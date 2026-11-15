@@ -39,7 +39,7 @@ public partial class BodyChart : Control
         var u = _sim.Units;
         int i = u.IndexOf(_unit);
         var def = _sim.Content.Units[u.Def[i]];
-        int max = Math.Max(1, _sim.Economy.MaxHp(u.Owner[i], def));
+        int max = Math.Max(1, _sim.MaxHpOf(i));
         var look = UiStyle.Current;
 
         Color Shade(BodyPart p)

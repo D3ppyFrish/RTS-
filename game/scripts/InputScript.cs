@@ -274,6 +274,7 @@ public sealed class InputScript
         "bracketleft" or "[" => Key.Bracketleft,
         "bracketright" or "]" => Key.Bracketright,
         "apostrophe" or "'" => Key.Apostrophe,
+        "comma" or "," => Key.Comma,
         _ when n.Length == 1 && char.IsDigit(n[0]) => Key.Key0 + (n[0] - '0'),
         _ when n.Length == 1 && char.IsLetter(n[0]) => Key.A + (char.ToUpperInvariant(n[0]) - 'A'),
         _ => throw new FormatException($"Input script: unknown key '{n}'"),

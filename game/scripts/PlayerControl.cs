@@ -330,6 +330,7 @@ public partial class PlayerControl : Node
         switch (key.Keycode)
         {
             case Key.L: StartRoad(); break;
+            case Key.Comma: Bloom(); break;
             case Key.Y: ToggleWall(); break;
             case Key.Apostrophe: ToggleBridge(); break;
             case Key.U: TrainAtSelected(null); break;
@@ -587,6 +588,20 @@ public partial class PlayerControl : Node
                 if (own.Count == 0) return;
             }
         }
+        if (DuskTreeUnder(screen))
+        {
+            // Battle priests heal the dusk tree (the Orcs' fighters hack it down) once its warden is gone.
+            var tree = _sim.DuskTree;
+            var u = _sim.Units;
+            var tending = own.FindAll(id => tree.CanWork(u.IndexOf(id)));
+            if (tending.Count > 0 && tree.CanUse(LocalPlayer, tending.ConvertAll(u.IndexOf)))
+            {
+                _sim.Schedule(_sim.Tick, new DuskTreeCommand(LocalPlayer, tending.ToArray()));
+                _rings.ShowMarker(new Vector3(tree.X + 0.5f, tree.Y, tree.Z + 0.5f) * bs, SelectionRenderer.Work);
+                own.RemoveAll(tending.Contains);
+                if (own.Count == 0) return;
+            }
+        }
         if (ResourceUnder(screen, out int rx, out int ry, out int rz))
         {
             var workers = OwnWorkers(own);
@@ -722,6 +737,16 @@ public partial class PlayerControl : Node
         return town != null && hit.Y >= town.Y - 2 && hit.Y <= town.Y + 5 ? town : null;
     }
 
+    /// <summary>True if the dusk tree (its wood, or its leaves once healed) is under the cursor.</summary>
+    public bool DuskTreeUnder(Vector2 screen)
+    {
+        var tree = _sim.DuskTree;
+        if (!tree.Exists || !VoxelRay.FromScreen(_rig.Camera, screen, World, HiddenFrom, out var hit, out _)) return false;
+        var block = World.Get(hit.X, hit.Y, hit.Z);
+        return (BlockInfo.IsDuskTree(block) || block == BlockType.DuskLeaves)
+            && Math.Abs(hit.X - tree.X) <= 7 && Math.Abs(hit.Z - tree.Z) <= 7 && Fog.HasSeen(hit.X, hit.Z);
+    }
+
     /// <summary>
     /// The block to gather under the cursor: a tree's trunk (also when the click hits its leaves), a berry
     /// bush, or stone, ore or coal.
@@ -764,7 +789,7 @@ public partial class PlayerControl : Node
         if (!VoxelRay.FromScreen(_rig.Camera, screen, w, HiddenFrom, out var hit, out _)) return false;
         (x, y, z) = (hit.X, hit.Y + 1, hit.Z);
         var block = w.Get(hit.X, hit.Y, hit.Z);
-        if (!BlockInfo.IsLeaves(block) && !BlockInfo.IsTrunk(block)) return true;
+        if (!BlockInfo.IsLeaves(block) && !BlockInfo.IsTrunk(block) && !BlockInfo.IsDuskTree(block)) return true;
         for (int r = 0; r <= 3; r++)
         for (int dz = -r; dz <= r; dz++)
         for (int dx = -r; dx <= r; dx++)
@@ -974,6 +999,23 @@ public partial class PlayerControl : Node
     {
         if (UsableDen() is not { } lair) return;
         _sim.Schedule(_sim.Tick, new DenCommand(LocalPlayer, OwnSelected().ToArray(), lair.Id));
+        Changed?.Invoke();
+    }
+
+    /// <summary>The selected unit of yours that bears the Dusk Staff, or 0.</summary>
+    public int StaffSelected()
+    {
+        foreach (int id in OwnSelected())
+            if (_sim.DuskTree.HasStaff(_sim.Units.IndexOf(id))) return id;
+        return 0;
+    }
+
+    /// <summary>The Dusk Staff's bearer, if selected, uses Dusk Bloom (key ,): every ally near it heals.</summary>
+    public void Bloom()
+    {
+        int id = StaffSelected();
+        if (id == 0 || !_sim.DuskTree.CanBloom(_sim.Units.IndexOf(id))) return;
+        _sim.Schedule(_sim.Tick, new BloomCommand(LocalPlayer, new[] { id }));
         Changed?.Invoke();
     }
 
@@ -1407,7 +1449,8 @@ public partial class PlayerControl : Node
         for (int i = 0; i < u.Count; i++)
         {
             var def = _sim.Content.Units[u.Def[i]];
-            if (u.Owner[i] == Simulation.WildPlayer && u.Town[i] == 0) wild++; // monsters; a town's guards are counted as guards
+            // Monsters; a town's guards are counted as guards and the dusk tree's warden as the warden.
+            if (u.Owner[i] == Simulation.WildPlayer && u.Town[i] == 0 && def != _sim.Content.DuskWarden) wild++;
             if (u.Owner[i] != LocalPlayer) continue;
             if (u.Subdued[i]) beaten++;
             else if (def.Role == UnitRole.Monster) monsters++;
@@ -1417,7 +1460,7 @@ public partial class PlayerControl : Node
         int densUsed = 0, lodges = 0;
         foreach (var lair in _sim.Monsters.Lairs)
         {
-            if (!lair.Cleared) lairs++;
+            if (!lair.Cleared && lair.Id != _sim.DuskTree.Lair) lairs++;
             if (lair.UsedBy == LocalPlayer) densUsed++;
         }
         foreach (var b in _sim.Buildings.All)
@@ -1442,6 +1485,22 @@ public partial class PlayerControl : Node
         foreach (var t in _sim.Content.Techs)
             if (_sim.Economy.HasTech(LocalPlayer, t)) techs++;
         var cam = CameraColumn;
+        var dusk = _sim.DuskTree;
+        string duskState = !dusk.Exists ? "none" : dusk.Razed ? "razed" : dusk.Healed ? "healed" : dusk.Unguarded ? "unguarded" : "guarded";
+        string warden = dusk.Lair != 0 ? "dead" : "none";
+        for (int w = 0; w < u.Count; w++)
+            if (_sim.Content.Units[u.Def[w]] == _sim.Content.DuskWarden)
+            {
+                warden = u.Owner[w] == Simulation.WildPlayer ? "wild" : u.Subdued[w] ? "beaten" : u.Owner[w] == LocalPlayer ? "own" : "other";
+                break;
+            }
+        int bearer = dusk.StaffBearer != 0 ? u.IndexOf(dusk.StaffBearer) : -1;
+        string staff = bearer < 0 ? "none" : u.Owner[bearer] == LocalPlayer ? "own" : "other";
+        string staffAt = bearer < 0 ? "none" : $"{u.X[bearer].FloorToInt()},{u.Y[bearer]},{u.Z[bearer].FloorToInt()}";
+        int tending = 0;
+        var ownSet = new HashSet<int>(own);
+        foreach (int id in dusk.Tending)
+            if (ownSet.Contains(id)) tending++;
         return $"selected={_selected.Count} first_id={(_selected.Count > 0 ? _selected[0] : 0)} own={own.Count} preview={_preview.Count} dragging={(_dragging ? 1 : 0)} " +
                $"paused={(_clock.Paused ? 1 : 0)} speed={_clock.Speed} slice={_slice.Level} tool={Tool} " +
                $"working={working} buildings={buildings} sites={sites} building={building} queue={sel?.Queue.Count ?? 0} " +
@@ -1464,6 +1523,7 @@ public partial class PlayerControl : Node
                $"guards_owner={(town != null && town.Guards.Any() ? u.Owner[u.IndexOf(town.Guards.First())] : -1)} tribute={town?.Caravans.Count ?? 0} " +
                $"pool={town?.Ready ?? 0} caravans={caravans} trading={trading} mercs={mercs} " +
                $"idle={_sim.Economy.IdleWorkers(LocalPlayer).Count} camera={cam.X},{cam.Z} " +
+               $"dusk_tree={duskState} warden={warden} staff={staff} staff_at={staffAt} tending={tending} bloom_ready={(StaffSelected() is int sb && sb != 0 && dusk.CanBloom(u.IndexOf(sb)) ? 1 : 0)} " +
                $"formation={inFormation} line_preview={_formationPreview.Count} spread={Spread(own)}";
     }
 

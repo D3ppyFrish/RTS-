@@ -387,10 +387,10 @@ public class MonsterTests
             Assert.All(lair.Pack, w => Assert.Equal(Wild, Owner(sim, w)));
             Assert.All(lair.Pack, w => Assert.True(FromDen(sim, w, lair) <= 12));
         }
-        // The players' own numbers leave the wolves out.
+        // The players' own numbers leave the wolves out; the wild side also has the dusk tree's warden.
         Assert.Equal(12, sim.Economy.Population(0));
         Assert.Equal(12, sim.Economy.Population(1));
-        Assert.Equal(8, sim.Economy.Population(Wild));
+        Assert.Equal(8 + 1, sim.Economy.Population(Wild));
     }
 
     private static long Sq(long v) => v * v;
@@ -426,8 +426,8 @@ public class MonsterTests
         for (int run = 0; run < 2; run++)
         {
             var sim = log.CreateSimulation();
-            // A lair for each start, and one by each city-state's town.
-            Assert.Equal(2 + sim.Cities.Towns.Count(t => t.LairId > 0), sim.Monsters.Lairs.Count);
+            // A lair for each start, the dusk tree's warden, and one by each city-state's town.
+            Assert.Equal(2 + 1 + sim.Cities.Towns.Count(t => t.LairId > 0), sim.Monsters.Lairs.Count);
             foreach (var c in log.Commands) sim.Schedule(c.Tick, c.Command);
             for (long t = 0; t < log.Ticks; t += 100)
             {

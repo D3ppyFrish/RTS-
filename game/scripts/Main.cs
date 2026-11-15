@@ -39,7 +39,8 @@ namespace Rts.Game;
 ///   --data=DIR            load the game data (factions.json, techs.json, buildings.json, units.json, roles.json,
 ///                         citystates.json) from DIR instead of the files built into the game; problems are
 ///                         printed and the game quits
-///   --focus=WHERE         starting camera focus: centre, start0, start1, cavern, swamp, lava or X,Z in blocks
+///   --focus=WHERE         starting camera focus: centre, start0, start1, cavern, swamp, lava, dusk (the dusk
+///                         tree) or X,Z in blocks
 ///   --blood=N             stain N columns around the camera focus with blood, and make every unit bleed
 ///                         (stress test for drawing blood)
 ///   --units=N             spawn N units of yours around the camera focus (stress test; all on one side,
@@ -55,6 +56,8 @@ namespace Rts.Game;
 ///   --lineup              every unit type each of the first two players can have (its faction's own, the
 ///                         shared ones, monsters, caravans and mercenaries) stands in a row at the camera
 ///                         focus, player 0's north of player 1's and too far apart to fight; no usual start
+///   --dusk-party=N        N of each of your soldier types (and two of each healer, if your faction heals the
+///                         dusk tree) stand fifteen columns from the dusk tree, out of its warden's reach
 ///   --xp=N                your units start with N experience (150 is enough for Settlers to evolve)
 ///   --player=N            play as player N: 0 (the default) is the Settlers at start0, 1 the Orcs at start1
 ///   --ai                  the other players in the match are computer players (see AiPlayer)
@@ -85,7 +88,7 @@ public partial class Main : Node3D
     private const int MaxTicksPerFrame = 8;
 
     /// <summary>Options that set a match up other than the usual start, so that its log would not replay it.</summary>
-    private static readonly string[] TestSetups = { "map", "units", "battle", "lineup", "goods", "houses", "xp", "weather", "lights", "blood" };
+    private static readonly string[] TestSetups = { "map", "units", "battle", "lineup", "goods", "houses", "xp", "weather", "lights", "blood", "dusk-party" };
 
     private Dictionary<string, string> _args = new();
     private ContentDb _content = null!;
@@ -577,6 +580,7 @@ public partial class Main : Node3D
         if (_args.TryGetValue("houses", out var hs) && int.TryParse(hs, out var houses) && houses > 0) GiveHouses(houses);
         if (_args.TryGetValue("lights", out var ls) && int.TryParse(ls, out var lights) && lights > 0) GiveLights(lights);
         if (_args.TryGetValue("xp", out var xs) && int.TryParse(xs, out var xp) && xp > 0) GiveExperience(xp);
+        if (_args.TryGetValue("dusk-party", out var ds) && int.TryParse(ds, out var party) && party > 0) SpawnDuskParty(party);
         if (_args.TryGetValue("blood", out var bls) && int.TryParse(bls, out var stains) && stains > 0) SpillBlood(stains, fx, fz);
         // A match from the usual start is recorded as it is played, to be saved as a replay at its end.
         var odd = new List<string>();
@@ -740,6 +744,41 @@ public partial class Main : Node3D
     }
 
     /// <summary>
+    /// --dusk-party=N: N of each soldier type that is trained and, if your faction heals the dusk tree, two of
+    /// each of its healers, yours, in ranks of eight two columns apart from fifteen columns off the dusk tree
+    /// (east if the ground there is about level with it, else west, south or north), out of its warden's
+    /// reach. Nobody moves until ordered.
+    /// </summary>
+    private void SpawnDuskParty(int n)
+    {
+        var tree = _sim.DuskTree;
+        if (!tree.Exists) return;
+        int me = PlayerControl.LocalPlayer;
+        var kinds = new List<UnitDef>();
+        foreach (var d in _sim.Content.BaseUnits)
+            if (d.Role != UnitRole.Worker && d.CanAttack)
+                for (int k = 0; k < n; k++) kinds.Add(d);
+        if (tree.UseFor(me) == DuskTreeUse.Heal)
+            foreach (var d in _sim.Content.Units)
+                if (d.Heal > 0 && d.Faction == _sim.Economy.Faction(me)) { kinds.Add(d); kinds.Add(d); }
+        // The first side (east, west, south, north) whose ground fifteen columns out is about level with the tree's.
+        int dx = 1, dz = 0;
+        foreach (var (sx, sz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+        {
+            int g = Walk.GroundLevel(_sim.World, tree.X + 15 * sx, tree.Z + 15 * sz);
+            if (g >= 0 && Math.Abs(g - tree.Y) <= 3) { (dx, dz) = (sx, sz); break; }
+        }
+        for (int k = 0, placed = 0; placed < kinds.Count && k < kinds.Count * 4; k++)
+        {
+            int along = 15 + k / 8 * 2, across = -7 + k % 8 * 2;
+            int x = Math.Clamp(tree.X + dx * along - dz * across, 0, WorldX - 1);
+            int z = Math.Clamp(tree.Z + dz * along + dx * across, 0, WorldZ - 1);
+            int id = _sim.SpawnUnit(me, kinds[placed].Id, x, z);
+            if (id > 0) { _spawned.Add((me, id)); placed++; }
+        }
+    }
+
+    /// <summary>
     /// --battle: n soldiers a side, every soldier type in turn, in ranks of eight two columns apart: yours
     /// six columns west of the focus facing east, the enemy's six columns east of it, and an enemy house
     /// about fourteen columns north of the focus where the ground allows. Nobody moves until ordered (or
@@ -892,6 +931,7 @@ public partial class Main : Node3D
         if (focus.StartsWith("start") && int.TryParse(focus[5..], out var p) && p >= 0 && p < map.Starts.Count)
             return (map.Starts[p].X, map.Starts[p].Z);
         if (focus == "cavern" && map.Cavern is { } c) return (c.X, c.Z);
+        if (focus == "dusk" && _sim.DuskTree.Exists) return (_sim.DuskTree.X, _sim.DuskTree.Z);
         if (focus is "swamp" or "lava")
         {
             // The middle of the swamp, or the first pool of lava.

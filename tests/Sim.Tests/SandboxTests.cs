@@ -87,7 +87,6 @@ public class SandboxTests
     [InlineData(TreeKind.Pine, BlockType.PineWood)]
     [InlineData(TreeKind.Birch, BlockType.BirchWood)]
     [InlineData(TreeKind.Willow, BlockType.Wood)]
-    [InlineData(TreeKind.Dusk, BlockType.Wood)]
     [InlineData(TreeKind.Mushroom, BlockType.MushroomStem)]
     public void EveryKindOfTreeGrowsWhereClicked(TreeKind kind, BlockType trunk)
     {
@@ -266,7 +265,7 @@ public class SandboxTests
         Assert.True(sim.TestMode);
         void Issue(Command c) => sim.Schedule(sim.Tick, c);
         Issue(new SandboxUnitCommand(0, Simulation.WildPlayer, "wolf", 32, 32, 4));
-        Issue(new SandboxTreeCommand(0, TreeKind.Dusk, 20, 40));
+        Issue(new SandboxTreeCommand(0, TreeKind.Willow, 20, 40));
         Issue(new SandboxBlocksCommand(0, BlockType.IronOre, 40, 10, 40, 42, 12, 42));
         Issue(new SandboxCheatCommand(0, 0, SandboxCheat.Invulnerable, true));
         Issue(new SandboxGoodsCommand(0, 1, 300));

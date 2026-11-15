@@ -28,6 +28,7 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 | Automation (automatic workers, repeat, stances) | `Automation/AutomationSystem.cs` | `AutomationTests.cs` | `ui-automation-screenshots.sh` |
 | Evolution (Settlers) | `Units/EvolutionSystem.cs` | `EvolutionTests.cs` | `ui-evolution-screenshots.sh` |
 | Monsters and taming (Orcs) | `Units/MonsterSystem.cs` | `MonsterTests.cs` | `ui-monsters-screenshots.sh` |
+| Dusk tree (warden, healing, staff, razing) | `Units/DuskTreeSystem.cs`; tree shape: `World/RegionGenerator.cs` (`GrowDuskTree`) | `DuskTreeTests.cs` | `ui-dusktree-screenshots.sh` |
 | City-states | `Economy/CityStateSystem.cs`, `Content/CityStateDef.cs` | `CityStateTests.cs` | `ui-citystate-screenshots.sh` |
 | Computer players (AI) | `AI/AiPlayer.cs` (Classic), `AI/AiPlayer.Smart.cs` (Normal, Hard), `AI/AiMatch.cs` | `AiTests.cs` | none; `ai-matches.sh` and `ai-versus.sh` play headless AI matches |
 | Winning, match end, replays | `MatchSystem.cs`, `Replay/CommandLog.cs`, `Replay/MatchReplay.cs`; game: `StartScreen.cs`, `MatchEndPanel.cs`, `Replays.cs` | `MatchTests.cs`, `ReplayTests.cs` | `ui-match-screenshots.sh` |

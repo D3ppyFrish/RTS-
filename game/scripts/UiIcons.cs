@@ -118,6 +118,12 @@ public static class UiIcons
     /// <summary>The pictures by name: one character per pixel, a letter from <see cref="Palette"/> or . for clear.</summary>
     private static readonly Dictionary<string, string[]> Glyphs = new()
     {
+        // Dusk Bloom: the Dusk Staff's violet bloom round a cyan light, with sparks of healing.
+        ["dusk_bloom"] = new[]
+        {
+            "t....tt....t", "...kvvvvk...", "..kvvttvvk..", "..kvtwwtvk..", "..kvvttvvk..", "t..kvvvvk..t",
+            ".....kSk....", ".....kSk....", ".....ktk....", ".....kSk....", ".....kSk....", "......k.....",
+        },
         ["food"] = new[]
         {
             "............", "............", "....kkkkk...", "..kkoyoyokk.", ".koyoooyooyk", ".kooyooooyok",

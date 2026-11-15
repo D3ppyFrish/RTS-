@@ -47,6 +47,10 @@ public static class UnitModels
     private static readonly Color Bristle = new(0.17f, 0.13f, 0.1f);
     private static readonly Color Iron = new(0.38f, 0.38f, 0.4f);
     private static readonly Color Toxic = new(0.55f, 1f, 0.3f);
+    private static readonly Color DuskBark = new(0.34f, 0.33f, 0.39f);
+    private static readonly Color DuskBarkDark = new(0.18f, 0.17f, 0.22f);
+    private static readonly Color DuskVein = new(0.3f, 0.9f, 0.95f);
+    private static readonly Color DuskLeaf = new(0.55f, 0.33f, 0.7f);
     private static readonly Color Team = new(1f, 0f, 0f, 0f);      // full-strength team colour
     private static readonly Color TeamDark = new(0.7f, 0f, 0f, 0f); // shaded team colour
 
@@ -329,6 +333,35 @@ public static class UnitModels
             .Orc(lift: 4, legs: false)
             .Box(-2, 19, -1, 1, 19, 2, Iron).Box(-3, 19, 0, -3, 21, 0, Bone).Box(2, 19, 0, 2, 21, 0, Bone) // horned helm
             .Box(3, 7, 1, 3, 24, 1, Wood).Box(3, 25, 1, 3, 27, 1, Bone),                 // and bone-tipped spear
+
+        // The dusk tree's guardian: a hulking husk of grey bark half again a person's height, cyan light in
+        // its cracks and eye sockets, a skull for a face under antler-like branches, and long bark claws.
+        "dusk_warden" => new Builder()
+            .Box(-4, 0, -2, -2, 7, 1, DuskBark).Box(1, 0, -2, 3, 7, 1, DuskBark)            // legs
+            .Box(-4, 0, 2, -2, 0, 3, DuskBarkDark).Box(1, 0, 2, 3, 0, 3, DuskBarkDark)      // root toes
+            .Box(-5, 8, -3, 4, 17, 2, DuskBark)                                             // trunk of a body
+            .Box(-5, 8, -3, 4, 8, 2, DuskBarkDark).Box(-1, 10, 3, 0, 16, 3, DuskVein)       // a glowing crack down the chest
+            .Box(-3, 12, 3, -3, 14, 3, DuskVein).Box(2, 9, 3, 2, 11, 3, DuskVein)
+            .Box(-7, 12, -2, -6, 17, 1, DuskBarkDark).Box(5, 12, -2, 6, 17, 1, DuskBarkDark) // hunched shoulders
+            .Box(-8, 4, -1, -7, 15, 0, DuskBark).Box(6, 4, -1, 7, 15, 0, DuskBark)          // long arms
+            .Box(-8, 1, 0, -8, 3, 2, DuskBarkDark).Box(7, 1, 0, 7, 3, 2, DuskBarkDark)      // claws
+            .Box(-8, 2, 2, -8, 2, 3, Bone).Box(7, 2, 2, 7, 2, 3, Bone)
+            .Box(-3, 18, -2, 2, 22, 2, Bone)                                                // skull
+            .Box(-2, 20, 3, -2, 20, 3, DuskVein).Box(1, 20, 3, 1, 20, 3, DuskVein)          // eyes
+            .Box(-2, 18, 3, 1, 18, 3, Dark).Box(-1, 19, 3, 0, 19, 3, Dark)                  // teeth and nose
+            .Box(-4, 22, 0, -4, 26, 0, DuskBarkDark).Box(-6, 25, 0, -5, 25, 0, DuskBarkDark).Box(-5, 27, 0, -5, 28, 0, DuskBarkDark) // antlers
+            .Box(3, 22, 0, 3, 26, 0, DuskBarkDark).Box(4, 25, 0, 5, 25, 0, DuskBarkDark).Box(4, 27, 0, 4, 28, 0, DuskBarkDark)
+            .Box(-5, 15, -3, 4, 15, -3, TeamDark),                                          // a sash, once it is someone's
+        // A battle priest who healed the dusk tree: the Dusk Staff in hand, a gnarled grey staff crowned with
+        // violet leaves round a cyan light, instead of the mace.
+        "dusk_staff_bearer" => new Builder().Humanoid().Rank()
+            .Box(-2, 13, -3, 1, 14, 1, Cloth)                                            // white hood
+            .Box(-2, 6, 1, 1, 9, 1, Cloth).Box(-1, 6, 1, 0, 9, 1, Team).Box(-2, 8, 1, 1, 8, 1, Team) // tabard and cross
+            .Box(-2, 6, -2, 1, 9, -2, DuskLeaf)                                          // a violet mantle
+            .Box(3, 0, 1, 3, 17, 1, DuskBark).Box(3, 4, 1, 3, 5, 1, DuskVein).Box(3, 10, 1, 3, 11, 1, DuskVein) // a grey staff veined in cyan
+            .Box(4, 15, 1, 4, 16, 1, DuskBarkDark).Box(2, 13, 1, 2, 14, 1, DuskBarkDark)
+            .Box(1, 18, -1, 5, 21, 3, DuskLeaf)                                          // a violet bloom on top
+            .Box(2, 19, -1, 4, 20, 3, DuskVein).Box(1, 19, 0, 5, 20, 2, DuskVein).Box(3, 22, 1, 3, 23, 1, DuskVein), // round a cyan light
 
         // Trade with the city-states: a pack mule with saddlebags in its owner's colour (what it carries goes on
         // its back), and the goblins' mercenaries.

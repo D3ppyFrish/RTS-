@@ -120,7 +120,7 @@ public partial class CombatRenderer : Node3D
                 _rings.Add(Vector3.Right, Vector3.Up, Vector3.Back, new Vector3(x * bs, y * bs + 0.04f, z * bs), Routing);
             if (u.Owner[i] == PlayerControl.LocalPlayer && (u.Subdued[i] || (evolves && evolution.CanEvolve(i))))
                 _ready.Add(Vector3.Right, Vector3.Up, Vector3.Back, new Vector3(x * bs, y * bs + 0.05f, z * bs), Evolvable);
-            int max = _sim.Economy.MaxHp(u.Owner[i], defs[u.Def[i]]);
+            int max = _sim.MaxHpOf(i);
             if (u.Hp[i] >= max && !_selected.Contains(u.Id[i])) continue;
             Bar(new Vector3(x, y + 2.5f, z) * bs, 1.2f * bs, 0.18f * bs, (float)u.Hp[i] / Math.Max(1, max), right, up, back);
         }

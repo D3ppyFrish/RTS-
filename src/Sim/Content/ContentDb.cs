@@ -38,6 +38,8 @@ public sealed class ContentDb
     public IReadOnlyList<UnitDef> BaseUnits { get; internal set; } = Array.Empty<UnitDef>();
     /// <summary>The monsters that keep lairs (<see cref="UnitDef.Lair"/>), in data order.</summary>
     public IReadOnlyList<UnitDef> LairMonsters { get; internal set; } = Array.Empty<UnitDef>();
+    /// <summary>The monster that guards the map's dusk tree (a lair with <c>duskTree</c>), or null if none does.</summary>
+    public UnitDef? DuskWarden { get; internal set; }
     public IReadOnlyList<BuildingDef> Buildings => _buildings;
     public IReadOnlyList<TechDef> Techs => _techs;
     public IReadOnlyList<FactionDef> Factions => _factions;

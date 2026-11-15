@@ -14,9 +14,13 @@
 // up: { "building": id } puts that building (one with "fromDen" in buildings.json) up on the den as a site
 // to build, or { "form": id } has the nearest unit near the den that can take that form (one with "fromDen"
 // in units.json) take it. Without it, the faction's players leave dens be.
+// duskTree (optional): what the faction's players can do to the map's dusk tree once its warden is gone:
+// heal (a unit that heals tends it, grows its canopy and takes up the Dusk Staff) or raze (any of their
+// fighting units hack it down, so nobody gets the staff). See "Dusk tree" in docs/rules.md.
 [
   { "id": "settlers", "name": "Settlers", "uiLook": "stone", "description": "Humans who grow their units into new forms through experience.",
-    "experience": { "levels": [150], "perDamage": 1, "perKill": 10, "perBuildSecond": 1, "perMinute": 5 } },
+    "experience": { "levels": [150], "perDamage": 1, "perKill": 10, "perBuildSecond": 1, "perMinute": 5 },
+    "duskTree": "heal" },
   { "id": "orcs", "name": "Orcs", "uiLook": "timber", "description": "Clans who tame and ride the monsters they defeat.", "tamesMonsters": true,
-    "den": { "building": "wolf_lodge" } }
+    "den": { "building": "wolf_lodge" }, "duskTree": "raze" }
 ]

@@ -46,6 +46,7 @@ Controls:
 | Evolve buttons | in the selection panel, for your units with the experience (they have a gold ring under them): a button per form evolves the selected units of that type into it, and Auto picks the form that type takes on its own (see [Evolution](rules.md#evolution)) |
 | Beaten, Ride, Recruit | Orcs only: the top bar's Beaten button selects your next beaten monster (it has a gold ring under it); in its panel, Ride has the nearest spearman climb on and become a wolf rider, and Recruit makes it one of your units (see [Monsters and taming](rules.md#monsters-and-taming)). With units selected near a cleared den, the Orcs' panel has a button to make the den a wolf lodge (see [Cleared dens](rules.md#cleared-dens)) |
 | Town buttons, Hire | the top bar has a button per city-state's town saying who holds it; it (or clicking the town) selects the town, whose panel shows its totem and guards and, for its holder, has a Hire button per mercenary. Right-click the totem with soldiers to break it and take the town (see [City-states](rules.md#city-states)) |
+| Right-click the dusk tree, `,` | once its warden is gone: battle priests heal the tree and one gets the Dusk Staff; Orc fighters hack it down instead. With the staff's bearer selected, the Dusk Bloom button or `,` heals every ally near it (see [The dusk tree](rules.md#the-dusk-tree)) |
 | K | open the tech tree: click a tech to research it at your town hall |
 | . | select your next idle worker and look at it (as the Idle workers button does) |
 | Ctrl+1..9, 1..9 | assign a control group, recall it (press twice to centre the camera on it) |
@@ -84,7 +85,10 @@ and the swamp has mist at night and in the morning and fireflies on clear nights
 Each kind of tree has its own look: broad-leaved trees with round green crowns, pines with tiers of
 blue-green needles over reddish bark, slender white birches with small yellow-green crowns, willows in the
 swamp with curtains of leaves hanging from their rims, giant red-capped mushrooms with pale spots and gills,
-and, now and then in the hills, a dusk tree with a violet canopy flecked with specks that glow.
+and, in the hills about halfway between the starts, the one dusk tree: a huge bare, twisted grey tree with
+cyan cracks and a skull at its foot, standing in purple mist and guarded by the Dusk Warden. Once the warden
+is gone, right-click the tree with battle priests to heal it (it grows a violet canopy and one priest gets
+the Dusk Staff), or, as the Orcs, with fighters to hack it down.
 
 The time of day and the weather are beside the game clock at the top (a sun or moon, the hour, and the
 weather unless it is clear). Its tooltip says what is coming, how far units see now and how often shots

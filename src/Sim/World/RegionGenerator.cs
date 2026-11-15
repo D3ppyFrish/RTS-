@@ -29,17 +29,66 @@ public static class RegionGenerator
 
     /// <summary>
     /// The kind of tree a biome grows, from a roll of 0 to 99: broad-leaved trees and birches in the
-    /// grassland, those and pines in the forest, pines and now and then a dusk tree in the hills, and
-    /// willows and giant mushrooms (with a few broad-leaved trees) in the swamp.
+    /// grassland, those and pines in the forest, pines in the hills, and willows and giant mushrooms (with a
+    /// few broad-leaved trees) in the swamp. The one dusk tree is placed on its own (see <see cref="RegionMap"/>).
     /// </summary>
     public static TreeKind KindFor(Biome biome, int roll) => biome switch
     {
         Biome.Forest => roll < 50 ? TreeKind.Broadleaf : roll < 72 ? TreeKind.Pine : TreeKind.Birch,
         Biome.Grassland => roll < 55 ? TreeKind.Broadleaf : TreeKind.Birch,
-        Biome.Hills => roll < 80 ? TreeKind.Pine : TreeKind.Dusk,
+        Biome.Hills => TreeKind.Pine,
         Biome.Swamp => roll < 50 ? TreeKind.Willow : roll < 85 ? TreeKind.Mushroom : TreeKind.Broadleaf,
         _ => TreeKind.Broadleaf,
     };
+
+    private static readonly (int Dx, int Dz)[] Compass =
+        { (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1) };
+
+    /// <summary>
+    /// Grows the dusk tree's wood with its trunk at column (x, z) on ground at level g (see
+    /// the builder's PlaceDuskTree); the branches' ways depend on the seed. Only fills open air.
+    /// </summary>
+    public static void GrowDuskTree(VoxelWorld w, int x, int g, int z, ulong seed)
+    {
+        const int trunk = 10;
+        void Wood(int wx, int wy, int wz, BlockType t = BlockType.DuskBranch)
+        {
+            if (w.InBounds(wx, wy, wz) && w.Get(wx, wy, wz) == BlockType.Air) w.Set(wx, wy, wz, t);
+        }
+        for (int y = 1; y <= trunk; y++) Wood(x, g + y, z, BlockType.DuskWood);
+        // Roots and a buttress at its foot.
+        foreach (var (dx, dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) }) Wood(x + dx, g + 1, z + dz, BlockType.DuskWood);
+        Wood(x + 1, g + 2, z, BlockType.DuskWood);
+        // A crooked top.
+        Wood(x + 1, g + trunk + 1, z);
+        Wood(x + 1, g + trunk + 2, z + 1);
+        Wood(x, g + trunk + 1, z - 1);
+        // Six branches, each its own way round, twisting up and out, with a twig at the end.
+        uint h = DeterministicRandom.Hash(x, z, seed + 33);
+        int skipA = (int)(h % 8), skipB = (skipA + 3 + (int)(h >> 3 & 1)) % 8;
+        int k = 0;
+        for (int d = 0; d < 8; d++)
+        {
+            if (d == skipA || d == skipB) continue;
+            var (dx, dz) = Compass[d];
+            int bx = x, by = g + 5 + k % 3 + (k >= 3 ? 1 : 0), bz = z;
+            int len = dx != 0 && dz != 0 ? 3 : 4;
+            uint bh = DeterministicRandom.Hash(x + d, z, seed + 34);
+            for (int step = 0; step < len; step++)
+            {
+                bx += dx;
+                bz += dz;
+                if ((bh >> step & 1) == 1 || step == 0) by++;
+                Wood(bx, by, bz);
+            }
+            // The twig: up one or two, and one off to the side.
+            Wood(bx, by + 1, bz);
+            if ((bh >> 5 & 1) == 1) Wood(bx, by + 2, bz);
+            var (sx, sz) = Compass[(d + 2) % 8];
+            Wood(bx + sx, by + 1, bz + sz);
+            k++;
+        }
+    }
 
     private sealed class Builder
     {
@@ -52,6 +101,7 @@ public static class RegionGenerator
         private readonly DeterministicRandom _rng;
 
         // Feature placement.
+        private int _duskX = -1, _duskZ = -1;
         private readonly int _hillX, _hillZ, _hillR, _swampX, _swampZ, _swampR;
         /// <summary>Rows (z) at the middle of each ford, the shallow stretches where the river can be waded.</summary>
         private readonly int[] _fordZ;
@@ -113,6 +163,7 @@ public static class RegionGenerator
             Fill();
             CarveCavern();
             PlaceLava();
+            PlaceDuskTree();
             PlantTrees();
             PlaceStartResources();
             return _map;
@@ -461,6 +512,47 @@ public static class RegionGenerator
             }
         }
 
+        /// <summary>Columns around the dusk tree that no other tree grows in.</summary>
+        private const int DuskClearing = 8;
+
+        /// <summary>
+        /// The map's one dusk tree: in the hills, as near as the ground allows to halfway between the west and
+        /// east coasts at the hills' middle row, on grass with level ground around it and no lava near. A
+        /// gnarled trunk ten blocks tall with roots spread at its foot (<see cref="BlockType.DuskWood"/>) and six
+        /// bare branches twisting up and out from its upper half (<see cref="BlockType.DuskBranch"/>). Its leaves only grow once it is healed (see
+        /// <see cref="Units.DuskTreeSystem"/>).
+        /// </summary>
+        private void PlaceDuskTree()
+        {
+            int cx = _sx / 2, cz = _hillZ;
+            for (int r = 0; r <= _hillR; r++)
+            for (int dz = -r; dz <= r; dz++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                if (Math.Max(Math.Abs(dx), Math.Abs(dz)) != r) continue;
+                int x = cx + dx, z = cz + dz;
+                if (!DuskSiteOk(x, z, out int g)) continue;
+                GrowDuskTree(_w, x, g, z, _seed);
+                (_duskX, _duskZ) = (x, z);
+                return;
+            }
+        }
+
+        private bool DuskSiteOk(int x, int z, out int g)
+        {
+            g = -1;
+            if (x < 12 || z < 12 || x >= _sx - 12 || z >= _sz - 12) return false;
+            if (_map.BiomeAt(x, z) != Biome.Hills || !GroundOk(x, z, out g) || g + 16 >= _sy) return false;
+            for (int dz = -6; dz <= 6; dz++)
+            for (int dx = -6; dx <= 6; dx++)
+            {
+                int h = _height[Idx(x + dx, z + dz)];
+                if (_w.Get(x + dx, h, z + dz) is BlockType.Lava or BlockType.Water) return false;
+                if (Math.Max(Math.Abs(dx), Math.Abs(dz)) <= 3 && Math.Abs(h - g) > 1) return false;
+            }
+            return true;
+        }
+
         private bool GroundOk(int x, int z, out int ground)
         {
             ground = _height[Idx(x, z)];
@@ -474,6 +566,8 @@ public static class RegionGenerator
         /// </summary>
         private void TryTree(int x, int z, int trunk, int crown = 0, TreeKind kind = TreeKind.Broadleaf)
         {
+            // The dusk tree stands alone in its clearing.
+            if (_duskX >= 0 && Math.Max(Math.Abs(x - _duskX), Math.Abs(z - _duskZ)) <= DuskClearing) return;
             if (!GroundOk(x, z, out int g)) return;
             Trees.Grow(_w, x, g, z, trunk, crown, kind, _seed);
         }
@@ -559,8 +653,6 @@ public enum TreeKind : byte
     Birch,
     /// <summary>A swamp willow with curtains of leaves hanging from its rim.</summary>
     Willow,
-    /// <summary>A rare dusk tree in the hills, with a broad violet canopy.</summary>
-    Dusk,
     /// <summary>A giant mushroom in the swamp: a pale stalk and a red cap.</summary>
     Mushroom,
 }

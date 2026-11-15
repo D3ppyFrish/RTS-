@@ -226,6 +226,13 @@ public static class ChunkMesher
         StructurePalette.CapSpot => new Color(0.94f, 0.9f, 0.82f),
         StructurePalette.Gills => new Color(0.82f, 0.74f, 0.6f),
         StructurePalette.GillsDark => new Color(0.66f, 0.57f, 0.44f),
+        StructurePalette.DuskBarkA => new Color(0.37f, 0.36f, 0.42f),
+        StructurePalette.DuskBarkB => new Color(0.29f, 0.28f, 0.34f),
+        StructurePalette.DuskBarkDark => new Color(0.16f, 0.15f, 0.2f),
+        StructurePalette.DuskVein => new Color(0.2f, 0.75f, 0.8f),
+        StructurePalette.Bone => new Color(0.9f, 0.88f, 0.82f),
+        StructurePalette.BoneDark => new Color(0.12f, 0.1f, 0.12f),
+        StructurePalette.Sap => new Color(0.55f, 0.04f, 0.05f),
         _ => new Color(1, 0, 1),
     };
 
@@ -267,6 +274,7 @@ public static class ChunkMesher
         BlockType.WillowLeaves => new Color(0.4f, 0.55f, 0.25f),
         BlockType.DuskLeaves => new Color(0.5f, 0.3f, 0.62f),
         BlockType.MushroomCap => new Color(0.72f, 0.2f, 0.16f),
+        BlockType.DuskWood or BlockType.DuskBranch => new Color(0.33f, 0.32f, 0.38f),
         _ => new Color(1, 0, 1),
     };
 }

@@ -64,13 +64,13 @@ public static class Walk
     }
 
     /// <summary>
-    /// Highest standable level in the column that is not on top of tree leaves, or -1. Spawning uses this
-    /// so units appear on the ground under a forest rather than on the canopy.
+    /// Highest standable level in the column that is not on top of tree leaves or the dusk tree, or -1.
+    /// Spawning uses this so units appear on the ground under a forest rather than on the canopy.
     /// </summary>
     public static int GroundLevel(VoxelWorld w, int x, int z)
     {
         for (int y = w.SizeY - 2; y >= 1; y--)
-            if (CanStand(w, x, y, z) && !BlockInfo.IsLeaves(w.Get(x, y - 1, z))) return y;
+            if (CanStand(w, x, y, z) && w.Get(x, y - 1, z) is var under && !BlockInfo.IsLeaves(under) && !BlockInfo.IsDuskTree(under)) return y;
         return -1;
     }
 
