@@ -89,6 +89,8 @@ jobs:
         run: bash scripts/ui-evolution-screenshots.sh build/ui
       - name: Clear wolf lairs as the Orcs (ride and recruit) and the Settlers (reward) with scripted input
         run: bash scripts/ui-monsters-screenshots.sh build/ui
+      - name: Kill the dusk tree's warden, heal the tree and use the staff, then raze it as the Orcs with scripted input
+        run: bash scripts/ui-dusktree-screenshots.sh build/ui/dusk-tree
       - name: Win the goblin town with gifts, hire goblins and trade with a caravan with scripted input
         run: bash scripts/ui-citystate-screenshots.sh build/ui
       - name: Start a match from the start screen, surrender, replay it, and win one with scripted input

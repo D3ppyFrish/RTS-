@@ -113,9 +113,9 @@ public class RegionGeneratorTests
         var map = Maps[m].Value;
         var w = map.World;
         var heights = new int[12];
-        var kinds = new int[6];
-        var smallest = new int[6];
-        var largest = new int[6];
+        var kinds = new int[5];
+        var smallest = new int[5];
+        var largest = new int[5];
         Array.Fill(smallest, int.MaxValue);
         int trees = 0;
         for (int z = 3; z < 509; z++)
@@ -184,7 +184,6 @@ public class RegionGeneratorTests
         _ => leaves switch
         {
             BlockType.WillowLeaves => TreeKind.Willow,
-            BlockType.DuskLeaves => TreeKind.Dusk,
             _ => TreeKind.Broadleaf,
         },
     };
@@ -204,25 +203,24 @@ public class RegionGeneratorTests
     [InlineData(Biome.Swamp)]
     public void EachBiomeGrowsItsOwnTrees(Biome biome)
     {
-        var count = new int[6];
+        var count = new int[5];
         for (int roll = 0; roll < 100; roll++) count[(int)RegionGenerator.KindFor(biome, roll)]++;
         switch (biome)
         {
             case Biome.Forest:
                 Assert.True(count[(int)TreeKind.Broadleaf] > 0 && count[(int)TreeKind.Pine] > 0 && count[(int)TreeKind.Birch] > 0);
-                Assert.Equal(0, count[(int)TreeKind.Willow] + count[(int)TreeKind.Mushroom] + count[(int)TreeKind.Dusk]);
+                Assert.Equal(0, count[(int)TreeKind.Willow] + count[(int)TreeKind.Mushroom]);
                 break;
             case Biome.Grassland:
                 Assert.Equal(100, count[(int)TreeKind.Broadleaf] + count[(int)TreeKind.Birch]);
                 break;
             case Biome.Hills:
-                // Pines, and now and then a dusk tree: the only place they grow.
-                Assert.True(count[(int)TreeKind.Pine] > count[(int)TreeKind.Dusk] && count[(int)TreeKind.Dusk] > 0);
-                Assert.Equal(100, count[(int)TreeKind.Pine] + count[(int)TreeKind.Dusk]);
+                // Pines (the one dusk tree is placed on its own).
+                Assert.Equal(100, count[(int)TreeKind.Pine]);
                 break;
             case Biome.Swamp:
                 Assert.True(count[(int)TreeKind.Willow] > 0 && count[(int)TreeKind.Mushroom] > 0);
-                Assert.Equal(0, count[(int)TreeKind.Pine] + count[(int)TreeKind.Birch] + count[(int)TreeKind.Dusk]);
+                Assert.Equal(0, count[(int)TreeKind.Pine] + count[(int)TreeKind.Birch]);
                 break;
         }
     }

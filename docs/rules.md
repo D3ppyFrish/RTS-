@@ -16,7 +16,7 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   goes with it. The worker then clears the rubble, 2 wood a block, before felling the next tree, so a
   tree gives twice the wood its trunk did before (8 or 10 for most trees). Units walk over tree rubble
   at half speed, like other rubble, and any worker sent to it clears it as wood. Every kind of tree
-  (broad-leaved trees, birches, pines, willows, dusk trees and giant mushrooms) is felled and cleared
+  (broad-leaved trees, birches, pines, willows and giant mushrooms; not the dusk tree) is felled and cleared
   the same way, and a wood cutter moves on from one kind to the next. Pines stand two blocks taller, so
   they give more (12 to 16 wood); mushrooms are a block shorter. They carry
   up to 5 goods to the nearest storage, then come back for more of the same nearby; a group spreads
@@ -312,6 +312,34 @@ the den is gone from the map either way.
 `MonsterTests` has the issue's check: Orcs clear a wolf lair, recruit one beaten wolf and ride another
 (a spearman becomes a wolf rider); Settlers who clear one get its reward instead, as does whoever beats
 the last wolf. All the numbers are first guesses for playtesting.
+
+### The dusk tree
+
+`src/Sim/Units/DuskTreeSystem.cs` (tests in `DuskTreeTests`): every map has exactly one dusk tree, a
+large bare tree in the hills about halfway between the starts, and a monster guards it.
+
+- **The tree**: `RegionGenerator.GrowDuskTree` grows it on level hill ground well away from water and
+  lava, with a clearing of 8 columns where no other tree grows: a trunk of 10 blocks (`DuskWood`), four
+  roots, a crooked top and six twisting bare branches (`DuskBranch`). It cannot be felled, gathered or
+  dug, and nothing else is in the way of it.
+- **The Dusk Warden** (`dusk_warden` in `units.json`, a monster whose `lair` has `duskTree`): one of it,
+  2 columns from the trunk; 500 hit points, slow (3.5), hits hard (18 crush), armoured. It guards 10
+  blocks round the tree with a leash of 16, never leaves a den and pays no reward. Orcs beat it rather
+  than kill it like any monster and can recruit it (it has no rider).
+- **Healing** (a faction's `duskTree` is `heal`: the Settlers): once the warden is gone (dead, or beaten),
+  right-clicking the tree with battle priests selected sends them to it (`DuskTreeCommand`). A priest
+  within 3 columns of the trunk tends it for 10 seconds; any other order stops it. When one finishes, the
+  tree grows a violet canopy round its branches (once a game), and that priest gets the **Dusk Staff**.
+- **The Dusk Staff**: +20 hit points, heals 2 more each time, and **Dusk Bloom** (`BloomCommand`): every
+  ally within 6 blocks heals 25 hit points (wounds mend too), then it waits 45 seconds. If the bearer
+  dies the staff is gone with it.
+- **Razing** (`duskTree` is `raze`: the Orcs): once the warden is gone, Orc fighters sent to the tree
+  hack it down: 30 seconds of one unit's work, shared among all of them. It falls as rubble (cleared for
+  wood like a felled tree), and nobody can heal it any more.
+- **In the game**: the tree stands in purple mist with a cold cyan glow at night. A priest tending it
+  shows "(healing the dusk tree, X%)", an Orc "(hacking at the dusk tree, X%)". The bearer is drawn
+  holding the staff, its panel says "with the Dusk Staff", and the Dusk Bloom button (or the `,` key)
+  uses it. The computer players leave the tree alone for now.
 
 ## City-states
 

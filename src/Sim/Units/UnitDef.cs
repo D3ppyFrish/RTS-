@@ -147,6 +147,11 @@ public sealed class LairDef
     public int Leash { get; init; } = 20;
     /// <summary>Goods a player gets for clearing the lair, if their faction does not tame monsters.</summary>
     public GoodAmount[] Reward { get; init; } = Array.Empty<GoodAmount>();
+    /// <summary>
+    /// The monster guards the map's dusk tree (see <see cref="DuskTreeSystem"/>) instead of a den on the way
+    /// from each start: it has no lair at the starts and leaves no den to use.
+    /// </summary>
+    public bool DuskTree { get; init; }
 }
 
 /// <summary>Riding a beaten monster: a unit of type <see cref="Rider"/> near it climbs on and becomes a <see cref="Becomes"/>.</summary>

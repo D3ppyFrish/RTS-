@@ -25,6 +25,19 @@ public sealed class FactionDef
     public bool TamesMonsters { get; init; }
     /// <summary>What its players can make of a monster den once the lair is cleared (see <see cref="DenUse"/>); null for nothing.</summary>
     public DenUse? Den { get; internal set; }
+    /// <summary>What its players can do to the dusk tree once its warden is gone (see <see cref="Units.DuskTreeSystem"/>).</summary>
+    public DuskTreeUse DuskTree { get; init; }
+}
+
+/// <summary>What a faction can do to the dusk tree once its warden is gone (see <see cref="Units.DuskTreeSystem"/>).</summary>
+public enum DuskTreeUse : byte
+{
+    /// <summary>Nothing.</summary>
+    None,
+    /// <summary>Heal it with a unit that heals, which takes up the Dusk Staff.</summary>
+    Heal,
+    /// <summary>Hack it down, so nobody gets the staff.</summary>
+    Raze,
 }
 
 /// <summary>

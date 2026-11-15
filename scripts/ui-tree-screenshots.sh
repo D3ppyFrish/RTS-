@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Screenshot test for trees: the start's grove close up, the kinds of tree in a forest, the swamp's willows
-# and giant mushrooms and a dusk tree in the hills, then the starting units sent to it and the game
+# and giant mushrooms and the dusk tree in the hills, then the starting units sent to it and the game
 # paused as the first trees come down and the workers clear the logs they leave, from two sides. Saves
 # PNGs to OUT_DIR and fails if no wood came in.
 # Usage: scripts/ui-tree-screenshots.sh [OUT_DIR]
@@ -14,7 +14,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it, and the
 # start's grove of eight trees at 97..115 x 236..244 (birches at 103 x 236 and 242, a pine at 115 x 236).
 # Further off: a forest of all three kinds round 140 x 200, willows and mushrooms round 221 x 148 in the
-# swamp, and a dusk tree at 152 x 401 in the hills.
+# swamp, and the dusk tree at 281 x 385 in the hills.
 STEPS="
 wait 20
 camera 106,241 20 30 16
@@ -26,7 +26,7 @@ shot $OUT/trees-forest.png
 camera 222,150 120 35 14
 wait 10
 shot $OUT/trees-swamp.png
-camera 152,401 30 30 16
+camera 281,385 30 30 24
 wait 10
 shot $OUT/trees-dusk.png
 camera 87,261 45 55 22

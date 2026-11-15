@@ -59,6 +59,7 @@ public partial class Hud : CanvasLayer
     private Label _tameLabel = null!;
     private Button _rideButton = null!, _recruitButton = null!, _beatenButton = null!;
     private Button _denButton = null!;
+    private Button _bloomButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
@@ -465,6 +466,14 @@ public partial class Hud : CanvasLayer
         _denButton.Pressed += () => _control.UseDen();
         column.AddChild(_denButton);
 
+        _bloomButton = MakeToolButton("Dusk Bloom [,]");
+        _bloomButton.Name = "dusk_bloom";
+        _bloomButton.Icon = UiIcons.Get("dusk_bloom");
+        _bloomButton.ToggleMode = false;
+        _bloomButton.Visible = false;
+        _bloomButton.Pressed += () => _control.Bloom();
+        column.AddChild(_bloomButton);
+
         _cityBox = new VBoxContainer { Visible = false };
         _cityBox.AddThemeConstantOverride("separation", 4);
         _hireRow = new HBoxContainer();
@@ -776,6 +785,7 @@ public partial class Hud : CanvasLayer
         RefreshEvolveRows();
         RefreshTaming();
         RefreshDen();
+        RefreshBloom();
         RefreshCities();
     }
 
@@ -847,6 +857,21 @@ public partial class Hud : CanvasLayer
     /// The den button while a cleared den your faction can use is near your selected units: for the Orcs, a
     /// wolf lodge put up on it (greyed out while you cannot pay); for a form, the unit that takes it.
     /// </summary>
+    /// <summary>The Dusk Bloom button while the Dusk Staff's bearer is selected (greyed out until it can bloom again).</summary>
+    private void RefreshBloom()
+    {
+        int id = _control.StaffSelected();
+        _bloomButton.Visible = id != 0;
+        if (id == 0) return;
+        var tree = _sim.DuskTree;
+        bool ready = tree.CanBloom(_sim.Units.IndexOf(id));
+        long wait = Math.Max(0, tree.BloomReady - _sim.Tick);
+        _bloomButton.Text = ready ? "Dusk Bloom [,]" : $"Dusk Bloom in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond} s";
+        _bloomButton.TooltipText = $"The Dusk Staff's bearer heals every ally within {DuskTreeSystem.BloomRange} blocks, itself too, " +
+                                   $"by {DuskTreeSystem.BloomHeal}. Then it waits {DuskTreeSystem.BloomCooldownTicks / Simulation.TicksPerSecond} s.";
+        _bloomButton.Disabled = !ready;
+    }
+
     private void RefreshDen()
     {
         int player = PlayerControl.LocalPlayer;
@@ -1038,8 +1063,14 @@ public partial class Hud : CanvasLayer
                 ? (u.Auto[i] ? (u.Held[i] ? "    automatic, waiting for orders" : "    automatic") : "")
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
             string heals = !_sim.Combat.Healing(i, out bool home) ? "" : home ? " (healing fast, at home)" : " (healing)";
-            return $"{def.Name}   ({PlayerName(u.Owner[i])})   {_sim.Content.Combat.Job(def.Role)}\n" +
-                   $"HP {u.Hp[i]} / {_sim.Economy.MaxHp(u.Owner[i], def)}{heals}    {Activity(u, i)}{load}{morale}{rule}    height {u.Y[i]}" +
+            string staff = _sim.DuskTree.HasStaff(i) ? " with the Dusk Staff" : "";
+            int tend = _sim.DuskTree.TendProgress(u.Id[i]);
+            if (tend > 0)
+                heals += _sim.DuskTree.Razing(u.Id[i])
+                    ? $" (hacking at the dusk tree, {_sim.DuskTree.RazeWork * 100 / DuskTreeSystem.RazeTicks}%)"
+                    : $" (healing the dusk tree, {tend * 100 / DuskTreeSystem.TendTicks}%)";
+            return $"{def.Name}{staff}   ({PlayerName(u.Owner[i])})   {_sim.Content.Combat.Job(def.Role)}\n" +
+                   $"HP {u.Hp[i]} / {_sim.MaxHpOf(i)}{heals}    {Activity(u, i)}{load}{morale}{rule}    height {u.Y[i]}" +
                    DescribeExperience(u, i);
         }
         var counts = new int[defs.Count];

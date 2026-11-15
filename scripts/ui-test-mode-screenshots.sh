@@ -27,7 +27,7 @@ clickui test_cat_tree
 select test_item pine
 clickui test_place
 clickworld 100,g,258
-select test_item dusk
+select test_item willow
 clickworld 104,g,257
 select test_item mushroom
 clickworld 108,g,258

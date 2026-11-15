@@ -283,6 +283,15 @@ public sealed record DenCommand(int PlayerId, int[] Units, int Lair) : UnitsComm
 }
 
 /// <summary>
+/// The units work on the map's dusk tree as the player's faction does (see <see cref="Units.DuskTreeSystem"/>):
+/// those that heal tend it until it is healed, or fighting units hack it down. The warden has to be gone.
+/// </summary>
+public sealed record DuskTreeCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
+
+/// <summary>The Dusk Staff's bearer, if among the units, uses Dusk Bloom (see <see cref="Units.DuskTreeSystem"/>).</summary>
+public sealed record BloomCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
+
+/// <summary>
 /// The caravans among the units trade with a city-state's town (by id): they carry loads of the good it
 /// buys there from the player's storage and bring back the good it sells, until given another order.
 /// </summary>

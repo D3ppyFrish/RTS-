@@ -46,7 +46,6 @@ public static class Trees
             case TreeKind.Pine: Pine(w, x, top, z, crown); return true;
             case TreeKind.Birch: Birch(w, x, top, z, h); return true;
             case TreeKind.Willow: Willow(w, x, top, z, h); return true;
-            case TreeKind.Dusk: Dusk(w, x, top, z); return true;
             case TreeKind.Mushroom: Mushroom(w, x, top, z, crown); return true;
         }
         for (int dy = -1; dy <= 1; dy++)
@@ -139,17 +138,6 @@ public static class Trees
                 Leaf(w, x + dx, y, z + dz, l);
             }
         }
-    }
-
-    /// <summary>A dusk tree: a broad canopy of violet leaves, flat underneath and domed on top.</summary>
-    private static void Dusk(VoxelWorld w, int x, int top, int z)
-    {
-        var d = BlockType.DuskLeaves;
-        Layer(w, x, top - 1, z, 1, d);
-        Layer(w, x, top, z, 2, d, round: true);
-        Layer(w, x, top + 1, z, 2, d, round: true);
-        Diamond(w, x, top + 2, z, d);
-        Leaf(w, x, top + 3, z, d);
     }
 
     /// <summary>A giant mushroom: a wide cap over a pale stalk.</summary>

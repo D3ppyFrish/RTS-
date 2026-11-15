@@ -28,14 +28,16 @@ public static class StructurePalette
         WillowA = 52, WillowB = 53, DuskA = 54, DuskB = 55, DuskDark = 56, DuskGlow = 57;
     /// <summary>A giant mushroom's cap: two reds, its pale spots and the gills underneath.</summary>
     public const byte CapA = 58, CapB = 59, CapSpot = 60, Gills = 61, GillsDark = 62;
+    /// <summary>The dusk tree: grey bark in three shades, the cyan glow in its cracks, a skull's bone and its hollows, red sap.</summary>
+    public const byte DuskBarkA = 63, DuskBarkB = 64, DuskBarkDark = 65, DuskVein = 66, Bone = 67, BoneDark = 68, Sap = 69;
     /// <summary>One more than the highest colour.</summary>
-    public const byte Count = 63;
+    public const byte Count = 70;
 
     /// <summary>Leaf colours: drawn swaying in the wind.</summary>
     public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark;
 
     /// <summary>Colours that glow by themselves (a dusk tree's specks).</summary>
-    public static bool IsGlow(byte c) => c == DuskGlow;
+    public static bool IsGlow(byte c) => c is DuskGlow or DuskVein;
     public const byte Occluder = 255;
 }
 
@@ -72,7 +74,7 @@ public static class StructureDetail
     public static bool IsDetailed(BlockType t) => IsStructure(t) || BlockInfo.IsRubble(t) || IsTree(t);
 
     /// <summary>Standing trees (every kind): trunks and leaves.</summary>
-    public static bool IsTree(BlockType t) => BlockInfo.IsTrunk(t) || BlockInfo.IsLeaves(t);
+    public static bool IsTree(BlockType t) => BlockInfo.IsTrunk(t) || BlockInfo.IsLeaves(t) || BlockInfo.IsDuskTree(t);
 
     /// <summary>Index in a 3 x 3 x 3 neighbourhood of the block at offset (dx, dy, dz) from its middle.</summary>
     public static int NeighbourIndex(int dx, int dy, int dz) => ((dy + 1) * 3 + (dz + 1)) * 3 + (dx + 1);
@@ -117,6 +119,7 @@ public static class StructureDetail
         private readonly BlockType _self;
         private readonly BlockType _px, _nx, _py, _ny, _pz, _nz;
         private readonly int _open; // bit per direction: nothing solid there, so that side shows
+        private readonly int _links;  // the dusk tree: bit per neighbour (NeighbourIndex) that is its wood
         private readonly int _wx, _wy, _wz;
         private readonly int _window; // the side a plank wall's window faces, or -1
         private readonly int _face;   // the side a door or gate faces, or -1
@@ -135,6 +138,10 @@ public static class StructureDetail
             _nz = n[NeighbourIndex(0, 0, -1)];
             _wx = wx; _wy = wy; _wz = wz;
             _open = 0;
+            _links = 0;
+            if (BlockInfo.IsDuskTree(_self))
+                for (int k = 0; k < 27; k++)
+                    if (k != 13 && BlockInfo.IsDuskTree(n[k])) _links |= 1 << k;
             for (int d = 0; d < 6; d++)
                 if (!BlockInfo.IsSolid(NeighbourOf(d))) _open |= 1 << d;
 
@@ -215,6 +222,8 @@ public static class StructureDetail
             BlockType.Thatch or BlockType.RoofTile => _kind == Kind.Slope ? Slope(x, y, z) : RoofColour(x, y, z, -1),
             BlockType.StoneBrick => Stone(x, y, z),
             BlockType.TreeRubble => Log(x, y, z),
+            BlockType.DuskWood => DuskTrunk(x, y, z),
+            BlockType.DuskBranch => DuskBranch(x, y, z),
             BlockType.MushroomCap => Cap(x, y, z),
             _ when BlockInfo.IsTrunk(_self) => Trunk(x, y, z),
             BlockType.WillowLeaves when Open(NY) => Strands(x, y, z),
@@ -631,6 +640,102 @@ public static class StructureDetail
         }
 
         private bool IsLogAt(int d) => NeighbourOf(d) == BlockType.TreeRubble;
+
+        // --- The dusk tree -------------------------------------------------------------------------------
+
+        /// <summary>
+        /// The dusk tree's trunk and roots: a lumpy column of grey bark, wider at the foot, with limbs reaching to
+        /// the wood beside it, cyan glowing cracks, and at the trunk's foot a skull half sunk in its roots with
+        /// red sap running down over it.
+        /// </summary>
+        private byte DuskTrunk(int x, int y, int z)
+        {
+            int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
+            bool column = Linked(0, 1, 0) || Linked(0, -1, 0);
+            bool foot = !BlockInfo.IsDuskTree(_ny);
+            if (foot && column && Linked(1, 0, 0) && Linked(-1, 0, 0) && Skull(x, y, z) is var bone && bone != 0) return bone;
+            int dx = 2 * x - 7, dz = 2 * z - 7, d2 = dx * dx + dz * dz;
+            // Lumps: the bark bulges out a little or sinks back in each eighth round the trunk, every two voxels up.
+            int octant = (dx >= 0 ? 4 : 0) + (dz >= 0 ? 2 : 0) + (Math.Abs(dx) >= Math.Abs(dz) ? 1 : 0);
+            int reach = 34 + 10 * (Hash(gy >> 1, octant, _wx * 31 + _wz) % 3);
+            if (foot && y < 3) reach = Math.Max(reach, 120 - 28 * y);
+            bool inside = column && d2 <= reach;
+            int edge = inside ? reach - d2 : -1;
+            // Limbs out to the wood beside it (roots, the buttress, the first block of each branch).
+            if (!inside && Limbs(x, y, z, BlockInfo.IsDuskTree(_self) && !column ? 36 : 20, out int le)) (inside, edge) = (true, le);
+            if (!inside) return StructurePalette.Empty;
+            return DuskBark(gx, gy, gz, edge, foot && x < 3 && Math.Abs(z - 3) <= 1 && y < 8);
+        }
+
+        /// <summary>A branch or twig of the dusk tree: limbs two voxels thick reaching to the wood beside it.</summary>
+        private byte DuskBranch(int x, int y, int z)
+        {
+            int count = 0;
+            for (int k = 0; k < 27; k++)
+                if ((_links >> k & 1) != 0) count++;
+            int r2 = count <= 1 ? 9 : 16; // a twig's end is thinner
+            int dx = 2 * x + 1 - Size, dy = 2 * y + 1 - Size, dz = 2 * z + 1 - Size;
+            bool knot = dx * dx + dy * dy + dz * dz <= r2;
+            if (!knot && !Limbs(x, y, z, r2, out _)) return StructurePalette.Empty;
+            return DuskBark(_wx * Size + x, _wy * Size + y, _wz * Size + z, 0, false);
+        }
+
+        private bool Linked(int dx, int dy, int dz) => (_links >> NeighbourIndex(dx, dy, dz) & 1) != 0;
+
+        /// <summary>
+        /// True if voxel (x, y, z) is within a limb from the block's middle toward a linked neighbour's, of
+        /// (doubled) radius squared <paramref name="r2"/>; <paramref name="edge"/> is how far inside it is.
+        /// </summary>
+        private bool Limbs(int x, int y, int z, int r2, out int edge)
+        {
+            edge = -1;
+            int px = 2 * x + 1 - Size, py = 2 * y + 1 - Size, pz = 2 * z + 1 - Size;
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if ((dx | dy | dz) == 0 || !Linked(dx, dy, dz)) continue;
+                int ex = dx * 2 * Size, ey = dy * 2 * Size, ez = dz * 2 * Size;
+                long num = (long)px * ex + (long)py * ey + (long)pz * ez, den = (long)ex * ex + (long)ey * ey + (long)ez * ez;
+                long p2 = (long)px * px + (long)py * py + (long)pz * pz;
+                long d2 = num <= 0 ? p2 : num >= den
+                    ? (long)(px - ex) * (px - ex) + (long)(py - ey) * (py - ey) + (long)(pz - ez) * (pz - ez)
+                    : p2 - num * num / den;
+                if (d2 > r2) continue;
+                edge = Math.Max(edge, (int)(r2 - d2));
+            }
+            return edge >= 0;
+        }
+
+        /// <summary>Grey bark with dark furrows; cracks glow cyan at the surface; red sap where it runs.</summary>
+        private static byte DuskBark(int gx, int gy, int gz, int edge, bool sap)
+        {
+            bool surface = edge < 14;
+            if (sap && surface) return StructurePalette.Sap;
+            int col = Hash(gx, gz, 7);
+            if (surface && col % 13 == 0 && Hash(gx >> 1, gy >> 2, gz >> 1) % 4 != 0) return StructurePalette.DuskVein;
+            return (Hash(gx, gy >> 1, gz) % 6) switch
+            {
+                0 => StructurePalette.DuskBarkDark,
+                1 or 2 => StructurePalette.DuskBarkB,
+                _ => StructurePalette.DuskBarkA,
+            };
+        }
+
+        /// <summary>
+        /// A skull five voxels wide in the trunk's foot, facing -X, with dark eyes and nose and a row of teeth;
+        /// 0 where voxel (x, y, z) is not part of it.
+        /// </summary>
+        private static byte Skull(int x, int y, int z)
+        {
+            if (x > 3 || y > 4 || z < 1 || z > 5) return 0;
+            bool corner = (x == 3 || x == 0 && y == 4) && (z == 1 || z == 5) || y == 4 && (z == 1 || z == 5) && x == 3;
+            if (corner) return 0;
+            if (x == 0 && y == 2 && (z == 2 || z == 4)) return StructurePalette.BoneDark;
+            if (x == 0 && y == 1 && z == 3) return StructurePalette.BoneDark;
+            if (x == 0 && y == 0 && (z & 1) == 0) return StructurePalette.BoneDark;
+            return StructurePalette.Bone;
+        }
 
         private static byte StoneShade(int a, int b, int c) => (Hash(a, b, c) % 6) switch
         {

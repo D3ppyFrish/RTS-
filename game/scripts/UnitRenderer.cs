@@ -45,7 +45,7 @@ public partial class UnitRenderer : Node3D
     /// <summary>The batch each player's units of each type are drawn in: [owner][def].</summary>
     private Batch[][] _batchByOwnerDef = Array.Empty<Batch[]>();
     private Batch _loads = null!;
-    private Batch _bands = null!, _heads = null!;
+    private Batch _bands = null!, _heads = null!, _staff = null!;
     /// <summary>A totem's paint while nobody holds its town.</summary>
     private static readonly Color Neutral = new(0.86f, 0.84f, 0.78f);
     private float[] _yawById = new float[1024];
@@ -161,6 +161,7 @@ void fragment() {
             _batches[model] = batch;
             return batch;
         }
+        _staff = Totem("dusk_staff_bearer");
         _bands = Totem("totem_band");
         _heads = Totem("totem_head");
 
@@ -169,6 +170,7 @@ void fragment() {
         float bs = ChunkMesher.BlockSize;
         foreach (var lair in sim.Monsters.Lairs)
         {
+            if (lair.Monster.Lair!.DuskTree) continue; // the warden's lair is the dusk tree itself
             var node = new MeshInstance3D { Mesh = den, MaterialOverride = _material, Position = new Vector3(lair.X + 0.5f, lair.Y, lair.Z + 0.5f) * bs };
             AddChild(node);
             _dens.Add((node, lair));
@@ -241,7 +243,8 @@ void fragment() {
         }
     }
 
-    private Batch BatchOf(int i) => _batchByOwnerDef[_sim.Units.Owner[i] & 7][_sim.Units.Def[i]];
+    private Batch BatchOf(int i) =>
+        _sim.DuskTree.HasStaff(i) ? _staff : _batchByOwnerDef[_sim.Units.Owner[i] & 7][_sim.Units.Def[i]];
 
     /// <summary>Adds an instance turned by yaw (sine s, cosine c) at (x, y, z) metres, tinted <paramref name="tint"/>.</summary>
     private static void Write(Batch b, float c, float s, float x, float y, float z, Color tint)

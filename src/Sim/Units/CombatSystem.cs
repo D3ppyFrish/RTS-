@@ -406,7 +406,7 @@ public sealed partial class CombatSystem
     };
 
     /// <summary>True if the unit is down to <see cref="RetreatPercent"/> of its hit points or less.</summary>
-    public bool Hurt(int i) => U.Hp[i] * 100 <= _sim.Economy.MaxHp(U.Owner[i], Def(i)) * RetreatPercent;
+    public bool Hurt(int i) => U.Hp[i] * 100 <= _sim.MaxHpOf(i) * RetreatPercent;
 
     /// <summary>
     /// How far unit i sees target t: its sight, a quarter more for a ranged unit on the high ground, less in
@@ -928,7 +928,6 @@ public sealed partial class CombatSystem
     {
         var u = U;
         long tick = _sim.Tick;
-        var economy = _sim.Economy;
         for (int i = 0; i < u.Count; i++)
         {
             var def = Def(i);
@@ -938,7 +937,7 @@ public sealed partial class CombatSystem
             long bestShare = long.MaxValue;
             foreach (int j in _near)
             {
-                int max = economy.MaxHp(u.Owner[j], Def(j));
+                int max = _sim.MaxHpOf(j);
                 if (j == i || u.Hp[j] >= max) continue;
                 // A bleeding ally comes before any that is not: it is worse off than its hit points say.
                 long share = (long)u.Hp[j] * 1000 / max + (u.Bleeding[j] != 0 ? 0 : 1000);
@@ -951,7 +950,7 @@ public sealed partial class CombatSystem
             int was = u.Hp[best];
             if (u.Bleeding[best] != 0) Stemmed++;
             u.StopBleeding(best); // a healer stems every bleeding wound at once
-            u.Hp[best] = Math.Min(bestMax, u.Hp[best] + def.Heal);
+            u.Hp[best] = Math.Min(bestMax, u.Hp[best] + _sim.DuskTree.HealOf(i));
             Mend(best, u.Hp[best] - was, u.Hp[best] >= bestMax);
         }
     }
@@ -1095,12 +1094,11 @@ public sealed partial class CombatSystem
         var u = U;
         var rules = Rules;
         long tick = _sim.Tick;
-        var economy = _sim.Economy;
         _homesFound = false;
         for (int i = 0; i < u.Count; i++)
         {
             if ((tick + u.Id[i]) % Tps != 0 || u.Subdued[i] || tick - u.LastFight[i] < rules.RecoveryDelayTicks) continue;
-            int max = economy.MaxHp(u.Owner[i], Def(i));
+            int max = _sim.MaxHpOf(i);
             if (u.Hp[i] >= max) continue;
             var percent = AtHome(i) ? rules.HomeRecoveryPercent : rules.RecoveryPercent;
             // In hundredths of a hit point, so whole percentages of whole hit points add up exactly.
@@ -1121,7 +1119,7 @@ public sealed partial class CombatSystem
     {
         var u = U;
         atHome = false;
-        if (u.Subdued[i] || _sim.Tick - u.LastFight[i] < Rules.RecoveryDelayTicks || u.Hp[i] >= _sim.Economy.MaxHp(u.Owner[i], Def(i)))
+        if (u.Subdued[i] || _sim.Tick - u.LastFight[i] < Rules.RecoveryDelayTicks || u.Hp[i] >= _sim.MaxHpOf(i))
             return false;
         _homesFound = false; // buildings may have changed since the last tick's look
         atHome = AtHome(i);
@@ -1320,6 +1318,10 @@ public sealed partial class CombatSystem
     /// those of <paramref name="owner"/> if <paramref name="allies"/>, otherwise those of every other player.
     /// In a fixed order (cell, then player, then index).
     /// </summary>
+    /// <summary>The owner's units (indexes) within <paramref name="radius"/> across and <paramref name="height"/> levels of a point.</summary>
+    internal void Allies(Fix64 x, int y, Fix64 z, Fix64 radius, int height, int owner, List<int> result) =>
+        Near(x, y, z, radius, height, owner, allies: true, result);
+
     private void Near(Fix64 x, int y, Fix64 z, Fix64 radius, int height, int owner, bool allies, List<int> result)
     {
         result.Clear();

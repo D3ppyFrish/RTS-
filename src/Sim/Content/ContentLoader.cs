@@ -216,7 +216,7 @@ public static class ContentLoader
         private void ReadFaction(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "den");
+            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "den", "duskTree");
             if (id == null) return;
             if (_db.TryGetFaction(id, out _) || id == _db.Wild.Id)
             {
@@ -231,6 +231,7 @@ public static class ContentLoader
                 UiLook = o.Str("uiLook", false) ?? "",
                 Experience = Experience(o),
                 TamesMonsters = o.Bool("tamesMonsters"),
+                DuskTree = o.Enum("duskTree", DuskTreeUse.None, required: false),
             };
             _db.Add(faction);
             Den(o, faction);
@@ -331,7 +332,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -341,6 +342,7 @@ public static class ContentLoader
                 Guard = guard,
                 Leash = Math.Max(leash, guard),
                 Reward = o.Cost("reward"),
+                DuskTree = o.Bool("duskTree"),
             };
         }
 
@@ -1004,7 +1006,8 @@ public static class ContentLoader
                     if (f.EvolvesFrom == u) forms.Add(f);
                 u.Forms = forms.ToArray();
                 if (u.TrainedAt != null && !u.IsTrader) bases.Add(u);
-                if (u.Lair != null) monsters.Add(u);
+                if (u.Lair is { DuskTree: false }) monsters.Add(u);
+                if (u.Lair is { DuskTree: true }) _db.DuskWarden = u;
             }
             _db.BaseUnits = bases.ToArray();
             _db.LairMonsters = monsters.ToArray();
@@ -1029,6 +1032,7 @@ public static class ContentLoader
             {
                 h.Add(f.Id);
                 h.Add(f.TamesMonsters ? 1 : 0);
+                h.Add((int)f.DuskTree);
                 h.Add(f.Den?.Building?.Index ?? -1);
                 h.Add(f.Den?.Form?.Index ?? -1);
                 if (f.Experience is not { } x)
@@ -1124,6 +1128,7 @@ public static class ContentLoader
                     h.Add(lair.Guard);
                     h.Add(lair.Leash);
                     h.Add(lair.Reward);
+                    h.Add(lair.DuskTree ? 1 : 0);
                 }
                 else
                 {

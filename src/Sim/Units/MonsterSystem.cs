@@ -185,13 +185,16 @@ public sealed class MonsterSystem
     /// <summary>
     /// Puts a lair of the monster with its den at column (x, z), on the ground there, and spawns its pack on
     /// the ground around it (every other column, nearest first, skipping columns more than
-    /// <see cref="GuardHeight"/> levels off the den's). Null if there is no ground at (x, z).
+    /// <see cref="GuardHeight"/> levels off the den's). With <paramref name="near"/>, the den and pack stand at
+    /// the levels nearest it rather than on the highest ground (under the dusk tree's branches, say). Null if
+    /// there is no ground at (x, z).
     /// </summary>
-    public Lair? Place(UnitDef monster, int x, int z)
+    public Lair? Place(UnitDef monster, int x, int z, int near = -1)
     {
         if (monster.Lair is not { } def) throw new ArgumentException($"'{monster.Id}' keeps no lair", nameof(monster));
         if (!World.InBounds(x, 0, z)) return null;
-        int y = Walk.GroundLevel(World, x, z);
+        int Ground(int gx, int gz) => near >= 0 ? Walk.NearestStandLevel(World, gx, gz, near, GuardHeight) : Walk.GroundLevel(World, gx, gz);
+        int y = Ground(x, z);
         if (y < 0) return null;
         var lair = new Lair(_nextId++, monster, x, y, z);
         foreach (var (ox, oz) in PackSpots)
@@ -199,9 +202,9 @@ public sealed class MonsterSystem
             if (lair.PackIds.Count == def.Pack) break;
             int px = x + ox, pz = z + oz;
             if (!World.InBounds(px, 0, pz)) continue;
-            int py = Walk.GroundLevel(World, px, pz);
+            int py = Ground(px, pz);
             if (py < 0 || Math.Abs(py - y) > GuardHeight) continue;
-            int id = _sim.SpawnUnit(Simulation.WildPlayer, monster.Id, px, pz);
+            int id = _sim.SpawnUnit(Simulation.WildPlayer, monster.Id, px, pz, py);
             if (id > 0) lair.PackIds.Add(id);
         }
         _lairs.Add(lair);
@@ -523,7 +526,7 @@ public sealed class MonsterSystem
 
     /// <summary>True if the player can use the den now: it is cleared and unused, their faction has a use for it, and a unit of theirs among the units can.</summary>
     public bool CanUseDen(int player, Lair lair, IEnumerable<int> units) =>
-        lair.Cleared && !lair.Used && DenUse(player) is { } use && DenUser(lair, Owned(player, units), use) >= 0;
+        lair.Cleared && !lair.Used && !lair.Monster.Lair!.DuskTree && DenUse(player) is { } use && DenUser(lair, Owned(player, units), use) >= 0;
 
     private IEnumerable<int> Owned(int player, IEnumerable<int> units)
     {
@@ -534,7 +537,8 @@ public sealed class MonsterSystem
     /// <summary>The player uses the den, if they can (see the class notes); it is gone from the map.</summary>
     internal void Apply(DenCommand c)
     {
-        if (GetLair(c.Lair) is not { } lair || !lair.Cleared || lair.Used || DenUse(c.PlayerId) is not { } use) return;
+        if (GetLair(c.Lair) is not { } lair || !lair.Cleared || lair.Used || lair.Monster.Lair!.DuskTree
+            || DenUse(c.PlayerId) is not { } use) return;
         var units = _sim.OwnedUnits(c);
         int user = DenUser(lair, units, use);
         if (user < 0) return;

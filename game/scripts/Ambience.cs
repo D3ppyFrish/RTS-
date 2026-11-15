@@ -77,6 +77,7 @@ public partial class Ambience : Node3D
         PlaceStars();
         FindLava();
         PlaceSwamp();
+        PlaceDuskMist();
         Rebuild();
     }
 
@@ -154,6 +155,19 @@ public partial class Ambience : Node3D
         _mistMat?.SetShaderParameter("amount", Mathf.Max(mist, look.Mist * 0.7f));
         _mistMat?.SetShaderParameter("tint", light.Haze.Lightened(0.25f));
         foreach (var m in _mist) m.Visible = mist > 0.01f || look.Mist > 0.01f;
+
+        // The dusk tree: purple mist about its roots and a cold cyan glow, deeper at night, gone once it falls.
+        if (_duskMistMat != null)
+        {
+            bool stands = !_sim.DuskTree.Razed;
+            _duskMistMat.SetShaderParameter("amount", 0.75f + 0.5f * dark);
+            foreach (var m in _duskMist) m.Visible = stands;
+            if (_duskLight != null)
+            {
+                _duskLight.Visible = stands && dark > 0.05f;
+                _duskLight.LightEnergy = 1.6f * dark;
+            }
+        }
 
         // Lightning in a storm: a white flash now and then.
         if (look.Rain > 0.85f && look.Cloud > 0.9f)
@@ -375,6 +389,48 @@ public partial class Ambience : Node3D
             AddChild(plane);
             _mist.Add(plane);
         }
+    }
+
+    private ShaderMaterial? _duskMistMat;
+    private readonly List<MeshInstance3D> _duskMist = new();
+    private OmniLight3D? _duskLight;
+
+    private void PlaceDuskMist()
+    {
+        var tree = _sim.DuskTree;
+        if (!tree.Exists) return;
+        const int r = 11, size = 2 * r + 1;
+        var image = Image.CreateEmpty(size, size, false, Image.Format.R8);
+        for (int z = 0; z < size; z++)
+        for (int x = 0; x < size; x++)
+        {
+            float d = Mathf.Sqrt((x - r) * (x - r) + (z - r) * (z - r)) / r;
+            image.SetPixel(x, z, new Color(Mathf.Clamp(1.15f - d * 1.1f, 0f, 1f), 0, 0));
+        }
+        var origin = new Vector2(tree.X - r + 0.5f, tree.Z - r + 0.5f) * Bs;
+        _duskMistMat = new ShaderMaterial { Shader = new Shader { Code = MistCode } };
+        _duskMistMat.SetShaderParameter("mask", ImageTexture.CreateFromImage(image));
+        _duskMistMat.SetShaderParameter("mask_origin", origin);
+        _duskMistMat.SetShaderParameter("mask_size", new Vector2(size, size) * Bs);
+        _duskMistMat.SetShaderParameter("tint", new Color(0.55f, 0.32f, 0.78f));
+        _terrain.Track(_duskMistMat);
+        for (int k = 0; k < 3; k++)
+        {
+            var plane = new MeshInstance3D
+            {
+                Mesh = new PlaneMesh { Size = new Vector2(size, size) * Bs, Material = _duskMistMat },
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Position = new Vector3(tree.X + 0.5f, tree.Y + 0.3f + 0.7f * k, tree.Z + 0.5f) * Bs,
+            };
+            AddChild(plane);
+            _duskMist.Add(plane);
+        }
+        _duskLight = new OmniLight3D
+        {
+            LightColor = new Color(0.35f, 0.95f, 1f), OmniRange = 9f * Bs, OmniAttenuation = 1.5f, ShadowEnabled = false,
+            Position = new Vector3(tree.X + 0.5f, tree.Y + 4f, tree.Z + 0.5f) * Bs, Visible = false,
+        };
+        AddChild(_duskLight);
     }
 
     // --- Shaders -----------------------------------------------------------------------------------

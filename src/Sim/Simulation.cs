@@ -42,6 +42,8 @@ public sealed class Simulation
     public EvolutionSystem Evolution { get; }
     /// <summary>Wild monsters and their lairs, and taming them (the Orcs').</summary>
     public MonsterSystem Monsters { get; }
+    /// <summary>The map's dusk tree, its warden, healing it or hacking it down, and the Dusk Staff.</summary>
+    public DuskTreeSystem DuskTree { get; }
     /// <summary>City-states' towns: their totems and holders, guards, tribute, caravan trade and mercenaries.</summary>
     public CityStateSystem Cities { get; }
     /// <summary>Who is still in the match and who won: a player whose town halls are all gone is out.</summary>
@@ -86,6 +88,7 @@ public sealed class Simulation
         Combat = new CombatSystem(this);
         Evolution = new EvolutionSystem(this);
         Monsters = new MonsterSystem(this);
+        DuskTree = new DuskTreeSystem(this);
         Cities = new CityStateSystem(this);
         Match = new MatchSystem(this);
         Automation = new AutomationSystem(this);
@@ -170,10 +173,10 @@ public sealed class Simulation
     /// Creates a unit standing on the ground at (x, z) (under any tree canopy). Used by match setup and tests;
     /// during play units come from buildings. Returns the unit id, or -1 if there is no ground there.
     /// </summary>
-    public int SpawnUnit(int owner, string unitId, int x, int z)
+    public int SpawnUnit(int owner, string unitId, int x, int z, int y = -1)
     {
         var def = Content.Unit(unitId);
-        int y = Walk.GroundLevel(World, x, z);
+        if (y < 0) y = Walk.GroundLevel(World, x, z);
         if (y < 0) return -1;
         return Units.Spawn(owner, def.Index, Fix64.FromInt(x) + Fix64.Half, y, Fix64.FromInt(z) + Fix64.Half, Economy.MaxHp(owner, def));
     }
@@ -240,9 +243,15 @@ public sealed class Simulation
 
     /// <summary>
     /// Match setup: a monster lair on the way from every start area to the map centre, with its pack (see
-    /// <see cref="MonsterSystem.PlaceAtStarts"/>). Call after placing the starting buildings and units.
+    /// <see cref="MonsterSystem.PlaceAtStarts"/>), and the Dusk Warden by the map's dusk tree (see
+    /// <see cref="DuskTreeSystem.Place"/>). Returns the start areas' lairs. Call after placing the starting buildings and units.
     /// </summary>
-    public List<Lair> SpawnLairs() => Monsters.PlaceAtStarts();
+    public List<Lair> SpawnLairs()
+    {
+        var lairs = Monsters.PlaceAtStarts();
+        DuskTree.Place();
+        return lairs;
+    }
 
     /// <summary>
     /// Match setup: a town for each city-state, about as far from every start area as from the others, each
@@ -293,6 +302,7 @@ public sealed class Simulation
         Blood.Step();
         Evolution.Step();
         Monsters.Step();
+        DuskTree.Step();
         Cities.Step();
         Paths.Step(Units, Tick);
         _movement.Step();
@@ -315,7 +325,7 @@ public sealed class Simulation
         ^ Combat.ComputeHash() * 0x94D049BB133111EBUL ^ Monsters.ComputeHash() * 0xD6E8FEB86659FD93UL
         ^ Cities.ComputeHash() * 0xA24BAED4963EE407UL ^ Match.ComputeHash() * 0x9FB21C651E98DF25UL
         ^ Physics.ComputeHash() * 0x61C8864680B583EBUL
-        ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL
+        ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL ^ DuskTree.ComputeHash() * 0x3C6EF372FE94F82BUL
         ^ (_fog ? Vision.ComputeHash() * 0xBF58476D1CE4E5B9UL : 0)
         ^ (_testMode ? 0x7A3E1C5B9D2F4E61UL ^ Sandbox.ComputeHash() * 0xE7037ED1A0B428DBUL : 0)
         ^ (_dayNight ? 0x5851F42D4C957F2DUL ^ (ulong)_dayStart * 0x2545F4914F6CDD1DUL ^ Conditions.ComputeHash() * 0xD1B54A32D192ED03UL : 0);
@@ -323,6 +333,9 @@ public sealed class Simulation
     private void Apply(Command command)
     {
         if (Sandbox.Apply(command)) return;
+        // Any other order stops units working on the dusk tree.
+        if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or AutomateCommand))
+            DuskTree.Release(this, released);
         switch (command)
         {
             case DigCommand d when BlockInfo.IsDiggable(World.Get(d.X, d.Y, d.Z)):
@@ -376,6 +389,8 @@ public sealed class Simulation
             case AutoEvolveCommand e: Evolution.Apply(e); break;
             case TameCommand t: Monsters.Apply(t); break;
             case DenCommand d: Monsters.Apply(d); break;
+            case DuskTreeCommand dt: DuskTree.Apply(dt); break;
+            case BloomCommand bl: DuskTree.Apply(bl); break;
             case TradeCommand t: Economy.Apply(t); break;
             case HireCommand h: Cities.Apply(h); break;
             case SurrenderCommand s: Match.Apply(s); break;
@@ -555,6 +570,10 @@ public sealed class Simulation
     /// beaten monsters, until the player has them ridden or recruited (see <see cref="MonsterSystem"/>), and a
     /// city-state town's guards and tribute caravans, which go about their own business (see <see cref="CityStateSystem"/>).
     /// </summary>
+    /// <summary>Unit i's most hit points: its type's for its owner, and the Dusk Staff's if it bears it.</summary>
+    public int MaxHpOf(int i) =>
+        Economy.MaxHp(Units.Owner[i], Content.Units[Units.Def[i]]) + (DuskTree.HasStaff(i) ? DuskTreeSystem.StaffHp : 0);
+
     internal List<int> OwnedUnits(UnitsCommand c)
     {
         var result = new List<int>(c.Units.Length);

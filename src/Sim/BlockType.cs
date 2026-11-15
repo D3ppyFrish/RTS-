@@ -79,17 +79,28 @@ public enum BlockType : byte
     DuskLeaves,
     /// <summary>A giant mushroom's cap.</summary>
     MushroomCap,
+    /// <summary>
+    /// The dusk tree's gnarled trunk and roots: one tree on each map, guarded by the Dusk Warden (see
+    /// <see cref="Units.DuskTreeSystem"/>). Not a resource: it cannot be cut or dug.
+    /// </summary>
+    DuskWood,
+    /// <summary>The dusk tree's bare, twisting branches and twigs (see <see cref="DuskWood"/>).</summary>
+    DuskBranch,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.MushroomCap;
+    public const BlockType Last = BlockType.DuskBranch;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
-    /// <summary>Bedrock, water and lava cannot be dug.</summary>
-    public static bool IsDiggable(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Bedrock && t != BlockType.Lava;
+    /// <summary>Bedrock, water, lava and the dusk tree cannot be dug.</summary>
+    public static bool IsDiggable(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Bedrock && t != BlockType.Lava
+        && !IsDuskTree(t);
+
+    /// <summary>The dusk tree's wood: its trunk, roots and branches (not its leaves).</summary>
+    public static bool IsDuskTree(BlockType t) => t is BlockType.DuskWood or BlockType.DuskBranch;
     /// <summary>Solid ground nothing can stand on (lava).</summary>
     public static bool CanStandOn(BlockType t) => IsSolid(t) && t != BlockType.Lava;
 
