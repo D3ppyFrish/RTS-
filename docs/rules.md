@@ -208,6 +208,15 @@ its commands played back ends the same. An order of the player's always comes fi
   is most likely out of its reach as well. A worker that gives up again and again is most likely stuck,
   in a pit say: from its second failure in a row it waits 10 seconds before looking again, then 20, 40
   and at most 60, instead of switching between idle and working.
+- **Work priorities** (`PriorityCommand`, `DefaultPriorityCommand`, Ctrl+J): each worker has a priority
+  list, the kinds of work it takes on its own, top first: build, farm, smelt, gather what's needed most
+  (the rule above), or gather one good (food, wood, stone, iron ore or coal; iron ore and coal then even
+  without a smelter). An idle automatic worker still takes what it carries to storage first, then goes
+  down its list and takes the first kind of work there is some of (the nearest site, farm or smelter, or
+  within 40 columns for gathering); work left off the list it never takes on its own. A worker without a
+  list of its own follows its player's default list, and so do the workers they train; the default starts
+  as build, farm, smelt, gather what's needed, which is how automatic workers always worked. A new list
+  counts from the worker's next job. Lists are part of the game state.
 - **Repeat** (`RepeatCommand`, P): a building on repeat queues each unit it finishes again as soon as
   there are goods for it and a minute's food left for everyone.
 - **Houses and farms**: a player whose workers are all automatic (Shift+J) also gets buildings: a house

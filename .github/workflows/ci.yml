@@ -111,6 +111,8 @@ jobs:
         run: bash scripts/ui-bridge-screenshots.sh build/ui
       - name: Plan a house and a town hall, build a house, start a plan with a right click and remove one, with scripted input
         run: bash scripts/ui-plan-screenshots.sh build/ui
+      - name: Open the work priorities menu, put wood first on a worker's list and take smelting off the default list, with scripted input
+        run: bash scripts/ui-priorities-screenshots.sh build/ui
       - name: Two armies fight and wounded units bleed, leaving trails and pools, with scripted input
         run: bash scripts/ui-blood-screenshots.sh build/ui
       - name: Test mode places trees, water, lava, units, a building, a lair and blood, sets cheats, weather and time, saves and loads a scenario, with scripted input

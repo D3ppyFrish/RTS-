@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Rts.Sim;
+using Rts.Sim.Automation;
 using Rts.Sim.Content;
 using Rts.Sim.Economy;
 using Rts.Sim.Units;
@@ -342,7 +343,8 @@ public partial class PlayerControl : Node
             case Key.Apostrophe: ToggleBridge(); break;
             case Key.U: TrainAtSelected(null); break;
             case Key.J:
-                if (key.ShiftPressed) ToggleAutoAll();
+                if (key.CtrlPressed) TogglePriorities();
+                else if (key.ShiftPressed) ToggleAutoAll();
                 else ToggleAutoSelected();
                 break;
             case Key.P: ToggleRepeat(); break;
@@ -374,6 +376,7 @@ public partial class PlayerControl : Node
                 break;
             case Key.Escape:
                 if (TechTreeOpen) ToggleTechTree();
+                else if (PrioritiesOpen) TogglePriorities();
                 else if (Tool != ToolMode.Select) SetTool(ToolMode.Select);
                 else SetSelection(Array.Empty<int>());
                 break;
@@ -1167,7 +1170,46 @@ public partial class PlayerControl : Node
     public void ToggleTechTree()
     {
         TechTreeOpen = !TechTreeOpen;
+        if (TechTreeOpen) PrioritiesOpen = false;
         Changed?.Invoke();
+    }
+
+    // ---- Work priorities ----
+
+    /// <summary>The work priorities menu (Ctrl+J) is open.</summary>
+    public bool PrioritiesOpen { get; private set; }
+
+    public void TogglePriorities()
+    {
+        PrioritiesOpen = !PrioritiesOpen;
+        if (PrioritiesOpen) TechTreeOpen = false;
+        Changed?.Invoke();
+    }
+
+    /// <summary>Gives the workers (yours, by id) a priority list; <see cref="WorkPriorities.UseDefault"/> puts them back on your default.</summary>
+    public void SetPriorities(int[] workers, ulong list)
+    {
+        if (workers.Length == 0) return;
+        _sim.Schedule(_sim.Tick, new PriorityCommand(LocalPlayer, workers, list));
+        Changed?.Invoke();
+    }
+
+    /// <summary>Sets your default priority list, for workers without one of their own and those you train later.</summary>
+    public void SetDefaultPriorities(ulong list)
+    {
+        _sim.Schedule(_sim.Tick, new DefaultPriorityCommand(LocalPlayer, list));
+        Changed?.Invoke();
+    }
+
+    /// <summary>All your workers, by id, in the order they came.</summary>
+    public List<int> AllOwnWorkers()
+    {
+        var u = _sim.Units;
+        var ids = new List<int>();
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].Role == UnitRole.Worker && !u.Subdued[i]) ids.Add(u.Id[i]);
+        ids.Sort();
+        return ids;
     }
 
     /// <summary>Where the building would go with its middle under the cursor.</summary>
@@ -1576,7 +1618,10 @@ public partial class PlayerControl : Node
                $"ghost={(Ghost.Visible ? Ghost.Result.ToString() : "none")} road={_roadPreview.Count} " +
                $"plans={plans} plans_ready={ready} plan_mode={(PlanMode ? 1 : 0)} " +
                $"food={stock[(int)Good.Food]} wood={stock[(int)Good.Wood]} stone={stock[(int)Good.Stone]} iron={stock[(int)Good.Iron]} " +
-               $"techtree={(TechTreeOpen ? 1 : 0)} research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
+               $"techtree={(TechTreeOpen ? 1 : 0)} priorities_menu={(PrioritiesOpen ? 1 : 0)} " +
+               $"default_priorities={WorkPriorities.ToLog(_sim.Automation.DefaultPriorities(LocalPlayer))} " +
+               $"priorities={(first >= 0 && _sim.Content.Units[u.Def[first]].Role == UnitRole.Worker ? WorkPriorities.ToLog(u.Priorities[first]) : "none")} " +
+               $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
                $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} routing={routing} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +

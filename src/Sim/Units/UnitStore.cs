@@ -208,6 +208,11 @@ public sealed class UnitStore
     /// where it is until it is given a job or switched to automatic again.
     /// </summary>
     public bool[] Held = Array.Empty<bool>();
+    /// <summary>
+    /// Its priority list (see <see cref="Automation.WorkPriorities"/>), or
+    /// <see cref="Automation.WorkPriorities.UseDefault"/> to follow its player's default list.
+    /// </summary>
+    public ulong[] Priorities = Array.Empty<ulong>();
 
     // Evolution (see EvolutionSystem).
     /// <summary>Experience earned from fighting, building and staying alive, for factions whose units earn it.</summary>
@@ -316,6 +321,7 @@ public sealed class UnitStore
         LastFight[i] = 0;
         Mending[i] = Fix64.Zero;
         Auto[i] = Held[i] = false;
+        Priorities[i] = 0;
         Xp[i] = 0;
         Subdued[i] = false;
         Town[i] = 0;
@@ -405,7 +411,7 @@ public sealed class UnitStore
             Mix((int)Combat[i]); Mix(Target[i]); Mix(TargetBuilding[i]); Mix(DestX[i]); Mix(DestZ[i]); Mix(DestY[i]);
             Mix(Cooldown[i]); Mix(Morale[i]); Mix(Rout[i]); Mix(ChaseRetry[i]); Mix(CombatWait[i]); Mix(HitBy[i]);
             Mix(LosBlocked[i] ? 1 : 0); Mix((int)Stance[i]); Mix(LastFight[i]); Mix(Mending[i].Raw);
-            Mix(Auto[i] ? 1 : 0); Mix(Held[i] ? 1 : 0);
+            Mix(Auto[i] ? 1 : 0); Mix(Held[i] ? 1 : 0); Mix((long)Priorities[i]);
             Mix(Xp[i]); Mix(Subdued[i] ? 1 : 0); Mix(Town[i]);
             for (int p = 0; p < Body.Parts; p++)
                 Mix(Wounds[i * Body.Parts + p] | ExtraArmour[i * Body.Parts + p] << 8 | BleedLeft[i * Body.Parts + p] << 16);
@@ -433,7 +439,7 @@ public sealed class UnitStore
         Cooldown[to] = Cooldown[from]; Morale[to] = Morale[from]; Rout[to] = Rout[from];
         ChaseRetry[to] = ChaseRetry[from]; CombatWait[to] = CombatWait[from]; HitBy[to] = HitBy[from];
         LosBlocked[to] = LosBlocked[from]; Stance[to] = Stance[from]; LastFight[to] = LastFight[from]; Mending[to] = Mending[from];
-        Auto[to] = Auto[from]; Held[to] = Held[from];
+        Auto[to] = Auto[from]; Held[to] = Held[from]; Priorities[to] = Priorities[from];
         Xp[to] = Xp[from]; Subdued[to] = Subdued[from]; Town[to] = Town[from];
         Array.Copy(Wounds, from * Body.Parts, Wounds, to * Body.Parts, Body.Parts);
         Array.Copy(ExtraArmour, from * Body.Parts, ExtraArmour, to * Body.Parts, Body.Parts);
@@ -463,7 +469,7 @@ public sealed class UnitStore
         Array.Resize(ref ChaseRetry, capacity); Array.Resize(ref CombatWait, capacity); Array.Resize(ref HitBy, capacity);
         Array.Resize(ref LosBlocked, capacity); Array.Resize(ref Stance, capacity);
         Array.Resize(ref LastFight, capacity); Array.Resize(ref Mending, capacity);
-        Array.Resize(ref Auto, capacity); Array.Resize(ref Held, capacity);
+        Array.Resize(ref Auto, capacity); Array.Resize(ref Held, capacity); Array.Resize(ref Priorities, capacity);
         Array.Resize(ref Xp, capacity); Array.Resize(ref Subdued, capacity); Array.Resize(ref Town, capacity);
         Array.Resize(ref Wounds, capacity * Body.Parts); Array.Resize(ref ExtraArmour, capacity * Body.Parts);
         Array.Resize(ref Bleeding, capacity); Array.Resize(ref BleedLeft, capacity * Body.Parts);
