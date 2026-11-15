@@ -43,6 +43,8 @@ public sealed class PlayerEconomy
     public bool Starving { get; internal set; }
     /// <summary>Workers it trains take jobs on their own (see <see cref="AutomateAllCommand"/>).</summary>
     public bool AutoWorkers { get; internal set; }
+    /// <summary>The priority list its workers follow unless they have one of their own (see <see cref="Automation.WorkPriorities"/>).</summary>
+    public ulong DefaultPriorities { get; internal set; } = Automation.WorkPriorities.Standard;
     /// <summary>Goods gathered from the world (blocks, farms), by <see cref="Good"/>.</summary>
     public int[] Gathered { get; } = new int[Goods.Count];
     /// <summary>Goods paid for buildings, roads and training.</summary>
@@ -227,6 +229,7 @@ public sealed partial class EconomySystem
         {
             Mix(p.Starving ? 1 : 0);
             Mix(p.AutoWorkers ? 1 : 0);
+            Mix((long)p.DefaultPriorities);
             Mix(p.Researching);
             Mix(p.ResearchTicks);
             for (int t = 0; t < p.Researched.Length; t++)

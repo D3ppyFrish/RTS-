@@ -74,6 +74,8 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!;
+    private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
     private SelectionBox _box = null!;
     private bool _updatingSlider;
@@ -126,6 +128,13 @@ public partial class Hud : CanvasLayer
         _techPanel.GrowHorizontal = Control.GrowDirection.Both;
         _techPanel.GrowVertical = Control.GrowDirection.Both;
         root.AddChild(_techPanel);
+
+        _prioritiesPanel = new PrioritiesPanel { Visible = false };
+        _prioritiesPanel.Init(_sim, _control);
+        Place(_prioritiesPanel, Control.LayoutPreset.Center, 0, 0);
+        _prioritiesPanel.GrowHorizontal = Control.GrowDirection.Both;
+        _prioritiesPanel.GrowVertical = Control.GrowDirection.Both;
+        root.AddChild(_prioritiesPanel);
 
         _toolLabel = MakeLabel("", 14);
         Place(_toolLabel, Control.LayoutPreset.BottomRight, -14, -10);
@@ -180,6 +189,11 @@ public partial class Hud : CanvasLayer
         _autoButton.TooltipText = "All your workers, and those you train, find their own jobs; houses and farms go up when needed";
         _autoButton.Pressed += () => _control.ToggleAutoAll();
         row.AddChild(_autoButton);
+        _prioritiesButton = MakeButton("Priorities");
+        _prioritiesButton.Name = "priorities_button";
+        _prioritiesButton.TooltipText = "Work priorities [Ctrl+J]: what each automatic worker does first, and the default list for new workers";
+        _prioritiesButton.Pressed += () => _control.TogglePriorities();
+        row.AddChild(_prioritiesButton);
         _beatenButton = MakeButton("");
         _beatenButton.Name = "beaten_button";
         _beatenButton.ToggleMode = false;
@@ -439,6 +453,14 @@ public partial class Hud : CanvasLayer
         _digButton.Visible = false;
         column.AddChild(_digButton);
 
+        _workerPrioritiesButton = MakeToolButton("Work priorities  [Ctrl+J]");
+        _workerPrioritiesButton.Name = "worker_priorities";
+        _workerPrioritiesButton.ToggleMode = false;
+        _workerPrioritiesButton.TooltipText = "Set what the selected workers do first when they find their own work";
+        _workerPrioritiesButton.Pressed += () => _control.TogglePriorities();
+        _workerPrioritiesButton.Visible = false;
+        column.AddChild(_workerPrioritiesButton);
+
         _tameRow = new HBoxContainer { Visible = false };
         _tameRow.AddThemeConstantOverride("separation", 4);
         _tameLabel = MakeLabel("", 13);
@@ -622,6 +644,13 @@ public partial class Hud : CanvasLayer
         _techButton.SetPressedNoSignal(_control.TechTreeOpen);
         _autoButton.SetPressedNoSignal(_sim.Economy.AutoWorkers(PlayerControl.LocalPlayer));
         _techPanel.Visible = _control.TechTreeOpen;
+        _prioritiesButton.SetPressedNoSignal(_control.PrioritiesOpen);
+        if (_control.PrioritiesOpen && !_prioritiesPanel.Visible)
+        {
+            _prioritiesPanel.Visible = true;
+            _prioritiesPanel.Opened();
+        }
+        _prioritiesPanel.Visible = _control.PrioritiesOpen;
         for (int i = 0; i < _speedButtons.Count; i++) _speedButtons[i].SetPressedNoSignal(!_clock.Paused && i == _clock.SpeedIndex);
         _pausedBanner.Visible = _clock.Paused;
         _pausedHint.Text = MatchOver ? "The match is over. Space lets it run on." : "Orders can still be given. Space to resume.";
@@ -666,6 +695,7 @@ public partial class Hud : CanvasLayer
         _toolLabel.Text = DescribeTool();
         _researchLabel.Text = DescribeResearch();
         if (_techPanel.Visible) _techPanel.Refresh();
+        if (_prioritiesPanel.Visible) _prioritiesPanel.Refresh();
     }
 
     private string DescribeResearch()
@@ -782,6 +812,7 @@ public partial class Hud : CanvasLayer
         }
         _digButton.Visible = _control.OwnDiggers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Dig;
         _digButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Dig);
+        _workerPrioritiesButton.Visible = _control.OwnWorkers().Count > 0;
         RefreshEvolveRows();
         RefreshTaming();
         RefreshDen();

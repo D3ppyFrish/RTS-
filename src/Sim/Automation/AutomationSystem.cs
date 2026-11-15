@@ -13,7 +13,8 @@ namespace Rts.Sim.Automation;
 /// given them just then. So it never does anything a player could not do by hand.
 ///
 /// An automatic worker (<see cref="UnitStore.Auto"/>) with nothing to do takes the most useful job near
-/// it. It first drops off what it carries. Then it helps build a site that is short of builders, works a
+/// it. It first drops off what it carries. Then it goes down its priority list (see <see cref="WorkPriorities"/>),
+/// which by default is the standard order: it helps build a site that is short of builders, works a
 /// farm that has room, or supplies a smelter that has no hauler and something to smelt. Failing those, it
 /// gathers the good the player needs most (see <see cref="FindGather"/>). A worker the player moves, stops
 /// or sends to fight is left alone (<see cref="UnitStore.Held"/>) until it is given a job or made automatic
@@ -228,6 +229,39 @@ public sealed class AutomationSystem
         }
     }
 
+    /// <summary>Sets the priority list of the command's workers (see <see cref="WorkPriorities"/>).</summary>
+    internal void Apply(PriorityCommand c)
+    {
+        foreach (int i in _sim.OwnedUnits(c))
+        {
+            if (!IsWorker(i)) continue;
+            U.Priorities[i] = c.List;
+            _retry.Remove(U.Id[i]); // what it may look for has changed: it looks at its next turn
+        }
+    }
+
+    /// <summary>Sets the player's default priority list; <see cref="WorkPriorities.UseDefault"/> puts back the standard one.</summary>
+    internal void Apply(DefaultPriorityCommand c)
+    {
+        if (!Economy.HasPlayer(c.PlayerId)) return;
+        Economy.Player(c.PlayerId).DefaultPriorities = c.List == WorkPriorities.UseDefault ? WorkPriorities.Standard : c.List;
+        var u = U;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == c.PlayerId && u.Priorities[i] == WorkPriorities.UseDefault) _retry.Remove(u.Id[i]);
+    }
+
+    /// <summary>The priority list worker i goes by: its own, or else its player's default.</summary>
+    public ulong PrioritiesOf(int i)
+    {
+        ulong own = U.Priorities[i];
+        if (own != WorkPriorities.UseDefault) return own;
+        return DefaultPriorities(U.Owner[i]);
+    }
+
+    /// <summary>The player's default priority list (the standard one until they set theirs). Changes nothing.</summary>
+    public ulong DefaultPriorities(int player) =>
+        player >= 0 && player < Economy.PlayerCount ? Economy.Player(player).DefaultPriorities : WorkPriorities.Standard;
+
     /// <summary>The player hands the worker (back) to automation: it looks for work at its next turn.</summary>
     private void LetGo(int i)
     {
@@ -290,42 +324,59 @@ public sealed class AutomationSystem
             return store != null ? new WorkCommand(owner, me, store.Id) : null;
         }
 
-        // A building that needs a worker: a site short of builders, then a farm with room, then a smelter
-        // with no hauler; the nearest of the most needed.
-        Building? best = null;
-        int bestRank = int.MaxValue;
-        long bestD = long.MaxValue;
-        foreach (var b in Buildings.All)
+        // The nearest building of each kind that needs a worker: a site short of builders (rank 0), a farm
+        // with room (1), a smelter with no hauler (2).
+        Span<int> nearest = stackalloc int[3];
+        Span<long> nearestD = stackalloc long[3];
+        nearest.Fill(-1);
+        var all = Buildings.All;
+        for (int k = 0; k < all.Count; k++)
         {
+            var b = all[k];
             if (b.Owner != owner || Avoided(-(long)b.Id, tick)) continue;
             int rank = Wants(b, s);
-            if (rank < 0 || rank > bestRank) continue;
+            if (rank < 0) continue;
             long d = b.CentreDistance2(x, z);
-            if (rank == bestRank && d >= bestD) continue;
-            best = b;
-            bestRank = rank;
-            bestD = d;
-        }
-        if (best != null)
-        {
-            var job = best.State == BuildingState.Site ? UnitJob.Build
-                : best.Def.Kind == BuildingKind.Farm ? UnitJob.Farm : UnitJob.Haul;
-            assignment = new Assignment(tick, job, best.Id, 0, 0, 0, BlockType.Air);
-            return new WorkCommand(owner, me, best.Id);
+            if (nearest[rank] >= 0 && d >= nearestD[rank]) continue;
+            nearest[rank] = k;
+            nearestD[rank] = d;
         }
 
-        // Something to gather. Looking is slow, so a worker that found nothing waits a while to look again
-        // (but takes a building's work as soon as there is some).
+        // Down the worker's priority list: the first kind of work there is some of. Looking for something
+        // to gather is slow, so a worker that found nothing waits a while to look again (but takes a
+        // building's work as soon as there is some).
         int id = u.Id[i];
-        if (_retry.TryGetValue(id, out long at) && tick < at) return null;
-        if (!FindGather(i, s, out int gx, out int gy, out int gz))
+        bool mayGather = !_retry.TryGetValue(id, out long at) || tick >= at;
+        bool looked = false;
+        foreach (var kind in WorkPriorities.Unpack(PrioritiesOf(i)))
         {
-            _retry[id] = tick + RetryTicks;
-            return null;
+            int rank = kind switch { WorkKind.Build => 0, WorkKind.Farm => 1, WorkKind.Smelt => 2, _ => -1 };
+            if (rank >= 0)
+            {
+                if (nearest[rank] < 0) continue;
+                var best = all[nearest[rank]];
+                var job = rank == 0 ? UnitJob.Build : rank == 1 ? UnitJob.Farm : UnitJob.Haul;
+                assignment = new Assignment(tick, job, best.Id, 0, 0, 0, BlockType.Air);
+                return new WorkCommand(owner, me, best.Id);
+            }
+            if (!mayGather) continue;
+            looked = true;
+            int only = kind == WorkKind.Needed ? -1 : GatherIndex(WorkPriorities.GoodOf(kind)!.Value);
+            if (!FindGather(i, s, only, out int gx, out int gy, out int gz)) continue;
+            _retry.Remove(id);
+            assignment = new Assignment(tick, UnitJob.Gather, 0, gx, gy, gz, World.Get(gx, gy, gz));
+            return new GatherCommand(owner, me, gx, gy, gz);
         }
-        _retry.Remove(id);
-        assignment = new Assignment(tick, UnitJob.Gather, 0, gx, gy, gz, World.Get(gx, gy, gz));
-        return new GatherCommand(owner, me, gx, gy, gz);
+        if (looked) _retry[id] = tick + RetryTicks;
+        return null;
+    }
+
+    /// <summary>The index in <see cref="Gatherable"/> of a good.</summary>
+    private static int GatherIndex(Good good)
+    {
+        for (int k = 0; k < Gatherable.Length; k++)
+            if (Gatherable[k].Good == good) return k;
+        return -1;
     }
 
     /// <summary>
@@ -352,12 +403,13 @@ public sealed class AutomationSystem
     /// The block for worker i to gather, if any: of the goods the player could use, the one with the most
     /// need, at its nearest block within <see cref="SearchRadius"/> columns and <see cref="SearchHeight"/>
     /// levels that no other worker has claimed and that a worker can stand next to (for a tree, the base
-    /// of its trunk). A good's need is its share of the gatherers (food and wood 3, stone 2, iron ore and
+    /// of its trunk). With <paramref name="only"/> (an index in <see cref="Gatherable"/>) it looks for that
+    /// good alone, smelter or not; with -1, for all of them by need. A good's need is its share of the gatherers (food and wood 3, stone 2, iron ore and
     /// coal 1, those two only with a smelter) over its gatherers plus one; four times that for food when
     /// the player has less than two minutes' worth or is starving, and a sixteenth for a good they have
     /// <see cref="Plenty"/> of. The search goes out ring by ring and stops once the most needed good is found.
     /// </summary>
-    private bool FindGather(int i, Stats s, out int fx, out int fy, out int fz)
+    private bool FindGather(int i, Stats s, int only, out int fx, out int fy, out int fz)
     {
         fx = fy = fz = -1;
         var u = U;
@@ -368,7 +420,7 @@ public sealed class AutomationSystem
         for (int k = 0; k < kinds; k++)
         {
             var (good, _, share) = Gatherable[k];
-            if (good is Good.IronOre or Good.Coal && !s.Smelter) continue;
+            if (only >= 0 ? k != only : good is Good.IronOre or Good.Coal && !s.Smelter) continue;
             long n = share * 1000L / (s.Gatherers[(int)good] + 1);
             if (good == Good.Food && (s.Starving || s.Stock[(int)Good.Food] < 2 * s.Upkeep))
                 n *= 4;
