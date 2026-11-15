@@ -1,0 +1,54 @@
+// Building types. kind sets what the building does: town_hall (stores goods, houses people, trains
+// workers and researches techs), storehouse, house, farm, smelter, barracks, wall (solid to wallHeight, laid
+// in lines a column at a time, and put right next to other walls) or gate (a wall whose bottom two levels
+// are gate leaves that only its owner's units walk through). size is [x, z] in blocks
+// (the door is on the +z side); wallHeight is in blocks; wall, footing (the bottom course, if different)
+// and roof are building materials: planks, thatch, roof_tile or stone_brick; chimney adds a stone chimney.
+// buildTime is the seconds one worker takes; cost is in goods; housing is the people it houses; storage
+// means goods are delivered and kept there; raidable means enemies can capture or burn it; workerSlots is
+// how many workers can work a farm or smelter at once; sight is how far (columns) beyond its walls its
+// player sees under fog of war (6 if not given); requires names the tech (or list of techs) the player must
+// have researched first; faction (optional) limits it to one faction; icon (optional, the id if not given)
+// names the picture the game shows for it (see game/scripts/UiIcons.cs). light (optional) is how far (columns
+// beyond its walls) its lantern or fire lights the ground from dusk to dawn, so what stands there is seen from
+// the daytime distance and shot at as by day; kind light is a torch post or campfire, a solid column of its
+// wall material wallHeight high (see src/Sim/Conditions.cs). Kind totem is a city-state's totem, which nobody
+// builds (see citystates.json): a plinth of its footing across the footprint with a pole of its wall material
+// in the middle, wallHeight high in all.
+// fromDen (optional): built only on a cleared monster den, by a faction whose "den" in factions.json names it,
+// never from the build menu. yield and yieldTime (optional, together): goods it brings in on its own every
+// yieldTime seconds once finished, into its owner's storage nearest it.
+[
+  { "id": "town_hall", "name": "Town hall", "kind": "town_hall", "size": [7, 7], "wallHeight": 4,
+    "wall": "planks", "footing": "stone_brick", "roof": "roof_tile",
+    "cost": { "wood": 200, "stone": 100 }, "buildTime": 120, "housing": 25, "storage": true, "sight": 10, "light": 4 },
+  { "id": "storehouse", "name": "Storehouse", "kind": "storehouse", "size": [5, 5], "wallHeight": 3,
+    "wall": "planks", "roof": "roof_tile",
+    "cost": { "wood": 40 }, "buildTime": 20, "storage": true, "raidable": true, "light": 3 },
+  { "id": "house", "name": "House", "kind": "house", "size": [4, 4], "wallHeight": 3,
+    "wall": "planks", "roof": "thatch",
+    "cost": { "wood": 30 }, "buildTime": 15, "housing": 5, "light": 3 },
+  { "id": "farm", "name": "Farm", "kind": "farm", "size": [6, 6],
+    "cost": { "wood": 20 }, "buildTime": 10, "workerSlots": 2, "requires": "farming" },
+  { "id": "barracks", "name": "Barracks", "kind": "barracks", "size": [6, 5], "wallHeight": 3,
+    "wall": "planks", "footing": "stone_brick", "roof": "roof_tile",
+    "cost": { "wood": 80, "stone": 20 }, "buildTime": 30, "light": 3 },
+  { "id": "smelter", "name": "Smelter", "kind": "smelter", "size": [3, 3], "wallHeight": 3,
+    "wall": "stone_brick", "roof": "stone_brick", "chimney": true,
+    "cost": { "stone": 30, "wood": 10 }, "buildTime": 20, "workerSlots": 1, "requires": "smelting", "light": 3 },
+  { "id": "wall", "name": "Wall", "kind": "wall", "size": [1, 1], "wallHeight": 3, "wall": "stone_brick",
+    "cost": { "stone": 2 }, "buildTime": 2, "sight": 2 },
+  { "id": "gate", "name": "Gate", "kind": "gate", "size": [1, 1], "wallHeight": 3, "wall": "stone_brick",
+    "cost": { "wood": 4, "stone": 2 }, "buildTime": 4, "sight": 2 },
+  { "id": "torch", "name": "Torch", "kind": "light", "size": [1, 1], "wallHeight": 2, "wall": "planks",
+    "cost": { "wood": 1 }, "buildTime": 2, "sight": 2, "light": 7 },
+  { "id": "campfire", "name": "Campfire", "kind": "light", "size": [1, 1], "wallHeight": 1, "wall": "stone_brick",
+    "cost": { "wood": 3 }, "buildTime": 4, "sight": 3, "light": 9 },
+  { "id": "wolf_lodge", "name": "Wolf lodge", "kind": "house", "size": [4, 4], "wallHeight": 2,
+    "wall": "planks", "footing": "stone_brick", "roof": "thatch", "icon": "paw", "faction": "orcs", "fromDen": true,
+    "cost": { "wood": 30 }, "buildTime": 15, "housing": 5, "yield": { "food": 5 }, "yieldTime": 15, "light": 3 },
+  { "id": "goblin_totem", "name": "Goblin totem", "kind": "totem", "size": [3, 3], "wallHeight": 7,
+    "wall": "planks", "footing": "stone_brick", "buildTime": 1, "sight": 8 },
+  { "id": "bridge", "name": "Bridge", "kind": "bridge", "size": [1, 1], "wallHeight": 1, "wall": "planks",
+    "cost": { "wood": 3 }, "buildTime": 3, "sight": 2 }
+]

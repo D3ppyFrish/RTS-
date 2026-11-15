@@ -1,0 +1,1336 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Globalization;
+using System.Text;
+using Godot;
+using Rts.Sim;
+using Rts.Sim.Content;
+using Rts.Sim.Economy;
+using Rts.Sim.Units;
+
+namespace Rts.Game;
+
+/// <summary>
+/// The minimal HUD: stored goods, population and game clock along the top with research, the switch for
+/// automatic workers and the time controls, a PAUSED banner, the build buttons on the left, the height
+/// slice control on the right, what is selected along the bottom (with train and repeat buttons for a
+/// building that trains units, for units that can evolve, a row of evolve buttons per type with the
+/// form that type takes on its own, and for beaten monsters, Ride and Recruit buttons), a Beaten button in
+/// the top bar while you have beaten monsters waiting, a button per city-state town in the top bar with
+/// who holds it (its panel has hire buttons for its holder), the tech tree screen,
+/// the selection box being dragged, and a line of key hints. The Surrender button just under the right
+/// end of the top bar asks first (surrender_yes, surrender_no); once the match is over for you it reads
+/// Results and opens the end of match panel again (see <see cref="MatchEndPanel"/>). Under the top bar on
+/// the left are the Idle workers button and the latest alerts (see <see cref="Alerts"/>).
+/// </summary>
+public partial class Hud : CanvasLayer
+{
+    private Simulation _sim = null!;
+    private GameClock _clock = null!;
+    private HeightSlice _slice = null!;
+    private PlayerControl _control = null!;
+
+    private readonly Label[] _stockLabels = new Label[Goods.Count];
+    private Label _popLabel = null!;
+    private Label _hungryLabel = null!;
+    private Label _clockLabel = null!;
+    private WorldLighting _lighting = null!;
+    private Button _dayButton = null!;
+    private bool _dayIsNight;
+    private Button _pauseButton = null!;
+    private readonly List<Button> _speedButtons = new();
+    private Control _pausedBanner = null!;
+    private Label _pausedHint = null!;
+    private VSlider _slider = null!;
+    private Label _sliceLabel = null!;
+    private PanelContainer _selectionPanel = null!;
+    private Label _selectionLabel = null!;
+    private Label _descriptionLabel = null!;
+    private BodyChart _bodyChart = null!;
+    private VBoxContainer _trainBox = null!;
+    private VBoxContainer _evolveBox = null!;
+    private readonly List<EvolveRow> _evolveRows = new();
+    private string _evolveKey = "";
+    private HBoxContainer _tameRow = null!;
+    private Label _tameLabel = null!;
+    private Button _rideButton = null!, _recruitButton = null!, _beatenButton = null!;
+    private Button _denButton = null!;
+    private Button _digButton = null!;
+    private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
+    private readonly List<(Button Button, CityState Town)> _cityButtons = new();
+    private VBoxContainer _cityBox = null!;
+    private HBoxContainer _hireRow = null!;
+    private readonly List<(Button Button, UnitDef Unit)> _hireButtons = new();
+    private CityStateDef? _cityFor;
+    private Button? _repeatButton;
+    private BuildingDef? _trainFor;
+    private Button _autoButton = null!;
+    private readonly List<(Button Button, BuildingDef? Def, Key Key)> _buildButtons = new();
+    private Label _researchLabel = null!;
+    private Button _techButton = null!;
+    private TechTreePanel _techPanel = null!;
+    private Label _toolLabel = null!;
+    private SelectionBox _box = null!;
+    private bool _updatingSlider;
+    private double _textTimer;
+    private bool _textDirty = true;
+    private Button _surrenderButton = null!;
+    private Control _surrenderPanel = null!;
+    private Alerts _alerts = null!;
+
+    /// <summary>The alerts column and idle workers button (see <see cref="Alerts"/>).</summary>
+    public Alerts AlertFeed => _alerts;
+
+    /// <summary>The match is over for you: the Surrender button reads Results and raises <see cref="ResultsPressed"/>.</summary>
+    public bool MatchOver { get; set; }
+
+    /// <summary>The Results button was pressed (once the match is over for you).</summary>
+    public event Action? ResultsPressed;
+
+    public void Init(Simulation sim, GameClock clock, HeightSlice slice, PlayerControl control, WorldLighting lighting)
+    {
+        _lighting = lighting;
+        _sim = sim;
+        _clock = clock;
+        _slice = slice;
+        _control = control;
+
+        var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, Theme = UiStyle.Theme };
+        root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        AddChild(root);
+
+        _box = new SelectionBox { MouseFilter = Control.MouseFilterEnum.Ignore };
+        _box.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        root.AddChild(_box);
+
+        BuildTopBar(root);
+        BuildPausedBanner(root);
+        BuildSurrenderPanel(root);
+        BuildSlicePanel(root);
+        BuildBuildPanel(root);
+        BuildSelectionPanel(root);
+
+        _alerts = new Alerts();
+        _alerts.Init(_sim, _control);
+        Place(_alerts, Control.LayoutPreset.TopLeft, 12, 54);
+        root.AddChild(_alerts);
+
+        _techPanel = new TechTreePanel { Visible = false };
+        _techPanel.Init(_sim, _control);
+        Place(_techPanel, Control.LayoutPreset.Center, 0, 0);
+        _techPanel.GrowHorizontal = Control.GrowDirection.Both;
+        _techPanel.GrowVertical = Control.GrowDirection.Both;
+        root.AddChild(_techPanel);
+
+        _toolLabel = MakeLabel("", 14);
+        Place(_toolLabel, Control.LayoutPreset.BottomRight, -14, -10);
+        _toolLabel.GrowHorizontal = Control.GrowDirection.Begin;
+        _toolLabel.GrowVertical = Control.GrowDirection.Begin;
+        _toolLabel.HorizontalAlignment = HorizontalAlignment.Right;
+        _toolLabel.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.8f));
+        root.AddChild(_toolLabel);
+
+        _slice.Changed += SyncSlider;
+        _control.Changed += () => _textDirty = true;
+        SyncSlider();
+    }
+
+    private void BuildTopBar(Control root)
+    {
+        var bar = new PanelContainer { ThemeTypeVariation = UiStyle.Bar };
+        bar.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
+        root.AddChild(bar);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 10);
+        bar.AddChild(row);
+
+        foreach (var good in Goods.All)
+            _stockLabels[(int)good] = Stat(row, UiIcons.For(good), Goods.Name(good));
+        _popLabel = Stat(row, UiIcons.Get("people"), "People over housing");
+        _hungryLabel = MakeLabel("hungry", 18);
+        _hungryLabel.AddThemeColorOverride("font_color", new Color(1f, 0.45f, 0.35f));
+        _hungryLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        row.AddChild(_hungryLabel);
+        row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
+        _clockLabel = Stat(row, UiIcons.Get("time"), "Match time and game speed");
+        // The time of day (see DayCycle): click to keep it day.
+        _dayButton = MakeButton("");
+        _dayButton.Name = "day_button";
+        _dayButton.Icon = UiIcons.Get("sun");
+        _dayButton.CustomMinimumSize = new Vector2(84, 0);
+        _dayButton.Alignment = HorizontalAlignment.Left;
+        _dayButton.Toggled += on => _lighting.Cycle.AlwaysDay = on;
+        row.AddChild(_dayButton);
+        row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
+
+        _researchLabel = MakeLabel("", 15);
+        _researchLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        row.AddChild(_researchLabel);
+        _techButton = MakeButton("Techs [K]");
+        _techButton.Name = "techs_button";
+        _techButton.Pressed += () => _control.ToggleTechTree();
+        row.AddChild(_techButton);
+        _autoButton = MakeButton("Auto workers [Shift+J]");
+        _autoButton.Name = "auto_button";
+        _autoButton.TooltipText = "All your workers, and those you train, find their own jobs; houses and farms go up when needed";
+        _autoButton.Pressed += () => _control.ToggleAutoAll();
+        row.AddChild(_autoButton);
+        _beatenButton = MakeButton("");
+        _beatenButton.Name = "beaten_button";
+        _beatenButton.ToggleMode = false;
+        _beatenButton.TooltipText = "Monsters your units beat, waiting for you to ride or recruit them: click to select the next one\n" +
+                                    "(or drag a box around several to choose for all of them at once)";
+        _beatenButton.Pressed += () => _control.SelectNextBeaten();
+        row.AddChild(_beatenButton);
+        foreach (var town in _sim.Cities.Towns)
+        {
+            var b = MakeButton("");
+            b.Name = "city_" + town.Def.Id;
+            b.ToggleMode = false;
+            b.TooltipText = $"{town.Def.Name}: {town.Def.Description}\nClick to select it and look at it. Whoever breaks the totem " +
+                            "on its market holds the town.";
+            b.Pressed += () => _control.FocusCity(town.Id);
+            row.AddChild(b);
+            _cityButtons.Add((b, town));
+        }
+
+        _pauseButton = MakeButton("Pause");
+        _pauseButton.Pressed += () => _clock.TogglePause();
+        row.AddChild(_pauseButton);
+        for (int i = 0; i < GameClock.Speeds.Length; i++)
+        {
+            int index = i;
+            var b = MakeButton(GameClock.Label(GameClock.Speeds[i]));
+            b.Pressed += () => _clock.SetSpeed(index, resume: true);
+            row.AddChild(b);
+            _speedButtons.Add(b);
+        }
+    }
+
+    /// <summary>
+    /// The Surrender button, just under the right end of the top bar (which is full), and the panel that
+    /// asks before you give up the match.
+    /// </summary>
+    private void BuildSurrenderPanel(Control root)
+    {
+        _surrenderButton = MakeButton("Surrender");
+        _surrenderButton.Name = "surrender_button";
+        _surrenderButton.ToggleMode = false;
+        _surrenderButton.AddThemeFontSizeOverride("font_size", 14);
+        _surrenderButton.TooltipText = "Give up the match (it asks first)";
+        _surrenderButton.Pressed += () =>
+        {
+            if (MatchOver) ResultsPressed?.Invoke();
+            else _surrenderPanel.Visible = !_surrenderPanel.Visible;
+        };
+        Place(_surrenderButton, Control.LayoutPreset.TopRight, -12, 54);
+        _surrenderButton.GrowHorizontal = Control.GrowDirection.Begin;
+        root.AddChild(_surrenderButton);
+
+        var panel = new PanelContainer { Visible = false };
+        panel.AddThemeStyleboxOverride("panel", UiStyle.Panel(0.97f, 18));
+        Place(panel, Control.LayoutPreset.Center, 0, 0);
+        panel.GrowHorizontal = Control.GrowDirection.Both;
+        panel.GrowVertical = Control.GrowDirection.Both;
+        root.AddChild(panel);
+        var column = new VBoxContainer();
+        column.AddThemeConstantOverride("separation", 10);
+        panel.AddChild(column);
+        var title = MakeLabel("Give up the match?", 24);
+        title.ThemeTypeVariation = UiStyle.Heading;
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        column.AddChild(title);
+        var text = MakeLabel("It counts as a defeat.", 14);
+        text.HorizontalAlignment = HorizontalAlignment.Center;
+        column.AddChild(text);
+        var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        row.AddThemeConstantOverride("separation", 12);
+        column.AddChild(row);
+        var yes = MakeButton("Surrender");
+        yes.Name = "surrender_yes";
+        yes.ToggleMode = false;
+        Frame(yes, MatchEndPanel.DefeatColor.Darkened(0.45f));
+        yes.Pressed += () =>
+        {
+            panel.Visible = false;
+            _control.Surrender();
+        };
+        row.AddChild(yes);
+        var no = MakeButton("Keep playing");
+        no.Name = "surrender_no";
+        no.ToggleMode = false;
+        Frame(no, PlainColour);
+        no.Pressed += () => panel.Visible = false;
+        row.AddChild(no);
+        _surrenderPanel = panel;
+    }
+
+    private void BuildPausedBanner(Control root)
+    {
+        var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        panel.AddThemeStyleboxOverride("panel", UiStyle.Panel(0.85f, 14));
+        Place(panel, Control.LayoutPreset.CenterTop, 0, 70);
+        panel.GrowHorizontal = Control.GrowDirection.Both;
+        var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        var label = MakeLabel("PAUSED", 40);
+        label.ThemeTypeVariation = UiStyle.Heading;
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        column.AddChild(label);
+        _pausedHint = MakeLabel("", 14);
+        _pausedHint.HorizontalAlignment = HorizontalAlignment.Center;
+        column.AddChild(_pausedHint);
+        panel.AddChild(column);
+        root.AddChild(panel);
+        _pausedBanner = panel;
+    }
+
+    private void BuildSlicePanel(Control root)
+    {
+        var panel = new PanelContainer();
+        Place(panel, Control.LayoutPreset.CenterRight, -12, 0);
+        panel.GrowHorizontal = Control.GrowDirection.Begin;
+        panel.GrowVertical = Control.GrowDirection.Both;
+        root.AddChild(panel);
+        var column = new VBoxContainer();
+        column.AddThemeConstantOverride("separation", 6);
+        panel.AddChild(column);
+        var title = MakeLabel("Height slice", 15);
+        title.ThemeTypeVariation = UiStyle.Heading;
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        column.AddChild(title);
+        _slider = new VSlider
+        {
+            MinValue = 1,
+            MaxValue = _slice.MaxLevel,
+            Step = 1,
+            CustomMinimumSize = new Vector2(24, 260),
+            SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
+            FocusMode = Control.FocusModeEnum.None,
+        };
+        _slider.ValueChanged += v =>
+        {
+            if (!_updatingSlider) _slice.Set((int)v >= _slice.MaxLevel ? -1 : (int)v);
+        };
+        column.AddChild(_slider);
+        _sliceLabel = MakeLabel("", 14);
+        _sliceLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        column.AddChild(_sliceLabel);
+        var keys = MakeLabel("PgUp / PgDn\nHome: off", 12);
+        keys.HorizontalAlignment = HorizontalAlignment.Center;
+        keys.ThemeTypeVariation = UiStyle.Dim;
+        column.AddChild(keys);
+    }
+
+    /// <summary>One button per building (with its hotkey and cost, or the tech it needs) and one for roads, down the left side.</summary>
+    private void BuildBuildPanel(Control root)
+    {
+        var panel = new PanelContainer();
+        Place(panel, Control.LayoutPreset.CenterLeft, 12, -30);
+        panel.GrowVertical = Control.GrowDirection.Both;
+        root.AddChild(panel);
+        var column = new VBoxContainer();
+        column.AddThemeConstantOverride("separation", 4);
+        panel.AddChild(column);
+        var title = MakeLabel("Build", 16);
+        title.ThemeTypeVariation = UiStyle.Heading;
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        column.AddChild(title);
+        foreach (var (key, id) in PlayerControl.BuildKeys)
+        {
+            if (!_sim.Content.TryGetBuilding(id, out var def)) continue;
+            var b = MakeToolButton("");
+            b.Name = "build_" + def.Id;
+            b.Icon = UiIcons.Get(def.Icon.Length > 0 ? def.Icon : def.Id);
+            b.Pressed += () => _control.StartBuild(def.Id);
+            if (def.Kind == BuildingKind.Light)
+                b.TooltipText = $"Lights the ground {def.Light} columns around it from dusk to dawn: what stands there is seen from " +
+                                "as far as by day and shot at as by day. A storm puts its open flame out until it passes.";
+            column.AddChild(b);
+            _buildButtons.Add((b, def, key));
+        }
+        if (_sim.Content.TryGetBuilding(PlayerControl.WallBuilding, out var wallDef))
+        {
+            var wall = MakeToolButton("");
+            wall.Name = "build_wall";
+            wall.Icon = UiIcons.Get(wallDef.Icon.Length > 0 ? wallDef.Icon : wallDef.Id);
+            wall.TooltipText = "Drag a line for the selected workers to wall off, a column at a time. " +
+                               "Walls join up with each other and with gates; a gate lets only your units through.";
+            wall.Pressed += () => _control.ToggleWall();
+            column.AddChild(wall);
+            _buildButtons.Add((wall, wallDef, Key.Y));
+        }
+        if (_sim.Content.TryGetBuilding(PlayerControl.BridgeBuilding, out var bridgeDef))
+        {
+            var bridge = MakeToolButton("");
+            bridge.Name = "build_bridge";
+            bridge.Icon = UiIcons.Get(bridgeDef.Icon.Length > 0 ? bridgeDef.Icon : bridgeDef.Id);
+            bridge.TooltipText = "Drag from bank to bank for the selected workers to lay a level deck across deep water, a " +
+                                 "chasm or a trench, a column at a time from the ends. Anyone can walk over it; Ctrl+right " +
+                                 "click a bridge with soldiers selected to knock that column out.";
+            bridge.Pressed += () => _control.ToggleBridge();
+            column.AddChild(bridge);
+            _buildButtons.Add((bridge, bridgeDef, Key.Apostrophe));
+        }
+        var road = MakeToolButton("");
+        road.Name = "build_road";
+        road.Icon = UiIcons.Get("road");
+        road.Pressed += () => _control.StartRoad();
+        column.AddChild(road);
+        _buildButtons.Add((road, null, Key.L));
+    }
+
+    private void BuildSelectionPanel(Control root)
+    {
+        _selectionPanel = new PanelContainer();
+        Place(_selectionPanel, Control.LayoutPreset.BottomLeft, 12, -12);
+        _selectionPanel.GrowVertical = Control.GrowDirection.Begin;
+        _selectionPanel.CustomMinimumSize = new Vector2(380, 0);
+        root.AddChild(_selectionPanel);
+        var column = new VBoxContainer();
+        column.AddThemeConstantOverride("separation", 6);
+        _selectionPanel.AddChild(column);
+        _selectionLabel = MakeLabel("", 16);
+        column.AddChild(_selectionLabel);
+        _bodyChart = new BodyChart { Name = "body_chart", Visible = false };
+        column.AddChild(_bodyChart);
+        _descriptionLabel = MakeLabel("", 13);
+        _descriptionLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _descriptionLabel.CustomMinimumSize = new Vector2(360, 0);
+        _descriptionLabel.ThemeTypeVariation = UiStyle.Dim;
+        column.AddChild(_descriptionLabel);
+        _trainBox = new VBoxContainer();
+        _trainBox.AddThemeConstantOverride("separation", 4);
+        column.AddChild(_trainBox);
+        _evolveBox = new VBoxContainer();
+        _evolveBox.AddThemeConstantOverride("separation", 4);
+        column.AddChild(_evolveBox);
+
+        _digButton = MakeToolButton("Dig an area  [Z]");
+        _digButton.Name = "dig_button";
+        _digButton.TooltipText = "Drag out an area for the selected workers and sappers to dig out, a layer at a time from the top. " +
+                                 "Workers carry what they dig to storage; sappers dig twice as fast and leave it.";
+        _digButton.Pressed += () => _control.ToggleDig();
+        _digButton.Visible = false;
+        column.AddChild(_digButton);
+
+        _tameRow = new HBoxContainer { Visible = false };
+        _tameRow.AddThemeConstantOverride("separation", 4);
+        _tameLabel = MakeLabel("", 13);
+        _tameLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        _tameLabel.CustomMinimumSize = new Vector2(170, 0);
+        _tameRow.AddChild(_tameLabel);
+        _rideButton = MakeToolButton("Ride");
+        _rideButton.Name = "tame_ride";
+        _rideButton.ToggleMode = false;
+        _rideButton.Pressed += () => _control.TameSelected(TameChoice.Ride);
+        _tameRow.AddChild(_rideButton);
+        _recruitButton = MakeToolButton("Recruit");
+        _recruitButton.Name = "tame_recruit";
+        _recruitButton.ToggleMode = false;
+        _recruitButton.CustomMinimumSize = new Vector2(90, 0);
+        _recruitButton.TooltipText = "It joins your army as it is, back at full health.";
+        _recruitButton.Pressed += () => _control.TameSelected(TameChoice.Recruit);
+        _tameRow.AddChild(_recruitButton);
+        column.AddChild(_tameRow);
+
+        _denButton = MakeToolButton("Use the den");
+        _denButton.Name = "den_use";
+        _denButton.ToggleMode = false;
+        _denButton.Visible = false;
+        _denButton.Pressed += () => _control.UseDen();
+        column.AddChild(_denButton);
+
+        _cityBox = new VBoxContainer { Visible = false };
+        _cityBox.AddThemeConstantOverride("separation", 4);
+        _hireRow = new HBoxContainer();
+        _hireRow.AddThemeConstantOverride("separation", 4);
+        _cityBox.AddChild(_hireRow);
+        column.AddChild(_cityBox);
+    }
+
+    /// <summary>The selected town's buttons: a hire button per mercenary (hire_UNIT).</summary>
+    private void BuildCityButtons(CityStateDef? def)
+    {
+        _cityFor = def;
+        foreach (var (b, _) in _hireButtons) b.QueueFree();
+        _hireButtons.Clear();
+        if (def == null) return;
+        foreach (var unit in def.Mercenaries)
+        {
+            var b = MakeToolButton("");
+            b.Name = "hire_" + unit.Id;
+            b.ToggleMode = false;
+            b.TooltipText = $"{unit.Description}\nOnly whoever holds the town hires them; one steps out at the market.";
+            b.Pressed += () => _control.HireAtSelectedCity(unit.Id);
+            _hireRow.AddChild(b);
+            _hireButtons.Add((b, unit));
+        }
+    }
+
+    /// <summary>The evolve buttons for one type of selected unit: what they are, a button per form, and the form they take on their own.</summary>
+    private sealed record EvolveRow(UnitDef Unit, HBoxContainer Box, Label Label, List<(Button Button, UnitDef Form)> Forms, Button Auto);
+
+    /// <summary>One row per type: a label, a button per form (evolve_ID) and the automatic choice (auto_evolve_ID).</summary>
+    private void BuildEvolveRows(List<UnitDef> types, string key)
+    {
+        _evolveKey = key;
+        foreach (var row in _evolveRows)
+        {
+            _evolveBox.RemoveChild(row.Box);
+            row.Box.QueueFree();
+        }
+        _evolveRows.Clear();
+        foreach (var unit in types)
+        {
+            var box = new HBoxContainer();
+            box.AddThemeConstantOverride("separation", 4);
+            var label = MakeLabel("", 13);
+            label.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            label.CustomMinimumSize = new Vector2(170, 0); // so the rows' buttons line up
+            box.AddChild(label);
+            var forms = new List<(Button, UnitDef)>();
+            foreach (var form in unit.Forms)
+            {
+                var b = MakeToolButton(form.Name);
+                b.Name = "evolve_" + form.Id;
+                b.ToggleMode = false;
+                b.CustomMinimumSize = new Vector2(60, 0);
+                b.TooltipText = FormTooltip(unit, form);
+                b.Pressed += () => _control.EvolveSelected(form.Id);
+                box.AddChild(b);
+                forms.Add((b, form));
+            }
+            var auto = MakeToolButton("");
+            auto.Name = "auto_evolve_" + unit.Id;
+            auto.CustomMinimumSize = new Vector2(60, 0);
+            auto.TooltipText = $"The form all your {Plural(unit.Name).ToLowerInvariant()}, now and later, take on their own " +
+                               "once they have the experience. Click for the next choice.";
+            auto.Pressed += () => _control.CycleAutoEvolve(unit.Id);
+            box.AddChild(auto);
+            _evolveBox.AddChild(box);
+            _evolveRows.Add(new EvolveRow(unit, box, label, forms, auto));
+        }
+    }
+
+    /// <summary>A form's description, then what it gains and gives up against the type it evolves from.</summary>
+    private static string FormTooltip(UnitDef from, UnitDef form)
+    {
+        var lines = new List<string>();
+        if (form.Description.Length > 0) lines.Add(form.Description);
+        void Change(string what, string a, string b)
+        {
+            if (a != b) lines.Add($"{what}: {a} to {b}");
+        }
+        Change("Role", RoleName(from.Role), RoleName(form.Role));
+        if (from.Role == UnitRole.Worker && form.Role != UnitRole.Worker) lines.Add("No longer gathers, builds or farms");
+        Change("Hit points", $"{from.MaxHp}", $"{form.MaxHp}");
+        Change("Damage", $"{from.Damage}", $"{form.Damage}");
+        Change("Time between hits", Seconds(from.AttackTicks), Seconds(form.AttackTicks));
+        Change("Range", Number(from.Range), Number(form.Range));
+        Change("Blast", Number(from.Splash), Number(form.Splash));
+        Change("Sight", Number(from.Sight), Number(form.Sight));
+        Change("Speed", Number(from.Speed), Number(form.Speed));
+        Change("Food a minute", $"{from.Upkeep}", $"{form.Upkeep}");
+        Change("Work speed", $"{from.WorkPercent}%", $"{form.WorkPercent}%");
+        if (form.Heal > 0 && (form.Heal != from.Heal || form.HealTicks != from.HealTicks || form.HealRange != from.HealRange))
+            lines.Add($"Heals the most hurt ally within {Number(form.HealRange)} blocks by {form.Heal} hit points every {Seconds(form.HealTicks)}");
+        foreach (var role in Enum.GetValues<UnitRole>())
+            if (form.WeaknessTo(role) != from.WeaknessTo(role))
+                lines.Add($"Takes {form.WeaknessTo(role)}% more damage from {RoleName(role)} attacks");
+        return string.Join("\n", lines);
+    }
+
+    private static string RoleName(UnitRole role) => role switch
+    {
+        UnitRole.LineInfantry => "line infantry",
+        UnitRole.HeavyInfantry => "heavy infantry",
+        _ => role.ToString().ToLowerInvariant(),
+    };
+
+    private static string Number(Fix64 value) => value.ToFloat().ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string Seconds(int ticks) =>
+        ((float)ticks / Simulation.TicksPerSecond).ToString("0.##", CultureInfo.InvariantCulture) + " s";
+
+    /// <summary>One train button per unit the building trains (the first also on U), and a repeat switch (P).</summary>
+    private void BuildTrainButtons(BuildingDef? def)
+    {
+        _trainFor = def;
+        foreach (var (button, _) in _trainButtons) button.QueueFree();
+        _trainButtons.Clear();
+        _repeatButton?.QueueFree();
+        _repeatButton = null;
+        if (def == null) return;
+        foreach (var id in def.Trains)
+        {
+            var unit = _sim.Content.Unit(id);
+            var b = MakeToolButton("");
+            b.Name = "train_" + id;
+            b.Icon = UiIcons.For(unit.Role, UnitRenderer.TeamColors[PlayerControl.LocalPlayer]);
+            b.ToggleMode = false;
+            b.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+            b.Pressed += () => _control.TrainAtSelected(unit.Id);
+            _trainBox.AddChild(b);
+            _trainButtons.Add((b, unit));
+        }
+        _repeatButton = MakeToolButton("Repeat training: off  [P]");
+        _repeatButton.Name = "repeat_button";
+        _repeatButton.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        _repeatButton.TooltipText = "Each unit it finishes is queued again once you can pay for it";
+        _repeatButton.Pressed += () => _control.ToggleRepeat();
+        _trainBox.AddChild(_repeatButton);
+    }
+
+    /// <summary>Updates the HUD: buttons, banner and selection box every frame, texts ten times a second.</summary>
+    public void Refresh(double delta)
+    {
+        _pauseButton.SetPressedNoSignal(_clock.Paused);
+        _techButton.SetPressedNoSignal(_control.TechTreeOpen);
+        _autoButton.SetPressedNoSignal(_sim.Economy.AutoWorkers(PlayerControl.LocalPlayer));
+        _techPanel.Visible = _control.TechTreeOpen;
+        for (int i = 0; i < _speedButtons.Count; i++) _speedButtons[i].SetPressedNoSignal(!_clock.Paused && i == _clock.SpeedIndex);
+        _pausedBanner.Visible = _clock.Paused;
+        _pausedHint.Text = MatchOver ? "The match is over. Space lets it run on." : "Orders can still be given. Space to resume.";
+        // Only a player still in a match of two or more can give up; once it is over for them, the button shows the results.
+        _surrenderButton.Visible = MatchOver || _sim.Match.Players.Count >= 2 && _sim.Match.InPlay(PlayerControl.LocalPlayer);
+        _surrenderButton.Text = MatchOver ? "Results" : "Surrender";
+        if (MatchOver) _surrenderPanel.Visible = false;
+        _box.Active = _control.Dragging;
+        _box.Rect = _control.DragRect;
+        _box.QueueRedraw();
+        _alerts.Refresh(delta, _clock.Paused);
+
+        _textTimer -= delta;
+        if (_textTimer > 0 && !_textDirty) return;
+        _textTimer = 0.1;
+        _textDirty = false;
+        ShowStock();
+
+        long seconds = _sim.Tick / Simulation.TicksPerSecond;
+        _clockLabel.Text = $"{seconds / 60:00}:{seconds % 60:00}   {GameClock.Label(_clock.Speed)}";
+        float hour = _lighting.Hour;
+        var cycle = _lighting.Cycle;
+        float trueHour = cycle.TrueHour(_sim.Tick);
+        int minutes = (int)(trueHour * 60) / 15 * 15; // a quarter of an hour at a time, so it doesn't flicker
+        var weather = cycle.Weather;
+        string clock = $"{minutes / 60:00}:{minutes % 60:00}";
+        _dayButton.Text = !cycle.On ? "Day" : weather == Weather.Clear ? clock : $"{clock}  {DayCycle.Name(weather)}";
+        _dayButton.TooltipText = DescribeConditions(trueHour, weather);
+        bool night = DayCycle.IsNight(hour);
+        if (night != _dayIsNight)
+        {
+            _dayIsNight = night;
+            _dayButton.Icon = UiIcons.Get(night ? "moon" : "sun");
+        }
+        _selectionLabel.Text = DescribeSelection();
+        _selectionPanel.Visible = _selectionLabel.Text.Length > 0;
+        bool one = _control.Selected.Count == 1 && _sim.Buildings.Get(_control.SelectedBuilding) == null && _sim.Cities.Get(_control.SelectedCity) == null;
+        _bodyChart.Show(_sim, one ? _control.Selected[0] : 0);
+        _descriptionLabel.Text = DescribeUnitType();
+        _descriptionLabel.Visible = _descriptionLabel.Text.Length > 0;
+        RefreshButtons();
+        _toolLabel.Text = DescribeTool();
+        _researchLabel.Text = DescribeResearch();
+        if (_techPanel.Visible) _techPanel.Refresh();
+    }
+
+    private string DescribeResearch()
+    {
+        int player = PlayerControl.LocalPlayer;
+        var tech = _sim.Economy.Researching(player);
+        return tech == null ? "" : $"Researching {tech.Name} {100L * _sim.Economy.ResearchTicks(player) / tech.ResearchTicks}%";
+    }
+
+    /// <summary>The first tech the player still needs for something, as text ("needs Farming"), or null if none.</summary>
+    private string? Needs(IReadOnlyList<TechDef> requires, FactionDef? faction)
+    {
+        int player = PlayerControl.LocalPlayer;
+        if (faction != null && faction != _sim.Economy.Faction(player)) return $"{faction.Name} only";
+        return _sim.Economy.MissingTech(player, requires) is { } t ? $"needs {t.Name}" : null;
+    }
+
+    /// <summary>The tech that allows roads, if roads need one.</summary>
+    private TechDef? RoadTech()
+    {
+        foreach (var t in _sim.Content.Techs)
+        foreach (var e in t.Effects)
+            if (e.Type == TechEffectType.Roads) return t;
+        return null;
+    }
+
+    /// <summary>
+    /// Greys out what the player cannot afford or lacks the techs for, and shows train buttons for their own
+    /// finished building that trains units.
+    /// </summary>
+    /// <summary>
+    /// The tooltip of the time of day button: the time, the weather and what is coming, and what they do to
+    /// sight and aim (see <see cref="Conditions"/>).
+    /// </summary>
+    private string DescribeConditions(float hour, Weather weather)
+    {
+        var cycle = _lighting.Cycle;
+        var c = _sim.Conditions;
+        if (!cycle.On)
+            return (cycle.AlwaysDay ? "Always day." : "Day and night are off for this match: it is always a clear day.") +
+                   " Units see as far as usual and every shot lands.";
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"Day {cycle.Day(_sim.Tick)}, {DayCycle.PartOf(hour).ToLowerInvariant()}, {DayCycle.Name(weather).ToLowerInvariant()}.");
+        if (c.Next != c.Weather)
+        {
+            float hours = (c.ChangesAt - _sim.Tick) / (float)Conditions.HourTicks;
+            sb.Append($" {DayCycle.Name(c.Next)} coming in about {Mathf.Max(1, Mathf.RoundToInt(hours))} h.");
+        }
+        int dark = c.SightPercent(-1, -1, false), lit = c.SightPercent(-1, -1, true);
+        sb.Append($"\nUnits see {dark}% as far as on a clear day");
+        if (lit > dark) sb.Append($", and {lit}% into the light of lanterns, torches, campfires and lava");
+        sb.Append('.');
+        if (c.Part != DayPart.Day && c.Weather == Weather.Storm) sb.Append(" The storm has put out torches and campfires.");
+        int hit = c.HitChance(-1, -1);
+        sb.Append(hit < 100 ? $"\nArchers and mages hit {hit}% of their shots at targets out of the light." : "\nEvery shot lands.");
+        sb.Append("\nIn the swamp, mist cuts sight by a quarter at night and in the morning.");
+        sb.Append(cycle.AlwaysDay ? "\nAlways day (the look only): click to show the real time of day."
+            : "\nClick to keep the world lit as by day (the look only: units still see as the time and weather allow).");
+        return sb.ToString();
+    }
+
+    private void RefreshButtons()
+    {
+        var econ = _sim.Economy;
+        int player = PlayerControl.LocalPlayer;
+        foreach (var (button, def, key) in _buildButtons)
+        {
+            string? needs;
+            if (def is { Kind: BuildingKind.Wall or BuildingKind.Bridge })
+            {
+                needs = Needs(def.Requires, def.Faction);
+                button.Text = $"{def.Name}  [{(key == Key.Apostrophe ? "'" : key.ToString())}]\n{needs ?? CostText(def.Cost) + " a column"}";
+                button.Disabled = needs != null || !econ.CanAfford(player, def.Cost);
+                button.SetPressedNoSignal(_control.Tool == (def.IsBridge ? PlayerControl.ToolMode.Bridge : PlayerControl.ToolMode.Wall));
+                continue;
+            }
+            if (def != null)
+            {
+                needs = Needs(def.Requires, def.Faction);
+                button.Text = $"{def.Name}  [{(key == Key.Semicolon ? ";" : key.ToString())}]\n{needs ?? CostText(def.Cost)}";
+                button.Disabled = needs != null || !econ.CanAfford(player, def.Cost);
+            }
+            else
+            {
+                needs = econ.CanLayRoads(player) ? null : $"needs {RoadTech()?.Name}";
+                button.Text = $"Road  [{key}]\n{needs ?? $"{EconomySystem.StonePerRoad} stone a block"}";
+                button.Disabled = needs != null || econ.Stock(player, Good.Stone) < EconomySystem.StonePerRoad;
+            }
+            button.SetPressedNoSignal(def != null ? _control.BuildDef == def : _control.Tool == PlayerControl.ToolMode.Road);
+        }
+        var b = _sim.Buildings.Get(_control.SelectedBuilding);
+        bool trains = b != null && b.Owner == player && b.Active && b.Def.Trains.Length > 0;
+        var trainFor = trains ? b!.Def : null;
+        if (trainFor != _trainFor) BuildTrainButtons(trainFor);
+        if (_repeatButton != null)
+        {
+            bool on = b?.Repeat == true;
+            _repeatButton.SetPressedNoSignal(on);
+            _repeatButton.Text = on ? "Repeat training: on  [P]" : "Repeat training: off  [P]";
+        }
+        for (int k = 0; k < _trainButtons.Count; k++)
+        {
+            var (button, unit) = _trainButtons[k];
+            string? needs = Needs(unit.Requires, unit.Faction);
+            string key = k == 0 ? "  [U]" : "";
+            button.Text = needs != null ? $"{unit.Name}: {needs}" : $"Train {unit.Name.ToLowerInvariant()}{key}   {CostText(unit.Cost)}";
+            button.Disabled = needs != null || !econ.CanAfford(player, unit.Cost) || b!.Queue.Count >= EconomySystem.MaxQueue;
+        }
+        _digButton.Visible = _control.OwnDiggers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Dig;
+        _digButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Dig);
+        RefreshEvolveRows();
+        RefreshTaming();
+        RefreshDen();
+        RefreshCities();
+    }
+
+    /// <summary>
+    /// The town buttons in the top bar (who holds the town), and the selected town's hire buttons, greyed out
+    /// when you do not hold it, lack the goods, have no room or nobody is ready.
+    /// </summary>
+    private void RefreshCities()
+    {
+        var econ = _sim.Economy;
+        int player = PlayerControl.LocalPlayer;
+        foreach (var (button, town) in _cityButtons)
+        {
+            button.Text = $"{town.Def.Name}: {HolderText(town, player)}";
+            button.SetPressedNoSignal(_control.SelectedCity == town.Id);
+        }
+        var selected = _sim.Cities.Get(_control.SelectedCity);
+        if (selected?.Def != _cityFor) BuildCityButtons(selected?.Def);
+        _cityBox.Visible = selected != null;
+        if (selected == null) return;
+        bool yours = selected.Holder == player, room = _sim.Cities.CanHire(player);
+        foreach (var (button, unit) in _hireButtons)
+        {
+            button.Text = !yours ? $"{unit.Name}: break the totem first" : $"Hire {unit.Name.ToLowerInvariant()}   {CostText(unit.Cost)}";
+            button.Disabled = !yours || selected.Ready == 0 || !room || !econ.CanAfford(player, unit.Cost);
+        }
+    }
+
+    /// <summary>Who holds the town, as the player sees it: neutral, yours, or another player's.</summary>
+    private string HolderText(CityState town, int player) =>
+        town.Holder == player ? "yours" : town.Holder >= 0 ? $"held by {PlayerName(town.Holder)}" : "neutral";
+
+    /// <summary>
+    /// The Beaten button while you have beaten monsters, and the Ride and Recruit buttons while some are
+    /// selected. Ride is greyed out when none of them has a unit near that could climb on.
+    /// </summary>
+    private void RefreshTaming()
+    {
+        int waiting = _control.AllBeaten().Count;
+        _beatenButton.Visible = waiting > 0;
+        _beatenButton.Text = $"Beaten: {waiting}";
+        var beaten = _control.OwnBeaten();
+        _tameRow.Visible = beaten.Count > 0;
+        if (beaten.Count == 0) return;
+        var u = _sim.Units;
+        var first = _sim.Content.Units[u.Def[u.IndexOf(beaten[0])]];
+        string name = (beaten.Count == 1 ? first.Name : Plural(first.Name)).ToLowerInvariant();
+        _tameLabel.Text = $"{beaten.Count} beaten {name}:";
+        int canRide = 0;
+        foreach (int id in beaten)
+            if (_sim.Monsters.RiderFor(u.IndexOf(id)) >= 0) canRide++;
+        if (first.Ride is { } ride)
+        {
+            string rider = ride.Rider.Name.ToLowerInvariant();
+            _rideButton.Text = canRide > 0 ? $"Ride: {ride.Becomes.Name.ToLowerInvariant()}" : $"Ride: needs a {rider} near";
+            _rideButton.TooltipText = $"The nearest {rider} of yours within {MonsterSystem.RideRange} blocks climbs on and becomes a " +
+                                      $"{ride.Becomes.Name.ToLowerInvariant()}, keeping its share of health. The {first.Name.ToLowerInvariant()} is gone.\n" +
+                                      ride.Becomes.Description;
+        }
+        else
+        {
+            _rideButton.Text = "Ride: nobody can";
+            _rideButton.TooltipText = $"Nobody rides a {first.Name.ToLowerInvariant()}.";
+        }
+        _rideButton.Disabled = canRide == 0;
+    }
+
+    /// <summary>
+    /// The den button while a cleared den your faction can use is near your selected units: for the Orcs, a
+    /// wolf lodge put up on it (greyed out while you cannot pay); for a form, the unit that takes it.
+    /// </summary>
+    private void RefreshDen()
+    {
+        int player = PlayerControl.LocalPlayer;
+        var lair = _control.UsableDen();
+        var use = _sim.Monsters.DenUse(player);
+        _denButton.Visible = lair != null && use != null;
+        if (lair == null || use == null) return;
+        string den = $"{lair.Monster.Name.ToLowerInvariant()} den";
+        if (use.Building is { } def)
+        {
+            bool afford = _sim.Economy.CanAfford(player, def.Cost);
+            _denButton.Text = $"Make the {den} a {def.Name.ToLowerInvariant()}   {CostText(def.Cost)}";
+            _denButton.Icon = UiIcons.Get(def.Icon.Length > 0 ? def.Icon : def.Id);
+            string yield = def.YieldTicks > 0
+                ? $" Brings in {CostText(def.Yield)} every {def.YieldTicks / Simulation.TicksPerSecond} s once built."
+                : "";
+            _denButton.TooltipText = $"Your selected workers build a {def.Name.ToLowerInvariant()} on the cleared {den}, which is gone. " +
+                                     $"It houses {def.Housing}.{yield}";
+            _denButton.Disabled = !afford;
+        }
+        else if (use.Form is { } form)
+        {
+            _denButton.Text = $"Use the {den}: {form.Name.ToLowerInvariant()}";
+            _denButton.Icon = null;
+            _denButton.TooltipText = $"The selected {form.EvolvesFrom!.Name.ToLowerInvariant()} nearest the den becomes a " +
+                                     $"{form.Name.ToLowerInvariant()}, a form it can get nowhere else. The den is gone.\n{form.Description}";
+            _denButton.Disabled = false;
+        }
+    }
+
+    /// <summary>
+    /// The evolve rows, one for each type of selected unit of yours that has forms, if one of them can
+    /// evolve or the type has a form it takes on its own: how many there are and how many are ready (or
+    /// the experience the most seasoned one has and needs), a button per form that is greyed out until one
+    /// of them can take it, and the form the type takes on its own.
+    /// </summary>
+    private void RefreshEvolveRows()
+    {
+        int player = PlayerControl.LocalPlayer;
+        var u = _sim.Units;
+        var evolution = _sim.Evolution;
+        var types = new List<UnitDef>();
+        if (evolution.Rules(player) != null)
+        {
+            foreach (int id in _control.Selected)
+            {
+                int i = u.IndexOf(id);
+                var def = _sim.Content.Units[u.Def[i]];
+                if (u.Owner[i] != player || def.Forms.Count == 0 || types.Contains(def)) continue;
+                if (evolution.CanEvolve(i) || evolution.AutoForm(player, def) != null) types.Add(def);
+            }
+            types.Sort((a, b) => a.Index.CompareTo(b.Index));
+        }
+        var key = new StringBuilder();
+        foreach (var t in types) key.Append(t.Index).Append(',');
+        if (key.ToString() != _evolveKey) BuildEvolveRows(types, key.ToString());
+
+        foreach (var row in _evolveRows)
+        {
+            int count = 0, ready = 0, best = -1;
+            var canTake = new bool[row.Forms.Count];
+            foreach (int id in _control.Selected)
+            {
+                int i = u.IndexOf(id);
+                if (u.Owner[i] != player || u.Def[i] != row.Unit.Index) continue;
+                count++;
+                if (best < 0 || u.Xp[i] > u.Xp[best]) best = i;
+                bool any = false;
+                for (int k = 0; k < row.Forms.Count; k++)
+                    if (evolution.CanEvolve(i, row.Forms[k].Form)) any = canTake[k] = true;
+                if (any) ready++;
+            }
+            string name = (count == 1 ? row.Unit.Name : Plural(row.Unit.Name)).ToLowerInvariant();
+            int next = best >= 0 ? evolution.NextLevelXp(best) : -1;
+            string state = ready > 0 ? $"{ready} ready" : best < 0 ? "" : next > 0 ? $"{u.Xp[best]}/{next} xp" : $"{u.Xp[best]} xp";
+            row.Label.Text = $"{count} {name}, {state}:";
+            for (int k = 0; k < row.Forms.Count; k++)
+            {
+                var (button, form) = row.Forms[k];
+                string? needs = Needs(form.Requires, form.Faction);
+                button.Text = needs != null ? $"{form.Name}: {needs}" : form.Name;
+                button.Disabled = !canTake[k];
+            }
+            var auto = evolution.AutoForm(player, row.Unit);
+            row.Auto.Text = auto != null ? $"Auto: {auto.Name}" : "Auto: off";
+            row.Auto.SetPressedNoSignal(auto != null);
+        }
+    }
+
+    private string DescribeTool()
+    {
+        switch (_control.Tool)
+        {
+            case PlayerControl.ToolMode.Terrain:
+                return "Terrain tool: left click digs, right click places stone (T or Esc to leave)";
+            case PlayerControl.ToolMode.Test:
+                return $"Test mode: left click to place {_control.TestPlacing}\nRight click or Esc to stop";
+            case PlayerControl.ToolMode.Build:
+            {
+                var ghost = _control.Ghost;
+                string why = !ghost.Visible ? "" : ghost.Result switch
+                {
+                    PlaceResult.Ok => "",
+                    PlaceResult.Crowded => "   (too close to another building)",
+                    PlaceResult.Uneven => "   (the ground is too steep)",
+                    PlaceResult.Blocked => "   (something is in the way)",
+                    PlaceResult.CannotAfford => "   (not enough goods)",
+                    PlaceResult.Locked when _control.BuildDef is { } def => $"   ({Needs(def.Requires, def.Faction)})",
+                    _ => "   (off the map)",
+                };
+                return $"Placing a {_control.BuildDef?.Name.ToLowerInvariant()}: left click builds it with the selected workers{why}\n" +
+                       "Shift+click to place more, right click or Esc to stop";
+            }
+            case PlayerControl.ToolMode.Tunnel:
+                return "Tunnel: left click where the selected sappers dig to (on a building: under it, to bring it down)" +
+                       (_control.OwnSappers().Count == 0 ? "   (select sappers first)" : "") +
+                       "\nShift+click to dig another, right click or Esc to stop";
+            case PlayerControl.ToolMode.Dig:
+                return (_control.DigStarted
+                           ? $"Dig: let go to mark out {_control.DigPreview.Count} columns, dug {_control.DigDepth} deep"
+                           : $"Dig: drag out an area for the selected workers and sappers to dig, {_control.DigDepth} deep") +
+                       (_control.OwnDiggers().Count == 0 ? "   (select workers or sappers first)" : "") +
+                       "\n[ and ]: shallower or deeper   Shift: mark out another   Right click or Esc to stop";
+            case PlayerControl.ToolMode.Wall:
+            {
+                var preview = _control.WallPreview;
+                int ok = 0;
+                foreach (var c in preview)
+                    if (c.Ok) ok++;
+                return (_control.WallStarted
+                           ? $"Wall: let go to wall off {ok} columns" + (ok < preview.Count ? $" ({preview.Count - ok} have no room or goods)" : "")
+                           : "Wall: drag a line for the selected workers to wall off") +
+                       (_control.OwnWorkers().Count == 0 ? "   (select workers first)" : "") +
+                       "\nShift: draw another   Right click or Esc to stop   (O: a gate, which only your units walk through)";
+            }
+            case PlayerControl.ToolMode.Bridge:
+            {
+                var preview = _control.WallPreview;
+                int ok = 0;
+                foreach (var c in preview)
+                    if (c.Ok) ok++;
+                return (!_control.WallStarted ? "Bridge: drag from bank to bank for the selected workers to bridge"
+                           : preview.Count == 0 ? "Bridge: both ends must be ground, about level, with deep water or a drop between"
+                           : $"Bridge: let go to lay {ok} deck columns" + (ok < preview.Count ? $" ({preview.Count - ok} have no room or goods)" : "")) +
+                       (_control.OwnWorkers().Count == 0 ? "   (select workers first)" : "") +
+                       "\nShift: draw another   Right click or Esc to stop   (Ctrl+right click a bridge: knock that column out)";
+            }
+            case PlayerControl.ToolMode.Road:
+                return _control.RoadStarted
+                    ? $"Road: click where it ends ({_control.RoadPreview.Count} blocks, {_control.RoadPreview.Count * EconomySystem.StonePerRoad} stone; Shift carries on)\nRight click or Esc to stop"
+                    : "Road: click where it starts\nRight click or Esc to stop";
+            default:
+                return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Ctrl+1-9: groups\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
+                       "J: automatic workers (Shift+J: all)   P: repeat training   V: stance";
+        }
+    }
+
+    public static string CostText(GoodAmount[] cost)
+    {
+        var text = new StringBuilder();
+        foreach (var c in cost)
+        {
+            if (text.Length > 0) text.Append(", ");
+            text.Append(c.Amount).Append(' ').Append(Goods.Name(c.Good).ToLowerInvariant());
+        }
+        return text.Length > 0 ? text.ToString() : "free";
+    }
+
+    private string DescribeSelection()
+    {
+        if (_sim.Buildings.Get(_control.SelectedBuilding) is { } building) return DescribeBuilding(building);
+        if (_sim.Cities.Get(_control.SelectedCity) is { } town) return DescribeCity(town);
+        var sel = _control.Selected;
+        if (sel.Count == 0) return "";
+        var u = _sim.Units;
+        var defs = _sim.Content.Units;
+        if (sel.Count == 1)
+        {
+            int i = u.IndexOf(sel[0]);
+            var def = defs[u.Def[i]];
+            string load = u.CarryAmount[i] > 0 ? $"    carrying {u.CarryAmount[i]} {Goods.Name(u.Carry[i]).ToLowerInvariant()}" : "";
+            string morale = def.CanAttack && u.Rout[i] == 0 ? $"    morale {u.Morale[i]}" : "";
+            string rule = def.Role == UnitRole.Worker
+                ? (u.Auto[i] ? (u.Held[i] ? "    automatic, waiting for orders" : "    automatic") : "")
+                : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
+            string heals = !_sim.Combat.Healing(i, out bool home) ? "" : home ? " (healing fast, at home)" : " (healing)";
+            return $"{def.Name}   ({PlayerName(u.Owner[i])})   {_sim.Content.Combat.Job(def.Role)}\n" +
+                   $"HP {u.Hp[i]} / {_sim.Economy.MaxHp(u.Owner[i], def)}{heals}    {Activity(u, i)}{load}{morale}{rule}    height {u.Y[i]}" +
+                   DescribeExperience(u, i);
+        }
+        var counts = new int[defs.Count];
+        int moving = 0, working = 0, fighting = 0, routing = 0, automatic = 0, ready = 0, beaten = 0, healing = 0;
+        var stances = new int[3];
+        foreach (int id in sel)
+        {
+            int i = u.IndexOf(id);
+            counts[u.Def[i]]++;
+            var def = defs[u.Def[i]];
+            if (u.Auto[i]) automatic++;
+            if (u.Owner[i] == PlayerControl.LocalPlayer && _sim.Evolution.CanEvolve(i)) ready++;
+            if (def.CanAttack && def.Role != UnitRole.Worker && (int)u.Stance[i] < stances.Length) stances[(int)u.Stance[i]]++;
+            if (_sim.Combat.Healing(i, out _)) healing++;
+            if (u.Subdued[i]) beaten++;
+            else if (u.Rout[i] > 0) routing++;
+            else if (u.Job[i] != UnitJob.None) working++;
+            else if (u.Target[i] != 0 || u.TargetBuilding[i] != 0) fighting++;
+            else if (u.Order[i] == UnitOrder.Move) moving++;
+        }
+        var parts = new List<string> { $"{moving} moving" };
+        if (working > 0) parts.Add($"{working} at work");
+        if (fighting > 0) parts.Add($"{fighting} fighting");
+        if (routing > 0) parts.Add($"{routing} running away");
+        if (healing > 0) parts.Add($"{healing} healing");
+        if (automatic > 0) parts.Add($"{automatic} automatic");
+        if (ready > 0) parts.Add($"{ready} can evolve");
+        if (beaten > 0) parts.Add($"{beaten} beaten, waiting for you");
+        if (stances[(int)UnitStance.Hold] > 0) parts.Add($"{stances[(int)UnitStance.Hold]} holding");
+        if (stances[(int)UnitStance.Retreat] > 0) parts.Add($"{stances[(int)UnitStance.Retreat]} retreat when hurt");
+        string busy = string.Join(", ", parts);
+        var text = new StringBuilder($"{sel.Count} units selected   ({busy})\n");
+        int shown = 0;
+        for (int d = 0; d < defs.Count; d++)
+        {
+            if (counts[d] == 0) continue;
+            if (shown++ > 0) text.Append("   ");
+            text.Append(counts[d]).Append(' ').Append(counts[d] > 1 ? Plural(defs[d].Name) : defs[d].Name);
+        }
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// For a unit whose player's units earn experience: its level and experience (and what the next level
+    /// needs), and whether it can evolve now.
+    /// </summary>
+    private string DescribeExperience(UnitStore u, int i)
+    {
+        var evolution = _sim.Evolution;
+        if (evolution.Rules(u.Owner[i]) == null) return "";
+        int next = evolution.NextLevelXp(i);
+        var text = new StringBuilder($"\nLevel {evolution.Level(i)}    experience {u.Xp[i]}");
+        if (next > 0) text.Append($" / {next}");
+        if (evolution.CanEvolve(i))
+            text.Append(u.Owner[i] == PlayerControl.LocalPlayer ? "    ready to evolve: pick a form below" : "    ready to evolve");
+        return text.ToString();
+    }
+
+    private string DescribeBuilding(Building b)
+    {
+        var u = _sim.Units;
+        var text = new StringBuilder($"{b.Def.Name}   ({PlayerName(b.Owner)})");
+        if (b.MaxHealth > 0) text.Append($"   health {b.Health} / {b.MaxHealth}");
+        text.Append('\n');
+        if (b.State == BuildingState.Site)
+        {
+            int builders = 0;
+            for (int i = 0; i < u.Count; i++)
+                if (u.Job[i] == UnitJob.Build && u.JobTarget[i] == b.Id) builders++;
+            text.Append($"Being built: {100L * b.Work / b.Def.BuildTicks}%   {builders} builder{(builders == 1 ? "" : "s")}");
+            if (builders == 0) text.Append(" (right click it with workers)");
+        }
+        else
+        {
+            var parts = new List<string>();
+            int housing = _sim.Economy.HousingOf(b);
+            if (housing > 0) parts.Add($"Houses {housing}");
+            if (b.Def.WorkerSlots > 0)
+            {
+                var job = b.Def.Kind == BuildingKind.Farm ? UnitJob.Farm : UnitJob.Haul;
+                int n = 0;
+                for (int i = 0; i < u.Count; i++)
+                    if (u.Job[i] == job && u.JobTarget[i] == b.Id) n++;
+                parts.Add($"{n} of {b.Def.WorkerSlots} workers (right click it with workers)");
+            }
+            if (b.Def.Kind == BuildingKind.Smelter && b.SmeltTicks > 0)
+                parts.Add($"smelting {100 - 100L * b.SmeltTicks / EconomySystem.SmeltTicks}%");
+            text.Append(string.Join("    ", parts));
+            if (b.Def.Storage || b.Def.Kind == BuildingKind.Smelter)
+            {
+                var goods = new List<string>();
+                foreach (var g in Goods.All)
+                    if (b.Stock[(int)g] > 0) goods.Add($"{b.Stock[(int)g]} {Goods.Name(g).ToLowerInvariant()}");
+                if (parts.Count > 0) text.Append('\n');
+                text.Append(goods.Count > 0 ? "Holds " + string.Join(", ", goods) : "Empty");
+            }
+            if (b.Queue.Count > 0)
+            {
+                var first = _sim.Content.Units[b.Queue[0]];
+                text.Append($"\nTraining a {first.Name.ToLowerInvariant()}: {100L * b.TrainTicks / Math.Max(1, first.TrainTicks)}%");
+                if (b.Queue.Count > 1) text.Append($", {b.Queue.Count - 1} more queued");
+                if (_sim.Economy.Population(b.Owner) >= _sim.Economy.Housing(b.Owner)) text.Append("   (needs more houses)");
+                else if (_sim.Economy.Starving(b.Owner)) text.Append("   (needs food)");
+            }
+            if (b.Repeat)
+            {
+                text.Append("\nOn repeat");
+                if (b.Owed.Count > 0)
+                    text.Append($": {b.Owed.Count} to queue again when there are goods (and a minute's food) for {(b.Owed.Count == 1 ? "it" : "them")}");
+            }
+        }
+        if (b.Raid != RaidKind.None && b.RaidPlayer >= 0)
+        {
+            int total = b.Raid == RaidKind.Capture ? EconomySystem.CaptureTicks : EconomySystem.BurnTicks;
+            text.Append($"\n{(b.Raid == RaidKind.Capture ? "Being captured" : "Burning")} by {PlayerName(b.RaidPlayer)}: {100L * b.RaidTicks / total}%");
+        }
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// A city-state's town: who holds it and how to take it, its totem and guards, the tribute and units its
+    /// holder gets, and what its trade pays.
+    /// </summary>
+    private string DescribeCity(CityState town)
+    {
+        var def = town.Def;
+        int player = PlayerControl.LocalPlayer;
+        var u = _sim.Units;
+        int trading = 0;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == player && u.Job[i] == UnitJob.Trade && u.JobTarget[i] == town.Id) trading++;
+        const int tps = Simulation.TicksPerSecond;
+        string Seconds(int ticks) => $"{(ticks + tps - 1) / tps} s";
+        var totem = _sim.Cities.Totem(town);
+        string totemText = totem != null ? $"Totem {totem.Health}/{totem.MaxHealth}" : $"Totem down: it stands again in {Seconds(town.RespawnTimer)}";
+        string guards = $"{town.Guards.Count()} of {def.Guards.Count} guards" +
+                        (town.Guards.Count() < def.Guards.Count ? $", the next in {Seconds(def.GuardRefillTicks - town.GuardTimer)}" : "");
+        string take = town.Holder == player
+            ? "Its guards fight your enemies' soldiers in the town; anyone who breaks the totem takes it from you"
+            : town.Holder >= 0
+                ? $"Break {PlayerName(town.Holder)}'s totem to take the town: its guards fight your soldiers there"
+                : "Break the totem to make them your vassals: the guards fight soldiers that come in, never workers or caravans";
+        string tribute = def.TributeCaravan != null && def.TributeAmount > 0
+            ? $"Tribute for its holder: {def.TributeAmount} {Goods.Name(def.TributeGood).ToLowerInvariant()} every {Seconds(def.TributeTicks)}" +
+              (town.Holder == player ? $", the next in {Seconds(def.TributeTicks - town.TributeTimer)}" : "") + "\n"
+            : "";
+        string refill = town.Ready < def.Pool ? $", the next in {Seconds(def.RefillTicks - town.RefillTimer)}" : "";
+        return $"{def.Name}   (city-state)   {HolderText(town, player)}\n" +
+               $"{totemText}   {guards}\n" +
+               take + "\n" + tribute +
+               $"Caravans bring {def.Load} {Goods.Name(def.Buys).ToLowerInvariant()} and get {def.Price} {Goods.Name(def.Sells).ToLowerInvariant()} " +
+               $"per 100 blocks from your storage ({def.HolderBonus}% more for its holder): {trading} of yours trading here\n" +
+               $"Mercenaries for its holder: {town.Ready} of {def.Pool} ready{refill}";
+    }
+
+    /// <summary>What a unit is doing: running away, its job, fighting or chasing, moving, or idle.</summary>
+    private string Activity(UnitStore u, int i)
+    {
+        if (u.Subdued[i]) return u.Owner[i] == PlayerControl.LocalPlayer ? "beaten: ride it or recruit it (below)" : "beaten";
+        if (u.Rout[i] > 0) return "running away (broken)";
+        if (DescribeJob(u, i) is { } job) return job;
+        int t = u.IndexOf(u.Target[i]);
+        string enemy = t >= 0 ? $"a {_sim.Content.Units[u.Def[t]].Name.ToLowerInvariant()}" : "an enemy";
+        if (u.Order[i] == UnitOrder.Chase) return u.TargetBuilding[i] != 0 ? "going to attack a building" : $"chasing {enemy}";
+        if (u.TargetBuilding[i] != 0) return "attacking a building";
+        if (u.Target[i] != 0) return $"fighting {enemy}";
+        if (u.Order[i] == UnitOrder.Move) return u.Combat[i] == CombatOrder.AttackMove ? "attack-moving" : "moving";
+        return "idle";
+    }
+
+    private static string StanceName(UnitStance stance) => stance switch
+    {
+        UnitStance.Hold => "holds its ground",
+        UnitStance.Retreat => "retreats when hurt",
+        _ => "aggressive",
+    };
+
+    /// <summary>What a unit's job has it doing, or null if it has none.</summary>
+    private static string? DescribeJob(UnitStore u, int i) => u.Job[i] switch
+    {
+        UnitJob.Gather => u.JobBlock[i] switch
+        {
+            BlockType.Wood => "chopping wood",
+            BlockType.BerryBush => "picking berries",
+            BlockType.Stone => "quarrying stone",
+            BlockType.IronOre => "mining iron ore",
+            BlockType.Coal => "mining coal",
+            _ => "digging",
+        },
+        UnitJob.Build => "building",
+        UnitJob.Farm => "farming",
+        UnitJob.Haul => "supplying the smelter",
+        UnitJob.Deliver => "taking goods to storage",
+        UnitJob.Capture => "capturing a storehouse",
+        UnitJob.Burn => "burning a storehouse",
+        UnitJob.Tunnel => "tunnelling",
+        UnitJob.Clean => u.Phase[i] == JobPhase.Working ? "scrubbing blood" : "cleaning blood",
+        UnitJob.Dig => u.Phase[i] switch
+        {
+            JobPhase.ToStore => "digging an area: taking what it dug to storage",
+            JobPhase.Wait => "digging an area: waiting for room",
+            _ => "digging an area",
+        },
+        UnitJob.Trade => u.Phase[i] switch
+        {
+            JobPhase.Fetch => "trading: fetching a load",
+            JobPhase.ToWork => "trading: taking a load to market",
+            JobPhase.ToStore => "trading: bringing back its pay",
+            _ => "trading: waiting for a whole load in storage",
+        },
+        _ => null,
+    };
+
+    /// <summary>What the game says about the selected unit's type (a form's gains and drawbacks), if one unit is selected.</summary>
+    private string DescribeUnitType()
+    {
+        if (_sim.Cities.Get(_control.SelectedCity) is { } town) return town.Def.Description;
+        if (_control.SelectedBuilding != 0 || _control.Selected.Count != 1) return "";
+        int i = _sim.Units.IndexOf(_control.Selected[0]);
+        return i < 0 ? "" : _sim.Content.Units[_sim.Units.Def[i]].Description;
+    }
+
+    /// <summary>The local player's stored goods, and population over housing, each beside its picture.</summary>
+    private void ShowStock()
+    {
+        var econ = _sim.Economy;
+        int player = PlayerControl.LocalPlayer;
+        var stock = econ.Stockpile(player);
+        foreach (var good in Goods.All) _stockLabels[(int)good].Text = stock[(int)good].ToString(CultureInfo.InvariantCulture);
+        _popLabel.Text = $"{econ.Population(player)} / {econ.Housing(player)}";
+        _hungryLabel.Visible = econ.Starving(player);
+    }
+
+    /// <summary>A picture and a number beside it in the top bar; <paramref name="tooltip"/> says what it counts.</summary>
+    private static Label Stat(HBoxContainer row, Texture2D icon, string tooltip)
+    {
+        var box = new HBoxContainer { TooltipText = tooltip, MouseFilter = Control.MouseFilterEnum.Pass };
+        box.AddThemeConstantOverride("separation", 5);
+        box.AddChild(new TextureRect { Texture = icon, StretchMode = TextureRect.StretchModeEnum.KeepCentered, MouseFilter = Control.MouseFilterEnum.Ignore });
+        var label = MakeLabel("", 19);
+        label.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        label.CustomMinimumSize = new Vector2(30, 0);
+        box.AddChild(label);
+        row.AddChild(box);
+        return label;
+    }
+
+    private static string Plural(string name) => name.EndsWith("man") ? name[..^3] + "men" : name + "s";
+
+    private static string PlayerName(int owner) =>
+        owner == PlayerControl.LocalPlayer ? "you" : owner == Simulation.WildPlayer ? "wild" : $"player {owner + 1}";
+
+    private void SyncSlider()
+    {
+        _updatingSlider = true;
+        _slider.Value = _slice.On ? _slice.Level : _slice.MaxLevel;
+        _updatingSlider = false;
+        _sliceLabel.Text = _slice.On ? $"cut at {_slice.Level}" : "off";
+    }
+
+    /// <summary>Anchors a control to a corner or edge midpoint, offset by (x, y) pixels, at its minimum size.</summary>
+    internal static void Place(Control c, Control.LayoutPreset preset, float x, float y)
+    {
+        c.SetAnchorsPreset(preset);
+        c.OffsetLeft = c.OffsetRight = x;
+        c.OffsetTop = c.OffsetBottom = y;
+    }
+
+    internal static Label MakeLabel(string text, int size)
+    {
+        var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
+        label.AddThemeFontSizeOverride("font_size", size);
+        return label;
+    }
+
+    internal static Button MakeToolButton(string text)
+    {
+        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, ToggleMode = true };
+        b.AddThemeFontSizeOverride("font_size", 13);
+        b.Alignment = HorizontalAlignment.Left;
+        b.CustomMinimumSize = new Vector2(150, 0);
+        return b;
+    }
+
+    internal static Button MakeButton(string text)
+    {
+        var b = new Button { Text = text, ToggleMode = true, FocusMode = Control.FocusModeEnum.None };
+        b.AddThemeFontSizeOverride("font_size", 16);
+        b.CustomMinimumSize = new Vector2(52, 0);
+        return b;
+    }
+
+    /// <summary>
+    /// Gives a button the current look's button style tinted with <paramref name="colour"/> (lighter on hover,
+    /// sunken when pressed), for the buttons that must stand out from the usual ones: the start screen's, the
+    /// end of match panel's and the alerts.
+    /// </summary>
+    internal static void Frame(Button b, Color colour)
+    {
+        var look = UiStyle.Current;
+        var frame = colour.Lightened(0.3f);
+        b.AddThemeStyleboxOverride("normal", UiStyle.Box(colour, frame, false, 1f, 14, 6));
+        b.AddThemeStyleboxOverride("hover", UiStyle.Box(colour.Lightened(0.14f), frame.Lightened(0.15f), false, 1f, 14, 6));
+        b.AddThemeStyleboxOverride("pressed", UiStyle.Box(colour.Darkened(0.15f), look.Highlight, true, 1f, 14, 6));
+        b.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(colour.Darkened(0.05f), look.Highlight, true, 1f, 14, 6));
+        b.AddThemeColorOverride("font_hover_color", Colors.White);
+        b.AddThemeColorOverride("font_pressed_color", Colors.White);
+    }
+
+    /// <summary>The colour of a button that starts or confirms something (see <see cref="Frame"/>).</summary>
+    internal static Color AccentColour => UiStyle.Current.AccentFill;
+    /// <summary>The colour of the other framed buttons (see <see cref="Frame"/>).</summary>
+    internal static Color PlainColour => UiStyle.Current.ButtonFill;
+}
+
+/// <summary>The rubber-band rectangle while box-selecting.</summary>
+public partial class SelectionBox : Control
+{
+    public bool Active;
+    public Rect2 Rect;
+
+    public override void _Draw()
+    {
+        if (!Active) return;
+        DrawRect(Rect, new Color(0.35f, 1f, 0.4f, 0.12f));
+        DrawRect(Rect, new Color(0.35f, 1f, 0.4f, 0.9f), filled: false, width: 1.5f);
+    }
+}

@@ -1,0 +1,164 @@
+// Unit types. Speed is in blocks per second, hp is hit points, trainTime is in seconds and cost is in
+// goods (food, wood, stone, iron_ore, coal, iron). trainedAt names the building that trains the unit;
+// requires names a tech the player must have researched first; faction (optional) limits the unit to
+// one faction. Roles: worker, line_infantry, heavy_infantry, ranged, cavalry, sapper, caster, siege, monster,
+// trader (see roles.json for what each is strong and weak against). description (optional) is shown in the game.
+// Combat: damage is the hit points one hit takes off (a unit without damage cannot attack), attackTime
+// the seconds between hits, range how far it hits (in blocks, from the middle of the unit; more than 2
+// makes it a ranged unit), sight how far it spots enemies to fight on its own, and splash (optional)
+// hits every enemy that close to the target too. weakTo (optional) lists roles whose attacks deal it
+// that many percent more damage, as in { "caster": 50 }. heal (optional) is the hit points it gives back
+// to the most hurt ally within healRange blocks every healTime seconds.
+// Armour (see Combat in docs/rules.md): attack (optional, default slash) is the kind of the unit's attack:
+// slash (swords, axes, claws), pierce (spears, arrows, lances) or crush (hammers, clubs, stones, blasts).
+// Armour stops slash best and crush least, and slash and pierce wounds bleed. body (optional) is humanoid
+// (head, torso, arms, legs; the default) or beast (head, body, legs). armor (optional) is the armour on
+// each part, as in { "head": 1, "torso": 2, "arms": 1, "legs": 1 } (a beast's: head, body, legs); each hit
+// on a part loses that many points, more against slash and fewer against crush. shield (optional) is the
+// percent chance a hit from in front of the unit is stopped whole. bleeds (optional, default true) says
+// whether its slash and pierce wounds bleed (see "bleeding" in roles.json); set it false for a body with no
+// blood in it.
+// upkeep (optional, default 1) is the food it eats a minute; work (optional, default 100) is how fast
+// it gathers, builds, farms and digs tunnels, in percent.
+// Evolution: a unit with evolvesFrom is a form that unit can take once it has the experience (see
+// "experience" in factions.json): it is not trained, and a form of a form needs one level more. Each
+// form gives something and takes something: here every form has one drawback, more upkeep, less speed
+// or a weakness (weakTo). A form with fromDen (optional) is not reached through experience: a unit takes it
+// only at a cleared monster den, for a faction whose "den" in factions.json names it.
+// Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
+// has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
+// near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
+// chases before it goes back, and reward the goods a player gets for clearing the lair, unless their
+// faction tames monsters (see "tamesMonsters" in factions.json): then each monster their units beat is
+// theirs to ride or to recruit. ride (optional) says which unit can climb on a beaten monster (rider) and
+// what it becomes (becomes); a recruited monster fights for its new owner as it is. tracksBlood (optional)
+// makes a wild monster follow a fresh blood trail it finds to the bleeding unit, well past its leash.
+// City-states (see citystates.json): a unit with the trader role is a caravan, which trades with a
+// city-state's town; caravans are trained but no player starts with one. A unit with hiredFrom is a
+// mercenary: not trained, but hired for its cost at that city-state's town by the city-state's ally.
+[
+  { "id": "worker", "name": "Worker", "role": "worker", "speed": 4, "hp": 40, "model": "worker",
+    "damage": 3, "attackTime": 1.5, "range": 1.25, "sight": 6,
+    "attack": "crush",
+    "cost": { "food": 30 }, "trainTime": 10, "trainedAt": "town_hall" },
+  { "id": "spearman", "name": "Spearman", "role": "line_infantry", "speed": 4, "hp": 80, "model": "spearman",
+    "damage": 8, "attackTime": 1, "range": 1.5, "sight": 8,
+    "attack": "pierce", "armor": { "head": 1, "torso": 1 },
+    "cost": { "food": 40, "wood": 20 }, "trainTime": 15, "trainedAt": "barracks" },
+  { "id": "archer", "name": "Archer", "role": "ranged", "speed": 4, "hp": 50, "model": "archer",
+    "damage": 6, "attackTime": 1.2, "range": 9, "sight": 10,
+    "attack": "pierce", "armor": { "torso": 1 },
+    "cost": { "food": 30, "wood": 30 }, "trainTime": 15, "trainedAt": "barracks", "requires": "archery" },
+  { "id": "rider", "name": "Rider", "role": "cavalry", "speed": 8, "hp": 120, "model": "rider",
+    "damage": 12, "attackTime": 1, "range": 1.5, "sight": 10,
+    "attack": "slash", "armor": { "head": 1, "torso": 1 },
+    "cost": { "food": 60, "wood": 30 }, "trainTime": 20, "trainedAt": "barracks", "requires": "horse_breeding" },
+  { "id": "sapper", "name": "Sapper", "role": "sapper", "speed": 4, "hp": 60, "model": "sapper",
+    "damage": 5, "attackTime": 1.5, "range": 1.25, "sight": 7,
+    "attack": "crush", "armor": { "head": 1, "torso": 1 },
+    "cost": { "food": 40, "wood": 20, "stone": 10 }, "trainTime": 15, "trainedAt": "barracks", "requires": "sapping" },
+  { "id": "mage", "name": "Mage", "role": "caster", "speed": 4, "hp": 45, "model": "mage",
+    "damage": 10, "attackTime": 2, "range": 8, "sight": 9, "splash": 1.5,
+    "attack": "crush",
+    "cost": { "food": 50, "stone": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" },
+
+  // Settler forms, first tier.
+  { "id": "foreman", "name": "Foreman", "evolvesFrom": "worker", "faction": "settlers", "role": "worker",
+    "description": "A master of the trades: gathers, builds and farms half as fast again, and eats for two.",
+    "speed": 4, "hp": 50, "model": "foreman", "damage": 3, "attackTime": 1.5, "range": 1.25, "sight": 6,
+    "attack": "crush", "armor": { "torso": 1 },
+    "work": 150, "upkeep": 2 },
+  { "id": "militia", "name": "Militia", "evolvesFrom": "worker", "faction": "settlers", "role": "line_infantry",
+    "description": "A worker who has taken up the spear for good: line infantry, a little slower than a spearman. It no longer works.",
+    "speed": 3.5, "hp": 70, "model": "militia", "damage": 7, "attackTime": 1, "range": 1.5, "sight": 8,
+    "attack": "pierce", "armor": { "torso": 1 } },
+  { "id": "knight", "name": "Knight", "evolvesFrom": "spearman", "faction": "settlers", "role": "heavy_infantry",
+    "description": "Heavy armour and a longsword: breaks spear lines, but slow.",
+    "speed": 3, "hp": 130, "model": "knight", "damage": 12, "attackTime": 1, "range": 1.5, "sight": 8,
+    "attack": "slash", "armor": { "head": 4, "torso": 5, "arms": 3, "legs": 3 }, "shield": 30 },
+  { "id": "pathfinder", "name": "Pathfinder", "evolvesFrom": "spearman", "faction": "settlers", "role": "line_infantry",
+    "description": "Runs ahead and sees far, but magic tears through light leather.",
+    "speed": 6, "hp": 80, "model": "pathfinder", "damage": 8, "attackTime": 1, "range": 1.5, "sight": 14,
+    "attack": "pierce", "armor": { "torso": 1 },
+    "weakTo": { "caster": 50 } },
+  { "id": "battle_priest", "name": "Battle priest", "evolvesFrom": "spearman", "faction": "settlers", "role": "line_infantry",
+    "description": "Fights in the line and heals the most hurt ally nearby, and must be fed for it.",
+    "speed": 4, "hp": 80, "model": "battle_priest", "damage": 8, "attackTime": 1, "range": 1.5, "sight": 8,
+    "attack": "crush", "armor": { "head": 1, "torso": 3, "arms": 1, "legs": 1 },
+    "heal": 4, "healTime": 2, "healRange": 5, "upkeep": 2 },
+  { "id": "siege_engineer", "name": "Siege engineer", "evolvesFrom": "spearman", "faction": "settlers", "role": "siege",
+    "description": "Hurls fire pots that bring walls down from afar; slow to move.",
+    "speed": 3, "hp": 80, "model": "siege_engineer", "damage": 12, "attackTime": 2.5, "range": 7, "sight": 9,
+    "attack": "crush", "armor": { "torso": 1 } },
+  { "id": "longbowman", "name": "Longbowman", "evolvesFrom": "archer", "faction": "settlers", "role": "ranged",
+    "description": "A tall bow that reaches a third further, and is slower on the march.",
+    "speed": 3.5, "hp": 50, "model": "longbowman", "damage": 7, "attackTime": 1.2, "range": 12, "sight": 12,
+    "attack": "pierce", "armor": { "torso": 1 } },
+  { "id": "ranger", "name": "Ranger", "evolvesFrom": "archer", "faction": "settlers", "role": "ranged",
+    "description": "Moves fast and spots the enemy first, but cannot stand up to spears.",
+    "speed": 5.5, "hp": 55, "model": "ranger", "damage": 6, "attackTime": 1.2, "range": 9, "sight": 13,
+    "attack": "pierce", "armor": { "torso": 1 },
+    "weakTo": { "line_infantry": 50 } },
+  { "id": "lancer", "name": "Lancer", "evolvesFrom": "rider", "faction": "settlers", "role": "cavalry",
+    "description": "A heavy lance on a heavy horse, which eats a great deal.",
+    "speed": 8, "hp": 130, "model": "lancer", "damage": 18, "attackTime": 1, "range": 1.5, "sight": 10,
+    "attack": "pierce", "armor": { "head": 2, "torso": 4, "arms": 2, "legs": 2 },
+    "upkeep": 3 },
+  { "id": "outrider", "name": "Outrider", "evolvesFrom": "rider", "faction": "settlers", "role": "cavalry",
+    "description": "A light horse that outruns everything and sees far, but arrows find it easily.",
+    "speed": 10, "hp": 120, "model": "outrider", "damage": 12, "attackTime": 1, "range": 1.5, "sight": 14,
+    "attack": "slash", "armor": { "torso": 1 },
+    "weakTo": { "ranged": 50 } },
+  { "id": "tunneller", "name": "Tunneller", "evolvesFrom": "sapper", "faction": "settlers", "role": "sapper",
+    "description": "Digs tunnels twice as fast. Hungry work.",
+    "speed": 4, "hp": 60, "model": "tunneller", "damage": 5, "attackTime": 1.5, "range": 1.25, "sight": 7,
+    "attack": "crush", "armor": { "head": 1, "torso": 1 },
+    "work": 200, "upkeep": 2 },
+  { "id": "demolisher", "name": "Demolisher", "evolvesFrom": "sapper", "faction": "settlers", "role": "sapper",
+    "description": "Powder charges bring buildings down faster, and are heavy to carry.",
+    "speed": 3.5, "hp": 70, "model": "demolisher", "damage": 9, "attackTime": 1.5, "range": 1.25, "sight": 7,
+    "attack": "crush", "armor": { "head": 1, "torso": 2 } },
+  { "id": "battle_mage", "name": "Battle mage", "evolvesFrom": "mage", "faction": "settlers", "role": "caster",
+    "description": "Bigger blasts over a wider area, fed by a bigger appetite.",
+    "speed": 4, "hp": 45, "model": "battle_mage", "damage": 14, "attackTime": 2, "range": 8, "sight": 9, "splash": 2,
+    "attack": "crush",
+    "upkeep": 2 },
+  { "id": "seer", "name": "Seer", "evolvesFrom": "mage", "faction": "settlers", "role": "caster",
+    "description": "Sees and strikes from far off, but walks slowly.",
+    "speed": 3.5, "hp": 45, "model": "seer", "damage": 10, "attackTime": 2, "range": 11, "sight": 15, "splash": 1.5,
+    "attack": "crush" },
+
+  // Monsters.
+  { "id": "wolf", "name": "Wolf", "role": "monster",
+    "description": "Hunts in packs around its den. Orcs who beat one can ride it or keep it.",
+    "speed": 7, "hp": 60, "model": "wolf", "damage": 7, "attackTime": 1, "range": 1.25, "sight": 9,
+    "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true,
+    "lair": { "pack": 4, "guard": 12, "leash": 20, "reward": { "food": 150, "iron": 20 } },
+    "ride": { "rider": "spearman", "becomes": "wolf_rider" } },
+
+  // Orc units that come from taming.
+  { "id": "wolf_rider", "name": "Wolf rider", "faction": "orcs", "role": "cavalry",
+    "description": "An orc spearman on a wolf it beat: twice as fast, and the wolf eats too.",
+    "speed": 9, "hp": 110, "model": "wolf_rider", "damage": 11, "attackTime": 1, "range": 1.5, "sight": 11,
+    "attack": "pierce", "armor": { "head": 1, "torso": 2, "legs": 1 },
+    "upkeep": 2 },
+
+  // Trade with the city-states.
+  { "id": "caravan", "name": "Caravan", "role": "trader",
+    "description": "A mule and its driver. Right-click a city-state's town to trade there: food out, iron back, and influence with them.",
+    "speed": 3.5, "hp": 80, "model": "caravan",
+    "armor": { "torso": 1 },
+    "cost": { "food": 20, "wood": 40 }, "trainTime": 20, "trainedAt": "town_hall" },
+
+  // Goblin mercenaries, hired at the goblins' town by their ally.
+  { "id": "goblin_cutthroat", "name": "Goblin cutthroat", "role": "line_infantry", "hiredFrom": "goblins",
+    "description": "A quick goblin blade for hire.",
+    "speed": 5, "hp": 55, "model": "goblin_cutthroat", "damage": 6, "attackTime": 0.8, "range": 1.25, "sight": 9,
+    "attack": "slash",
+    "cost": { "food": 40, "iron": 10 } },
+  { "id": "goblin_slinger", "name": "Goblin slinger", "role": "ranged", "hiredFrom": "goblins",
+    "description": "Slings rocks and scrap from behind the line.",
+    "speed": 4.5, "hp": 35, "model": "goblin_slinger", "damage": 5, "attackTime": 1.2, "range": 7, "sight": 10,
+    "attack": "crush",
+    "cost": { "food": 40, "wood": 20 } }
+]

@@ -1,0 +1,564 @@
+# Game rules
+
+How each game system works, for players and for anyone changing the rules. Controls are in
+[playing.md](playing.md); where each system lives in the code is in the map in `CLAUDE.md`.
+
+## Economy
+
+`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal and iron ingots, every
+unit of it carried by a worker or held in a building. A player's stock is what their storage buildings
+(town hall and storehouses) hold, and costs are taken from the storage nearest the work.
+
+- **Gathering** (`GatherCommand`): workers dig stone, ore and coal a block at a time, fell trees and
+  pick berry bushes (5 food each). A felled tree topples over away from the worker (0.8 seconds) and
+  lands as a line of tree rubble along the ground, one block for each block of its trunk (following
+  steps of one up or drops of up to three down; logs with no room heap up over the stump). Its crown
+  goes with it. The worker then clears the rubble, 2 wood a block, before felling the next tree, so a
+  tree gives twice the wood its trunk did before (8 or 10 for most trees). Units walk over tree rubble
+  at half speed, like other rubble, and any worker sent to it clears it as wood. Every kind of tree
+  (broad-leaved trees, birches, pines, willows, dusk trees and giant mushrooms) is felled and cleared
+  the same way, and a wood cutter moves on from one kind to the next. Pines stand two blocks taller, so
+  they give more (12 to 16 wood); mushrooms are a block shorter. They carry
+  up to 5 goods to the nearest storage, then come back for more of the same nearby; a group spreads
+  over a resource instead of crowding one block. A worker that cannot get to its block tries the next
+  one nearby, and gives the job up after three in a row (stone at the bottom of a pit too deep to climb
+  down into, say).
+- **Buildings** (`BuildCommand`, from `data/buildings.json`): town hall, storehouse, house, farm, barracks
+  and smelter. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
+  A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column
+  gap from other buildings, and its cost; its voxel blocks go up layer by layer as workers build it.
+- **Farms and the smelter** (`WorkCommand`): two farmers each bring 5 food every 15 seconds. The
+  smelter's worker keeps it supplied with ore and coal from storage and carries its ingots back
+  (2 ore + 1 coal = 1 iron in 10 seconds).
+- **Population**: the town hall houses 25 (every town hall, including one built later) and each house 5; the town hall trains workers for 30 food
+  and the barracks trains soldiers (`TrainCommand`) while there is room. Every minute each unit eats its
+  upkeep (1 food, more for some forms: see [Evolution](#evolution)); a player who cannot pay is hungry and cannot train.
+- **Roads** (`RoadCommand`, after the Roads tech): a line of road up to 64 blocks, 1 stone per block,
+  laid at once on open ground. Units on a road move twice as fast, and paths prefer roads when they save time.
+- **Raids** (`CaptureCommand`, `BurnCommand`): units at an enemy storehouse capture it with its goods
+  in 10 seconds or burn it and its goods in 5, unless one of the owner's units is within 8 blocks (and
+  a soldier among them will fight the raiders).
+
+## Combat
+
+`src/Sim/Units/CombatSystem*.cs` runs the fighting each tick, after the economy.
+
+- **Orders**: an attack order (`AttackCommand`, `AttackBuildingCommand`) sends units after their
+  target wherever it goes; an attack-move (`AttackMoveCommand`) walks somewhere and fights what it meets
+  on the way, then carries on; a plain move walks past enemies. Soldiers standing still fight the
+  nearest enemy they see and answer anyone who hits them; workers fight only when ordered to. A soldier
+  on a raid that is attacked drops the raid and fights back.
+- **Damage**: each unit's damage, attack time, range, sight and splash are in `data/units.json`. The role
+  table in `data/roles.json` (from the design doc) doubles an attack on a role it is strong against: line
+  infantry beats cavalry, ranged beats line infantry and workers, cavalry beats ranged units and casters,
+  and every combat role beats sappers and workers. All of a tick's hits land together, so neither side
+  strikes first, and units do not waste blows on an enemy that is already dying.
+- **Terrain**: ranged units (range over 2) need a clear line to their target (leaves do not block it), and
+  two or more levels above it they reach and see 25% further. Height also changes where hits land (see
+  armour below): arrows from the high ground and blows from above find more heads, blows struck uphill
+  more legs.
+- **Armour and hit locations** (issue #71, `src/Sim/Units/Body.cs`): every hit lands on a part of the
+  body, picked with a deterministic roll (match seed, tick, attacker and target). A humanoid is hit on the
+  head 10% of the time, the torso 50%, the arms 20% and the legs 20%; a beast (`"body": "beast"`, such as
+  the wolf) on the head 15%, the body 60% and the legs 25%. A ranged shot from two or more levels above, or
+  a melee blow from a level above, moves 10 points from the legs to the head; a melee blow uphill moves 20
+  points to the legs (the head's first, then the torso's). The part multiplies the damage: head 150%,
+  torso 100%, legs 85% (a beast's 70%), arms 70%. Then the target's armour on that part (`"armor"` in
+  `data/units.json`, per part) takes points off, by the attack's kind (`"attack"`): slash (swords, axes,
+  claws) is stopped by one and a half times the armour, pierce (spears, arrows, lances) by the armour,
+  crush (hammers, clubs, stones, blasts) by half of it. A hit always does at least a quarter of what it
+  would do with no armour, and at least 1. Armour has no upkeep. A unit can carry armour of its own on
+  top of its type's (`UnitStore.ExtraArmour`, for pieces found later); it keeps it when it evolves.
+- **Shields** (`"shield"`, a percent chance): a shield stops a whole hit from in front of its bearer
+  (within a quarter turn of the way it faces: towards its target, the way its formation faces, or where it
+  walks; a unit standing idle turns to whoever hits it). Hits from the side or behind and blasts' splash
+  are never stopped, so flanking a shield wall pays. The knight carries one (30%).
+- **Wounds**: each hit's damage after armour is kept as a wound on its part (`UnitStore.Wounds`, at most
+  255 a part), and slash and pierce wounds bleed (`UnitStore.Bleeding`, one bit a part; crush does not).
+  Healing, from healers or over time, mends the worst wound first with the hit points it gives back, and
+  a part mended whole stops bleeding; a unit back at full health has no wounds. Experience for damage
+  counts the damage after armour.
+  The unit panel draws the selected unit's body, shaded by its wounds, with each part's armour and wound.
+- **Bleeding** (issue #72): a slash or pierce wound bleeds away 40% of the hit's damage again
+  (`UnitStore.BleedLeft`, per part), a hit point a second per bleeding wound and a point more for every
+  20 it has left, then clots. Bleeding lands with the tick's blows but does not count as being in the
+  fight, so a bleeding unit still starts to heal on its own after 10 quiet seconds. It can kill (decided
+  by the designer, 14 Nov: "Yes, wounds clot with rest"); the unit whose blow last cut it (`UnitStore.Cutter`)
+  gets the kill and the experience for the blood. Three ways to stop it sooner: a healer (the battle
+  priest) stems all of a unit's bleeding at once when it heals it, and goes to a bleeding ally before any
+  that is only hurt; a unit healing at home (out of the fight 10 seconds, near its own town hall or house)
+  has its wounds bound at once; and away from home it just has to clot. A **grievous wound**
+  (`CombatSystem.OpenGrievousWound`, for amputations in #73; the designer, 14 Nov: "grievous wounds like
+  amputations will kill a unit likely before it clots as long as they don't receive treatment") bleeds 4
+  hit points a second and never clots: only a healer or getting home stops it. Units whose type has
+  `"bleeds": false` never bleed. A beaten monster's wounds are bound so it lives to be tamed. The numbers
+  are `"bleeding"` in `data/roles.json` (`"kills": false` makes bleeding stop at 1 hit point).
+- **Blood on the ground** (`World/BloodSystem.cs`): a bleeding unit drips on the top block of the column it
+  stands on every quarter second and leaves more where it loses hit points, a blow that draws blood
+  splashes it, and a death leaves a pool, so a wounded unit leaves a trail and a battle a stained field.
+  Each column holds one stain (up to 255 blood) with an age; it is gone after a day of game time (20
+  minutes, `"bloodDays"`), three times sooner in rain and six times in a storm, and fresh blood on it makes
+  it younger. Digging out or changing the stained block, or water (or anything) over it, takes it away, and
+  blood never falls on water. At most 8,192 stains: when full, the faintest eighth (amount by time left)
+  goes. Blood is game state, in the state hash. The game draws it as splats on the block tops, darker and
+  wider for more blood, drying brown and fading as it ages, and a bleeding unit with a wet patch and
+  falling drops; there is no setting to turn it off (the designer, 14 Nov).
+- **Cleaning blood** (`CleanCommand`, `EconomySystem.Clean.cs`; asked for by the designer, 14 Nov): workers sent
+  to blood (right click on it) scrub the nearest stain within 8 columns of that spot that no other cleaner
+  has, a second plus a tick per blood in it (at their work speed), and move on until none is left there. A
+  clean town gives wolves no trail to follow.
+- **Wolves follow blood**: a wild monster with `"tracksBlood"` (the wolf) that has nothing to do picks up
+  the freshest trail (blood fallen in the last minute) within its sight and goes after the unit that left
+  it, up to 48 blocks from its den, well past its usual leash; it gives up and goes home when the quarry
+  dies or gets past that. Trails of wild monsters are never followed. (Eating the kill and leaving bones is
+  #74 and #75.)
+- **Casters**: the mage's blast hits every enemy within 1.5 blocks of its target, so it breaks packed groups.
+- **Morale**: a death costs each ally near it a share of 150 morale (a bigger share the fewer they are)
+  and gives each enemy near it a share of 60. At 25 a unit breaks: it runs to its town hall, or away from
+  the enemy, for 8 seconds, ignoring orders, then rallies. Morale comes back a point a second; a hungry
+  army has at most 50.
+- **Healing**: a unit that has not hit anything or been hit for 10 seconds gets back a quarter of a
+  percent of its hit points a second (from half health, full in 3 minutes 20 seconds), or 2% a second
+  within 12 columns of a town hall or house of its own (full in 25 seconds), so a wounded army is
+  worth bringing home. Healers such as the battle priest heal on top of this. The numbers are in
+  `data/roles.json`.
+- **Buildings** are made of real blocks. Damage knocks out the top block of the column nearest the
+  attacker (a sapper knocks out the bottom one, so the whole column falls), and a building that has lost
+  half of itself (by block toughness) collapses. Sappers deal full damage to buildings, everyone else a
+  quarter.
+- **Tunnels** (`TunnelCommand`): sappers dig toward a block column by column, a level up or down each
+  column, twice as fast as a worker digs, and walk in. They stop at bedrock, water, buildings and fields.
+  Digging just under a building takes away what holds it up, and that part of it falls in.
+- **Dig areas** (`DigAreaCommand`, `DigArea`): workers and sappers dig out an area of up to 64 x 64
+  columns down to a level (at most 16 below its highest ground), a layer at a time from the top, so
+  nobody digs out the block under a neighbour first. A stair one column wide is left along the longer
+  side, from the X1 (or Z1) end, one level lower per column, so the diggers can always climb out (a
+  one-wide trench is its own stair). Workers carry stone, ore, coal, wood and berries to storage as when
+  gathering; plain ground is just dug away. Sappers dig twice as fast and leave everything. Blocks under
+  buildings and roads are left. Units following a path no longer drop more than a level into a column
+  that is not on their way, so they don't slip into a pit when cutting a corner along its rim.
+- **Walls and gates** (`WallCommand`, `EconomySystem.Walls.cs`): a wall is laid along a straight line, one
+  building per column (3 stone bricks high, 2 stone each), paid for column by column until the goods run
+  out. Workers build it a column at a time and move on to the next unfinished column nearby. Walls and
+  gates join up without the gap other buildings keep, and a line that steps diagonally still shuts the way
+  (nobody cuts a corner between two blocked columns). A gate is a wall column whose two bottom blocks are
+  gate leaves (`BlockType.Gate`): its owner's units walk through, everyone else finds it shut. Flow fields
+  are per player for this, and movement checks it too. Walls are ordinary building blocks, so blows knock
+  their tops off, sappers knock out the bottom block and the rest of the column comes down as a falling
+  piece that lands as rubble, and tunnels dug under a stretch bring all of it down. Units sent at a
+  building they cannot get to (it is walled in) go for the nearest wall or gate of its owner instead
+  (within 16 columns) and break through.
+- **Bridges** (`BridgeCommand`, `EconomySystem.Bridges.cs`): drawn from bank to bank like a wall, a bridge
+  is a level plank deck at the standing height of the higher end (the two ends must be ground at most a
+  climb apart). Every column of the line that nobody could walk across at about that height (deep water,
+  a drop of two or more, a dug trench) gets a deck block, up to 32 of them, 3 wood each, paid for column by
+  column until the wood runs out; ground on the way is left as it is. Each deck column is its own one-block
+  building that workers build from ground or finished deck beside it, so a bridge goes out from the bank a
+  column at a time, and each worker starts at the end on its side. Anyone can walk over a bridge, the enemy
+  too, so a crossing you open is a way in as well as out. A few blows (a plank's toughness) knock a deck column
+  out and it falls (into the water, which flows back): a player can also knock out their own bridge
+  (`AttackBuildingCommand` is allowed on your own bridges) to cut the way across behind them. Bridges are
+  never placed from the build menu (`CanPlace` refuses them).
+
+`BridgeTests` checks bridges: workers bridge a river too deep to wade, a column at a time from the near
+bank, and a spearman who could not get across walks over it; the enemy crosses it too until a spearman
+knocks out its end column, which cuts the way; the deck runs level at the higher end and skips ground; and
+a bridge stops where the wood runs out.
+
+`CombatTests` has the issue's checks: each counter wins its matchup at equal cost from either side of the
+field, archers on a hill beat the same archers below whichever side the hill is on (on the flat, where
+arrows land is down to chance, so the check is over six matches), mages break a packed block of spearmen
+that beats them spread out, and sappers bring a house down more than twice as fast as spearmen of the same
+cost. `ArmourTests` checks armour: a helmet and mail take more than a quarter off a sword's average hit and
+the head hurts most, slash, pierce and crush differ against the same armour and only slash and pierce
+bleed, archers on a hill land over one and a half times the share of head hits, uphill blows find the legs, a shield stops
+hits from the front and none from behind, and healing mends the worst wound first. `BleedingTests` checks
+bleeding: a wound loses hit points each second until it clots, slash and pierce bleed 40% of their damage and
+crush none, bleeding kills and credits the cutter (or stops at 1 with `"kills": false`), a grievous wound
+kills untreated, a battle priest stems bleeding at once and sees to the bleeding first, home binds wounds,
+a bleeding unit leaves a trail that fades in a day and three times faster in rain, digging or flooding a
+stained block clears it, blood stays under the cap in a 1,000-unit battle, and a wolf follows a fresh trail
+past its leash to the bleeding unit while ignoring old trails and wild ones. All the numbers are first
+guesses for playtesting.
+
+## Automation
+
+`src/Sim/Automation/AutomationSystem.cs` runs each tick, right after the tick's commands. It gives the
+same commands a player could, through the same code, so a game replayed with automation turned off and
+its commands played back ends the same. An order of the player's always comes first.
+
+- **Automatic workers** (`AutomateCommand`, J; `AutomateAllCommand`, Shift+J): once a second an
+  automatic worker with nothing to do takes the nearest job it is needed for, in this order: take what
+  it carries to storage; build a site that can use another builder (one, plus one for every 30 seconds
+  of building); work a farm with a free place; keep a smelter going while there is something to smelt;
+  otherwise gather within 40 columns what is needed most. Food and wood are wanted 3 parts each and
+  stone 2 (iron ore and coal 1 each once you have a smelter), spread over the workers already on each;
+  food counts four times as much while you are hungry or have less than two minutes' food, and a good
+  you have 500 of hardly at all. A worker the player orders to move, stop or fight waits for orders
+  until it is given work again or made automatic again. A job given up within 15 seconds without
+  anything done is not given out again for a minute, and the worker who gave it up keeps away from the
+  ground within 8 columns of it for that minute too, since the rest of a pit or ledge it couldn't get to
+  is most likely out of its reach as well. A worker that gives up again and again is most likely stuck,
+  in a pit say: from its second failure in a row it waits 10 seconds before looking again, then 20, 40
+  and at most 60, instead of switching between idle and working.
+- **Repeat** (`RepeatCommand`, P): a building on repeat queues each unit it finishes again as soon as
+  there are goods for it and a minute's food left for everyone.
+- **Houses and farms**: a player whose workers are all automatic (Shift+J) also gets buildings: a house
+  when the units waiting to be trained would fill the housing, and a farm when food runs short (less
+  than 100 plus two minutes' worth), no farm has a free place and there are fewer farm places than a
+  third of the workers. They go on the nearest free spot within 24 columns of the town hall, keeping 3
+  columns in front of every door clear, and the automatic workers build them.
+- **Stances** (`StanceCommand`, V): soldiers are aggressive (they chase what they see), hold their
+  ground (they fight only what is in reach and never move to chase), or retreat when hurt (aggressive
+  until down to a third of their hit points, then they hold their ground, and when hit away from home
+  they walk back to the nearest town hall).
+
+`AutomationTests` has the issue's check: a town hall and five workers, given orders only at the start
+(all workers automatic, train workers on repeat, research farming), grow for 10 minutes without going
+hungry, from 5 to 40 people with 7 houses and 7 farms, and the same game replayed from its recorded
+commands with automation off ends in the same state. All the numbers are first guesses for playtesting.
+
+## Evolution
+
+`src/Sim/Units/EvolutionSystem.cs` is the Settlers' signature: their units earn experience and evolve.
+Orc units earn none.
+
+- **Experience** (`UnitStore.Xp`): a Settlers unit earns 1 for each hit point of damage it deals to enemy
+  units and buildings, 10 for each enemy unit it kills, 1 for each second of building and 5 for each
+  minute it stays alive. The first level needs 150. The rates and levels are in `data/factions.json`.
+- **Forms**: at each level a unit can take its next form: one of the unit types in `data/units.json`
+  whose `evolvesFrom` names its type. Forms are not trained. Each gives something and takes something:
+  more upkeep, less speed, or a weakness (`weakTo`: that many percent more damage from one role's attacks).
+
+  | From | Forms |
+  | --- | --- |
+  | Worker | foreman (works half as fast again, eats 2), militia (line infantry, slower than a spearman; it stops working) |
+  | Spearman | knight (heavy infantry, 130 hit points and 12 damage, slow), pathfinder (speed 6, sight 14, +50% from casters), battle priest (heals the most hurt ally within 5 blocks by 4 every 2 seconds, eats 2), siege engineer (siege: fire pots from 7 blocks that hit buildings at full damage, slow) |
+  | Archer | longbowman (range 12, slower), ranger (speed 5.5, sight 13, +50% from line infantry) |
+  | Rider | lancer (18 damage, eats 3), outrider (speed 10, sight 14, +50% from ranged) |
+  | Sapper | tunneller (digs tunnels twice as fast, eats 2), demolisher (9 damage, slower) |
+  | Mage | battle mage (14 damage over a 2-block blast, eats 2), seer (range 11, sight 15, slower) |
+
+- **Evolving** (`EvolveCommand`) is immediate and free. The unit keeps its id, place, orders, experience
+  and the same share of its hit points; a worker that becomes militia drops its job and load and is no
+  longer automatic. Experience is never spent, so a form of a form needs only the next level.
+- **Auto-evolve** (`AutoEvolveCommand`): the player can choose the form each unit type takes on its
+  own. Once a second, automation evolves the units of that type that can take it.
+- **In the game**: your units that can evolve have a gold ring under them. Select them and the panel
+  shows a row for each type with a unit ready (or a form chosen for it), with a button per form (hover
+  it for what the form gains and gives up) and an Auto button that steps through the forms that type
+  takes on its own. A single unit's panel shows its level and experience. Forms wear a gold belt.
+  `--xp=N` starts your units with N experience, to try the forms at once.
+
+`EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
+a knight, which hits an orc spearman three times as hard as before (heavy infantry beats line infantry)
+but walks a quarter slower. All the numbers are first guesses for playtesting.
+
+## Monsters and taming
+
+`src/Sim/Units/MonsterSystem.cs` is the Orcs' signature: wolf lairs guard the land between the start
+areas, and Orcs who beat a wolf keep it.
+
+- **Lairs**: at match start a lair lies on the way from each start area to the map centre, 40 blocks
+  out (at most two thirds of the way and at least 20, on dry ground away from buildings), with a pack
+  of four wolves around its den. Monsters belong to the wild side (player 7), everyone's enemy, which
+  earns no experience and pays no upkeep.
+- **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
+  than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
+  home, and with nobody near they go back to the den. Monsters never break and run.
+- **Clearing**: a lair is cleared when none of its pack is left wild. If whoever beat the last wolf
+  cannot tame monsters (the Settlers), they get the lair's reward, 150 food and 20 iron, in their
+  storage nearest the den.
+- **Beaten, not killed**: a wolf that an Orc unit would kill is beaten instead. It stays where it fell
+  with 1 hit point, now the Orc player's, and does nothing until they choose (`TameCommand`): **ride**
+  it (the nearest spearman of theirs within 12 blocks climbs on and becomes a wolf rider, with speed 9
+  instead of 4, keeping its share of hit points; the wolf is gone) or **recruit** it (it joins
+  the army as it is, back at full health). Beaten wolves count as a kill, take housing and eat; an
+  explicit attack order or a blast can still finish them.
+- **Data**: a monster is a unit with the `monster` role and a `lair` (pack size, guard and leash
+  radius, reward); `ride` says which unit rides it and what that unit becomes (the wolf rider is an
+  Orc unit that is not trained). A faction with `tamesMonsters` beats monsters instead of killing them.
+- **In the game**: when your units beat a monster, the Beaten button in the top bar counts the ones
+  waiting and selects the next on each click (a box around several selects them all). They have a gold
+  ring under them, and their panel has Ride (greyed out until a spearman is near enough) and Recruit.
+
+### Cleared dens
+
+`DenTests` (issue #70): once a lair is cleared, its den can be used once, by a player with one of their
+units within 8 blocks of it (`DenCommand`). What it becomes is the faction's `den` in `factions.json`;
+the den is gone from the map either way.
+
+- **Orcs: the wolf lodge.** A site for a wolf lodge goes up on the den (or as near as the ground allows,
+  its middle at most 4 columns off), paid for like any building (30 wood), and the workers among the
+  selected units go to build it (15 seconds for one worker). Finished, it houses 5, like a house, and
+  its wolves bring in 5 food every 15 seconds (about one worker on a farm) into the nearest storage.
+  It is never in the build menu (`fromDen` in `buildings.json`); `yield` and `yieldTime` are what a
+  building brings in on its own.
+- **Settlers: a unique evolution (waiting on the designer).** The hook is built: a faction's `den` can name a
+  form (`{ "form": id }`, a unit with `fromDen` in `units.json`), and the nearest selected unit near the
+  den that the form evolves from takes it at once. Experience never gives a `fromDen` form. Which form
+  it is, for which units, is still open, so the Settlers have no `den` yet and leave dens be.
+- **Stays as it was:** the Settlers still get a lair's reward for clearing it.
+- **In the game**: with your units selected near a cleared den, the selection panel has a button for
+  it ("Make the wolf den a wolf lodge", greyed out while you cannot pay).
+
+`MonsterTests` has the issue's check: Orcs clear a wolf lair, recruit one beaten wolf and ride another
+(a spearman becomes a wolf rider); Settlers who clear one get its reward instead, as does whoever beats
+the last wolf. All the numbers are first guesses for playtesting.
+
+## City-states
+
+`src/Sim/Economy/CityStateSystem.cs`: towns of other races, too small to win, that trade with everyone
+and are won by force. There is one so far, the goblins (`data/citystates.json`).
+
+- **The town**: at match start each city-state gets a town about as far from every start area as from
+  the others (on a 512 map about 96 blocks from their middle, where the ground allows): a levelled
+  15×15 square with four stone huts around a market, and the goblins' totem on the market (a 3×3 stone
+  plinth with a carved pole, 7 high). Nobody can build on the square, though its blocks can be dug like
+  any others. Its own wolf lair lies 24 to 36 blocks further out, so the start areas reach the town
+  before its lair.
+- **The totem** (`goblin_totem` in `buildings.json`): attacked like any building (right-click it with
+  soldiers). Whoever breaks it holds the town, and it stands again 5 seconds later in their colour.
+  Breaking a held town's totem takes the town over. Your own units do not attack your totem.
+- **Guards**: six goblins (three cutthroats, three slingers) stand round the market. They belong to
+  whoever holds the town (the wild side while nobody does), take no orders, need no housing and eat
+  nothing. They fight soldiers that come within 4 columns of the square, never workers or caravans, so
+  anyone can walk through and trade. Soldiers do not pick a fight with neutral guards on their own (they
+  answer one that hits them). A guard that chased a soldier out walks back to its post, and a fallen
+  guard is replaced every 45 seconds.
+- **Vassals**: while you hold the town its guards fight your enemies' soldiers there, it sends you a
+  tribute caravan with 15 iron every minute (to your first town hall, and the caravan goes home after;
+  it can be killed on the way), you alone can hire its mercenaries (`HireCommand`): goblin cutthroats
+  (quick blades) and slingers, paid for in goods, at most 6 ready at a time and one more every 30
+  seconds, stepping out at the market and needing room in your housing; and your caravans earn 50% more
+  there.
+- **Caravans** (`TradeCommand`): town halls train them (20 food, 40 wood). Right-click a town (or its
+  totem) with caravans selected and each fetches 20 food from your storage nearest the town, walks it to
+  the market, sells it for 5 iron per 100 blocks between that storage and the town, takes the iron to your
+  nearest storage, and goes again. Anyone's caravans can trade, whoever holds the town. Caravans cannot
+  fight, and a wolf lair between a start area and the map centre kills one that walks past it alone.
+- **In the game**: the top bar has a button per town saying who holds it. It, or a click on the town,
+  selects the town: its panel shows the totem's health (or when it stands again), the guards, how to take
+  the town, the tribute, what its caravans trade and how many mercenaries are ready, with a Hire button
+  per mercenary, for its holder only. The totem is drawn as a carved goblin pole painted in its holder's
+  colour (plain while neutral), losing its top as it is knocked down. You hear when you take a town,
+  lose one, and when tribute sets out.
+- **Computer players** (Normal and Hard) send a party of 6 soldiers from 6 minutes on, once they have 8
+  at home and no wave out: it fights the guards, then breaks the totem, and is tried again 3 minutes
+  later if it fails. Holding a town, they hire its goblins when they can.
+
+This replaced the earlier influence alliance (gifts, influence from trade and lairs, raiding caravans
+for influence), which is gone. `CityStateTests` has the issue's checks: breaking the totem makes the
+goblins your vassals and tribute reaches your hall; another player breaking it takes the town over;
+neutral guards fight soldiers but not workers or caravans; vassal guards fight the holder's enemies and
+only the holder hires. All the numbers are first guesses for playtesting.
+
+## Winning and computer players
+
+`src/Sim/MatchSystem.cs`: every player given a town hall at the start is in the match. A player with no
+finished town hall left standing is out, and so is a player who surrenders (`SurrenderCommand`; their
+units and buildings stay). The last player in wins; players who go out on the same tick draw. A sandbox
+with fewer than two players never ends. Who is out, who won and when are part of the state hash.
+
+`src/Sim/AI/AiPlayer.cs` is a computer player. It plays only by giving the commands a person could
+give, deciding from the game as it stands, so a match with it records and replays like any other. It
+plays at one of three levels (`AiLevel`): **Classic**, the first computer player, described in the next
+two points and kept as it was to measure the others by; **Normal** and **Hard**, described after them
+(issue #47, `AiPlayer.Smart.cs`). The start screen picks the level (Hard unless changed), and so does
+`--ai-level` in the game and `--levels` in the match runner.
+
+- **Economy**: all its workers are automatic (see [Automation](#automation)), so automation keeps them gathering what
+  is needed, puts up houses and farms. On top of that it trains workers at the town hall (10 at first,
+  one more each minute, up to 30), researches the techs in a set order, puts up a barracks once it has
+  10 workers (a second after 12 minutes) and a storehouse where its workers gather far from storage.
+  It keeps a minute's food in hand. When food runs short it moves a few workers onto food, and keeps
+  wood for a farm rather than spending it; when wood runs short and the trees near its workers are gone,
+  it sends workers to the trees nearest its town hall, out to 128 columns.
+- **Army**: its starting soldiers first clear the nearest wolf lair. Its barracks train a weighted mix
+  of what they can (spearmen most, siege least). Soldiers at home gather 12 columns in front of the
+  town hall. From 3 minutes on, when there are 12 more than the home guard (a fifth, at least 2), they
+  go as a wave to the nearest enemy town hall, fighting what they meet on the way, then go for its
+  defenders (soldiers within 18 columns of its door) and bring it down. Defenders that hold the wave up
+  for 30 seconds without one of them falling, out of reach on a wall say, stop holding it back. Each
+  wave needs 4 more soldiers than the last (half as many after 25 minutes), and a wave of at least 4
+  goes anyway when the enemy has less than half as many soldiers in all. A wave down to a quarter of
+  its soldiers comes home. Enemies within 32 columns of its town hall are met by every soldier at home,
+  and by a wave still within 48 columns. The Orcs ride, then recruit, the monsters they beat; the
+  Settlers' soldiers evolve into the form with the most damage times hit points.
+- **Normal** plays by the fog of war: it goes only by what it sees and remembers seeing. Enemy buildings
+  are remembered once seen until it sees them gone; enemy soldiers for 3 minutes. While it knows of no
+  enemy town hall, its fastest soldier (a rider, at least 6 blocks a second) scouts the other start
+  areas, coming home when hurt; with fog of war on it looks again every 3 minutes while no wave is out.
+  Its barracks weigh what to train by the soldiers it has seen: much more of the roles strong against
+  them, less of the roles they are strong against, a few sappers for each wave and at most two siege
+  units. Its first wave waits until 5 minutes (meeting the classic player's 3-minute wave at home, by
+  the town hall, wins that fight), and a wave sets out when big enough and not much weaker than the
+  enemy army it knows of, or small when it is twice as strong. A wave marches in formation (melee in
+  front, ranged behind) to a line 24 columns short of its target, then attacks; one that does not know
+  where the enemy town hall is goes for the nearest start area it has not seen. Soldiers of a wave below
+  35% of their hit points go home to the town hall's door to heal, and rejoin at 85%. A wave that sees
+  an enemy army twice its strength before the fight starts falls back. Its sappers go for the target
+  building whatever else is happening. It saves for its barracks before research, builds the second at
+  8 minutes, sends idle workers to trees, and after 6 minutes keeps more wood in hand.
+- **Hard** is Normal, plus: in a fight its archers and mages shoot the enemy in reach they are strong
+  against, else the one with the fewest hit points, and riders and spearmen switch onto enemies they
+  are strong against; up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
+  second town hall where its workers gather far from storage; and after 9 minutes, with the stone, a
+  wall round the town hall 4 columns out with two gates three wide.
+- `scripts/ai-versus.sh` plays two levels against each other over 20 seeds with fog of war, on both
+  sides of the map. When it was written, Hard beat Classic in 15 of 20 seeds (3 lost, 2 undecided after
+  40 minutes) and 16 of 20 with the sides swapped; Normal beat Classic in 15; Hard beat Normal slightly
+  more often than it lost.
+
+`AiMatch.Play` plays computer players against each other from the usual start (town halls, four of every
+trained unit, the lairs and the city-states), and `--ai` in the match runner does it from the command
+line, prints the winner and fails if there is none:
+
+```bash
+dotnet run -c Release --project tools/MatchRunner -- --ai --seed=3 --record=ai.log   # at most 40 minutes
+```
+
+CI runs `scripts/ai-matches.sh`, issue #15's check: on seeds 1 to 5 (512×512 maps) every match must be
+won within 40 game minutes, and replaying its log must give the same hashes and winner. Since issue #47
+the matches are Hard against Classic with fog of war; they are won in 8 to 39 minutes. All the numbers are first guesses for playtesting.
+
+## Fog of war
+
+`src/Sim/VisionSystem.cs`: with fog of war on, each player sees only what is within sight of their
+units (each unit type's sight in `data/units.json`, counted from the column it stands on) and their
+buildings (a building's `sight` in `data/buildings.json`, in columns beyond its footprint: 10 for a
+town hall, 6 for the others). Every 4 ticks, the same on every machine, each column is worked out for
+each player as never seen, seen before, or in sight now. How much each player has seen is part of the
+state hash. With fog of war off, every player sees everything.
+
+In the game (`game/scripts/FogOfWar.cs`), ground you have never seen is black. Ground you have seen but
+cannot see now is dimmed and greyed, and shows the land and buildings as they were when you last saw
+them (`src/Sim/WorldMemory.cs`): a change out of your sight shows once you see that column again.
+Other players' units, their health bars and their shots show only where you can see, and buildings and
+towns can only be picked where you have looked. When the match is over, the fog lifts.
+
+The start screen has a Fog of war switch, on unless switched off (or started with `--fog=off`). A match
+started from the command line has fog of war only with `--fog`. With day, night and weather, sight is
+shortened in the dark and in bad weather, except into the light (see [Day, night and weather](#day-night-and-weather)). It is recorded in the command log (a
+`fog 1` line), so a replay plays back with it. Computer players at Normal and Hard go by it (see
+[Winning and computer players](#winning-and-computer-players)); the Classic one sees everything.
+
+## Day, night and weather
+
+`src/Sim/Conditions.cs`: with day, night and weather on (`Simulation.DayNight`), the time of day and the
+weather are game rules that change how far units see and how well they shoot. All the numbers are
+starting guesses to be tuned in playtests.
+
+- **Clock.** A day lasts 20 minutes of game time and a match starts at 8:00 (or at the hour set with
+  `--time-of-day`). Dawn is 5:00 to 6:30, dusk 19:30 to 21:00, night in between.
+- **Weather** rolls in and out: clear, cloudy, rain, storm, or a morning fog. A spell lasts one to five
+  hours of the day, and when one begins the next is already decided, so the sky (and the HUD's tooltip)
+  shows it coming. What comes next leans on what there is: a clear sky clouds over before it rains, rain
+  can build to a storm, a storm dies down to rain, and fog only rolls in during the early morning and
+  burns off by 11:00. The first three hours are clear. The rolls use the simulation's own random stream,
+  stirred by how many units and buildings there are, so no two matches get the same weather, but every
+  machine and every replay does. The weather is part of the state hash.
+- **Sight** (units and buildings under fog of war, and how far soldiers look for enemies): dusk and dawn
+  85%, night 60%; rain 85%, storm 70%, fog 60%; these multiply, and in the swamp's mist (at night and
+  until 9:00) a unit sees a quarter less again; never below 40%.
+- **Light beats darkness.** From dusk to dawn, ground near a light is lit: lanterns on town halls (4
+  columns beyond the walls) and on houses, storehouses, barracks and smelters (3), torches (7),
+  campfires (9) and lava (3). What stands on lit ground is seen from as far as by day (the weather still
+  counts) and shot at as by day. A storm puts out the open flames of torches and campfires until it
+  passes; lanterns are sheltered. A building's light is `light` in `data/buildings.json`.
+- **Aim.** A ranged shot at a unit lands every time on a clear day. At night it misses 20% more often
+  (dusk and dawn 10%) unless the target is lit; rain adds 10%, a storm 25%, fog 15%; at least half of
+  shots always land. A miss lands beside the target. Melee blows and shots at buildings always land.
+  Whether a shot lands is a hash of the tick, the shooter and the seed.
+- **Torches and campfires** (`kind: light`) are cheap buildings: a 1-block post of planks two high, or a
+  ring of stone one high, that workers build like any other.
+- **Lava** lies in a few pools up in the hills, well away from the starts. Nothing stands on it or digs
+  through it, and it lights the ground around it at night.
+
+The start screen has a Day, night and weather switch, on unless switched off (or started with
+`--daynight=off`); a match from the command line has them only with `--daynight` or `--time-of-day`. They
+are recorded in the command log (`daynight 1`, and `daystart M` for a start at another minute of the
+day), so a replay plays back with them. With them off it is always a clear day and nothing changes.
+
+In the game (`game/scripts/DayCycle.cs`, `WorldLighting.cs`, `Ambience.cs`) the light, the sky and the
+weather follow the rules' clock and weather; see [Controls and HUD](playing.md) for how it looks.
+
+## Start screen, match end and replays
+
+Started without command-line options (or with `--menu`), the game opens on the start screen
+(`game/scripts/StartScreen.cs`). Each player has their faction (see [Game data](../README.md#game-data)) and generated maps have
+two starts, so picking the Settlers or the Orcs picks the player and start too: player 0 in the west or
+player 1 in the east. The world seed comes up at random (New seed draws another), and the computer
+opponent is on unless switched off, which leaves the other side standing idle. So is fog of war (see
+[Fog of war](#fog-of-war)). Matches from the start screen have no terrain tool. With options, the game starts a match
+at once as they say (seed 1234 unless given, the computer only with `--ai`, fog of war only with
+`--fog`), as the tests run it.
+
+The Surrender button under the top bar asks first, then gives up the match. When the match is over for
+you (you won, lost your last town hall or surrendered), the clock stops and `MatchEndPanel` shows
+Victory, Defeat or Draw, how it came about, the match time and the seed. Look around hides it (the
+button under the top bar, now Results, brings it back), New match goes back to the start screen and
+Quit leaves.
+
+Every match from the usual start is recorded as it is played: `Simulation.Recording` keeps each command
+on the tick it is carried out (automation's own orders are left out, since a replay gives them again),
+under the header `CommandLog.UsualStart` writes for the start the game sets up
+(`Simulation.SetUpUsualStart`). At the end the log is saved as a replay in `user://replays` (on Windows
+`%APPDATA%\Godot\app_userdata\RTS\replays`; change with `--replays=DIR`), named after the time and
+seed, with a comment line saying who played whom and how it ended. The match runner plays it back and
+prints who won (see [Headless matches and replays](../README.md#headless-matches-and-replays)). A match set up with `--map`, `--units`, `--battle`,
+`--goods`, `--houses` or `--xp` would not replay from such a log, so it is not saved, and the panel
+says why.
+
+## Test mode
+
+For building a scenario to try something out (issue #89). Tick **Test mode** on the start screen (or
+start with `--test-mode`) and the match has a test panel on the right (`game/scripts/TestPanel.cs`; F1
+hides it), the terrain tool (T) and an 8x speed. Everything the panel does is a test mode command
+(`SandboxUnitCommand` and the rest in `Commands.cs`, carried out by `Sandbox/SandboxSystem.cs`), so a test
+match is recorded and replays like any other. The simulation carries them out only when the match was
+started in test mode (`Simulation.TestMode`, set before the first tick and part of the state hash), so they
+cannot change a normal match, a computer players' match or the determinism check.
+
+- **Place**: pick what to put down and click the map, as often as you like (right click or Esc stops):
+  any unit type, for either player or as a wild monster, in a group of up to 100; any building but a
+  city-state's totem, finished and free (a town hall for a player who has none brings them into the
+  match); a tree of each kind; a square of blocks (stone, soil, grass, sand, mud, iron ore, coal,
+  crystal, berry bushes, water or lava stacked on the ground, or air, which digs that deep and clears
+  what stands above); a monster lair with its pack; fresh blood; or the eraser, which removes the units
+  and buildings around the click (city-state totems stay). Water put down at or under the sea's level runs
+  into the open ground beside it, up to that level; higher up it stays where it is put, since water never
+  runs out and would flood the land.
+- **Units**: heal (full health, wounds and bleeding gone, morale back), kill (as by falling ground: they
+  fall and bleed, and nobody gets the kill), remove, wound (bleeding from the legs for 12 seconds) or
+  season (the most experience there is) the selected units, anyone's; and play the other side (with fog
+  of war off).
+- **World**: the weather (for four hours) and the time of day, with day and night on; 1000 more of every
+  good, or every tech, for either side.
+- **Cheats**, for either side: instant building (sites go up at once, with or without workers), instant
+  training (housing and food still count), instant research, and invulnerability (units and buildings
+  take no damage and do not bleed; a test mode kill still kills).
+- **Save**: one tick at a time (F2, which pauses), and saving the scenario: the match's command log, in
+  `user://scenarios` (change with `--scenarios=DIR`). Loading a saved one (from the list there, or
+  `--scenario=PATH`) plays it back from the start to the moment it was saved, paused, with the camera where
+  it was. A scenario is a plain text command log, so it can be written or edited by hand (see
+  `Replay/CommandLog.cs` for the `sandbox-*` lines).
+
+## Alerts and idle workers
+
+`src/Sim/EventLog.cs`: the simulation keeps a log of what each player should hear about, filled as it
+happens the same way on every machine: your units or a building of yours hit by another side (or a
+capture or burning of it begun), a building site finished, research done, a unit trained, your town hall
+destroyed or captured, and an enemy town hall you last hit destroyed, or one you captured. Under attack
+events are kept to one per place (within 16 columns) every 5 seconds per player. The log keeps the
+newest 256 events, each with a sequence number that only grows, so the game asks for those after the
+last one it saw. Nothing in the simulation reads it, so it is not part of the state hash.
+`EconomySystem.IdleWorkers` lists a player's workers with nothing to do: standing with no order and no
+job (automatic ones too, while they find no work).
+
+In the game (`game/scripts/Alerts.cs`), under the top bar on the left, the Idle workers button shows how
+many of your workers are idle; each click (or the . key) selects the next one and moves the camera to
+it. Below it are your latest five alerts, newest first, red for attacks and losses, green for buildings
+finished and town halls won, blue for research. Clicking one moves the camera to where it happened. The
+same alert again within 10 seconds is counted on the one showing ("x3"); an alert goes after 20 seconds
+on screen, not counting time paused.

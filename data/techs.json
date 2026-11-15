@@ -1,0 +1,52 @@
+// Techs, researched one at a time at the town hall. requires lists the techs that must come first;
+// faction (optional) limits a tech to one faction. researchTime is in seconds, cost in goods. Units and
+// buildings name the tech that unlocks them in their own "requires". icon (optional, the id if not
+// given) names the picture the game shows for it (see game/scripts/UiIcons.cs). Effects:
+//   gather_speed  { percent }             workers dig, chop and pick that much faster
+//   carry         { amount }              workers carry that many more goods
+//   farm_yield    { amount }              each farm harvest gives that much more food
+//   housing       { building, amount }    each building of that type houses that many more
+//   unit_hp       { role or unit, amount } more hit points, for units already alive too
+//   unit_speed    { role or unit, percent } faster walking (no role or unit: every unit)
+//   roads                                 roads can be laid (if no tech has this, roads need no tech)
+[
+  { "id": "farming", "icon": "farm", "name": "Farming", "description": "Fields of grain.",
+    "cost": { "wood": 40 }, "researchTime": 20 },
+  { "id": "tools", "icon": "pick", "name": "Better tools", "description": "Iron-shod picks and axes.",
+    "cost": { "wood": 40, "stone": 20 }, "researchTime": 30,
+    "effects": [ { "type": "gather_speed", "percent": 25 } ] },
+  { "id": "roads", "icon": "road", "name": "Roads", "description": "Packed gravel paths that double walking speed.",
+    "cost": { "stone": 20 }, "researchTime": 20,
+    "effects": [ { "type": "roads" } ] },
+  { "id": "archery", "icon": "bow", "name": "Archery", "description": "Bows and the training to use them.",
+    "cost": { "wood": 50 }, "researchTime": 30 },
+  { "id": "basic_magic", "icon": "star", "name": "Basic magic", "description": "The first spells, taught at the barracks.",
+    "cost": { "food": 60, "stone": 40 }, "researchTime": 40 },
+  { "id": "masonry", "icon": "bricks", "name": "Masonry", "description": "Stone houses that hold more people.",
+    "cost": { "stone": 60 }, "researchTime": 30, "requires": [ "tools" ],
+    "effects": [ { "type": "housing", "building": "house", "amount": 2 } ] },
+  { "id": "crop_rotation", "icon": "sprout", "name": "Crop rotation", "description": "Richer harvests.",
+    "cost": { "food": 60, "wood": 30 }, "researchTime": 40, "requires": [ "farming" ],
+    "effects": [ { "type": "farm_yield", "amount": 2 } ] },
+  { "id": "horse_breeding", "icon": "horse", "name": "Horse breeding", "description": "Mounts for riders.",
+    "cost": { "food": 80, "wood": 40 }, "researchTime": 40, "requires": [ "farming" ] },
+  { "id": "carts", "icon": "wheel", "name": "Handcarts", "description": "Workers carry more on each trip.",
+    "cost": { "wood": 60 }, "researchTime": 30, "requires": [ "roads" ],
+    "effects": [ { "type": "carry", "amount": 3 } ] },
+  { "id": "smelting", "icon": "flame", "name": "Smelting", "description": "Furnaces that turn ore and coal into iron.",
+    "cost": { "stone": 40, "wood": 20 }, "researchTime": 30, "requires": [ "masonry" ] },
+  { "id": "sapping", "icon": "shovel", "name": "Sapping", "description": "Tunnellers who bring down walls.",
+    "cost": { "wood": 40, "stone": 40 }, "researchTime": 30, "requires": [ "masonry" ] },
+  { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades.",
+    "cost": { "wood": 80, "stone": 40 }, "researchTime": 40, "requires": [ "tools" ],
+    "effects": [ { "type": "gather_speed", "percent": 15 } ] },
+  { "id": "settler_drill", "icon": "shield", "name": "Drilled ranks", "faction": "settlers", "description": "Armoured spear lines.",
+    "cost": { "food": 50, "iron": 5 }, "researchTime": 40, "requires": [ "smelting" ],
+    "effects": [ { "type": "unit_hp", "role": "line_infantry", "amount": 20 } ] },
+  { "id": "orc_war_drums", "icon": "drum", "name": "War drums", "faction": "orcs", "description": "The whole clan marches faster.",
+    "cost": { "food": 60, "wood": 40 }, "researchTime": 40,
+    "effects": [ { "type": "unit_speed", "percent": 15 } ] },
+  { "id": "orc_beast_pens", "icon": "paw", "name": "Beast pens", "faction": "orcs", "description": "Tougher mounts.",
+    "cost": { "food": 80, "wood": 40 }, "researchTime": 40, "requires": [ "horse_breeding" ],
+    "effects": [ { "type": "unit_hp", "role": "cavalry", "amount": 30 } ] }
+]

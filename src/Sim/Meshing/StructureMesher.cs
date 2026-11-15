@@ -1,0 +1,256 @@
+using System;
+using System.Collections.Generic;
+
+namespace Rts.Sim.Meshing;
+
+/// <summary>
+/// One rectangle of merged fine-voxel faces (see <see cref="StructureDetail"/>), in fine voxels relative to
+/// the chunk's corner. Face numbering and corners as in <see cref="Quad"/>.
+/// </summary>
+public readonly record struct FineQuad(byte Face, byte Colour, int X, int Y, int Z, int W, int H)
+{
+    /// <summary>Corner <paramref name="i"/> (0..3), counter-clockwise when seen from outside the solid.</summary>
+    public (int X, int Y, int Z) Corner(int i) => new Quad(Face, BlockType.Air, X, Y, Z, W, H).Corner(i);
+}
+
+/// <summary>
+/// Meshes the building blocks (and rubble) of a chunk at character scale: every such block of the chunk (see
+/// <see cref="StructureDetail.IsDetailed"/>) becomes its fine voxels, and the visible faces of those are
+/// merged greedily by colour. Terrain around them hides faces that touch it. The terrain mesher is given the
+/// chunk with its building blocks taken out (<see cref="StripStructures"/>), so the ground under and beside a
+/// building is drawn where the building's finer shape leaves it showing. Like <see cref="GreedyMesher"/> it
+/// works on a padded copy of a chunk, so it can run off the main thread.
+/// </summary>
+public static class StructureMesher
+{
+    private const int S = VoxelWorld.ChunkSize;
+    private const int P = VoxelWorld.PaddedSize;
+    private const int F = StructureDetail.Size;
+
+    [ThreadStatic] private static byte[]? _grid;
+    [ThreadStatic] private static BlockType[]? _near;
+    // The fine voxels of each block of the chunk being built, worked out once (see Shape).
+    [ThreadStatic] private static byte[]? _shapes;
+    [ThreadStatic] private static bool[]? _shaped;
+
+    /// <summary>True if the padded chunk has any building blocks of its own (not counting its border).</summary>
+    public static bool HasStructures(ReadOnlySpan<BlockType> padded)
+    {
+        for (int y = 0; y < S; y++)
+        for (int z = 0; z < S; z++)
+        for (int x = 0; x < S; x++)
+            if (StructureDetail.IsDetailed(padded[GreedyMesher.Index(x, y, z)])) return true;
+        return false;
+    }
+
+    /// <summary>Copies a padded chunk into <paramref name="dest"/> with every building block made air.</summary>
+    public static void StripStructures(ReadOnlySpan<BlockType> padded, Span<BlockType> dest)
+    {
+        for (int i = 0; i < P * P * P; i++)
+        {
+            var b = padded[i];
+            dest[i] = StructureDetail.IsDetailed(b) ? BlockType.Air : b;
+        }
+    }
+
+    /// <summary>Appends the fine quads of the chunk's building blocks to <paramref name="output"/>.</summary>
+    public static void Build(ReadOnlySpan<BlockType> padded, int chunkX, int chunkY, int chunkZ, List<FineQuad> output)
+    {
+        if (padded.Length < P * P * P) throw new ArgumentException("Padded chunk is too small", nameof(padded));
+        _shapes ??= new byte[S * S * S * StructureDetail.Volume];
+        Array.Clear(_shaped ??= new bool[S * S * S]);
+        Region(padded, chunkX, chunkY, chunkZ, 0, 0, 0, S, output);
+    }
+
+    /// <summary>Smallest region (blocks on a side) <see cref="Region"/> splits a chunk into.</summary>
+    private const int MinRegion = 4;
+
+    /// <summary>
+    /// Meshes the detailed blocks in the cube of <paramref name="size"/> blocks at (rx, ry, rz) of the chunk:
+    /// as one box around them, or, where they are few and spread out (trees dotted over a chunk), as the
+    /// eight halves of the cube in turn, so the fine grid stays close to the blocks it draws.
+    /// </summary>
+    private static void Region(ReadOnlySpan<BlockType> padded, int chunkX, int chunkY, int chunkZ,
+        int rx, int ry, int rz, int size, List<FineQuad> output)
+    {
+        int x0 = S, y0 = S, z0 = S, x1 = -1, y1 = -1, z1 = -1, count = 0;
+        for (int y = ry; y < ry + size; y++)
+        for (int z = rz; z < rz + size; z++)
+        for (int x = rx; x < rx + size; x++)
+        {
+            if (!StructureDetail.IsDetailed(padded[GreedyMesher.Index(x, y, z)])) continue;
+            count++;
+            x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); z0 = Math.Min(z0, z);
+            x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); z1 = Math.Max(z1, z);
+        }
+        if (count == 0) return;
+        long box = (long)(x1 - x0 + 3) * (y1 - y0 + 3) * (z1 - z0 + 3);
+        if (size > MinRegion && box > 4L * count + 64)
+        {
+            int half = size / 2;
+            for (int oy = 0; oy < 2; oy++)
+            for (int oz = 0; oz < 2; oz++)
+            for (int ox = 0; ox < 2; ox++)
+                Region(padded, chunkX, chunkY, chunkZ, rx + ox * half, ry + oy * half, rz + oz * half, half, output);
+            return;
+        }
+        MeshBox(padded, chunkX, chunkY, chunkZ, x0, y0, z0, x1, y1, z1, output);
+    }
+
+    /// <summary>
+    /// Meshes the detailed blocks in blocks [x0, x1] x [y0, y1] x [z0, z1] of the chunk, on a grid one fine
+    /// voxel bigger all round, so faces against what is next to them are checked too. Detailed blocks of the
+    /// chunk around the box (meshed with another part of it) hide the faces against them without being
+    /// drawn here.
+    /// </summary>
+    private static void MeshBox(ReadOnlySpan<BlockType> padded, int chunkX, int chunkY, int chunkZ,
+        int x0, int y0, int z0, int x1, int y1, int z1, List<FineQuad> output)
+    {
+        // The grid starts a voxel before block x0 (and y0, z0) and ends a voxel after block x1.
+        int nx = (x1 - x0 + 1) * F + 2, ny = (y1 - y0 + 1) * F + 2, nz = (z1 - z0 + 1) * F + 2;
+        int volume = nx * ny * nz;
+        var grid = _grid;
+        if (grid == null || grid.Length < volume) grid = _grid = new byte[Math.Max(volume, 64 * 64 * 64)];
+        for (int by = y0 - 1; by <= y1 + 1; by++)
+        for (int bz = z0 - 1; bz <= z1 + 1; bz++)
+        for (int bx = x0 - 1; bx <= x1 + 1; bx++)
+        {
+            var b = padded[GreedyMesher.Index(bx, by, bz)];
+            bool inChunk = bx >= 0 && by >= 0 && bz >= 0 && bx < S && by < S && bz < S;
+            bool inBox = bx >= x0 && bx <= x1 && by >= y0 && by <= y1 && bz >= z0 && bz <= z1;
+            // Where the block's voxels fall in the grid, clipped to it.
+            int ox = (bx - x0) * F + 1, oy = (by - y0) * F + 1, oz = (bz - z0) * F + 1;
+            int xs = Math.Max(0, -ox), xe = Math.Min(F, nx - ox);
+            int ys = Math.Max(0, -oy), ye = Math.Min(F, ny - oy);
+            int zs = Math.Max(0, -oz), ze = Math.Min(F, nz - oz);
+            if (inChunk && StructureDetail.IsDetailed(b))
+            {
+                var shape = Shape(padded, chunkX, chunkY, chunkZ, bx, by, bz);
+                for (int y = ys; y < ye; y++)
+                for (int z = zs; z < ze; z++)
+                {
+                    var from = shape.Slice(StructureDetail.VoxelIndex(xs, y, z), xe - xs);
+                    var to = grid.AsSpan(((oy + y) * nz + oz + z) * nx + ox + xs, xe - xs);
+                    if (inBox)
+                    {
+                        from.CopyTo(to);
+                        continue;
+                    }
+                    for (int k = 0; k < from.Length; k++)
+                        to[k] = from[k] == StructurePalette.Empty ? StructurePalette.Empty : StructurePalette.Occluder;
+                }
+            }
+            else
+            {
+                // Solid terrain hides the faces that touch it; air, water and the next chunk's buildings do not.
+                byte fill = BlockInfo.IsSolid(b) && !StructureDetail.IsDetailed(b) ? StructurePalette.Occluder : StructurePalette.Empty;
+                for (int y = ys; y < ye; y++)
+                for (int z = zs; z < ze; z++)
+                    grid.AsSpan(((oy + y) * nz + oz + z) * nx + ox + xs, xe - xs).Fill(fill);
+            }
+        }
+
+        Mesh(grid.AsSpan(0, volume), nx, ny, nz, x0 * F - 1, y0 * F - 1, z0 * F - 1, output);
+    }
+
+    /// <summary>The fine voxels of detailed block (bx, by, bz) of the chunk being built, worked out the first time asked.</summary>
+    private static ReadOnlySpan<byte> Shape(ReadOnlySpan<BlockType> padded, int chunkX, int chunkY, int chunkZ, int bx, int by, int bz)
+    {
+        int at = (by * S + bz) * S + bx;
+        var shape = _shapes.AsSpan(at * StructureDetail.Volume, StructureDetail.Volume);
+        if (_shaped![at]) return shape;
+        var near = _near ??= new BlockType[27];
+        for (int dy = -1; dy <= 1; dy++)
+        for (int dz = -1; dz <= 1; dz++)
+        for (int dx = -1; dx <= 1; dx++)
+            near[StructureDetail.NeighbourIndex(dx, dy, dz)] = padded[GreedyMesher.Index(bx + dx, by + dy, bz + dz)];
+        StructureDetail.Fill(near, chunkX * S + bx, chunkY * S + by, chunkZ * S + bz, shape);
+        _shaped[at] = true;
+        return shape;
+    }
+
+    /// <summary>
+    /// Greedy-meshes a grid of fine voxels (indexed <c>(y * nz + z) * nx + x</c>): faces of coloured voxels
+    /// that touch empty space (or the edge of the grid) are merged into rectangles of one colour. Quads are
+    /// offset by (ox, oy, oz).
+    /// </summary>
+    public static void Mesh(ReadOnlySpan<byte> grid, int nx, int ny, int nz, int ox, int oy, int oz, List<FineQuad> output)
+    {
+        Span<int> dims = stackalloc int[] { nx, ny, nz };
+        Span<int> strides = stackalloc int[] { 1, nx * nz, nx };
+        Span<int> pos = stackalloc int[3];
+        int maxArea = Math.Max(nx * ny, Math.Max(ny * nz, nx * nz));
+        byte[] mask = new byte[maxArea];
+        // Slices along each axis holding anything to draw: the rest are skipped (trees leave a lot of air).
+        var drawn = new bool[nx + ny + nz];
+        for (int y = 0; y < ny; y++)
+        for (int z = 0; z < nz; z++)
+        {
+            var row = grid.Slice((y * nz + z) * nx, nx);
+            for (int x = 0; x < nx; x++)
+            {
+                byte c = row[x];
+                if (c == StructurePalette.Empty || c == StructurePalette.Occluder) continue;
+                drawn[x] = true;
+                drawn[nx + y] = true;
+                drawn[nx + ny + z] = true;
+            }
+        }
+        for (int face = 0; face < 6; face++)
+        {
+            int a = face >> 1, u = (a + 1) % 3, v = (a + 2) % 3;
+            bool positive = (face & 1) == 0;
+            int du = dims[u], dv = dims[v], sa = strides[a], su = strides[u], sv = strides[v];
+            int first = a == 0 ? 0 : a == 1 ? nx : nx + ny;
+            for (int slice = 0; slice < dims[a]; slice++)
+            {
+                if (!drawn[first + slice]) continue;
+                int next = slice + (positive ? 1 : -1);
+                bool hasNext = next >= 0 && next < dims[a];
+                int nextOffset = (positive ? 1 : -1) * sa;
+                bool any = false;
+                for (int j = 0; j < dv; j++)
+                {
+                    int at = slice * sa + j * sv;
+                    for (int i = 0; i < du; i++, at += su)
+                    {
+                        byte c = grid[at];
+                        byte m = 0;
+                        if (c != StructurePalette.Empty && c != StructurePalette.Occluder
+                            && (!hasNext || grid[at + nextOffset] == StructurePalette.Empty))
+                        {
+                            m = c;
+                            any = true;
+                        }
+                        mask[j * du + i] = m;
+                    }
+                }
+                if (!any) continue;
+
+                for (int j = 0; j < dv; j++)
+                for (int i = 0; i < du;)
+                {
+                    byte m = mask[j * du + i];
+                    if (m == 0) { i++; continue; }
+                    int w = 1;
+                    while (i + w < du && mask[j * du + i + w] == m) w++;
+                    int h = 1;
+                    while (j + h < dv && RowMatches(mask, (j + h) * du + i, w, m)) h++;
+                    for (int y = 0; y < h; y++) mask.AsSpan((j + y) * du + i, w).Clear();
+
+                    pos[a] = slice + (positive ? 1 : 0);
+                    pos[u] = i;
+                    pos[v] = j;
+                    output.Add(new FineQuad((byte)face, m, pos[0] + ox, pos[1] + oy, pos[2] + oz, w, h));
+                    i += w;
+                }
+            }
+        }
+    }
+
+    private static bool RowMatches(ReadOnlySpan<byte> mask, int start, int w, byte m)
+    {
+        for (int k = 0; k < w; k++) if (mask[start + k] != m) return false;
+        return true;
+    }
+}

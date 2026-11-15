@@ -1,0 +1,46 @@
+// Combat roles, from the design doc's role table. Every role is listed once: worker, line_infantry,
+// heavy_infantry, ranged, cavalry, sapper, caster, siege, monster, trader. A unit's attacks deal "strong" times
+// their damage to the roles its role is strongAgainst, and to the roles that list its role in
+// weakAgainst (the same relation, written from the other side). Against buildings, a role with
+// "structures" in strongAgainst deals full damage and every other role deals "structures" times its
+// damage. job is the role's job in the table, shown in the game.
+//
+// recovery is healing over time, for every unit: one that has not hit anything or been hit for "after"
+// seconds gets back "percent" of its most hit points each second, or "homePercent" within "homeRange"
+// columns of a town hall or house of its own. Healers heal on top of this.
+//
+// bleeding: a slash or pierce wound bleeds away "share" percent of the hit's damage again, "rate" hit
+// points a second for each bleeding wound (a point more for every 20 it has left to bleed), until it clots.
+// A healer stems it at once, and a unit healing at home has it bound. "kills" says whether bleeding can
+// kill (false: it stops at 1 hit point). Blood on the ground fades in "bloodDays" in-game days.
+{
+  "strong": 2,
+  "structures": 0.25,
+  "recovery": { "after": 10, "percent": 0.25, "homePercent": 2, "homeRange": 12 },
+  "bleeding": { "share": 40, "rate": 1, "kills": true, "bloodDays": 1 },
+  "roles": [
+    { "role": "worker", "job": "Gather, dig, build, haul",
+      "strongAgainst": [],
+      "weakAgainst": ["line_infantry", "heavy_infantry", "ranged", "cavalry", "sapper", "caster", "siege", "monster"] },
+    { "role": "line_infantry", "job": "Hold ground",
+      "strongAgainst": ["cavalry"], "weakAgainst": ["ranged"] },
+    { "role": "heavy_infantry", "job": "Break lines",
+      "strongAgainst": ["line_infantry"], "weakAgainst": ["cavalry", "siege"] },
+    { "role": "ranged", "job": "Damage from range, best on high ground",
+      "strongAgainst": ["line_infantry", "worker"], "weakAgainst": ["cavalry", "heavy_infantry"] },
+    { "role": "cavalry", "job": "Scout, raid, flank",
+      "strongAgainst": ["ranged"], "weakAgainst": ["line_infantry"] },
+    { "role": "sapper", "job": "Tunnel, collapse walls",
+      "strongAgainst": ["structures"],
+      "weakAgainst": ["line_infantry", "heavy_infantry", "ranged", "cavalry", "caster", "siege", "monster"] },
+    { "role": "caster", "job": "Spells, terrain magic",
+      "strongAgainst": [], "weakAgainst": ["cavalry"] },
+    { "role": "siege", "job": "Break walls at range",
+      "strongAgainst": ["structures"], "weakAgainst": ["cavalry", "heavy_infantry"] },
+    { "role": "monster", "job": "Guard their lairs",
+      "strongAgainst": [], "weakAgainst": [] },
+    { "role": "trader", "job": "Trade with city-states",
+      "strongAgainst": [],
+      "weakAgainst": ["line_infantry", "heavy_infantry", "ranged", "cavalry", "sapper", "caster", "siege", "monster"] }
+  ]
+}

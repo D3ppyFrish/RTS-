@@ -1,0 +1,190 @@
+using System;
+using System.Collections.Generic;
+
+namespace Rts.Sim.Economy;
+
+public enum BuildingState : byte
+{
+    /// <summary>Placed and paid for; workers are building it, and its blocks go up as they work.</summary>
+    Site,
+    /// <summary>Finished and working.</summary>
+    Active,
+}
+
+public enum RaidKind : byte
+{
+    None,
+    Capture,
+    Burn,
+}
+
+/// <summary>
+/// A placed building. Its footprint is columns [X, X + SizeX) by [Z, Z + SizeZ); Y is the level units
+/// stand at around it, so its first layer of blocks is at Y (a farm's field is at Y - 1).
+/// </summary>
+public sealed class Building
+{
+    public int Id { get; }
+    public int Owner { get; internal set; }
+    public BuildingDef Def { get; }
+    public int X { get; }
+    public int Y { get; }
+    public int Z { get; }
+    public BuildingState State { get; internal set; }
+    /// <summary>Worker-ticks of building work done (a site is finished at <see cref="BuildingDef.BuildTicks"/>).</summary>
+    public int Work { get; internal set; }
+    /// <summary>Template blocks placed so far.</summary>
+    public int Placed { get; internal set; }
+    /// <summary>Goods inside, by <see cref="Good"/>: a store's stock, or a smelter's inputs and output.</summary>
+    public int[] Stock { get; } = new int[Goods.Count];
+
+    /// <summary>The player capturing or burning it, or -1.</summary>
+    public int RaidPlayer { get; internal set; } = -1;
+    public RaidKind Raid { get; internal set; }
+    public int RaidTicks { get; internal set; }
+
+    /// <summary>Ticks left on the ingot being smelted, or 0.</summary>
+    public int SmeltTicks { get; internal set; }
+
+    /// <summary>Units waiting to be trained (unit definition indexes), first in front.</summary>
+    public List<int> Queue { get; } = new();
+    public int TrainTicks { get; internal set; }
+    /// <summary>It repeats its training: each unit it finishes is owed to the queue again (see <see cref="RepeatCommand"/>).</summary>
+    public bool Repeat { get; internal set; }
+    /// <summary>
+    /// Units (definition indexes) finished while on repeat and not yet queued again, oldest first; automation
+    /// queues them as the player can pay.
+    /// </summary>
+    public List<int> Owed { get; } = new();
+
+    /// <summary>
+    /// The toughness of its placed blocks that are gone: knocked out, dug away or fallen. It collapses once
+    /// that is half of what was built (see <see cref="Units.CombatSystem"/>).
+    /// </summary>
+    public int Lost { get; internal set; }
+    /// <summary>Damage dealt toward knocking out its next block.</summary>
+    public int Damage { get; internal set; }
+    /// <summary>Which of its blocks (by index in the template) are counted in <see cref="Lost"/>; null while none are.</summary>
+    internal bool[]? Gone;
+
+    /// <summary>The toughness of the blocks placed so far.</summary>
+    public int Built => Def.ToughnessOf(Placed);
+    /// <summary>What it can take before it collapses, from <see cref="MaxHealth"/> down to 0.</summary>
+    public int Health => Math.Max(0, Built / 2 - Lost - Damage);
+    /// <summary>Half the toughness of what is built: a building collapses when it has lost that much.</summary>
+    public int MaxHealth => Built / 2;
+
+    internal Building(int id, int owner, BuildingDef def, int x, int y, int z)
+    {
+        Id = id;
+        Owner = owner;
+        Def = def;
+        X = x;
+        Y = y;
+        Z = z;
+    }
+
+    public int MaxX => X + Def.SizeX - 1;
+    public int MaxZ => Z + Def.SizeZ - 1;
+    public bool Active => State == BuildingState.Active;
+
+    /// <summary>True if column (x, z) is inside the footprint.</summary>
+    public bool Covers(int x, int z) => x >= X && x <= MaxX && z >= Z && z <= MaxZ;
+
+    /// <summary>Columns from (x, z) to the footprint, counting diagonal steps as one (0 inside).</summary>
+    public int ColumnDistance(int x, int z)
+    {
+        int dx = x < X ? X - x : x > MaxX ? x - MaxX : 0;
+        int dz = z < Z ? Z - z : z > MaxZ ? z - MaxZ : 0;
+        return Math.Max(dx, dz);
+    }
+
+    /// <summary>True if block (x, y, z) is inside the building's box (footprint by its full height).</summary>
+    public bool Contains(int x, int y, int z) =>
+        Covers(x, z) && y >= Y + (Def.Walkable ? -1 : 0) && y < Y + Math.Max(Def.Height, 1);
+
+    /// <summary>Squared horizontal distance from (x, z) to the footprint's centre, in half blocks.</summary>
+    public long CentreDistance2(int x, int z)
+    {
+        long dx = 2L * x - (X + MaxX), dz = 2L * z - (Z + MaxZ);
+        return dx * dx + dz * dz;
+    }
+}
+
+/// <summary>All buildings, in ascending id order (the order every system visits them in).</summary>
+public sealed class BuildingStore
+{
+    private readonly List<Building> _list = new();
+    private readonly Dictionary<int, Building> _byId = new();
+    private int _nextId = 1;
+
+    public IReadOnlyList<Building> All => _list;
+    public int Count => _list.Count;
+
+    public Building? Get(int id) => _byId.TryGetValue(id, out var b) ? b : null;
+
+    internal Building Add(int owner, BuildingDef def, int x, int y, int z)
+    {
+        var b = new Building(_nextId++, owner, def, x, y, z);
+        _list.Add(b);
+        _byId.Add(b.Id, b);
+        return b;
+    }
+
+    internal void Remove(Building b)
+    {
+        _list.Remove(b);
+        _byId.Remove(b.Id);
+    }
+
+    /// <summary>The building whose box contains block (x, y, z), or null.</summary>
+    public Building? At(int x, int y, int z)
+    {
+        foreach (var b in _list)
+            if (b.Contains(x, y, z)) return b;
+        return null;
+    }
+
+    /// <summary>
+    /// The owner of the gate on column (x, z), or -1 if there is none: their units walk through it, everyone
+    /// else's find it shut (see <see cref="BlockType.Gate"/>).
+    /// </summary>
+    public int GateOwner(int x, int z)
+    {
+        foreach (var b in _list)
+            if (b.Def.Kind == BuildingKind.Gate && b.Covers(x, z)) return b.Owner;
+        return -1;
+    }
+
+    /// <summary>The building whose footprint covers column (x, z), or null.</summary>
+    public Building? AtColumn(int x, int z)
+    {
+        foreach (var b in _list)
+            if (b.Covers(x, z)) return b;
+        return null;
+    }
+
+    /// <summary>FNV-1a over every field that affects the game.</summary>
+    public ulong ComputeHash()
+    {
+        ulong h = 14695981039346656037UL;
+        void Mix(long v) { h = (h ^ (ulong)v) * 1099511628211UL; }
+        Mix(_list.Count);
+        Mix(_nextId);
+        foreach (var b in _list)
+        {
+            Mix(b.Id); Mix(b.Owner); Mix(b.Def.Index); Mix(b.X); Mix(b.Y); Mix(b.Z);
+            Mix((int)b.State); Mix(b.Work); Mix(b.Placed);
+            foreach (int s in b.Stock) Mix(s);
+            Mix(b.RaidPlayer); Mix((int)b.Raid); Mix(b.RaidTicks); Mix(b.SmeltTicks);
+            Mix(b.Queue.Count);
+            foreach (int q in b.Queue) Mix(q);
+            Mix(b.TrainTicks);
+            Mix(b.Repeat ? 1 : 0);
+            Mix(b.Owed.Count);
+            foreach (int o in b.Owed) Mix(o);
+            Mix(b.Lost); Mix(b.Damage);
+        }
+        return h;
+    }
+}

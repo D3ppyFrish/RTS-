@@ -1,0 +1,11 @@
+# Godot
+.godot/
+*.import.tmp
+# .NET
+bin/
+obj/
+*.user
+.vs/
+# Builds and local output
+build/
+screenshots/

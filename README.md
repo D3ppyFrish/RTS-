@@ -1,0 +1,210 @@
+# RTS
+
+A 3D voxel real-time strategy game: one long match on a newly discovered continent,
+with diggable terrain, rival races, monsters, magic and deep economy. Built with Godot 4 and C#.
+
+Design doc: https://claude.ai/artifact/NUFTDiS6HPWihhhmrhiyQm
+
+## Playing
+
+Every pull request and every push to `develop` produces a Windows build: download the
+`RTS-windows-...` artifact from the run on the **Actions** tab, unzip it and run `RTS.exe`.
+
+- [docs/playing.md](docs/playing.md): getting a build, the start screen, the controls and the HUD.
+- [docs/rules.md](docs/rules.md): how each system works (economy, combat, automation, evolution,
+  monsters, city-states, winning and computer players, fog of war, match end and replays, alerts).
+
+## Developing
+
+```bash
+scripts/setup.sh                    # .NET 8 SDK + Godot 4.7.2 (mono)
+dotnet test RTS.sln                 # simulation tests
+scripts/screenshot.sh out.png       # render the game to a PNG on a virtual screen
+scripts/ui-screenshots.sh [DIR]     # scripted mouse and keyboard: box select, pause, height slice
+scripts/ui-economy-screenshots.sh   # scripted economy: gather, research, build, train, road
+scripts/ui-combat-screenshots.sh    # scripted battle: attack-move, tunnel under a house
+scripts/ui-automation-screenshots.sh  # scripted automation: automatic workers, repeat, a house put up on its own
+scripts/ui-evolution-screenshots.sh   # scripted evolution: evolve buttons, auto-evolve, a knight's panel
+scripts/ui-monsters-screenshots.sh    # scripted wolf lairs: Orcs beat a pack, ride one wolf and recruit one; Settlers get the reward
+scripts/ui-citystate-screenshots.sh   # scripted city-state: break the goblins' totem, hire goblins, a caravan trades
+scripts/ui-match-screenshots.sh       # scripted match flow: start screen, surrender, defeat and its replay, victory
+scripts/ui-fog-screenshots.sh         # scripted fog of war: the start screen switch, enemies hidden until in sight
+scripts/ui-dig-screenshots.sh         # scripted dig tool: workers and sappers dig out a dragged area
+scripts/ui-wall-screenshots.sh        # scripted walls: a gate placed, a wall drawn through it and built
+scripts/ui-bridge-screenshots.sh      # scripted bridge: a deck drawn across a river and laid by the workers
+scripts/determinism.sh              # 10-minute headless match, replayed twice, hashes compared
+scripts/ai-matches.sh               # Hard computer against Classic, five matches with fog; each must have a winner within 40 minutes
+scripts/ai-versus.sh [A] [B] [N]    # level A against level B over N seeds with fog (default hard, classic, 20), both sides of the map
+scripts/benchmark.sh [SECONDS]      # load the 512x512 region, dig 100 blocks/s, log frame times
+scripts/setup.sh --with-export-templates && scripts/export-windows.sh
+```
+
+### Maps
+
+`RegionGenerator` (src/Sim/World) builds the 512×64×512 slice region from a seed with integer maths:
+ocean and beaches on the west and east edges, a river running north–south that can be waded at three
+shallow fords (about a quarter, half and three quarters of the way down), grassland and forests,
+a hill range with stone ridges, a swamp, and a cavern with ore and crystal under the hills. Each
+player starts in a clearing near their coast with berry bushes, a grove, a stone outcrop and an iron
+outcrop mirrored around it. Each biome grows its own trees (`RegionGenerator.KindFor`): broad-leaved
+trees and birches in the grassland, those and pines in the forest, pines and a rare violet dusk tree in
+the hills, and willows and giant mushrooms in the swamp; the start grove has two birches and a pine.
+Every kind is its own trunk and leaf block (`BlockInfo.IsTrunk`, `BlockInfo.IsLeaves`). `RegionMap.Save`/`Load` read and write a run-length-encoded binary map,
+so handmade maps can be loaded with `--map=PATH`. `--focus=start0|start1|cavern|X,Z` points the camera.
+
+### Units
+
+Units live in the simulation core as flat arrays (`src/Sim/Units/UnitStore.cs`) with fixed-point
+positions and stable ids. A move order sends a group to a point. Units step up one block (never two),
+drop up to three, wade through shallow water, fall when the ground under them is dug away, push each
+other apart so crowds spread out, and stop when they arrive or the crowd at the goal has settled. Unit
+types (worker, spearman, archer, rider, sapper, mage, and the Settlers' forms they evolve into: see
+[Evolution](docs/rules.md#evolution)) come from `data/units.json` (see [Game data](#game-data)).
+Godot draws them with one MultiMesh per model; the placeholder models are built from voxels an eighth
+of a terrain block across, tinted in the owner's colour. Each player starts with a town hall at their
+start area and four of every unit type that is trained in front of it (except caravans), a wolf lair
+lies on the way to the map centre (see [Monsters and taming](docs/rules.md#monsters-and-taming)) and each city-state has a town (see
+[City-states](docs/rules.md#city-states)); `--goods=N` gives every town hall N more of every good, and `--houses=N` puts N houses
+behind yours, since the start has more people than room. `--units=N` instead spawns N of your units
+around the camera focus (all on one side, so they walk rather than fight), and `--battle=N` sets two
+armies of N soldiers each facing each other at the camera focus, with an enemy house nearby.
+`--player=1` plays the Orcs at the east start instead of the Settlers at the west one, `--ai` has
+the computer play the other players (see [Winning and computer players](docs/rules.md#winning-and-computer-players)), at `--ai-level=normal`, `hard` (the default) or `classic`, and `--fog` turns fog of war on
+(see [Fog of war](docs/rules.md#fog-of-war)). `--daynight` plays with day, night and weather, and
+`--time-of-day=H` does too, starting at hour H (8 morning, 13 noon, 19.3 dusk, 0 midnight);
+`--weather=W` makes the first day's weather W (clear, cloudy, rain, storm or fog), `--lights=N` puts N
+torches and a campfire around your town hall, and `--focus=swamp` or `--focus=lava` looks at the swamp
+or the first pool of lava (see [Day, night and weather](docs/rules.md#day-night-and-weather)). These options start a match at once; started without options, the game shows the start screen instead (see [Start screen, match end and replays](docs/rules.md#start-screen-match-end-and-replays)).
+
+Pathfinding (`src/Sim/Units/WalkGraph.cs`, `FlowField.cs`): the walk graph keeps up to four standing
+levels per block column (surface, tunnels, caves, bridges) and the steps between them, following the
+same rules units move by, and rebuilds only the columns around changed blocks. Every unit ordered to
+the same spot shares one flow field: path distances to the goal, computed outward from it with a fixed
+budget per tick (12,000 nodes) and headed toward the units, so a field covers the way there rather
+than the whole map. When blocks change under a field it is marked dirty: units that find their way
+gone get it recomputed within half a second, and otherwise it is refreshed after five seconds, which
+picks up new shortcuts such as a freshly dug tunnel. Units with no way to the goal (a wall across the
+map, a pit they fell into) give up at once instead of walking into the wall. A move order may name
+the level to go to (`MoveCommand.Y`), so units can be sent into a tunnel under a hill rather than
+onto it.
+
+### Game data
+
+Factions, techs, buildings, units, the combat role table and the city-states are data, in six JSON files under `data/`
+(comments and trailing commas allowed; each file describes its fields at the top). They are built into the simulation core,
+so the game, the tests and the match runner all play with the same content; `--data=DIR` makes the game
+load a folder of edited copies instead. `ContentLoader` checks everything before the game starts and
+reports every problem at once, one line each: misspelt fields, missing or out-of-range values,
+duplicate ids, references to ids that do not exist, prerequisite cycles (with the loop spelled out),
+and anything that would need another faction's tech. Command logs record a hash of the data, so a
+replay made with different data says so instead of drifting apart.
+
+- **Factions**: Settlers and Orcs (who tame monsters: see [Monsters and taming](docs/rules.md#monsters-and-taming)). Player 0 plays the first
+  faction, player 1 the second, and so on; picking a faction on the start screen picks the player who
+  has it.
+- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 15
+  in all: a shared core (farming, better tools, roads, archery, basic magic, masonry, crop rotation,
+  horse breeding, handcarts, smelting, sapping) and two per faction. Prerequisites form a branching
+  tree up to four deep. A tech unlocks the units and buildings that name it in `requires`, and can have
+  effects: faster gathering, bigger loads, richer farms, more housing, more hit points (for units
+  already alive too), faster walking, and roads.
+  Design principle for new techs: **research gives tools, not numbers**. A tech should give players a new
+  ability, unit option, building or tactic to outsmart enemies and adapt, not just a higher number; stat
+  buffs are mostly avoided. The stat effects above are to be replaced (see issue #80, on hold).
+- **Roles** (`roles.json`): the design doc's role table, saying which roles each role is strong and weak
+  against and how much less damage the others deal to buildings, and how fast units out of the fight
+  heal (see [Combat](docs/rules.md#combat)).
+- **Buildings and units** name the techs they need; the barracks trains spearmen at once, and archers,
+  riders, sappers and mages after their techs. `units.json` also holds the forms units evolve into and the
+  monsters, and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)) and whether it
+  tames monsters.
+- **City-states** (`citystates.json`): each town's totem (a building of kind `totem` in `buildings.json`)
+  and how soon it stands again, its guards, the tribute its holder gets, what its caravans trade, its
+  mercenaries (units whose `hiredFrom` names it), its lair monster and what its huts are built of (see
+  [City-states](docs/rules.md#city-states)).
+
+The tech tree screen (K) shows your faction's techs in columns by how many techs lead to them, with
+lines from each tech to what it opens up: green when researched, gold while being researched, bright
+when you can start it now and dim otherwise. All the numbers are first guesses for playtesting.
+
+### Headless matches and replays
+
+`tools/MatchRunner` runs a match with no Godot at full speed (a 10-minute match with 200 units takes
+about 20 seconds, mostly pathfinding). It either generates a match with scripted players from a seed
+or replays a command log, records the state hash every N ticks, and fails if repeated runs differ.
+Command logs are plain text and double as replays:
+
+```bash
+dotnet run -c Release --project tools/MatchRunner -- --minutes=10 --record=match.log   # generate + check
+dotnet run -c Release --project tools/MatchRunner -- --units=500 --minutes=5           # bigger armies
+dotnet run -c Release --project tools/MatchRunner -- --log=match.log --runs=3          # replay a log
+```
+
+The replays the game saves are command logs too: `--log=FILE` plays one back, checks it replays the
+same, and prints who won and when.
+
+Scripted players dig and build near their home and, once a second, send a slice of their army (100
+units each by default, `--units=N`) to their start or their dig site, attack-move it to the map centre
+or the enemy start, set it on the nearest enemy or an enemy building, or have its sappers tunnel.
+Every two seconds they also make an economic move from their town hall: gather, build, farm or smelt,
+research a tech, train a worker or soldier, lay a road, raid an enemy storehouse, or change their
+automation (automatic workers, repeat, stances or the form a unit type takes on its own); when one of
+their units can evolve, half the time they evolve every unit of its type that can instead. Now and then
+they send a slice to the nearest wolf lair, and half the time they ride or recruit the monsters they beat.
+They also send their raiders at the city-states' totems, send idle caravans to trade with them, and hire
+mercenaries where they hold the town.
+CI runs `scripts/determinism.sh` on every PR and push: it replays the match twice in one process and
+again from the saved log in a second process, and uploads the log and hash traces.
+
+### Scripted input
+
+`--input="STEPS"` (or `--input-file=PATH`) drives the game with scripted mouse and keyboard input:
+steps such as `drag 500,300 900,600`, `click 1150,330 right`, `key space`, `key pagedown*14`,
+`camera X,Z YAW PITCH DISTANCE`, `shot PATH` and `print`, separated by `;` or new lines (the full list is
+in `game/scripts/InputScript.cs`; `clickworld X,Y,Z` clicks a block wherever the camera shows it, and
+`clickui NAME` clicks a HUD button by name, such as `tech_roads` or `train_worker`; `dragworld` drags
+between two blocks; `waitmatch` waits for a match started from the start screen).
+`scripts/ui-screenshots.sh` uses it to box-select the starting units, order them to move, pause, and
+cut a hill with the height slice; `scripts/ui-economy-screenshots.sh` sends the workers to dig the
+stone outcrop, researches roads from the tech tree, places and builds a house, queues a worker at the
+town hall and lays a road; `scripts/ui-combat-screenshots.sh` starts with `--battle=16` at the map
+centre, sends a sapper to tunnel under the enemy house and attack-moves the rest of the army through
+the enemy; `scripts/ui-automation-screenshots.sh` makes the starting workers automatic and the soldiers
+hold their ground, puts the town hall on repeat, then makes every worker automatic and waits for them
+to put up a house on their own; `scripts/ui-evolution-screenshots.sh` starts with `--xp=150`, turns the
+spearmen into knights with the evolve button, sets the archers to become longbowmen on their own, evolves
+the rest, and selects one knight; `scripts/ui-monsters-screenshots.sh` plays the Orcs (`--player=1`), whose
+starting units attack-move into the nearest wolf lair and beat the pack, then picks a beaten wolf with
+the Beaten button for a spearman to ride and the next to recruit, and plays the Settlers, who clear
+their lair for its reward; `scripts/ui-citystate-screenshots.sh` starts with `--goods=1000 --houses=4`,
+picks the goblin town from the top bar, clears the wolf lair on the road and breaks the goblins' totem
+with the starting units, hires a goblin of each kind, and trains a caravan and right-clicks the town with
+it, then waits for the trade and tribute to come in; `scripts/ui-match-screenshots.sh` starts with `--menu`, picks the
+Orcs on the start screen with the computer playing the Settlers, surrenders, checks the Defeat panel
+and that the match runner plays the saved replay back to the same end, goes back to the start screen,
+and then, from the command line with `--units=40`, brings down the Orcs' town hall for a Victory;
+`scripts/ui-fog-screenshots.sh` switches fog of war off and on again on the start screen and starts a
+`--battle=16` match without a computer player, checks that the enemy army out of sight is not drawn,
+attack-moves until it is, and checks that without fog of war every enemy unit shows. `scripts/ui-alerts-screenshots.sh`
+selects one idle worker after another with the Idle workers button, builds a house and clicks its
+alert from far away to bring the camera back, then attack-moves a `--battle=16` army into the enemy's
+and clicks the under attack alert. `scripts/ui-test-mode-screenshots.sh` starts with `--test-mode` and uses the test panel
+to put down trees, a pond, lava, wolves, the Orcs' spearmen and barracks, a wolf lair and blood, turns on
+invulnerability, sets dusk and rain, saves the scenario and loads it back (`select NAME ITEM` picks from an
+option list, `spin NAME V` sets a number box). Each checks the
+printed UI state and saves screenshots. CI runs them on every PR and uploads the PNGs as the
+`ui-screenshots-...` artifact.
+
+### Benchmark
+
+`--benchmark[=SECONDS]` (default 10) loads the full 512×64×512 region, digs 100 blocks per second
+near the camera while it slowly orbits, then prints one `BENCHMARK ...` line with load time, FPS,
+frame-time percentiles, frames over 16.7 ms and main-thread CPU work per frame, and quits. The line
+is also appended to `user://benchmark.txt` (on Windows `%APPDATA%\Godot\app_userdata\RTS\benchmark.txt`;
+change with `--benchmark-out=PATH`). On a Windows build run `RTS.exe -- --benchmark`.
+Add `--units=1000` to also spawn 1,000 of your units around the camera; every 8 seconds they are all
+sent to one new point near the camera, so they keep walking around the holes being dug
+(`RTS.exe -- --benchmark --units=1000`).
+The cloud dev container only has a software renderer, so its FPS numbers are not representative.
+
+To open in the editor, open `game/project.godot` with Godot 4.7.2 (.NET edition).
