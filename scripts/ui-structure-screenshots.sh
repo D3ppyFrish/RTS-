@@ -4,6 +4,7 @@
 # the town is photographed close up from a few sides. Saves PNGs to OUT_DIR and fails if the UI state is
 # not as expected.
 # Usage: scripts/ui-structure-screenshots.sh [OUT_DIR]
+# CI: skip (close-up look checks, run by hand when the looks change)
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/structures}")"
 mkdir -p "$OUT"

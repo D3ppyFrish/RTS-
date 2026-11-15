@@ -4,6 +4,7 @@
 # far shots show the type badges over every unit, which appear only when the camera is far out.
 # Saves PNGs to OUT_DIR and fails if the badges are not as expected.
 # Usage: scripts/ui-lineup-screenshots.sh [OUT_DIR]
+# CI: skip (close-up look checks, run by hand when the looks change)
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/units}")"
 mkdir -p "$OUT"

@@ -57,10 +57,30 @@ jobs:
           path: build/ai-matches
           retention-days: 7
 
-  ui-screenshots:
-    name: UI screenshot test
+  ui-list:
+    name: Find UI screenshot tests
     runs-on: ubuntu-24.04
-    needs: test
+    outputs:
+      scripts: ${{ steps.find.outputs.scripts }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: List the UI scripts, leaving out any with a CI skip line
+        id: find
+        run: |
+          names=$(grep -L '^# CI: skip' scripts/ui-*.sh | sed 's|scripts/||; s|\.sh$||' | sort)
+          echo "$names"
+          echo "scripts=$(echo "$names" | jq -R . | jq -cs .)" >> "$GITHUB_OUTPUT"
+
+  # One job per UI script, all at once. A new scripts/ui-*.sh is picked up without editing this file;
+  # add a "# CI: skip" line to its header to leave it out.
+  ui-script:
+    name: UI ${{ matrix.script }}
+    runs-on: ubuntu-24.04
+    needs: [test, ui-list]
+    strategy:
+      fail-fast: false # every script reports, not just the first to fail
+      matrix:
+        script: ${{ fromJSON(needs.ui-list.outputs.scripts) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -77,56 +97,37 @@ jobs:
           sudo apt-get install -y -qq xvfb xauth libgl1 libgl1-mesa-dri libxcursor1 libxinerama1 libxrandr2 libxi6
           GODOT_DIR="$HOME/godot" BIN_DIR="$HOME/.local/bin" bash scripts/setup.sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: Select units, pause and cut a hill with scripted input
-        run: bash scripts/ui-screenshots.sh build/ui
-      - name: Gather, research, build a house, train and lay a road with scripted input
-        run: bash scripts/ui-economy-screenshots.sh build/ui
-      - name: Fight a battle and tunnel under a house with scripted input
-        run: bash scripts/ui-combat-screenshots.sh build/ui
-      - name: Automatic workers, repeating training and an automatic house with scripted input
-        run: bash scripts/ui-automation-screenshots.sh build/ui
-      - name: Evolve units with the evolve and auto-evolve buttons with scripted input
-        run: bash scripts/ui-evolution-screenshots.sh build/ui
-      - name: Clear wolf lairs as the Orcs (ride and recruit) and the Settlers (reward) with scripted input
-        run: bash scripts/ui-monsters-screenshots.sh build/ui
-      - name: Kill the dusk tree's warden, heal the tree and use the staff, then raze it as the Orcs with scripted input
-        run: bash scripts/ui-dusktree-screenshots.sh build/ui/dusk-tree
-      - name: Win the goblin town with gifts, hire goblins and trade with a caravan with scripted input
-        run: bash scripts/ui-citystate-screenshots.sh build/ui
-      - name: Start a match from the start screen, surrender, replay it, and win one with scripted input
-        run: bash scripts/ui-match-screenshots.sh build/ui
-      - name: Fog of war, switched on the start screen, hides the enemy until your army sees it, with scripted input
-        run: bash scripts/ui-fog-screenshots.sh build/ui
-      - name: Dig out an area with workers and sappers using the dig tool, with scripted input
-        run: bash scripts/ui-dig-screenshots.sh build/ui
-      - name: A ledge dug free falls, comes down in dust and leaves rubble, with scripted input
-        run: bash scripts/ui-physics-screenshots.sh build/ui
-      - name: Alerts for a finished house and an attack move the camera, and the idle workers button, with scripted input
-        run: bash scripts/ui-alerts-screenshots.sh build/ui
-      - name: Right-drag a line that the army forms up along, then move it keeping its shape, with scripted input
-        run: bash scripts/ui-formation-screenshots.sh build/ui
-      - name: Place a gate, draw a wall through it and watch the workers build it, with scripted input
-        run: bash scripts/ui-wall-screenshots.sh build/ui
-      - name: Draw a bridge across a river and watch the workers lay its deck, with scripted input
-        run: bash scripts/ui-bridge-screenshots.sh build/ui
-      - name: Plan a house and a town hall, build a house, start a plan with a right click and remove one, with scripted input
-        run: bash scripts/ui-plan-screenshots.sh build/ui
-      - name: Two armies fight and wounded units bleed, leaving trails and pools, with scripted input
-        run: bash scripts/ui-blood-screenshots.sh build/ui
-      - name: Test mode places trees, water, lava, units, a building, a lair and blood, sets cheats, weather and time, saves and loads a scenario, with scripted input
-        run: bash scripts/ui-test-mode-screenshots.sh build/ui
-      - name: The start screen, HUD, tech tree and end of match panel in each UI look, with scripted input
-        run: bash scripts/ui-style-screenshots.sh build/ui/style
-      - name: The world lit at morning, noon, dusk and night, and kept day with the time of day button, with scripted input
-        run: bash scripts/ui-daynight-screenshots.sh build/ui/daynight
-      # Screenshots are about 30 MB a run: kept three days, long enough to look at a PR's.
+      - name: Run ${{ matrix.script }}.sh with scripted input
+        run: bash scripts/${{ matrix.script }}.sh build/ui/${{ matrix.script }}
       - uses: actions/upload-artifact@v4
         if: always()
         continue-on-error: true
         with:
-          name: ui-screenshots-${{ github.sha }}
+          name: ui-${{ matrix.script }}-${{ github.sha }}
           path: build/ui
           retention-days: 3
+
+  # Keeps one "UI screenshot test" check that passes only when every UI script passed, and gathers their
+  # screenshots into one ui-screenshots-<sha> artifact, one folder per script.
+  ui-screenshots:
+    name: UI screenshot test
+    runs-on: ubuntu-24.04
+    needs: [ui-list, ui-script]
+    if: always()
+    steps:
+      # Screenshots are about 30 MB a run: kept three days, long enough to look at a PR's.
+      - uses: actions/upload-artifact/merge@v4
+        if: needs.ui-script.result != 'skipped'
+        continue-on-error: true
+        with:
+          name: ui-screenshots-${{ github.sha }}
+          pattern: ui-*-${{ github.sha }}
+          delete-merged: true
+          retention-days: 3
+      - name: Every UI script passed
+        run: |
+          echo "find: ${{ needs.ui-list.result }}, scripts: ${{ needs.ui-script.result }}"
+          [ "${{ needs.ui-list.result }}" = success ] && [ "${{ needs.ui-script.result }}" = success ]
 
   windows-build:
     name: Windows build
