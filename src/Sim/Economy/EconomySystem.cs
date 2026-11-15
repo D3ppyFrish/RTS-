@@ -255,13 +255,13 @@ public sealed partial class EconomySystem
             {
                 StepSite(b);
             }
-            else
+            else if (b.Active)
             {
                 if (b.Def.Kind == BuildingKind.Smelter) StepSmelter(b);
                 if (b.Queue.Count > 0) StepTraining(b);
                 if (b.Def.YieldTicks > 0 && (_sim.Tick + b.Id) % b.Def.YieldTicks == 0) BringYield(b);
             }
-            if (b.Def.Raidable && StepRaid(b)) k--; // burned down
+            if (b.Def.Raidable && !b.Planned && StepRaid(b)) k--; // burned down
         }
 
         StepResearch();
@@ -313,8 +313,9 @@ public sealed partial class EconomySystem
     /// other buildings (or the gap around them; walls and gates need none between each other) must not be
     /// in the way. With <paramref name="checkPlayer"/>
     /// false only the ground counts, not the player's techs and goods (match setup).
+    /// A plan is checked with <paramref name="ignore"/>: the building that may stand on its own footprint.
     /// </summary>
-    public PlaceResult CanPlace(int player, BuildingDef def, int x, int z, out int baseY, bool checkPlayer = true)
+    public PlaceResult CanPlace(int player, BuildingDef def, int x, int z, out int baseY, bool checkPlayer = true, Building? ignore = null)
     {
         baseY = -1;
         if (def.IsBridge) return PlaceResult.Blocked; // laid along a line instead (see BridgeCommand)
@@ -324,6 +325,7 @@ public sealed partial class EconomySystem
         if (x < 1 || z < 1 || x1 > w.SizeX - 2 || z1 > w.SizeZ - 2) return PlaceResult.OutOfBounds;
         foreach (var b in Buildings.All)
         {
+            if (b == ignore) continue;
             // Walls and gates join up with each other; everything else keeps a gap of a column.
             int gap = def.IsWall && b.Def.IsWall ? 0 : 1;
             if (x <= b.MaxX + gap && x1 >= b.X - gap && z <= b.MaxZ + gap && z1 >= b.Z - gap) return PlaceResult.Crowded;
@@ -381,6 +383,12 @@ public sealed partial class EconomySystem
     /// <summary>Creates the building and levels its site: high columns cut down, low ones filled, leaves cleared.</summary>
     private Building Prepare(int owner, BuildingDef def, int x, int z, int baseY)
     {
+        Level(def, x, z, baseY);
+        return Buildings.Add(owner, def, x, baseY, z);
+    }
+
+    private void Level(BuildingDef def, int x, int z, int baseY)
+    {
         var w = World;
         int clear = Math.Max(def.Height, Walk.Clearance);
         for (int cz = z; cz < z + def.SizeZ; cz++)
@@ -390,7 +398,6 @@ public sealed partial class EconomySystem
             for (int y = baseY; y < baseY + clear; y++)
                 if (w.Get(cx, y, cz) != BlockType.Air) w.Set(cx, y, cz, BlockType.Air);
         }
-        return Buildings.Add(owner, def, x, baseY, z);
     }
 
     /// <summary>
@@ -668,6 +675,46 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>
+    /// Marks out a plan for the player where the building fits, whether or not they can pay for it yet; the
+    /// ground is left as it is until the plan is started.
+    /// </summary>
+    internal void Apply(PlanCommand c)
+    {
+        if (!_sim.Content.TryGetBuilding(c.Building, out var def)) return;
+        var fit = CanPlace(c.PlayerId, def, c.X, c.Z, out int baseY);
+        if (fit != PlaceResult.Ok && fit != PlaceResult.CannotAfford) return;
+        var b = Buildings.Add(c.PlayerId, def, c.X, baseY, c.Z);
+        b.State = BuildingState.Planned;
+    }
+
+    internal void Apply(CancelPlanCommand c)
+    {
+        var b = Buildings.Get(c.Building);
+        if (b != null && b.Owner == c.PlayerId && b.Planned) Buildings.Remove(b);
+    }
+
+    /// <summary>
+    /// Why the player's plan cannot be started now: <see cref="PlaceResult.Ok"/> if it can (the ground still fits,
+    /// the techs are there and the goods are in store).
+    /// </summary>
+    public PlaceResult CanStart(Building plan) =>
+        !plan.Planned ? PlaceResult.Blocked : CanPlace(plan.Owner, plan.Def, plan.X, plan.Z, out _, ignore: plan);
+
+    /// <summary>
+    /// Starts a plan: pays for it, levels its ground and makes it a site. False, with nothing changed, if it
+    /// cannot start yet (see <see cref="CanStart"/>).
+    /// </summary>
+    private bool StartPlan(Building b)
+    {
+        if (CanPlace(b.Owner, b.Def, b.X, b.Z, out int baseY, ignore: b) != PlaceResult.Ok) return false;
+        if (!TrySpend(b.Owner, b.Def.Cost, b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2)) return false;
+        Level(b.Def, b.X, b.Z, baseY);
+        b.Y = baseY;
+        b.State = BuildingState.Site;
+        return true;
+    }
+
+    /// <summary>
     /// Puts a site of a den building (<see cref="BuildingDef.FromDen"/>) as near column (x, z), the den, as it fits
     /// (its middle within <see cref="DenSearch"/> columns), pays for it, and sends the workers among the command's
     /// units to build it. Null, with nothing paid, if the player's faction or techs do not allow it, they cannot
@@ -735,6 +782,7 @@ public sealed partial class EconomySystem
     {
         var b = Buildings.Get(c.Building);
         if (b == null || b.Owner != c.PlayerId) return;
+        if (b.Planned && !StartPlan(b)) return;
         foreach (int i in Workers(c))
         {
             if (b.State == BuildingState.Site)
@@ -765,7 +813,7 @@ public sealed partial class EconomySystem
     private void StartRaid(UnitsCommand c, int building, UnitJob job)
     {
         var b = Buildings.Get(building);
-        if (b == null || b.Owner == c.PlayerId || !b.Def.Raidable) return;
+        if (b == null || b.Owner == c.PlayerId || !b.Def.Raidable || b.Planned) return;
         foreach (int i in OwnedUnits(c))
             StartJob(i, job, b.Id);
     }

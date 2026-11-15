@@ -268,6 +268,8 @@ public sealed class InputScript
         "pagedown" or "pgdn" => Key.Pagedown,
         "pageup" or "pgup" => Key.Pageup,
         "home" => Key.Home,
+        "tab" => Key.Tab,
+        "delete" or "del" => Key.Delete,
         "escape" or "esc" => Key.Escape,
         "minus" => Key.Minus,
         "equal" or "plus" => Key.Equal,

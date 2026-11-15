@@ -334,6 +334,7 @@ public sealed class AutomationSystem
     /// </summary>
     private int Wants(Building b, Stats s)
     {
+        if (b.Planned) return -1; // not started: the player starts it
         int working = _working.GetValueOrDefault(b.Id);
         // A bridge's deck is built from beside it: not before there is ground or deck to stand on there.
         if (b.State == BuildingState.Site) return working < MaxBuilders(b.Def) && (!b.Def.IsBridge || Economy.BridgeAccess(b, out _, out _, out _)) ? 0 : -1;
@@ -721,6 +722,7 @@ public sealed class AutomationSystem
                 if (b.Def.Kind == BuildingKind.Farm) s.FarmSite = true;
                 continue;
             }
+            if (b.Planned) continue;
             s.Housing += Economy.HousingOf(b);
             if (b.Def.Storage)
                 for (int g = 0; g < Goods.Count; g++) s.Stock[g] += b.Stock[g];

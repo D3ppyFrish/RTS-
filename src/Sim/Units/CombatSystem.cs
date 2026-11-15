@@ -308,7 +308,7 @@ public sealed partial class CombatSystem
         if (u.TargetBuilding[i] != 0)
         {
             b = Buildings.Get(u.TargetBuilding[i]);
-            if (b != null && (b.Owner != u.Owner[i] || b.Def.IsBridge) && !guard) return true;
+            if (b != null && !b.Planned && (b.Owner != u.Owner[i] || b.Def.IsBridge) && !guard) return true;
             b = null;
             u.TargetBuilding[i] = 0;
         }
@@ -587,7 +587,7 @@ public sealed partial class CombatSystem
         int bestD = BreachRange + 1;
         foreach (var w in Buildings.All)
         {
-            if (w.Owner != b.Owner || !w.Def.IsWall) continue;
+            if (w.Owner != b.Owner || !w.Def.IsWall || w.Planned) continue;
             int d = w.ColumnDistance(x, z);
             if (d >= bestD) continue;
             (best, bestD) = (w, d);
@@ -1255,7 +1255,7 @@ public sealed partial class CombatSystem
     {
         var b = Buildings.Get(c.Building);
         // A player may knock out their own bridge, to cut the way across behind them.
-        if (b == null || (b.Owner == c.PlayerId && !b.Def.IsBridge)) return;
+        if (b == null || b.Planned || (b.Owner == c.PlayerId && !b.Def.IsBridge)) return;
         foreach (int i in _sim.OwnedUnits(c))
         {
             if (!Def(i).CanAttack) continue;
