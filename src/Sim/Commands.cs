@@ -103,6 +103,16 @@ public sealed record BuildCommand(int PlayerId, int[] Units, string Building, in
     public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building, X, Z);
 }
 
+/// <summary>
+/// Plan a building (by definition id) with its footprint's corner at column (X, Z): it is marked out but not
+/// paid for or built, so it may be placed before the player can afford it. A <see cref="WorkCommand"/> on the
+/// plan starts it, once the player can pay (see <see cref="Economy.BuildingState.Planned"/>).
+/// </summary>
+public sealed record PlanCommand(int PlayerId, string Building, int X, int Z) : Command(PlayerId);
+
+/// <summary>Remove one of the player's plans (a building not yet started).</summary>
+public sealed record CancelPlanCommand(int PlayerId, int Building) : Command(PlayerId);
+
 /// <summary>The units go to an enemy storehouse and take it over, goods and all, once nobody defends it.</summary>
 public sealed record CaptureCommand(int PlayerId, int[] Units, int Building) : UnitsCommand(PlayerId, Units)
 {

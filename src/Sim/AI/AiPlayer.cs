@@ -976,7 +976,7 @@ public sealed partial class AiPlayer
         long bestD = long.MaxValue;
         foreach (var b in sim.Buildings.All)
         {
-            if (b.Owner == Player || b.Owner == Simulation.WildPlayer) continue;
+            if (b.Owner == Player || b.Owner == Simulation.WildPlayer || b.Planned) continue;
             var (bx, bz) = Middle(b);
             long d = Dist2(bx, bz, x, z);
             if (d < bestD) (bestD, best) = (d, b);

@@ -9,8 +9,7 @@ namespace Rts.Game;
 /// <summary>
 /// Draws a ring under every selected unit (green for yours, red for others), a paler ring under units
 /// inside a selection box being dragged, a short-lived marker where an order was given, a frame around
-/// the selected building or city-state town, the building being placed (green where it fits, red where it
-/// does not), the road being laid, the wall being drawn (green where a column goes up, red where not), the areas being dug (marked out, or being dug by your units), and
+/// the selected building or city-state town, the road being laid, the wall being drawn (green where a column goes up, red where not), the areas being dug (marked out, or being dug by your units), and
 /// a ring where each selected unit would stand in a formation line being dragged out.
 /// </summary>
 public partial class SelectionRenderer : Node3D
@@ -49,8 +48,6 @@ void fragment() {
     private StandardMaterial3D _markerMaterial = null!;
     private double _markerAge = double.MaxValue;
     private const double MarkerSeconds = 0.7;
-    private MeshInstance3D _ghost = null!;
-    private StandardMaterial3D _ghostMaterial = null!;
     private MeshInstance3D _frame = null!;
     private StandardMaterial3D _frameMaterial = null!;
     private int _frameBuilding;
@@ -88,14 +85,6 @@ void fragment() {
         _marker = new MeshInstance3D { Mesh = Ring(0.55f, 0.7f, 40), MaterialOverride = _markerMaterial, Visible = false };
         AddChild(_marker);
 
-        _ghostMaterial = new StandardMaterial3D
-        {
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-        };
-        _ghost = new MeshInstance3D { Mesh = new BoxMesh { Size = Vector3.One }, MaterialOverride = _ghostMaterial, Visible = false };
-        AddChild(_ghost);
         _frameMaterial = new StandardMaterial3D
         {
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
@@ -130,18 +119,7 @@ void fragment() {
     public void UpdateTools(PlayerControl control)
     {
         float bs = ChunkMesher.BlockSize;
-        var ghost = control.Ghost;
-        if (ghost.Visible && control.BuildDef is { } def)
-        {
-            float h = Math.Max(def.Height, 1);
-            _ghost.Scale = new Vector3(def.SizeX, h, def.SizeZ) * bs;
-            _ghost.Position = new Vector3(ghost.X + def.SizeX / 2f, ghost.Y + h / 2f, ghost.Z + def.SizeZ / 2f) * bs;
-            var c = ghost.Result == PlaceResult.Ok ? Own : Other;
-            _ghostMaterial.AlbedoColor = new Color(c.R, c.G, c.B, 0.35f);
-            _ghost.Visible = true;
-        }
-        else _ghost.Visible = false;
-
+        // The building being placed is drawn as a see-through model by GhostRenderer.
         var b = _sim.Buildings.Get(control.SelectedBuilding);
         var town = _sim.Cities.Get(control.SelectedCity);
         if (b != null)

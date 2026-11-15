@@ -49,6 +49,9 @@ public partial class Hud : CanvasLayer
     private Label _descriptionLabel = null!;
     private BodyChart _bodyChart = null!;
     private VBoxContainer _trainBox = null!;
+    private Button _planModeButton = null!;
+    private HBoxContainer _planRow = null!;
+    private Button _startPlanButton = null!;
     private VBoxContainer _evolveBox = null!;
     private readonly List<EvolveRow> _evolveRows = new();
     private string _evolveKey = "";
@@ -336,6 +339,13 @@ public partial class Hud : CanvasLayer
         title.ThemeTypeVariation = UiStyle.Heading;
         title.HorizontalAlignment = HorizontalAlignment.Center;
         column.AddChild(title);
+        _planModeButton = MakeToolButton("Plan mode: off  [Tab]");
+        _planModeButton.Name = "plan_mode";
+        _planModeButton.TooltipText = "Place buildings as plans: marked out in see-through violet, not paid for or built. " +
+                                      "A plan turns cyan once you can pay for it; right click it to start building. " +
+                                      "Placing what you cannot afford makes a plan even with this off.";
+        _planModeButton.Pressed += () => _control.TogglePlanMode();
+        column.AddChild(_planModeButton);
         foreach (var (key, id) in PlayerControl.BuildKeys)
         {
             if (!_sim.Content.TryGetBuilding(id, out var def)) continue;
@@ -402,6 +412,20 @@ public partial class Hud : CanvasLayer
         _trainBox = new VBoxContainer();
         _trainBox.AddThemeConstantOverride("separation", 4);
         column.AddChild(_trainBox);
+        _planRow = new HBoxContainer { Visible = false };
+        _planRow.AddThemeConstantOverride("separation", 4);
+        _startPlanButton = MakeToolButton("Start building");
+        _startPlanButton.Name = "plan_start";
+        _startPlanButton.ToggleMode = false;
+        _startPlanButton.TooltipText = "Pay for it and start building, with the selected workers (or right click it).";
+        _startPlanButton.Pressed += () => _control.StartSelectedPlan();
+        _planRow.AddChild(_startPlanButton);
+        var cancel = MakeToolButton("Remove plan  [Del]");
+        cancel.Name = "plan_cancel";
+        cancel.ToggleMode = false;
+        cancel.Pressed += () => _control.CancelSelectedPlan();
+        _planRow.AddChild(cancel);
+        column.AddChild(_planRow);
         _evolveBox = new VBoxContainer();
         _evolveBox.AddThemeConstantOverride("separation", 4);
         column.AddChild(_evolveBox);
@@ -713,7 +737,8 @@ public partial class Hud : CanvasLayer
             {
                 needs = Needs(def.Requires, def.Faction);
                 button.Text = $"{def.Name}  [{(key == Key.Semicolon ? ";" : key.ToString())}]\n{needs ?? CostText(def.Cost)}";
-                button.Disabled = needs != null || !econ.CanAfford(player, def.Cost);
+                // What you cannot afford yet can still be placed, as a plan.
+                button.Disabled = needs != null;
             }
             else
             {
@@ -723,7 +748,12 @@ public partial class Hud : CanvasLayer
             }
             button.SetPressedNoSignal(def != null ? _control.BuildDef == def : _control.Tool == PlayerControl.ToolMode.Road);
         }
+        _planModeButton.SetPressedNoSignal(_control.PlanMode);
+        _planModeButton.Text = _control.PlanMode ? "Plan mode: on  [Tab]" : "Plan mode: off  [Tab]";
         var b = _sim.Buildings.Get(_control.SelectedBuilding);
+        bool plan = b is { Planned: true } && b.Owner == player;
+        _planRow.Visible = plan;
+        if (plan) _startPlanButton.Disabled = econ.CanStart(b!) != PlaceResult.Ok;
         bool trains = b != null && b.Owner == player && b.Active && b.Def.Trains.Length > 0;
         var trainFor = trains ? b!.Def : null;
         if (trainFor != _trainFor) BuildTrainButtons(trainFor);
@@ -927,8 +957,12 @@ public partial class Hud : CanvasLayer
                     PlaceResult.Locked when _control.BuildDef is { } def => $"   ({Needs(def.Requires, def.Faction)})",
                     _ => "   (off the map)",
                 };
+                if (_control.Planning && ghost.Result is PlaceResult.Ok or PlaceResult.CannotAfford)
+                    return $"Planning a {_control.BuildDef?.Name.ToLowerInvariant()}: left click marks it out, to start later by right clicking it" +
+                           (ghost.Result == PlaceResult.CannotAfford ? "   (not enough goods yet)" : "") +
+                           "\nShift+click to plan more, Tab for plan mode, right click or Esc to stop";
                 return $"Placing a {_control.BuildDef?.Name.ToLowerInvariant()}: left click builds it with the selected workers{why}\n" +
-                       "Shift+click to place more, right click or Esc to stop";
+                       "Shift+click to place more, Tab to plan instead, right click or Esc to stop";
             }
             case PlayerControl.ToolMode.Tunnel:
                 return "Tunnel: left click where the selected sappers dig to (on a building: under it, to bring it down)" +
@@ -970,7 +1004,7 @@ public partial class Hud : CanvasLayer
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training   V: stance";
         }
     }
@@ -1070,7 +1104,18 @@ public partial class Hud : CanvasLayer
         var text = new StringBuilder($"{b.Def.Name}   ({PlayerName(b.Owner)})");
         if (b.MaxHealth > 0) text.Append($"   health {b.Health} / {b.MaxHealth}");
         text.Append('\n');
-        if (b.State == BuildingState.Site)
+        if (b.Planned)
+        {
+            var result = _sim.Economy.CanStart(b);
+            text.Append(result switch
+            {
+                PlaceResult.Ok => "Planned: ready to build. Right click it to start",
+                PlaceResult.CannotAfford => $"Planned: waiting for goods ({CostText(b.Def.Cost)})",
+                PlaceResult.Locked => $"Planned: {Needs(b.Def.Requires, b.Def.Faction)}",
+                _ => "Planned: something is in the way now",
+            });
+        }
+        else if (b.State == BuildingState.Site)
         {
             int builders = 0;
             for (int i = 0; i < u.Count; i++)

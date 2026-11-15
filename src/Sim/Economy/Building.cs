@@ -9,6 +9,12 @@ public enum BuildingState : byte
     Site,
     /// <summary>Finished and working.</summary>
     Active,
+    /// <summary>
+    /// A plan: the player's mark for a building to come, neither paid for nor worked on, its ground untouched.
+    /// It keeps its footprint free of other buildings; a <see cref="WorkCommand"/> on it pays and turns it into a
+    /// <see cref="Site"/> (see <see cref="PlanCommand"/>).
+    /// </summary>
+    Planned,
 }
 
 public enum RaidKind : byte
@@ -28,7 +34,7 @@ public sealed class Building
     public int Owner { get; internal set; }
     public BuildingDef Def { get; }
     public int X { get; }
-    public int Y { get; }
+    public int Y { get; internal set; }
     public int Z { get; }
     public BuildingState State { get; internal set; }
     /// <summary>Worker-ticks of building work done (a site is finished at <see cref="BuildingDef.BuildTicks"/>).</summary>
@@ -87,6 +93,7 @@ public sealed class Building
     public int MaxX => X + Def.SizeX - 1;
     public int MaxZ => Z + Def.SizeZ - 1;
     public bool Active => State == BuildingState.Active;
+    public bool Planned => State == BuildingState.Planned;
 
     /// <summary>True if column (x, z) is inside the footprint.</summary>
     public bool Covers(int x, int z) => x >= X && x <= MaxX && z >= Z && z <= MaxZ;

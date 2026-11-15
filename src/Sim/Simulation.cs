@@ -359,6 +359,8 @@ public sealed class Simulation
             case DigAreaCommand da: Economy.Apply(da); break;
             case WorkCommand w: Economy.Apply(w); break;
             case BuildCommand b: Economy.Apply(b); break;
+            case PlanCommand pc: Economy.Apply(pc); break;
+            case CancelPlanCommand cp: Economy.Apply(cp); break;
             case CaptureCommand c: Economy.Apply(c); break;
             case BurnCommand b: Economy.Apply(b); break;
             case RoadCommand r: Economy.Apply(r); break;

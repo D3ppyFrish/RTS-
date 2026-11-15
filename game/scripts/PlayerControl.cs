@@ -121,6 +121,13 @@ public partial class PlayerControl : Node
     /// <summary>The building the build tool places.</summary>
     public BuildingDef? BuildDef { get; private set; }
     public Placement Ghost { get; private set; }
+    /// <summary>
+    /// Planner mode (Tab, or the Plan button): what the build tool places is a plan, marked out but not paid for
+    /// or built until you start it (right click it). Without it, a building you cannot afford is planned too.
+    /// </summary>
+    public bool PlanMode { get; private set; }
+    /// <summary>The build tool's next click makes a plan rather than a site.</summary>
+    public bool Planning => PlanMode || Ghost.Result == PlaceResult.CannotAfford;
     /// <summary>The road the road tool would lay, column by column at ground level (empty until it has a start).</summary>
     public IReadOnlyList<(int X, int Y, int Z)> RoadPreview => _roadPreview;
     public bool RoadStarted => _roadStarted;
@@ -338,6 +345,8 @@ public partial class PlayerControl : Node
                 else ToggleAutoSelected();
                 break;
             case Key.P: ToggleRepeat(); break;
+            case Key.Tab: TogglePlanMode(); break;
+            case Key.Delete or Key.Backspace: CancelSelectedPlan(); break;
             case Key.V: CycleStance(); break;
             case Key.K: ToggleTechTree(); break;
             case Key.Period: SelectNextIdleWorker(); break;
@@ -544,7 +553,12 @@ public partial class PlayerControl : Node
     private void Order(Vector2 screen, bool ctrl)
     {
         var own = OwnSelected();
-        if (own.Count == 0) return;
+        if (own.Count == 0)
+        {
+            // Right click on a plan of yours starts it, with nobody selected too (automatic workers take it on).
+            if (BuildingUnder(screen) is { Planned: true } plan && plan.Owner == LocalPlayer) StartPlan(plan, own);
+            return;
+        }
         float bs = ChunkMesher.BlockSize;
         int target = PickUnit(screen);
         if (target > 0 && OwnerOf(target) != LocalPlayer)
@@ -689,6 +703,11 @@ public partial class PlayerControl : Node
             _rings.ShowMarker(centre, SelectionRenderer.Other);
             return;
         }
+        if (b.Planned)
+        {
+            StartPlan(b, own);
+            return;
+        }
         // Workers with something to do there: build the site, work the farm or smelter, unload at storage.
         var u = _sim.Units;
         var working = new List<int>();
@@ -703,14 +722,54 @@ public partial class PlayerControl : Node
         _rings.ShowMarker(centre, working.Count > 0 ? SelectionRenderer.Work : SelectionRenderer.Own);
     }
 
-    /// <summary>The building whose blocks (or levelled site, or field) are under the cursor, or null.</summary>
+    /// <summary>
+    /// Starts one of your plans: the workers among <paramref name="own"/> build it (with none, automatic workers
+    /// may). If you cannot pay for it yet (or it no longer fits) nothing happens but a red marker.
+    /// </summary>
+    public void StartPlan(Building b, List<int>? own = null)
+    {
+        float bs = ChunkMesher.BlockSize;
+        var centre = new Vector3(b.X + b.Def.SizeX / 2f, b.Y, b.Z + b.Def.SizeZ / 2f) * bs;
+        if (!b.Planned || b.Owner != LocalPlayer || _sim.Economy.CanStart(b) != PlaceResult.Ok)
+        {
+            _rings.ShowMarker(centre, SelectionRenderer.Other);
+            return;
+        }
+        var workers = own != null ? OwnWorkers(own) : new List<int>();
+        _sim.Schedule(_sim.Tick, new WorkCommand(LocalPlayer, workers.ToArray(), b.Id));
+        _rings.ShowMarker(centre, SelectionRenderer.Work);
+        Changed?.Invoke();
+    }
+
+    /// <summary>Starts the selected plan with the selected workers (the selected building's Start button).</summary>
+    public void StartSelectedPlan()
+    {
+        if (_sim.Buildings.Get(SelectedBuilding) is { Planned: true } b) StartPlan(b, OwnSelected());
+    }
+
+    /// <summary>Removes the selected plan, if it is one of yours.</summary>
+    public void CancelSelectedPlan()
+    {
+        if (_sim.Buildings.Get(SelectedBuilding) is not { Planned: true } b || b.Owner != LocalPlayer) return;
+        _sim.Schedule(_sim.Tick, new CancelPlanCommand(LocalPlayer, b.Id));
+        Changed?.Invoke();
+    }
+
+    public void TogglePlanMode()
+    {
+        PlanMode = !PlanMode;
+        Changed?.Invoke();
+    }
+
+    /// <summary>The building whose blocks (or levelled site, or field, or plan) are under the cursor, or null.</summary>
     public Building? BuildingUnder(Vector2 screen)
     {
         if (!VoxelRay.FromScreen(_rig.Camera, screen, World, HiddenFrom, out var hit, out _) || !Fog.HasSeen(hit.X, hit.Z)) return null;
         var b = _sim.Buildings.At(hit.X, hit.Y, hit.Z);
-        if (b != null) return b;
+        if (b != null && !(b.Planned && b.Owner != LocalPlayer)) return b;
         // A site with nothing built yet, or a field: the ground under its footprint.
         b = _sim.Buildings.AtColumn(hit.X, hit.Z);
+        if (b != null && b.Planned && b.Owner != LocalPlayer) return null; // others' plans are not seen
         return b != null && hit.Y >= b.Y - 2 && hit.Y < b.Y + Math.Max(b.Def.Height, 1) ? b : null;
     }
 
@@ -1084,10 +1143,14 @@ public partial class PlayerControl : Node
 
     private void PlaceBuilding(bool keepPlacing)
     {
-        if (BuildDef is not { } def || !Ghost.Visible || Ghost.Result != PlaceResult.Ok) return;
-        _sim.Schedule(_sim.Tick, new BuildCommand(LocalPlayer, OwnWorkers(OwnSelected()).ToArray(), def.Id, Ghost.X, Ghost.Z));
+        if (BuildDef is not { } def || !Ghost.Visible || Ghost.Result is not (PlaceResult.Ok or PlaceResult.CannotAfford)) return;
+        bool plan = Planning;
+        _sim.Schedule(_sim.Tick, plan
+            ? new PlanCommand(LocalPlayer, def.Id, Ghost.X, Ghost.Z)
+            : new BuildCommand(LocalPlayer, OwnWorkers(OwnSelected()).ToArray(), def.Id, Ghost.X, Ghost.Z));
         float bs = ChunkMesher.BlockSize;
-        _rings.ShowMarker(new Vector3(Ghost.X + def.SizeX / 2f, Ghost.Y, Ghost.Z + def.SizeZ / 2f) * bs, SelectionRenderer.Work);
+        _rings.ShowMarker(new Vector3(Ghost.X + def.SizeX / 2f, Ghost.Y, Ghost.Z + def.SizeZ / 2f) * bs,
+            plan ? GhostRenderer.PlannedColor : SelectionRenderer.Work);
         if (!keepPlacing) SetTool(ToolMode.Select);
     }
 
@@ -1359,10 +1422,16 @@ public partial class PlayerControl : Node
         int working = 0;
         foreach (int id in own)
             if (_sim.Units.Job[_sim.Units.IndexOf(id)] != UnitJob.None) working++;
-        int buildings = 0, sites = 0;
+        int buildings = 0, sites = 0, plans = 0, ready = 0;
         foreach (var b in _sim.Buildings.All)
         {
             if (b.Owner != LocalPlayer) continue;
+            if (b.Planned)
+            {
+                plans++;
+                if (_sim.Economy.CanStart(b) == PlaceResult.Ok) ready++;
+                continue;
+            }
             buildings++;
             if (b.State == BuildingState.Site) sites++;
         }
@@ -1446,6 +1515,7 @@ public partial class PlayerControl : Node
                $"paused={(_clock.Paused ? 1 : 0)} speed={_clock.Speed} slice={_slice.Level} tool={Tool} " +
                $"working={working} buildings={buildings} sites={sites} building={building} queue={sel?.Queue.Count ?? 0} " +
                $"ghost={(Ghost.Visible ? Ghost.Result.ToString() : "none")} road={_roadPreview.Count} " +
+               $"plans={plans} plans_ready={ready} plan_mode={(PlanMode ? 1 : 0)} " +
                $"food={stock[(int)Good.Food]} wood={stock[(int)Good.Wood]} stone={stock[(int)Good.Stone]} iron={stock[(int)Good.Iron]} " +
                $"techtree={(TechTreeOpen ? 1 : 0)} research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +

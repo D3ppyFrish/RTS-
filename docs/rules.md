@@ -27,6 +27,13 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   and smelter. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
   A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column
   gap from other buildings, and its cost; its voxel blocks go up layer by layer as workers build it.
+- **Plans** (`PlanCommand`, issue #92): a building marked out but not paid for or built, so it can be
+  placed before the player can afford it. It needs the same ground and gap as a site (and the tech),
+  keeps its footprint free of other buildings, and leaves the ground as it is. A `WorkCommand` on a plan
+  starts it once the player can pay: the cost is taken, the ground levelled and it becomes a site the
+  command's workers build (with none, automatic workers may take it on). Until then nothing works on it:
+  automatic workers leave it alone, it gives no housing, sight or production, cannot be attacked or
+  raided, and other players do not see it. `CancelPlanCommand` removes one.
 - **Farms and the smelter** (`WorkCommand`): two farmers each bring 5 food every 15 seconds. The
   smelter's worker keeps it supplied with ore and coal from storage and carries its ingots back
   (2 ore + 1 coal = 1 iron in 10 seconds).

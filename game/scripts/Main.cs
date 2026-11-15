@@ -115,6 +115,7 @@ public partial class Main : Node3D
     private Ambience _ambience = null!;
     private UnitRenderer _unitRenderer = null!;
     private SelectionRenderer _selectionRenderer = null!;
+    private GhostRenderer _ghostRenderer = null!;
     private CombatRenderer _combatRenderer = null!;
     private BloodRenderer _bloodRenderer = null!;
     private UnitIcons _unitIcons = null!;
@@ -324,6 +325,9 @@ public partial class Main : Node3D
         _selectionRenderer = new SelectionRenderer();
         _match.AddChild(_selectionRenderer);
         _selectionRenderer.Init(_sim);
+        _ghostRenderer = new GhostRenderer();
+        _match.AddChild(_ghostRenderer);
+        _ghostRenderer.Init(_sim);
         _combatRenderer = new CombatRenderer();
         _match.AddChild(_combatRenderer);
         _combatRenderer.Init(_sim, _rig.Camera, _selectionRenderer.Material.Shader, _fog);
@@ -413,6 +417,7 @@ public partial class Main : Node3D
         _control.UpdateFrame();
         _selectionRenderer.UpdateRings(_control.Selected, _control.Preview, PlayerControl.LocalPlayer, alpha, delta);
         _selectionRenderer.UpdateTools(_control);
+        _ghostRenderer.UpdateGhosts(_control);
         _combatRenderer.UpdateFrame(alpha, _control.Selected);
         _bloodRenderer.UpdateFrame(alpha);
         _unitIcons.UpdateFrame(alpha);
@@ -702,6 +707,7 @@ public partial class Main : Node3D
         float y = cut ?? 100000f;
         _unitRenderer.Material.SetShaderParameter("slice_y", y);
         _selectionRenderer.Material.SetShaderParameter("slice_y", y);
+        _ghostRenderer.SetSlice(y);
         _combatRenderer.Material.SetShaderParameter("slice_y", y);
         _bloodRenderer.Material.SetShaderParameter("slice_y", y);
         _unitIcons.Material.SetShaderParameter("slice_y", y);

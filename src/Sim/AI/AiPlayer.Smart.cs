@@ -193,7 +193,7 @@ public sealed partial class AiPlayer
         bool inMatch = sim.Match.Players.Count > 0;
         foreach (var b in sim.Buildings.All)
         {
-            if (b.Owner == Player || b.Owner == Simulation.WildPlayer) continue;
+            if (b.Owner == Player || b.Owner == Simulation.WildPlayer || b.Planned) continue; // others' plans are not seen
             var (mx, mz) = Middle(b);
             if (!vision.Sees(Player, mx, mz) && !vision.Sees(Player, b.X, b.Z) && !vision.Sees(Player, b.MaxX, b.Z)
                 && !vision.Sees(Player, b.X, b.MaxZ) && !vision.Sees(Player, b.MaxX, b.MaxZ)) continue;

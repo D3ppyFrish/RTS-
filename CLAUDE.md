@@ -20,6 +20,7 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 | System | Core | Tests | Screenshot script |
 | --- | --- | --- | --- |
 | Economy (gather, build, train, roads, raids) | `Economy/EconomySystem.cs` (+ `.Jobs`, `.Research`, `.Trade` partials), `Economy/BuildingDef.cs`, `Economy/Goods.cs` | `EconomyTests.cs`, `ResearchTests.cs`, `QuarryTests.cs` | `ui-economy-screenshots.sh` |
+| Plans and building ghosts | `Economy/EconomySystem.cs` (`PlanCommand`, `CanStart`); game: `GhostRenderer.cs` | `PlanTests.cs` | `ui-plan-screenshots.sh` |
 | Walls and gates | `Economy/EconomySystem.Walls.cs` | `WallTests.cs` | `ui-wall-screenshots.sh` |
 | Bridges | `Economy/EconomySystem.Bridges.cs` | `BridgeTests.cs` | `ui-bridge-screenshots.sh` |
 | Combat (orders, damage, morale, healing, buildings) | `Units/CombatSystem.cs` (+ `.Structures`, `.Tunnels` partials) | `CombatTests.cs`, `HealingTests.cs` | `ui-combat-screenshots.sh` |

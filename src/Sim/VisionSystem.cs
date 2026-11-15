@@ -113,7 +113,7 @@ public sealed class VisionSystem
         }
         foreach (var b in _sim.Buildings.All)
         {
-            if ((uint)b.Owner >= (uint)_grids.Length) continue;
+            if ((uint)b.Owner >= (uint)_grids.Length || b.Planned) continue;
             int dark = c.SightPercent(b.X, b.Z, false);
             int s = b.Def.Sight * dark / 100;
             Stamp(b.Owner, b.X, b.Z, b.MaxX, b.MaxZ, s * s);

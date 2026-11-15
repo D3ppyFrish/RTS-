@@ -31,7 +31,9 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// 43 stop 1 101,102
 /// 44 gather 0 30 12 41 1,2          (dig, chop or pick block (30, 12, 41))
 /// 45 build 0 house 60 70 3,4        (place a house with its corner at column (60, 70); units 3 and 4 build it)
-/// 46 work 0 7 5,6                   (work at building 7: build, farm, supply a smelter, or unload)
+/// 46 work 0 7 5,6                   (work at building 7: build, farm, supply a smelter, unload, or start a plan)
+/// 46 plan 0 house 60 70             (plan a house with its corner at column (60, 70), not yet paid for)
+/// 46 unplan 0 7                     (remove plan 7)
 /// 47 capture 1 2 101,102            (or burn: raid building 2)
 /// 48 road 0 10 10 30 10
 /// 49 train 0 1 worker               (queue a worker at building 1)
@@ -179,6 +181,8 @@ public sealed class CommandLog
                 GatherCommand g => string.Create(ci, $"{tick} gather {g.PlayerId} {g.X} {g.Y} {g.Z} {Ids(g.Units)}"),
                 CleanCommand cl => string.Create(ci, $"{tick} clean {cl.PlayerId} {cl.X} {cl.Z} {Ids(cl.Units)}"),
                 BuildCommand b => string.Create(ci, $"{tick} build {b.PlayerId} {Name(b.Building)} {b.X} {b.Z} {Ids(b.Units)}"),
+                PlanCommand pl => string.Create(ci, $"{tick} plan {pl.PlayerId} {Name(pl.Building)} {pl.X} {pl.Z}"),
+                CancelPlanCommand cp => string.Create(ci, $"{tick} unplan {cp.PlayerId} {cp.Building}"),
                 WorkCommand wk => string.Create(ci, $"{tick} work {wk.PlayerId} {wk.Building} {Ids(wk.Units)}"),
                 CaptureCommand c => string.Create(ci, $"{tick} capture {c.PlayerId} {c.Building} {Ids(c.Units)}"),
                 BurnCommand bn => string.Create(ci, $"{tick} burn {bn.PlayerId} {bn.Building} {Ids(bn.Units)}"),
@@ -288,6 +292,8 @@ public sealed class CommandLog
                             "gather" => new GatherCommand(Int(f[2]), ParseIds(f[6]), Int(f[3]), Int(f[4]), Int(f[5])),
                             "clean" => new CleanCommand(Int(f[2]), ParseIds(f[5]), Int(f[3]), Int(f[4])),
                             "build" => new BuildCommand(Int(f[2]), ParseIds(f[6]), Name(f[3]), Int(f[4]), Int(f[5])),
+                            "plan" => new PlanCommand(Int(f[2]), Name(f[3]), Int(f[4]), Int(f[5])),
+                            "unplan" => new CancelPlanCommand(Int(f[2]), Int(f[3])),
                             "work" => new WorkCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
                             "capture" => new CaptureCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
                             "burn" => new BurnCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
