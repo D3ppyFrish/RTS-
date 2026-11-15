@@ -334,7 +334,7 @@ public sealed class Simulation
     {
         if (Sandbox.Apply(command)) return;
         // Any other order stops units working on the dusk tree.
-        if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or AutomateCommand))
+        if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or AutomateCommand or PriorityCommand))
             DuskTree.Release(this, released);
         switch (command)
         {
@@ -385,6 +385,8 @@ public sealed class Simulation
             case StanceCommand st: Combat.Apply(st); break;
             case AutomateCommand a: Automation.Apply(a); break;
             case AutomateAllCommand a: Automation.Apply(a); break;
+            case PriorityCommand pr: Automation.Apply(pr); break;
+            case DefaultPriorityCommand dp: Automation.Apply(dp); break;
             case EvolveCommand e: Evolution.Apply(e); break;
             case AutoEvolveCommand e: Evolution.Apply(e); break;
             case TameCommand t: Monsters.Apply(t); break;

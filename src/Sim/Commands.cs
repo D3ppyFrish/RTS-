@@ -228,6 +228,23 @@ public sealed record AutomateCommand(int PlayerId, int[] Units, bool On) : Units
 public sealed record AutomateAllCommand(int PlayerId, bool On) : Command(PlayerId);
 
 /// <summary>
+/// Sets the priority list of the workers among the units: the kinds of work they take on their own when
+/// automatic, in order (see <see cref="Automation.WorkPriorities"/>). <see cref="Automation.WorkPriorities.UseDefault"/>
+/// puts them back on the player's default list. Their current job goes on; the list counts from their next one.
+/// </summary>
+public sealed record PriorityCommand(int PlayerId, int[] Units, ulong List) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(PriorityCommand? other) => base.Equals(other) && List == other!.List;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), List);
+}
+
+/// <summary>
+/// Sets the player's default priority list, which every worker of theirs without a list of its own follows,
+/// those trained later included. <see cref="Automation.WorkPriorities.UseDefault"/> puts back the standard one.
+/// </summary>
+public sealed record DefaultPriorityCommand(int PlayerId, ulong List) : Command(PlayerId);
+
+/// <summary>
 /// The building repeats its training (<paramref name="On"/>): each unit it finishes is queued again as soon
 /// as the player can pay for it. Off stops that.
 /// </summary>

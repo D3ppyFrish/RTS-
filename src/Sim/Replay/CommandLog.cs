@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Rts.Sim.Automation;
 using Rts.Sim.Content;
 using Rts.Sim.Economy;
 using Rts.Sim.Units;
@@ -200,6 +201,8 @@ public sealed class CommandLog
                 TunnelCommand tn => string.Create(ci, $"{tick} tunnel {tn.PlayerId} {tn.X} {tn.Y} {tn.Z} {Ids(tn.Units)}"),
                 AutomateCommand au => string.Create(ci, $"{tick} automate {au.PlayerId} {OnOff(au.On)} {Ids(au.Units)}"),
                 AutomateAllCommand aa => string.Create(ci, $"{tick} automate-all {aa.PlayerId} {OnOff(aa.On)}"),
+                PriorityCommand pr => string.Create(ci, $"{tick} priority {pr.PlayerId} {WorkPriorities.ToLog(pr.List)} {Ids(pr.Units)}"),
+                DefaultPriorityCommand dp => string.Create(ci, $"{tick} default-priority {dp.PlayerId} {WorkPriorities.ToLog(dp.List)}"),
                 RepeatCommand rp => string.Create(ci, $"{tick} repeat {rp.PlayerId} {rp.Building} {OnOff(rp.On)}"),
                 StanceCommand st => string.Create(ci, $"{tick} stance {st.PlayerId} {StanceName(st.Stance)} {Ids(st.Units)}"),
                 EvolveCommand ev => string.Create(ci, $"{tick} evolve {ev.PlayerId} {ev.Form} {Ids(ev.Units)}"),
@@ -312,6 +315,8 @@ public sealed class CommandLog
                             "tunnel" => new TunnelCommand(Int(f[2]), ParseIds(f[6]), Int(f[3]), Int(f[4]), Int(f[5])),
                             "automate" => new AutomateCommand(Int(f[2]), ParseIds(f[4]), ParseOnOff(f[3])),
                             "automate-all" => new AutomateAllCommand(Int(f[2]), ParseOnOff(f[3])),
+                            "priority" => new PriorityCommand(Int(f[2]), ParseIds(f[4]), WorkPriorities.ParseLog(f[3])),
+                            "default-priority" => new DefaultPriorityCommand(Int(f[2]), WorkPriorities.ParseLog(f[3])),
                             "repeat" => new RepeatCommand(Int(f[2]), Int(f[3]), ParseOnOff(f[4])),
                             "stance" => new StanceCommand(Int(f[2]), ParseIds(f[4]), ParseStance(f[3])),
                             "evolve" => new EvolveCommand(Int(f[2]), ParseIds(f[4]), Name(f[3])),
