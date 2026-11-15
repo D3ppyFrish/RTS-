@@ -4,6 +4,7 @@
 # paused as the first trees come down and the workers clear the logs they leave, from two sides. Saves
 # PNGs to OUT_DIR and fails if no wood came in.
 # Usage: scripts/ui-tree-screenshots.sh [OUT_DIR]
+# CI: skip (close-up look checks, run by hand when the looks change)
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/trees}")"
 mkdir -p "$OUT"

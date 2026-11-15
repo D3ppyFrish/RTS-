@@ -4,6 +4,7 @@
 # throw out chips where they land, and leave lumpy heaps of rubble. Saves PNGs to OUT_DIR and fails if the
 # UI state is not as expected.
 # Usage: scripts/ui-collapse-detail-screenshots.sh [OUT_DIR]
+# CI: skip (close-up look checks, run by hand when the looks change)
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/collapse}")"
 mkdir -p "$OUT"

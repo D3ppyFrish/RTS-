@@ -192,8 +192,9 @@ and clicks the under attack alert. `scripts/ui-test-mode-screenshots.sh` starts 
 to put down trees, a pond, lava, wolves, the Orcs' spearmen and barracks, a wolf lair and blood, turns on
 invulnerability, sets dusk and rain, saves the scenario and loads it back (`select NAME ITEM` picks from an
 option list, `spin NAME V` sets a number box). Each checks the
-printed UI state and saves screenshots. CI runs them on every PR and uploads the PNGs as the
-`ui-screenshots-...` artifact.
+printed UI state and saves screenshots. CI runs each of them as its own job, in parallel, on every PR
+and uploads the PNGs as the `ui-screenshots-...` artifact, one folder per script. A new `scripts/ui-*.sh`
+is picked up by CI automatically; put a `# CI: skip` line in its header to leave it out.
 
 ### Benchmark
 

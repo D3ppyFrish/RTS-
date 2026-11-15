@@ -49,8 +49,9 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 | UI look (theme, fonts, icons) | game: `UiStyle.cs` (looks, panels, buttons), `UiIcons.cs` (pixel icons; `icon` in the data), fonts in `game/fonts` (OFL) | `ContentTests.cs` (icons in the data) | `ui-style-screenshots.sh` |
 
 Tick order and commands: `Simulation.cs`, `Commands.cs`. Determinism check: `determinism.sh`
-(match runner in `tools/MatchRunner`). CI (`.github/workflows/ci.yml`) runs every `ui-*` script except
-`ui-structure`, `ui-tree`, `ui-collapse-detail` and `ui-lineup`.
+(match runner in `tools/MatchRunner`). CI (`.github/workflows/ci.yml`) runs every `scripts/ui-*.sh` as its own parallel job, found
+automatically; a script with a `# CI: skip` header line is left out (`ui-structure`, `ui-tree`,
+`ui-collapse-detail`, `ui-lineup`).
 
 ## Rules for the simulation core
 
