@@ -353,6 +353,8 @@ public sealed class Simulation
             case PatrolCommand pa:
                 ApplyMove(pa, pa.X, pa.Z, pa.Y, attack: true, patrol: true);
                 break;
+            case GuardCommand gd: Combat.Apply(gd); break;
+            case RallyCommand ra: Economy.Apply(ra); break;
             case FormationMoveCommand fm:
                 ApplyFormation(fm);
                 break;
@@ -560,7 +562,7 @@ public sealed class Simulation
     /// The standing spot for a move target: level y (or the top) of column (x, z) if a unit can stand
     /// there, otherwise the closest column within 8 blocks that has ground.
     /// </summary>
-    private (int X, int Z, int Y) StandingGoal(int x, int z, int y)
+    internal (int X, int Z, int Y) StandingGoal(int x, int z, int y)
     {
         int best = Walkable.NearestNode(x, z, y);
         if (best >= 0) return (x, z, Walkable.Level(best));

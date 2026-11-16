@@ -65,6 +65,16 @@ public sealed class Building
     public List<int> Owed { get; } = new();
 
     /// <summary>
+    /// Where its trained units walk when they step out (see <see cref="RallyCommand"/>): column RallyX, RallyZ at
+    /// level RallyY. RallyX is -1 while it has none.
+    /// </summary>
+    public int RallyX { get; internal set; } = -1;
+    public int RallyZ { get; internal set; }
+    public int RallyY { get; internal set; }
+    /// <summary>True if it has a rally point.</summary>
+    public bool HasRally => RallyX >= 0;
+
+    /// <summary>
     /// The toughness of its placed blocks that are gone: knocked out, dug away or fallen. It collapses once
     /// that is half of what was built (see <see cref="Units.CombatSystem"/>).
     /// </summary>
@@ -203,6 +213,7 @@ public sealed class BuildingStore
             foreach (int o in b.Owed) Mix(o);
             Mix(b.Lost); Mix(b.Damage);
             Mix(b.Upgrade?.Index ?? -1); Mix(b.UpgradeWork);
+            Mix(b.RallyX); Mix(b.RallyZ); Mix(b.RallyY);
         }
         return h;
     }

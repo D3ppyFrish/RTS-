@@ -273,6 +273,7 @@ public sealed partial class CombatSystem
             if (u.Combat[i] == CombatOrder.Attack) u.Combat[i] = CombatOrder.Auto;
             else if (u.Combat[i] == CombatOrder.AttackMove && u.Order[i] == UnitOrder.Idle) Resume(i);
             else if (u.Combat[i] == CombatOrder.Patrol && u.Order[i] == UnitOrder.Idle && Turn(i)) Resume(i);
+            else if (u.Combat[i] == CombatOrder.Guard) Follow(i);
             return;
         }
         if (InReach(i, def, t, b))
@@ -327,7 +328,8 @@ public sealed partial class CombatSystem
         {
             t = u.IndexOf(u.Target[i]);
             if (t >= 0 && u.Owner[t] != u.Owner[i] && (!guard || _sim.Cities.Repels(i, t))
-                && (order == CombatOrder.Attack || (!u.Subdued[t] && Within(i, t, hold ? Reach(i, def, t) : Sight(i, def, t) * Leash))))
+                && (order == CombatOrder.Attack || (!u.Subdued[t] && Within(i, t, hold ? Reach(i, def, t) : Sight(i, def, t) * Leash)))
+                && (order != CombatOrder.Guard || NearCharge(i, t, GuardLeash)))
                 return true;
             t = -1;
             u.Target[i] = 0;
@@ -342,8 +344,13 @@ public sealed partial class CombatSystem
         int by = u.HitBy[i] != 0 ? u.IndexOf(u.HitBy[i]) : -1;
         // Workers do not go looking for fights.
         if (def.Role == UnitRole.Worker && order == CombatOrder.Auto) return false;
+        // A guard first goes for whoever hits its charge, and fights only near its charge.
+        bool guarding = order == CombatOrder.Guard;
+        if (guarding && by >= 0 && !NearCharge(i, by, GuardLeash)) by = -1;
         if (by >= 0 && u.Owner[by] != u.Owner[i] && !u.Subdued[by] && (!guard || _sim.Cities.Repels(i, by)) && Within(i, by, hold ? Reach(i, def, by) : Sight(i, def, by) * AnswerRange)) t = by;
+        else if (guarding && ChargeAttacker(i) is var at && at >= 0) t = at;
         else if ((_sim.Tick + u.Id[i]) % AcquireInterval == 0) t = Nearest(i, def);
+        if (guarding && t >= 0 && t != by && !NearCharge(i, t, GuardRange) && t != ChargeAttacker(i)) t = -1;
         if (t >= 0 && hold && !Within(i, t, Reach(i, def, t))) t = -1;
         if (t < 0) return false;
         u.Target[i] = u.Id[t];

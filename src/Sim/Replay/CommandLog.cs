@@ -202,6 +202,8 @@ public sealed class CommandLog
                 PatrolCommand pa => pa.Y < 0
                     ? string.Create(ci, $"{tick} patrol {pa.PlayerId} {pa.X} {pa.Z} {Ids(pa.Units)}")
                     : string.Create(ci, $"{tick} patrol {pa.PlayerId} {pa.X} {pa.Z} {Ids(pa.Units)} {pa.Y}"),
+                GuardCommand gd => string.Create(ci, $"{tick} guard {gd.PlayerId} {gd.Unit} {gd.Building} {Ids(gd.Units)}"),
+                RallyCommand ra => string.Create(ci, $"{tick} rally {ra.PlayerId} {ra.Building} {ra.X} {ra.Z} {ra.Y}"),
                 DigAreaCommand da => string.Create(ci, $"{tick} dig-area {da.PlayerId} {da.X1} {da.Z1} {da.X2} {da.Z2} {da.Y} {Ids(da.Units)}"),
                 TunnelCommand tn => string.Create(ci, $"{tick} tunnel {tn.PlayerId} {tn.X} {tn.Y} {tn.Z} {Ids(tn.Units)}"),
                 AutomateCommand au => string.Create(ci, $"{tick} automate {au.PlayerId} {OnOff(au.On)} {Ids(au.Units)}"),
@@ -327,6 +329,8 @@ public sealed class CommandLog
                             "priority" => new PriorityCommand(Int(f[2]), ParseIds(f[4]), WorkPriorities.ParseLog(f[3])),
                             "default-priority" => new DefaultPriorityCommand(Int(f[2]), WorkPriorities.ParseLog(f[3])),
                             "repeat" => new RepeatCommand(Int(f[2]), Int(f[3]), ParseOnOff(f[4])),
+                            "guard" => new GuardCommand(Int(f[2]), ParseIds(f[5]), Int(f[3]), Int(f[4])),
+                            "rally" => new RallyCommand(Int(f[2]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6])),
                             "stance" => new StanceCommand(Int(f[2]), ParseIds(f[4]), ParseStance(f[3])),
                             "evolve" => new EvolveCommand(Int(f[2]), ParseIds(f[4]), Name(f[3])),
                             "auto-evolve" => new AutoEvolveCommand(Int(f[2]), Name(f[3]), f[4] == "off" ? null : Name(f[4])),

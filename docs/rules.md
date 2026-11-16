@@ -38,7 +38,10 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   smelter's worker keeps it supplied with ore and coal from storage and carries its ingots back
   (2 ore + 1 coal = 1 iron in 10 seconds).
 - **Population**: the town hall houses 25 (every town hall, including one built later) and each house 5; the town hall trains workers for 30 food
-  and the barracks trains soldiers (`TrainCommand`) while there is room. Every minute each unit eats its
+  and the barracks trains soldiers (`TrainCommand`) while there is room. A building that trains units can have a
+  rally point (`RallyCommand`, snapped to ground a unit can stand on): each unit it trains walks there
+  when it steps out, stopping within 1.5 blocks. Setting it on the building itself clears it, and a
+  captured building loses it. Every minute each unit eats its
   upkeep (1 food, more for some forms: see [Evolution](#evolution)); a player who cannot pay is hungry and cannot train.
 - **Roads** (`RoadCommand`, after the Roads tech): a line of road up to 64 blocks, 1 stone per block,
   laid at once on open ground. Units on a road move twice as fast, and paths prefer roads when they save time.
@@ -57,7 +60,12 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   stood when it was given the order, and so on, until it is given another order. A unit that stops to
   fight carries on to the same end afterwards. A walk that ends more than 2 columns past the arrival
   radius from its end counts as a miss, and two misses in a row end the patrol (there is no way between
-  the ends); a goal less than 3 columns away is only an attack-move. Soldiers standing still fight the
+  the ends); a goal less than 3 columns away is only an attack-move. A guard order (`GuardCommand`) puts
+  units in charge of one of their player's units or buildings: each keeps within 3 columns of it, walking
+  after it when it moves (it looks every 8 ticks), and fights enemies within 8 columns of it, first whoever
+  hits it; it lets an enemy go once that enemy is more than 12 columns from the charge, and walks back. A
+  guard ignores enemies further from its charge even when it can see them. The order ends when the charge
+  dies, burns, is captured or the unit is given another order. Soldiers standing still fight the
   nearest enemy they see and answer anyone who hits them; workers fight only when ordered to. A soldier
   on a raid that is attacked drops the raid and fights back.
 - **Damage**: each unit's damage, attack time, range, sight and splash are in `data/units.json`. The role
