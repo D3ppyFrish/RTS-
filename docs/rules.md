@@ -573,12 +573,15 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   do not go out after raiders at a building more than 24 columns outside the line of the wall (they
   would leave through the gates a few at a time for a fight far from home, and be beaten in parts):
   they meet the enemy at the town. A town hall is always defended. The whole wall is 160
-  columns (320 stone and 72 wood). Over 20 seeds against Hard's Orcs it started on the first side at 5
-  to 8 minutes and on the last at 10 to 20 (17 on average): the later sides wait for stone, and for calm
-  after the first fights. As the rules are, a wall holds
-  a wave up for seconds rather than minutes (a group knocks a column out in a few blows) and stops its
-  owner's archers shooting out as well as the enemy's shooting in, so it is more a mark of the style
-  than a defence yet.
+  columns (142 of wall and 18 of gate). Over 20 seeds against Hard's Orcs the ring of barriers was whole
+  at 8 to 14 minutes (11 on average; the stone wall it used to build was started on its last side at 17),
+  the first columns were wooden at 10 to 15, and at 20 minutes 63 of the 160 were, on average. After that
+  it goes slowly, as wood is what Hard runs short of: in the nine matches that went the full 40 minutes
+  44 to 160 columns were wooden at the end (96 on average), and one had the whole ring wooden (at 28
+  minutes) and had started on stone. A barrier holds a group up for a few blows; a wooden wall takes
+  four times as much, a stone wall ten times, and archers now shoot from the top of both. Hard does not
+  fight from behind its wall yet, though: all but its posted archers still go out to meet whoever comes
+  near the town, so the wall is worth less to it than it would be to a player who waits behind it.
 - `scripts/ai-versus.sh` plays two levels against each other over 20 seeds with fog of war, the first
   level on a different side of the map each seed. With issue #2, Hard beat Normal and Classic in all
   20; Normal beat Classic in 12 (6 lost, 2 undecided after 40 minutes) and Easy in 9 (11 lost). Since
@@ -587,6 +590,12 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   Hard's Orcs (`--levels=hard,hard`) over 20 seeds: the Settlers won 2, the Orcs 10, 8 undecided (before
   the styles 5, 8 and 7): the wall costs the Settlers about a tenth of their army at 15 minutes and a
   quarter of it stays home, and a wall does not yet give that back.
+  With the wall tiers (walls laid as barriers and upgraded) the numbers are about what they were: Hard
+  beat Classic in all 20 and Normal in 19 (as the Settlers in 29 minutes on average, as the Orcs in 21);
+  Normal beat Classic in 11 (7 lost, 2 undecided) and Easy in 9 (11 lost); Hard's Settlers against Hard's
+  Orcs won none, lost 11 and left 9 undecided. The match Hard lost to Normal (seed 19, as the Settlers)
+  went at 6 minutes: its soldiers followed raiders seen from its half-built wall out past it, and met
+  Normal's whole first wave outside the town.
   Before issue #2 Normal (then called Hard) was told where the enemy starts and beat Classic in 15:
   finding the enemy itself costs it and Easy some of that, and Classic still sees through the fog.
 
