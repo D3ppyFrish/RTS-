@@ -402,7 +402,9 @@ public sealed partial class EconomySystem
         }
         places.Sort((p, q) => Far(p.X, p.Z) != Far(q.X, q.Z) ? Far(p.X, p.Z).CompareTo(Far(q.X, q.Z))
             : p.B.Id != q.B.Id ? p.B.Id.CompareTo(q.B.Id) : p.Z != q.Z ? p.Z.CompareTo(q.Z) : p.X.CompareTo(q.X));
-        // Posts somebody else is on their way to, and those the command's own units already stand on (they stay).
+        // Posts somebody else is on their way to, and those the command's own units already stand on: they stay,
+        // on the building named or, when a wall is named, anywhere along the wall. Named a tower, those on the
+        // wall beside it go up it; named a wall, those on a tower come down to it.
         var taken = new HashSet<long>();
         for (int j = 0; j < U.Count; j++)
             if (U.Job[j] == UnitJob.Post && !units.Contains(j)) taken.Add(Column(U.JobX[j], U.JobZ[j]));
@@ -410,7 +412,8 @@ public sealed partial class EconomySystem
         foreach (int i in units)
         {
             long here = Column(U.X[i].FloorToInt(), U.Z[i].FloorToInt());
-            if (U.Job[i] == UnitJob.None && WallUnder(i) != null && columns.Contains(here)) taken.Add(here);
+            if (U.Job[i] == UnitJob.None && WallUnder(i) is { } on && columns.Contains(here)
+                && (on == wall || (!on.Def.IsTower && !wall.Def.IsTower))) taken.Add(here);
             else waiting.Add(i);
         }
         int next = 0;

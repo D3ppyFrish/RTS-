@@ -157,6 +157,33 @@ public class TowerTests
     }
 
     [Fact]
+    public void ATowerPlannedOverAWallIsStartedAndBuiltLikeAnyPlan()
+    {
+        var sim = Flat();
+        var store = Store(sim, 0, stone: 0, wood: 0);
+        var walls = Line(sim, 0, "wooden_wall", 20, 30, 30);
+        int worker = sim.SpawnUnit(0, "worker", 25, 26);
+        sim.Schedule(0, new PlanCommand(0, "watchtower", 24, 29));
+        sim.Step();
+        var plan = sim.Buildings.All.Single(b => b.Def.IsTower);
+        Assert.Equal(BuildingState.Planned, plan.State);
+        // A plan changes nothing: the wall is the building on those columns, and whole.
+        Assert.Same(walls[5], sim.Buildings.AtColumn(25, 30));
+        Assert.Equal(PlaceResult.CannotAfford, sim.Economy.CanStart(plan));
+        store.Stock[(int)Good.Wood] = 30;
+        Assert.Equal(PlaceResult.Ok, sim.Economy.CanStart(plan));
+        sim.Schedule(sim.Tick, new WorkCommand(0, new[] { worker }, plan.Id));
+        sim.Step();
+        Assert.Equal(BuildingState.Site, plan.State);
+        Assert.Equal(0, store.Stock[(int)Good.Wood]);
+        for (int y = 0; y < 4; y++) Assert.Equal(BlockType.Planks, sim.World.Get(25, walls[5].Y + y, 30));
+        RunUntil(sim, () => plan.Active, 90 * Tps, "the worker to build the planned tower over the wall");
+        AssertSolid(sim, plan, BlockType.Trestle);
+        Assert.Null(sim.Buildings.Get(walls[5].Id));
+        Assert.Same(plan, sim.Buildings.AtColumn(25, 30));
+    }
+
+    [Fact]
     public void AStoneTowerTakesAWatchtowersPlaceAndStandsAcrossAThickWall()
     {
         var sim = Flat();
@@ -258,6 +285,40 @@ public class TowerTests
         RunUntil(sim, () => up.All(id => sim.Units.Y[Index(sim, id)] == Ground + 1 && sim.Units.Z[Index(sim, id)].FloorToInt() >= 34), 40 * Tps,
             "the archers to come down and walk off");
         Assert.Equal(0, sim.Combat.Aim(Index(sim, up[0])));
+    }
+
+    [Fact]
+    public void SentUpATowerThoseOnTheWallBesideItGoTooAndSentToTheWallTheyComeBack()
+    {
+        var sim = Flat();
+        for (int x = 20; x <= 27; x++)
+        {
+            Place(sim, 0, "stone_wall", x, 30);
+            Place(sim, 0, "stone_facing", x, 29);
+            Place(sim, 0, "stone_facing", x, 31);
+        }
+        var tower = Place(sim, 0, "stone_tower", 28, 28);
+        var wall = sim.Buildings.AtColumn(26, 30)!;
+        var ids = Enumerable.Range(0, 7).Select(k => sim.SpawnUnit(0, k < 2 ? "archer" : "mage", 22 + k, 35)).ToArray();
+        Building? On(int id) => sim.Economy.WallUnder(Index(sim, id));
+        // Three are posted on the wall, on the edges of its deck nearest the column named.
+        sim.Schedule(0, new PostCommand(0, ids.Take(3).ToArray(), wall.Id));
+        RunUntil(sim, () => ids.Take(3).All(id => On(id) is { Def.IsWall: true }), 30 * Tps, "three to climb the wall");
+        // An order onto the wall again leaves them where they are: they stay anywhere along it.
+        var before = ids.Take(3).Select(id => (sim.Units.X[Index(sim, id)], sim.Units.Z[Index(sim, id)])).ToArray();
+        sim.Schedule(sim.Tick, new PostCommand(0, ids.Take(3).ToArray(), sim.Buildings.AtColumn(24, 30)!.Id));
+        sim.Run(2 * Tps);
+        Assert.Equal(before, ids.Take(3).Select(id => (sim.Units.X[Index(sim, id)], sim.Units.Z[Index(sim, id)])).ToArray());
+        // All seven sent up the tower: those on the wall climb down and go up it with the rest.
+        sim.Schedule(sim.Tick, new PostCommand(0, ids, tower.Id));
+        RunUntil(sim, () => ids.All(id => On(id) == tower), 40 * Tps, "all seven to stand on the tower");
+        Assert.All(ids, id => Assert.Equal(tower.Y + 9, sim.Units.Y[Index(sim, id)]));
+        // Sent up it again they stay, and sent to the wall they come down to it.
+        sim.Schedule(sim.Tick, new PostCommand(0, ids, tower.Id));
+        sim.Run(2 * Tps);
+        Assert.All(ids, id => Assert.Same(tower, On(id)));
+        sim.Schedule(sim.Tick, new PostCommand(0, ids, wall.Id));
+        RunUntil(sim, () => ids.All(id => On(id) is { Def.IsWall: true }), 60 * Tps, "all seven to stand on the wall");
     }
 
     [Fact]

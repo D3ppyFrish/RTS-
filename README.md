@@ -30,7 +30,7 @@ scripts/ui-citystate-screenshots.sh   # scripted city-state: break the goblins' 
 scripts/ui-match-screenshots.sh       # scripted match flow: start screen, surrender, defeat and its replay, victory
 scripts/ui-fog-screenshots.sh         # scripted fog of war: the start screen switch, enemies hidden until in sight
 scripts/ui-dig-screenshots.sh         # scripted dig tool: workers and sappers dig out a dragged area
-scripts/ui-wall-screenshots.sh        # scripted walls: a gate placed, a wall drawn through it and built, upgraded twice, archers posted on it
+scripts/ui-wall-screenshots.sh        # scripted walls: a gate placed, a wall drawn through it and built, upgraded twice, archers posted on it, a stone tower put onto it and a watchtower beside it
 scripts/ui-bridge-screenshots.sh      # scripted bridge: a deck drawn across a river and laid by the workers
 scripts/determinism.sh              # 10-minute headless match, replayed twice, hashes compared
 scripts/ai-matches.sh               # Hard computer against Classic, five matches with fog; each must have a winner within 40 minutes
@@ -119,10 +119,15 @@ replay made with different data says so instead of drifting apart.
   monsters, and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)), whether it
   tames monsters, and how a computer player plays it (`aiStyle`: `waves` or `balanced`, see
   [Winning and computer players](docs/rules.md#winning-and-computer-players)).
-- **Walls and gates** in `buildings.json` come in tiers: `"upgrade"` names the building one is turned into
-  where it stands (so only the first of a chain is ever laid), `"sturdy"` multiplies the damage each of
-  its blocks takes, `"walkway": true` lets ranged units be posted on top, and `"wall": "palisade"` is the
-  barrier's stakes (see [Combat](docs/rules.md#combat), wall tiers).
+- **Walls, gates and towers** in `buildings.json`: walls and gates come in tiers, where `"upgrade"` names
+  the building one is turned into where it stands (so only the first of a chain is ever laid) and
+  `"facing"` the building that goes up on each free side of an upgrade when it is done (a stone wall is
+  three columns thick). `"sturdy"` multiplies the damage each of its blocks takes and `"walkway": true`
+  lets ranged units be posted on top. A building of `"kind": "tower"` is solid to its top, is put up alone
+  or onto the player's own walls, and gives the units posted on it `"aim"` (the share in a hundred of
+  their would-be misses that land, and a fifth of it more shots to the head). The materials
+  `"wall": "palisade"` (a barrier's stakes), `"rampart"` (pale stone with battlements) and `"trestle"` (a
+  watchtower's open frame) are theirs (see [Combat](docs/rules.md#combat): wall tiers, facings, towers).
 - **City-states** (`citystates.json`): each town's totem (a building of kind `totem` in `buildings.json`)
   and how soon it stands again, its guards, the tribute its holder gets, what its caravans trade, its
   mercenaries (units whose `hiredFrom` names it), its lair monster and what its huts are built of (see

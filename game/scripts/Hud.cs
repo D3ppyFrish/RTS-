@@ -343,7 +343,10 @@ public partial class Hud : CanvasLayer
         column.AddChild(keys);
     }
 
-    /// <summary>One button per building (with its hotkey and cost, or the tech it needs) and one for roads, down the left side.</summary>
+    /// <summary>
+    /// One button per building (with its hotkey and cost, or the tech it needs) and one for roads, two abreast
+    /// down the left side (one below the other they ran into the selection panel).
+    /// </summary>
     private void BuildBuildPanel(Control root)
     {
         var panel = new PanelContainer();
@@ -364,6 +367,10 @@ public partial class Hud : CanvasLayer
                                       "Placing what you cannot afford makes a plan even with this off.";
         _planModeButton.Pressed += () => _control.TogglePlanMode();
         column.AddChild(_planModeButton);
+        var grid = new GridContainer { Columns = 2 };
+        grid.AddThemeConstantOverride("h_separation", 4);
+        grid.AddThemeConstantOverride("v_separation", 4);
+        column.AddChild(grid);
         foreach (var (key, id) in PlayerControl.BuildKeys)
         {
             if (!_sim.Content.TryGetBuilding(id, out var def)) continue;
@@ -379,7 +386,7 @@ public partial class Hud : CanvasLayer
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +
                                 $"units posted on top (right click it with them) aim better: {def.Aim}% of the shots they would " +
                                 "miss in the dark or the rain land, and they hit the head more often.";
-            column.AddChild(b);
+            grid.AddChild(b);
             _buildButtons.Add((b, def, key));
         }
         if (_sim.Content.TryGetBuilding(PlayerControl.WallBuilding, out var wallDef))
@@ -390,9 +397,10 @@ public partial class Hud : CanvasLayer
             wall.TooltipText = "Drag a line for the selected workers to wall off, a column at a time. " +
                                "Walls join up with each other and with gates; a gate lets only your units through. " +
                                "This is the cheap first tier, easy to knock down: select a column of it to upgrade the " +
-                               "stretch to a wooden wall that archers stand on, and that to a stone wall.";
+                               "stretch to a wooden wall that archers stand on, and that to a stone wall three columns " +
+                               "thick. Put a tower onto a wall for a strong point that sees far.";
             wall.Pressed += () => _control.ToggleWall();
-            column.AddChild(wall);
+            grid.AddChild(wall);
             _buildButtons.Add((wall, wallDef, Key.Y));
         }
         if (_sim.Content.TryGetBuilding(PlayerControl.BridgeBuilding, out var bridgeDef))
@@ -404,14 +412,14 @@ public partial class Hud : CanvasLayer
                                  "chasm or a trench, a column at a time from the ends. Anyone can walk over it; Ctrl+right " +
                                  "click a bridge with soldiers selected to knock that column out.";
             bridge.Pressed += () => _control.ToggleBridge();
-            column.AddChild(bridge);
+            grid.AddChild(bridge);
             _buildButtons.Add((bridge, bridgeDef, Key.Apostrophe));
         }
         var road = MakeToolButton("");
         road.Name = "build_road";
         road.Icon = UiIcons.Get("road");
         road.Pressed += () => _control.StartRoad();
-        column.AddChild(road);
+        grid.AddChild(road);
         _buildButtons.Add((road, null, Key.L));
     }
 
@@ -1137,7 +1145,7 @@ public partial class Hud : CanvasLayer
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training   V: stance";
         }
     }
@@ -1319,9 +1327,10 @@ public partial class Hud : CanvasLayer
         var u = _sim.Units;
         var econ = _sim.Economy;
         var text = new StringBuilder();
-        if (b.Def.IsTower) text.Append($"Sees {b.Def.Sight} columns around it. ");
-        text.Append(b.Def.Walkway ? "Archers and other ranged units can be posted on top (right click it with them)"
-            : "Too low to post anyone on");
+        if (b.Def.IsTower) text.Append($"Sees {b.Def.Sight} columns around it\n");
+        text.Append(!b.Def.Walkway ? "Too low to post anyone on"
+            : b.Def.IsTower ? "Ranged units are posted on top (right click it with them)"
+            : "Archers and other ranged units can be posted on top (right click it with them)");
         if (b.Def.Walkway)
         {
             int posted = 0, first = -1;
@@ -1334,9 +1343,9 @@ public partial class Hud : CanvasLayer
             if (b.Def.IsTower)
             {
                 int free = econ.FreePosts(b);
-                text.Append($": {posted} up there, room for {free} more along its edge");
+                text.Append($"\n{posted} up there, room for {free} more along its edge");
                 if (b.Def.Aim > 0)
-                    text.Append($"\nFrom up here {b.Def.Aim}% of the shots that would miss in the dark or the rain land, and more hit the head");
+                    text.Append($"\nFrom up here {b.Def.Aim}% of the shots that would miss in the dark\nor the rain land, and more hit the head");
             }
             else if (first >= 0) text.Append($": a {_sim.Content.Units[u.Def[first]].Name.ToLowerInvariant()} stands here");
         }
