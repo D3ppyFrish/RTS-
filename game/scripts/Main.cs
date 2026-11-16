@@ -51,6 +51,8 @@ namespace Rts.Game;
 ///   --goods=N             every town hall starts with N more of every good (for trying things out)
 ///   --houses=N            N finished houses of yours behind your town hall (the start has more people than
 ///                         room, so this makes room to try out training and hiring)
+///   --raid=N              N of player 1's sappers stand beside your house nearest your start (with --houses)
+///                         and are ordered to knock it down (to try out rebuild orders)
 ///   --battle=N            two armies of N soldiers each (every soldier type in turn) face each other at
 ///                         the camera focus, yours to the west, with an enemy house to the north
 ///   --lineup              every unit type each of the first two players can have (its faction's own, the
@@ -78,7 +80,7 @@ namespace Rts.Game;
 ///   --fog[=off]           fog of war (see FogOfWar): a match started from the command line has it only with
 ///                         --fog, and on the start screen it is ticked unless --fog=off
 /// A match from the usual start is recorded as it is played and saved as a replay at its end; --map,
-/// --units, --battle, --lineup, --goods, --houses and --xp set a match up otherwise, so it is not.
+/// --units, --battle, --lineup, --goods, --houses, --raid and --xp set a match up otherwise, so it is not.
 /// </summary>
 public partial class Main : Node3D
 {
@@ -88,7 +90,7 @@ public partial class Main : Node3D
     private const int MaxTicksPerFrame = 8;
 
     /// <summary>Options that set a match up other than the usual start, so that its log would not replay it.</summary>
-    private static readonly string[] TestSetups = { "map", "units", "battle", "lineup", "goods", "houses", "xp", "weather", "lights", "blood", "dusk-party" };
+    private static readonly string[] TestSetups = { "map", "units", "battle", "lineup", "goods", "houses", "raid", "xp", "weather", "lights", "blood", "dusk-party" };
 
     private Dictionary<string, string> _args = new();
     private ContentDb _content = null!;
@@ -583,6 +585,7 @@ public partial class Main : Node3D
         if (_args.ContainsKey("lineup")) SpawnLineup(fx, fz);
         if (_args.TryGetValue("goods", out var gs) && int.TryParse(gs, out var goods) && goods > 0) GiveGoods(goods);
         if (_args.TryGetValue("houses", out var hs) && int.TryParse(hs, out var houses) && houses > 0) GiveHouses(houses);
+        if (_args.TryGetValue("raid", out var rs) && int.TryParse(rs, out var raiders) && raiders > 0) SpawnRaid(raiders);
         if (_args.TryGetValue("lights", out var ls) && int.TryParse(ls, out var lights) && lights > 0) GiveLights(lights);
         if (_args.TryGetValue("xp", out var xs) && int.TryParse(xs, out var xp) && xp > 0) GiveExperience(xp);
         if (_args.TryGetValue("dusk-party", out var ds) && int.TryParse(ds, out var party) && party > 0) SpawnDuskParty(party);
@@ -873,6 +876,39 @@ public partial class Main : Node3D
             if (placed == count) break;
             if (_sim.Economy.PlaceFinished(player, house, x, z) != null) placed++;
         }
+    }
+
+    /// <summary>
+    /// --raid: this many of player 1's sappers on the free columns just east of your house nearest your start,
+    /// ordered (at the first tick) to knock it down.
+    /// </summary>
+    private void SpawnRaid(int count)
+    {
+        int player = PlayerControl.LocalPlayer, enemy = player == 1 ? 0 : 1;
+        int sx = -1, sz = -1;
+        foreach (var start in _sim.Map.Starts)
+            if (start.Player == player) (sx, sz) = (start.X, start.Z);
+        Rts.Sim.Economy.Building? house = null;
+        long best = long.MaxValue;
+        foreach (var b in _sim.Buildings.All)
+        {
+            if (b.Owner != player || b.Def.Kind != Rts.Sim.Economy.BuildingKind.House) continue;
+            long d = b.CentreDistance2(sx, sz);
+            if (d < best) (house, best) = (b, d);
+        }
+        if (house == null)
+        {
+            GD.Print("Raid: you have no house to raid (add --houses)");
+            return;
+        }
+        var ids = new List<int>();
+        for (int k = 0; k < count * 8 && ids.Count < count; k++)
+        {
+            int id = _sim.SpawnUnit(enemy, "sapper", house.MaxX + 2 + k / 4, house.Z + k % 4);
+            if (id > 0) ids.Add(id);
+        }
+        _sim.Schedule(0, new AttackBuildingCommand(enemy, ids.ToArray(), house.Id));
+        GD.Print($"Raid: {ids.Count} sappers on your house at {house.X},{house.Z}");
     }
 
     /// <summary>

@@ -392,6 +392,7 @@ public sealed class Simulation
             case StanceCommand st: Combat.Apply(st); break;
             case AutomateCommand a: Automation.Apply(a); break;
             case AutomateAllCommand a: Automation.Apply(a); break;
+            case RebuildCommand rb: Automation.Apply(rb); break;
             case PriorityCommand pr: Automation.Apply(pr); break;
             case DefaultPriorityCommand dp: Automation.Apply(dp); break;
             case EvolveCommand e: Evolution.Apply(e); break;

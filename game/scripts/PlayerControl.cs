@@ -49,6 +49,7 @@ namespace Rts.Game;
 ///   J, Shift+J            the selected workers find their own jobs, or stop doing so / all your workers
 ///                         and those you train later
 ///   P                     the selected building repeats its training, or stops
+///   Shift+P               rebuild orders: your destroyed buildings are put back where they stood, or not
 ///   V                     the selected soldiers' stance: aggressive, hold their ground, retreat when hurt
 ///   .                     select your next idle worker and centre the camera on it (as the HUD's Idle
 ///                         workers button does)
@@ -355,7 +356,10 @@ public partial class PlayerControl : Node
                 else if (key.ShiftPressed) ToggleAutoAll();
                 else ToggleAutoSelected();
                 break;
-            case Key.P: ToggleRepeat(); break;
+            case Key.P:
+                if (key.ShiftPressed) ToggleRebuild();
+                else ToggleRepeat();
+                break;
             case Key.Tab: TogglePlanMode(); break;
             case Key.Delete or Key.Backspace: CancelSelectedPlan(); break;
             case Key.V: CycleStance(); break;
@@ -1040,6 +1044,13 @@ public partial class PlayerControl : Node
     public void ToggleAutoAll()
     {
         _sim.Schedule(_sim.Tick, new AutomateAllCommand(LocalPlayer, !_sim.Economy.AutoWorkers(LocalPlayer)));
+        Changed?.Invoke();
+    }
+
+    /// <summary>Your destroyed buildings are put back where they stood, or no longer (see <see cref="RebuildCommand"/>).</summary>
+    public void ToggleRebuild()
+    {
+        _sim.Schedule(_sim.Tick, new RebuildCommand(LocalPlayer, !_sim.Economy.Rebuilds(LocalPlayer)));
         Changed?.Invoke();
     }
 
@@ -1747,6 +1758,7 @@ public partial class PlayerControl : Node
                $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} " +
+               $"rebuild={(_sim.Economy.Rebuilds(LocalPlayer) ? 1 : 0)} ruins={OwnRuins()} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +
                $"beaten={beaten} monsters={monsters} riders={riders} wild={wild} lairs={lairs} " +
@@ -1766,6 +1778,15 @@ public partial class PlayerControl : Node
         int n = 0;
         foreach (var b in _sim.Buildings.All)
             if (b.Owner == LocalPlayer && b.Def.IsWall && b.Def.FacingOf == null && b.Def.Tier == tier) n++;
+        return n;
+    }
+
+    /// <summary>Your ruins that rebuild orders will put back.</summary>
+    private int OwnRuins()
+    {
+        int n = 0;
+        foreach (var r in _sim.Automation.Ruins)
+            if (r.Owner == LocalPlayer) n++;
         return n;
     }
 

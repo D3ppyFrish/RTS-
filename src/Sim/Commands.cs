@@ -299,6 +299,12 @@ public sealed record DefaultPriorityCommand(int PlayerId, ulong List) : Command(
 public sealed record RepeatCommand(int PlayerId, int Building, bool On) : Command(PlayerId);
 
 /// <summary>
+/// Turns the player's rebuild orders on or off: with them on, each of their finished buildings that is
+/// destroyed is put back where it stood, once it is safe and they can pay (see <see cref="Automation.AutomationSystem"/>).
+/// </summary>
+public sealed record RebuildCommand(int PlayerId, bool On) : Command(PlayerId);
+
+/// <summary>
 /// Sets where the building's trained units walk when they step out: level Y (-1 for the top) of column
 /// (X, Z). An X below 0, or a spot on the building itself, clears it (they stay at the door).
 /// </summary>

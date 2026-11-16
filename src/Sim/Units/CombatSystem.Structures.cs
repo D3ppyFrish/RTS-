@@ -111,6 +111,7 @@ public sealed partial class CombatSystem
     /// </summary>
     private void Collapse(Building b)
     {
+        _sim.Automation.Destroyed(b);
         _sim.Physics.Crumble(b);
         Buildings.Remove(b);
     }

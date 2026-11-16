@@ -11,8 +11,8 @@ namespace Rts.Game;
 /// See-through models of buildings to come (issue #92): the finished building over each of your plans and
 /// building sites until it is complete, and over the spot the build tool would place one. The colour says
 /// what it is: violet for a plan you cannot pay for yet, cyan for a plan you can start now (right click it),
-/// amber for a site being built (only its blocks still to come), red where the build tool cannot place it.
-/// Other players' plans and sites get none.
+/// amber for a site being built (only its blocks still to come), red where the build tool cannot place it,
+/// pale grey over a ruin your rebuild orders will put back. Other players' plans, sites and ruins get none.
 /// </summary>
 public partial class GhostRenderer : Node3D
 {
@@ -21,6 +21,8 @@ public partial class GhostRenderer : Node3D
     public static readonly Color ReadyColor = new(0.2f, 0.92f, 1f);
     public static readonly Color SiteColor = new(1f, 0.72f, 0.22f);
     public static readonly Color BlockedColor = new(1f, 0.3f, 0.25f);
+    /// <summary>A destroyed building rebuild orders will put back (see <see cref="Rts.Sim.Automation.AutomationSystem.Ruins"/>).</summary>
+    public static readonly Color RuinColor = new(0.85f, 0.85f, 0.8f);
 
     private const string ShaderCode = @"
 shader_type spatial;
@@ -79,7 +81,7 @@ void fragment() {
     }
 
     /// <summary>Ghosts drawn now, by state (for the scripted checks): plans you cannot pay for, plans you can, sites.</summary>
-    public (int Planned, int Ready, int Sites) Counts { get; private set; }
+    public (int Planned, int Ready, int Sites, int Ruins) Counts { get; private set; }
 
     public void Init(Simulation sim)
     {
@@ -129,7 +131,28 @@ void fragment() {
             node.SetInstanceShaderParameter("tint", tint);
             node.SetInstanceShaderParameter("pulse", pulse);
         }
-        Counts = (planned, ready, sites);
+        // Ruins to rebuild, keyed below every building id.
+        var ruins = _sim.Automation.Ruins;
+        int ruinCount = 0;
+        for (int k = 0; k < ruins.Count; k++)
+        {
+            var r = ruins[k];
+            if (r.Owner != player || MeshFor(r.Def, 0) is not { } mesh) continue;
+            int key = -1 - k;
+            _seen.Add(key);
+            ruinCount++;
+            if (!_shown.TryGetValue(key, out var node))
+            {
+                node = new MeshInstance3D { MaterialOverride = _depth, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+                AddChild(node);
+                _shown[key] = node;
+            }
+            node.Mesh = mesh;
+            node.Position = new Vector3(r.X, r.Y, r.Z) * bs;
+            node.SetInstanceShaderParameter("tint", RuinColor);
+            node.SetInstanceShaderParameter("pulse", 0f);
+        }
+        Counts = (planned, ready, sites, ruinCount);
         if (_shown.Count > _seen.Count)
         {
             var gone = new List<int>();

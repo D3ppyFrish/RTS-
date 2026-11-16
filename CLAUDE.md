@@ -27,6 +27,7 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 | Bleeding and blood on the ground | `Units/CombatSystem.cs` (bleeding), `World/BloodSystem.cs`; game: `BloodRenderer.cs` | `BleedingTests.cs` | `ui-blood-screenshots.sh` |
 | Formations | `Units/Formations.cs` | `FormationTests.cs` | `ui-formation-screenshots.sh` |
 | Automation (automatic workers, repeat, stances) | `Automation/AutomationSystem.cs` | `AutomationTests.cs` | `ui-automation-screenshots.sh` |
+| Rebuild orders (ruins put back) | `Automation/AutomationSystem.Rebuild.cs` (hooks: `CombatSystem.Collapse`, `EconomySystem.StepRaid`); game: `GhostRenderer.cs` (ruin ghosts) | `RebuildTests.cs` | `ui-rebuild-screenshots.sh` |
 | Work priorities (per-worker and default lists) | `Automation/WorkPriorities.cs`, `Automation/AutomationSystem.cs` (`FindJob`); game: `PrioritiesPanel.cs` | `PriorityTests.cs` | `ui-priorities-screenshots.sh` |
 | Evolution (Settlers) | `Units/EvolutionSystem.cs` | `EvolutionTests.cs` | `ui-evolution-screenshots.sh` |
 | Monsters and taming (Orcs) | `Units/MonsterSystem.cs` | `MonsterTests.cs` | `ui-monsters-screenshots.sh` |

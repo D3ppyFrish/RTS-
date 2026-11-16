@@ -45,6 +45,8 @@ public sealed class PlayerEconomy
     public bool AutoWorkers { get; internal set; }
     /// <summary>The priority list its workers follow unless they have one of their own (see <see cref="Automation.WorkPriorities"/>).</summary>
     public ulong DefaultPriorities { get; internal set; } = Automation.WorkPriorities.Standard;
+    /// <summary>Its destroyed buildings are put back (see <see cref="RebuildCommand"/>).</summary>
+    public bool Rebuild { get; internal set; }
     /// <summary>Goods gathered from the world (blocks, farms), by <see cref="Good"/>.</summary>
     public int[] Gathered { get; } = new int[Goods.Count];
     /// <summary>Goods paid for buildings, roads and training.</summary>
@@ -180,6 +182,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's workers are all automatic, those they train included (see <see cref="AutomateAllCommand"/>).</summary>
     public bool AutoWorkers(int player) => player >= 0 && player < _players.Count && _players[player].AutoWorkers;
 
+    /// <summary>True if the player has rebuild orders on (see <see cref="RebuildCommand"/>).</summary>
+    public bool Rebuilds(int player) => player >= 0 && player < _players.Count && _players[player].Rebuild;
+
     /// <summary>
     /// The player's workers with nothing to do, by id: standing with no order and no job (automatic ones too,
     /// while they find no work), not running away and not beaten monsters.
@@ -229,6 +234,7 @@ public sealed partial class EconomySystem
         {
             Mix(p.Starving ? 1 : 0);
             Mix(p.AutoWorkers ? 1 : 0);
+            Mix(p.Rebuild ? 1 : 0);
             Mix((long)p.DefaultPriorities);
             Mix(p.Researching);
             Mix(p.ResearchTicks);
@@ -688,6 +694,7 @@ public sealed partial class EconomySystem
             return false;
         }
         // Burned: the goods are lost and what is left of it crumbles.
+        _sim.Automation.Destroyed(b);
         _sim.Physics.Crumble(b);
         Buildings.Remove(b);
         return true;
