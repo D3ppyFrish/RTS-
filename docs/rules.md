@@ -322,7 +322,7 @@ Orc units earn none.
   | From | Forms |
   | --- | --- |
   | Worker | foreman (works half as fast again, eats 2), militia (line infantry, slower than a spearman; it stops working) |
-  | Spearman | knight (heavy infantry, 130 hit points and 12 damage, slow), pathfinder (speed 6, sight 14, +50% from casters), battle priest (heals the most hurt ally within 5 blocks by 4 every 2 seconds, eats 2), siege engineer (siege: fire pots from 7 blocks that hit buildings at full damage, slow) |
+  | Spearman | knight (heavy infantry, 130 hit points and 12 damage, slow), pathfinder (speed 6, sight 14, +50% from casters), battle priest (heals the most hurt ally within 5 blocks by 4 every 2 seconds, eats 2), siege engineer (siege: fire pots from 7 blocks that hit buildings at full damage, slow); at a cleared wolf den only, the Wolfheart (see [Cleared dens](#cleared-dens)) |
   | Archer | longbowman (range 12, slower), ranger (speed 5.5, sight 13, +50% from line infantry) |
   | Rider | lancer (18 damage, eats 3), outrider (speed 10, sight 14, +50% from ranged) |
   | Sapper | tunneller (digs tunnels twice as fast, eats 2), demolisher (9 damage, slower) |
@@ -373,7 +373,7 @@ areas, and Orcs who beat a wolf keep it.
 
 ### Cleared dens
 
-`DenTests` (issue #70): once a lair is cleared, its den can be used once, by a player with one of their
+`DenTests` (issue #3): once a lair is cleared, its den can be used once, by a player with one of their
 units within 8 blocks of it (`DenCommand`). What it becomes is the faction's `den` in `factions.json`;
 the den is gone from the map either way.
 
@@ -383,13 +383,16 @@ the den is gone from the map either way.
   its wolves bring in 5 food every 15 seconds (about one worker on a farm) into the nearest storage.
   It is never in the build menu (`fromDen` in `buildings.json`); `yield` and `yieldTime` are what a
   building brings in on its own.
-- **Settlers: a unique evolution (waiting on the designer).** The hook is built: a faction's `den` can name a
-  form (`{ "form": id }`, a unit with `fromDen` in `units.json`), and the nearest selected unit near the
-  den that the form evolves from takes it at once. Experience never gives a `fromDen` form. Which form
-  it is, for which units, is still open, so the Settlers have no `den` yet and leave dens be.
+- **Settlers: the Wolfheart.** The Settlers' `den` names a form (`{ "form": id }`, a unit with `fromDen`
+  in `units.json`): the selected spearman nearest the den becomes a **Wolfheart** at once, free. It is a
+  form no spearman reaches through experience, and it is not among the forms in the evolve row or for
+  Auto. A Wolfheart wears the pelt of the pack: 110 hit points, 12 damage, speed 5.5, sight 12 and a
+  little more armour (head 1, torso 2), and it eats 3 food a minute. With no spearman near the den, the
+  den cannot be used. The numbers are first guesses for playtesting.
 - **Stays as it was:** the Settlers still get a lair's reward for clearing it.
 - **In the game**: with your units selected near a cleared den, the selection panel has a button for
-  it ("Make the wolf den a wolf lodge", greyed out while you cannot pay).
+  it ("Make the wolf den a wolf lodge", greyed out while you cannot pay, or "Make a spearman a
+  wolfheart at the wolf den"). Computer players leave dens be.
 
 `MonsterTests` has the issue's check: Orcs clear a wolf lair, recruit one beaten wolf and ride another
 (a spearman becomes a wolf rider); Settlers who clear one get its reward instead, as does whoever beats

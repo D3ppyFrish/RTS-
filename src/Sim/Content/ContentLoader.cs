@@ -1081,7 +1081,7 @@ public static class ContentLoader
             {
                 var forms = new List<UnitDef>();
                 foreach (var f in _db.Units)
-                    if (f.EvolvesFrom == u) forms.Add(f);
+                    if (f.EvolvesFrom == u && !f.FromDen) forms.Add(f);
                 u.Forms = forms.ToArray();
                 if (u.TrainedAt != null && !u.IsTrader) bases.Add(u);
                 if (u.Lair is { DuskTree: false }) monsters.Add(u);

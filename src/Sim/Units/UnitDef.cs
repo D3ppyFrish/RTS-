@@ -99,7 +99,7 @@ public sealed class UnitDef
     /// <see cref="Content.DenUse"/>), never through experience.
     /// </summary>
     public bool FromDen { get; init; }
-    /// <summary>The forms it can evolve into, in data order.</summary>
+    /// <summary>The forms it can evolve into through experience, in data order (not those taken at a den, <see cref="FromDen"/>).</summary>
     public IReadOnlyList<UnitDef> Forms { get; internal set; } = Array.Empty<UnitDef>();
     /// <summary>How many evolutions it is from a trained unit: 0 for those, 1 for their forms, and so on.</summary>
     public int Tier { get; internal set; }

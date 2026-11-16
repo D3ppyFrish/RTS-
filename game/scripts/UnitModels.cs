@@ -278,6 +278,13 @@ public static class UnitModels
             .Box(1, 14, -2, 1, 16, -2, Team)                                             // feather
             .Box(-2, 5, -2, 1, 10, -2, TeamDark)                                         // short cloak
             .Box(3, 1, 1, 3, 17, 1, Wood).Box(3, 18, 1, 3, 19, 1, Steel),                // spear
+        "wolfheart" => new Builder().Humanoid().Rank()
+            .Box(-2, 12, -3, 1, 14, 1, Fur).Box(-2, 14, 1, 1, 14, 2, Fur)               // wolf's head worn as a hood, snout over the brow
+            .Box(-2, 15, -2, -2, 16, -2, DarkFur).Box(1, 15, -2, 1, 16, -2, DarkFur)    // ears
+            .Box(-1, 13, 2, -1, 13, 2, Glow).Box(0, 13, 2, 0, 13, 2, Glow)              // the pelt's pale eyes
+            .Box(-3, 4, -2, 2, 11, -2, Fur).Box(-3, 4, -3, 2, 6, -3, PaleFur)           // pelt down the back
+            .Box(-3, 9, -2, 2, 9, 1, DarkFur)                                           // ruff over the shoulders
+            .Box(3, 1, 1, 3, 17, 1, Wood).Box(3, 18, 1, 3, 20, 1, Steel).Box(3, 15, 0, 3, 15, 2, PaleFur), // spear with a fur tassel
         "battle_priest" => new Builder().Humanoid().Rank()
             .Box(-2, 13, -3, 1, 14, 1, Cloth)                                            // white hood
             .Box(-2, 6, 1, 1, 9, 1, Cloth).Box(-1, 6, 1, 0, 9, 1, Team).Box(-2, 8, 1, 1, 8, 1, Team) // tabard and cross
