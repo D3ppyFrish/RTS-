@@ -228,6 +228,18 @@ public sealed record PatrolCommand(int PlayerId, int[] Units, int X, int Z, int 
 }
 
 /// <summary>
+/// The units guard one of their player's units (<paramref name="Unit"/>, by id) or buildings
+/// (<paramref name="Building"/>, by id; the other is 0): they keep near it, follow it where it goes, and fight
+/// the enemies that come near it or hit it, until they are given another order or it is gone. Units that
+/// cannot fight ignore it.
+/// </summary>
+public sealed record GuardCommand(int PlayerId, int[] Units, int Unit, int Building = 0) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(GuardCommand? other) => base.Equals(other) && Unit == other!.Unit && Building == other.Building;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Unit, Building);
+}
+
+/// <summary>
 /// Sappers dig a tunnel two blocks high from where they stand to column (X, Z), ending with their feet at
 /// level Y, going at most one level up or down per column. Other units ignore it.
 /// </summary>
@@ -285,6 +297,12 @@ public sealed record DefaultPriorityCommand(int PlayerId, ulong List) : Command(
 /// as the player can pay for it. Off stops that.
 /// </summary>
 public sealed record RepeatCommand(int PlayerId, int Building, bool On) : Command(PlayerId);
+
+/// <summary>
+/// Sets where the building's trained units walk when they step out: level Y (-1 for the top) of column
+/// (X, Z). An X below 0, or a spot on the building itself, clears it (they stay at the door).
+/// </summary>
+public sealed record RallyCommand(int PlayerId, int Building, int X, int Z, int Y = -1) : Command(PlayerId);
 
 /// <summary>Sets the units' stance (see <see cref="Units.UnitStance"/>). Workers, who fight only when ordered to, keep theirs.</summary>
 public sealed record StanceCommand(int PlayerId, int[] Units, Units.UnitStance Stance) : UnitsCommand(PlayerId, Units)

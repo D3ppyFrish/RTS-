@@ -24,7 +24,9 @@ namespace Rts.Game;
 ///                         smelter; caravans trade with a city-state's town; otherwise move there,
 ///                         keeping their shape (Ctrl+right click: attack-move, fighting whatever they meet
 ///                         on the way; Alt+right click on the ground: patrol, walking there and back
-///                         again and again, fighting whatever they meet, until given another order)
+///                         again and again, fighting whatever they meet, until given another order; Alt+right
+///                         click on one of your units or buildings: guard it). With only your barracks or town
+///                         hall selected: set its rally point (on the building itself: clear it)
 ///   Right drag            draw a line: the selected units spread out along it facing forward from it,
 ///                         melee in front and ranged behind (with Ctrl, they attack-move there)
 ///   H G C B M N           place a house, storehouse, farm, barracks, smelter or town hall (the selected
@@ -568,6 +570,7 @@ public partial class PlayerControl : Node
         {
             // Right click on a plan of yours starts it, with nobody selected too (automatic workers take it on).
             if (BuildingUnder(screen) is { Planned: true } plan && plan.Owner == LocalPlayer) StartPlan(plan, own);
+            else Rally(screen);
             return;
         }
         float bs = ChunkMesher.BlockSize;
@@ -662,13 +665,51 @@ public partial class PlayerControl : Node
     private void Patrol(Vector2 screen)
     {
         var own = OwnSelected();
-        if (own.Count == 0 || !GroundUnder(screen, out int x, out int y, out int z)) return;
+        if (own.Count == 0) return;
         var u = _sim.Units;
+        float bs = ChunkMesher.BlockSize;
         var fighters = own.FindAll(id => _sim.Content.Units[u.Def[u.IndexOf(id)]].CanAttack);
+        // On one of your units or buildings: guard it.
+        int ward = PickUnit(screen);
+        if (ward > 0 && OwnerOf(ward) == LocalPlayer)
+        {
+            fighters.Remove(ward);
+            if (fighters.Count == 0) return;
+            _sim.Schedule(_sim.Tick, new GuardCommand(LocalPlayer, fighters.ToArray(), ward));
+            int w = u.IndexOf(ward);
+            _rings.ShowMarker(new Vector3(u.X[w].ToFloat(), u.Y[w], u.Z[w].ToFloat()) * bs, SelectionRenderer.Own);
+            return;
+        }
+        if (BuildingUnder(screen) is { Planned: false } charge && charge.Owner == LocalPlayer)
+        {
+            if (fighters.Count == 0) return;
+            _sim.Schedule(_sim.Tick, new GuardCommand(LocalPlayer, fighters.ToArray(), 0, charge.Id));
+            _rings.ShowMarker(new Vector3(charge.X + charge.Def.SizeX / 2f, charge.Y, charge.Z + charge.Def.SizeZ / 2f) * bs, SelectionRenderer.Own);
+            return;
+        }
+        if (!GroundUnder(screen, out int x, out int y, out int z)) return;
         if (fighters.Count > 0) _sim.Schedule(_sim.Tick, new PatrolCommand(LocalPlayer, fighters.ToArray(), x, z, y));
         own.RemoveAll(fighters.Contains);
         if (own.Count > 0) _sim.Schedule(_sim.Tick, new MoveCommand(LocalPlayer, own.ToArray(), x, z, y));
         _rings.ShowMarker(new Vector3(x + 0.5f, y, z + 0.5f) * ChunkMesher.BlockSize, SelectionRenderer.Other);
+    }
+
+    /// <summary>
+    /// A right click with your building that trains units selected (and no units): its rally point goes where the
+    /// click was, and the units it trains walk there; a right click on the building itself clears it.
+    /// </summary>
+    private void Rally(Vector2 screen)
+    {
+        var b = _sim.Buildings.Get(SelectedBuilding);
+        if (b == null || b.Owner != LocalPlayer || b.Def.Trains.Length == 0 || b.Planned) return;
+        if (BuildingUnder(screen) == b)
+        {
+            _sim.Schedule(_sim.Tick, new RallyCommand(LocalPlayer, b.Id, -1, -1));
+            return;
+        }
+        if (!GroundUnder(screen, out int x, out int y, out int z)) return;
+        _sim.Schedule(_sim.Tick, new RallyCommand(LocalPlayer, b.Id, x, z, y));
+        _rings.ShowMarker(new Vector3(x + 0.5f, y, z + 0.5f) * ChunkMesher.BlockSize, SelectionRenderer.Own);
     }
 
     /// <summary>
@@ -1590,7 +1631,7 @@ public partial class PlayerControl : Node
         var sel = _sim.Buildings.Get(SelectedBuilding);
         string building = sel == null ? "none" : $"{sel.Def.Id}";
         var u = _sim.Units;
-        int units = 0, enemies = 0, enemiesShown = 0, fighting = 0, routing = 0, tunnelling = 0, digging = 0, cleaning = 0, patrolling = 0;
+        int units = 0, enemies = 0, enemiesShown = 0, fighting = 0, routing = 0, tunnelling = 0, digging = 0, cleaning = 0, patrolling = 0, guarding = 0;
         for (int i = 0; i < u.Count; i++)
         {
             if (u.Owner[i] != LocalPlayer)
@@ -1607,6 +1648,7 @@ public partial class PlayerControl : Node
             if (u.Job[i] == UnitJob.Dig) digging++;
             if (u.Job[i] == UnitJob.Clean) cleaning++;
             if (u.Combat[i] == CombatOrder.Patrol) patrolling++;
+            if (u.Combat[i] == CombatOrder.Guard) guarding++;
         }
         int inFormation = 0;
         foreach (int id in own)
@@ -1688,7 +1730,7 @@ public partial class PlayerControl : Node
             if (ownSet.Contains(id)) tending++;
         return $"selected={_selected.Count} first_id={(_selected.Count > 0 ? _selected[0] : 0)} own={own.Count} preview={_preview.Count} dragging={(_dragging ? 1 : 0)} " +
                $"paused={(_clock.Paused ? 1 : 0)} speed={_clock.Speed} slice={_slice.Level} tool={Tool} " +
-               $"working={working} buildings={buildings} sites={sites} building={building} queue={sel?.Queue.Count ?? 0} " +
+               $"working={working} buildings={buildings} sites={sites} building={building} queue={sel?.Queue.Count ?? 0} rally={(sel is { HasRally: true } ? $"{sel.RallyX},{sel.RallyZ}" : "none")} " +
                $"ghost={(Ghost.Visible ? Ghost.Result.ToString() : "none")} road={_roadPreview.Count} " +
                $"plans={plans} plans_ready={ready} plan_mode={(PlanMode ? 1 : 0)} " +
                $"food={stock[(int)Good.Food]} wood={stock[(int)Good.Wood]} stone={stock[(int)Good.Stone]} iron={stock[(int)Good.Iron]} " +
@@ -1697,7 +1739,7 @@ public partial class PlayerControl : Node
                $"priorities={(first >= 0 && _sim.Content.Units[u.Def[first]].Role == UnitRole.Worker ? WorkPriorities.ToLog(u.Priorities[first]) : "none")} " +
                $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
-               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} routing={routing} tunnelling={tunnelling} " +
+               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +

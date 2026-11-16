@@ -626,6 +626,12 @@ public sealed partial class EconomySystem
         if (b.TrainTicks < def.TrainTicks || !AccessSpot(b, out int x, out int z, out int y)) return;
         int id = U.Spawn(owner, def.Index, Fix64.FromInt(x) + Fix64.Half, y, Fix64.FromInt(z) + Fix64.Half, MaxHp(owner, def));
         if (def.Role == UnitRole.Worker) U.Auto[U.IndexOf(id)] = Player(owner).AutoWorkers;
+        if (b.HasRally)
+        {
+            int i = U.IndexOf(id);
+            _sim.SendUnit(i, b.RallyX, b.RallyZ, b.RallyY);
+            U.ArriveRadius[i] = RallyArrive;
+        }
         _population[owner]++;
         _sim.Events.UnitTrained(owner, id, def.Index, x, y, z);
         b.Queue.RemoveAt(0);
@@ -675,6 +681,7 @@ public sealed partial class EconomySystem
         {
             b.Owner = player;
             b.Queue.Clear();
+            b.RallyX = -1;
             b.TrainTicks = 0;
             b.Repeat = false;
             b.Owed.Clear();
@@ -970,6 +977,27 @@ public sealed partial class EconomySystem
         if (b == null || b.Owner != c.PlayerId || b.Def.Trains.Length == 0) return;
         b.Repeat = c.On;
         if (!c.On) b.Owed.Clear();
+    }
+
+    /// <summary>How close (blocks) a unit walking to its building's rally point comes before it stops: room for a crowd.</summary>
+    public static readonly Fix64 RallyArrive = Fix64.FromRatio(3, 2);
+
+    /// <summary>
+    /// Sets or clears where the building's trained units walk when they step out (see <see cref="RallyCommand"/>):
+    /// only on the player's own building that trains units. The spot snaps to ground a unit can stand on.
+    /// </summary>
+    internal void Apply(RallyCommand c)
+    {
+        var b = Buildings.Get(c.Building);
+        if (b == null || b.Owner != c.PlayerId || b.Def.Trains.Length == 0) return;
+        if (c.X < 0 || c.Z < 0 || c.X >= _sim.World.SizeX || c.Z >= _sim.World.SizeZ || b.Covers(c.X, c.Z))
+        {
+            b.RallyX = -1;
+            b.RallyZ = b.RallyY = 0;
+            return;
+        }
+        var (x, z, y) = _sim.StandingGoal(c.X, c.Z, c.Y);
+        (b.RallyX, b.RallyZ, b.RallyY) = (x, z, y);
     }
 
     /// <summary>The command's units that exist, belong to the player and are not routing, without duplicates, in order.</summary>

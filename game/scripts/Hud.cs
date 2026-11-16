@@ -1144,7 +1144,7 @@ public partial class Hud : CanvasLayer
                     ? $"Road: click where it ends ({_control.RoadPreview.Count} blocks, {_control.RoadPreview.Count * EconomySystem.StonePerRoad} stone; Shift carries on)\nRight click or Esc to stop"
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
-                return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol   Ctrl+1-9: groups\n" +
+                return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training   V: stance";
         }
@@ -1190,7 +1190,7 @@ public partial class Hud : CanvasLayer
                    DescribeExperience(u, i);
         }
         var counts = new int[defs.Count];
-        int moving = 0, working = 0, fighting = 0, routing = 0, automatic = 0, ready = 0, beaten = 0, healing = 0, patrolling = 0;
+        int moving = 0, working = 0, fighting = 0, routing = 0, automatic = 0, ready = 0, beaten = 0, healing = 0, patrolling = 0, guarding = 0;
         var stances = new int[3];
         foreach (int id in sel)
         {
@@ -1202,6 +1202,7 @@ public partial class Hud : CanvasLayer
             if (def.CanAttack && def.Role != UnitRole.Worker && (int)u.Stance[i] < stances.Length) stances[(int)u.Stance[i]]++;
             if (_sim.Combat.Healing(i, out _)) healing++;
             if (u.Combat[i] == CombatOrder.Patrol) patrolling++;
+            if (u.Combat[i] == CombatOrder.Guard) guarding++;
             if (u.Subdued[i]) beaten++;
             else if (u.Rout[i] > 0) routing++;
             else if (u.Job[i] != UnitJob.None) working++;
@@ -1212,6 +1213,7 @@ public partial class Hud : CanvasLayer
         if (working > 0) parts.Add($"{working} at work");
         if (fighting > 0) parts.Add($"{fighting} fighting");
         if (patrolling > 0) parts.Add($"{patrolling} patrolling");
+        if (guarding > 0) parts.Add($"{guarding} guarding");
         if (routing > 0) parts.Add($"{routing} running away");
         if (healing > 0) parts.Add($"{healing} healing");
         if (automatic > 0) parts.Add($"{automatic} automatic");
@@ -1305,6 +1307,10 @@ public partial class Hud : CanvasLayer
                 else if (_sim.Economy.Starving(b.Owner)) text.Append("   (needs food)");
             }
             if (b.Def.IsRampart) text.Append(DescribeWall(b));
+            if (b.Def.Trains.Length > 0 && b.Owner == PlayerControl.LocalPlayer)
+                text.Append(b.HasRally
+                    ? "\nRally point set: new units walk to the flag (right click the building to clear it)"
+                    : "\nRight click the ground to set a rally point for new units");
             if (b.Repeat)
             {
                 text.Append("\nOn repeat");
@@ -1423,9 +1429,20 @@ public partial class Hud : CanvasLayer
         {
             CombatOrder.AttackMove => "attack-moving",
             CombatOrder.Patrol => "patrolling",
+            CombatOrder.Guard => GuardActivity(u, i),
             _ => "moving",
         };
+        if (u.Combat[i] == CombatOrder.Guard) return GuardActivity(u, i);
         return "idle";
+    }
+
+    /// <summary>"guarding" and what: a unit by its kind, or a building by its name.</summary>
+    private string GuardActivity(UnitStore u, int i)
+    {
+        int w = u.GuardUnit[i] != 0 ? u.IndexOf(u.GuardUnit[i]) : -1;
+        if (w >= 0) return $"guarding a {_sim.Content.Units[u.Def[w]].Name.ToLowerInvariant()}";
+        var b = _sim.Buildings.Get(u.GuardBuilding[i]);
+        return b != null ? $"guarding the {b.Def.Name.ToLowerInvariant()}" : "guarding";
     }
 
     private static string StanceName(UnitStance stance) => stance switch

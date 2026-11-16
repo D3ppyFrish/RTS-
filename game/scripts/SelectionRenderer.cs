@@ -49,6 +49,7 @@ void fragment() {
     private double _markerAge = double.MaxValue;
     private const double MarkerSeconds = 0.7;
     private MeshInstance3D _frame = null!;
+    private Node3D _rally = null!;
     private StandardMaterial3D _frameMaterial = null!;
     private int _frameBuilding;
     private MultiMesh _road = null!;
@@ -92,6 +93,8 @@ void fragment() {
         };
         _frame = new MeshInstance3D { MaterialOverride = _frameMaterial, Visible = false };
         AddChild(_frame);
+        _rally = RallyFlag();
+        AddChild(_rally);
         _road = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
@@ -145,6 +148,9 @@ void fragment() {
             _frame.Visible = false;
             _frameBuilding = 0;
         }
+        // The selected building's rally point: a flag where its trained units walk to.
+        _rally.Visible = b is { HasRally: true } && b.Owner == PlayerControl.LocalPlayer;
+        if (_rally.Visible) _rally.Position = new Vector3(b!.RallyX + 0.5f, b.RallyY, b.RallyZ + 0.5f) * bs;
 
         var road = control.RoadPreview;
         int needed = Math.Max(16, road.Count);
@@ -296,6 +302,39 @@ void fragment() {
         b[o + 8] = 0; b[o + 9] = 0; b[o + 10] = 1; b[o + 11] = z * bs;
         b[o + 12] = color.R; b[o + 13] = color.G; b[o + 14] = color.B; b[o + 15] = 1;
         return count + 1;
+    }
+
+    /// <summary>A rally flag: a pole with a pale pennant and a ring in the player's selection colour at its foot. Its origin is the ground.</summary>
+    private static Node3D RallyFlag()
+    {
+        float bs = ChunkMesher.BlockSize;
+        var flag = new Node3D { Visible = false };
+        var pole = new StandardMaterial3D { AlbedoColor = new Color(0.45f, 0.32f, 0.2f) };
+        var ring = new StandardMaterial3D { AlbedoColor = Own, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
+        // A pale pennant: it stands out on grass, sand and stone alike.
+        var cloth = new StandardMaterial3D { AlbedoColor = new Color(1f, 0.96f, 0.85f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
+        flag.AddChild(new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = new Vector3(0.15f, 3f, 0.15f) * bs },
+            MaterialOverride = pole,
+            Position = new Vector3(0, 1.5f, 0) * bs,
+        });
+        // The pennant stands across the usual camera's view (it looks from the south-west), not edge-on.
+        var pivot = new Node3D { Position = new Vector3(0, 2.55f, 0) * bs, RotationDegrees = new Vector3(0, -45, 0) };
+        pivot.AddChild(new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = new Vector3(1.2f, 0.8f, 0.08f) * bs },
+            MaterialOverride = cloth,
+            Position = new Vector3(0.67f, 0, 0) * bs,
+        });
+        flag.AddChild(pivot);
+        flag.AddChild(new MeshInstance3D
+        {
+            Mesh = Ring(0.45f, 0.6f, 32),
+            MaterialOverride = ring,
+            Position = new Vector3(0, 0.04f, 0),
+        });
+        return flag;
     }
 
     /// <summary>A flat square in the ground plane, half its side in metres.</summary>
