@@ -350,6 +350,9 @@ public sealed class Simulation
             case AttackMoveCommand am:
                 ApplyMove(am, am.X, am.Z, am.Y, attack: true);
                 break;
+            case PatrolCommand pa:
+                ApplyMove(pa, pa.X, pa.Z, pa.Y, attack: true, patrol: true);
+                break;
             case FormationMoveCommand fm:
                 ApplyFormation(fm);
                 break;
@@ -421,9 +424,11 @@ public sealed class Simulation
 
     /// <summary>
     /// A move order, or with <paramref name="attack"/> an attack-move: the units fight what they meet on the
-    /// way (see <see cref="CombatSystem"/>).
+    /// way (see <see cref="CombatSystem"/>), and with <paramref name="patrol"/> as well a patrol: each unit
+    /// walks back to where it stood when it gets there, and so on (a unit already within
+    /// <see cref="CombatSystem.PatrolShortest"/> columns of the goal just attack-moves there).
     /// </summary>
-    private void ApplyMove(UnitsCommand m, int x, int z, int y, bool attack)
+    private void ApplyMove(UnitsCommand m, int x, int z, int y, bool attack, bool patrol = false)
     {
         if (x < 0 || z < 0 || x >= World.SizeX || z >= World.SizeZ) return;
         var indexes = OwnedUnits(m);
@@ -443,6 +448,12 @@ public sealed class Simulation
             {
                 Units.Combat[i] = CombatOrder.AttackMove;
                 (Units.DestX[i], Units.DestZ[i], Units.DestY[i]) = (gx, gz, gy);
+                int sx = Units.X[i].FloorToInt(), sz = Units.Z[i].FloorToInt();
+                if (patrol && Math.Max(Math.Abs(sx - gx), Math.Abs(sz - gz)) >= CombatSystem.PatrolShortest)
+                {
+                    Units.Combat[i] = CombatOrder.Patrol;
+                    (Units.PatrolX[i], Units.PatrolZ[i], Units.PatrolY[i]) = (sx, sz, Units.Y[i]);
+                }
             }
             Units.Order[i] = UnitOrder.Move;
             Units.OrderX[i] = gx;

@@ -1144,7 +1144,7 @@ public partial class Hud : CanvasLayer
                     ? $"Road: click where it ends ({_control.RoadPreview.Count} blocks, {_control.RoadPreview.Count * EconomySystem.StonePerRoad} stone; Shift carries on)\nRight click or Esc to stop"
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
-                return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Ctrl+1-9: groups\n" +
+                return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training   V: stance";
         }
@@ -1190,7 +1190,7 @@ public partial class Hud : CanvasLayer
                    DescribeExperience(u, i);
         }
         var counts = new int[defs.Count];
-        int moving = 0, working = 0, fighting = 0, routing = 0, automatic = 0, ready = 0, beaten = 0, healing = 0;
+        int moving = 0, working = 0, fighting = 0, routing = 0, automatic = 0, ready = 0, beaten = 0, healing = 0, patrolling = 0;
         var stances = new int[3];
         foreach (int id in sel)
         {
@@ -1201,6 +1201,7 @@ public partial class Hud : CanvasLayer
             if (u.Owner[i] == PlayerControl.LocalPlayer && _sim.Evolution.CanEvolve(i)) ready++;
             if (def.CanAttack && def.Role != UnitRole.Worker && (int)u.Stance[i] < stances.Length) stances[(int)u.Stance[i]]++;
             if (_sim.Combat.Healing(i, out _)) healing++;
+            if (u.Combat[i] == CombatOrder.Patrol) patrolling++;
             if (u.Subdued[i]) beaten++;
             else if (u.Rout[i] > 0) routing++;
             else if (u.Job[i] != UnitJob.None) working++;
@@ -1210,6 +1211,7 @@ public partial class Hud : CanvasLayer
         var parts = new List<string> { $"{moving} moving" };
         if (working > 0) parts.Add($"{working} at work");
         if (fighting > 0) parts.Add($"{fighting} fighting");
+        if (patrolling > 0) parts.Add($"{patrolling} patrolling");
         if (routing > 0) parts.Add($"{routing} running away");
         if (healing > 0) parts.Add($"{healing} healing");
         if (automatic > 0) parts.Add($"{automatic} automatic");
@@ -1417,7 +1419,12 @@ public partial class Hud : CanvasLayer
         if (u.Order[i] == UnitOrder.Chase) return u.TargetBuilding[i] != 0 ? "going to attack a building" : $"chasing {enemy}";
         if (u.TargetBuilding[i] != 0) return "attacking a building";
         if (u.Target[i] != 0) return $"fighting {enemy}";
-        if (u.Order[i] == UnitOrder.Move) return u.Combat[i] == CombatOrder.AttackMove ? "attack-moving" : "moving";
+        if (u.Order[i] == UnitOrder.Move) return u.Combat[i] switch
+        {
+            CombatOrder.AttackMove => "attack-moving",
+            CombatOrder.Patrol => "patrolling",
+            _ => "moving",
+        };
         return "idle";
     }
 

@@ -23,7 +23,8 @@ namespace Rts.Game;
 ///                         workers gather a tree, bush, stone or ore, build a site or work a farm or
 ///                         smelter; caravans trade with a city-state's town; otherwise move there,
 ///                         keeping their shape (Ctrl+right click: attack-move, fighting whatever they meet
-///                         on the way)
+///                         on the way; Alt+right click on the ground: patrol, walking there and back
+///                         again and again, fighting whatever they meet, until given another order)
 ///   Right drag            draw a line: the selected units spread out along it facing forward from it,
 ///                         melee in front and ranged behind (with Ctrl, they attack-move there)
 ///   H G C B M N           place a house, storehouse, farm, barracks, smelter or town hall (the selected
@@ -108,7 +109,7 @@ public partial class PlayerControl : Node
     private bool _wallDragging;
     private int _wallX, _wallZ;
     private readonly List<(int X, int Y, int Z, bool Ok)> _wallPreview = new();
-    private bool _rightDown, _lineDragging, _rightCtrl;
+    private bool _rightDown, _lineDragging, _rightCtrl, _rightAlt;
     private Vector2 _rightPos;
     private readonly List<Vector3> _formationPreview = new();
 
@@ -295,6 +296,7 @@ public partial class PlayerControl : Node
                     _lineDragging = false;
                     _rightPos = mb.Position;
                     _rightCtrl = mb.CtrlPressed;
+                    _rightAlt = mb.AltPressed;
                 }
                 break;
             case InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: false } mb:
@@ -302,6 +304,7 @@ public partial class PlayerControl : Node
                 if (!_rightDown) break;
                 _rightDown = false;
                 if (_lineDragging) OrderLine(_rightPos, mb.Position, _rightCtrl || mb.CtrlPressed);
+                else if (_rightAlt || mb.AltPressed) Patrol(_rightPos);
                 else Order(_rightPos, _rightCtrl || mb.CtrlPressed);
                 _lineDragging = false;
                 _formationPreview.Clear();
@@ -650,6 +653,22 @@ public partial class PlayerControl : Node
         // Both ends the same: they move there keeping their shape.
         _sim.Schedule(_sim.Tick, new FormationMoveCommand(LocalPlayer, own.ToArray(), x, z, x, z, ctrl, y));
         _rings.ShowMarker(new Vector3(x + 0.5f, y, z + 0.5f) * bs, ctrl ? SelectionRenderer.Other : SelectionRenderer.Own);
+    }
+
+    /// <summary>
+    /// An Alt+right click: the selected soldiers patrol between where they stand and the ground clicked
+    /// (see <see cref="CombatSystem"/>); the rest of the selection, which cannot fight, just walks there.
+    /// </summary>
+    private void Patrol(Vector2 screen)
+    {
+        var own = OwnSelected();
+        if (own.Count == 0 || !GroundUnder(screen, out int x, out int y, out int z)) return;
+        var u = _sim.Units;
+        var fighters = own.FindAll(id => _sim.Content.Units[u.Def[u.IndexOf(id)]].CanAttack);
+        if (fighters.Count > 0) _sim.Schedule(_sim.Tick, new PatrolCommand(LocalPlayer, fighters.ToArray(), x, z, y));
+        own.RemoveAll(fighters.Contains);
+        if (own.Count > 0) _sim.Schedule(_sim.Tick, new MoveCommand(LocalPlayer, own.ToArray(), x, z, y));
+        _rings.ShowMarker(new Vector3(x + 0.5f, y, z + 0.5f) * ChunkMesher.BlockSize, SelectionRenderer.Other);
     }
 
     /// <summary>
@@ -1571,7 +1590,7 @@ public partial class PlayerControl : Node
         var sel = _sim.Buildings.Get(SelectedBuilding);
         string building = sel == null ? "none" : $"{sel.Def.Id}";
         var u = _sim.Units;
-        int units = 0, enemies = 0, enemiesShown = 0, fighting = 0, routing = 0, tunnelling = 0, digging = 0, cleaning = 0;
+        int units = 0, enemies = 0, enemiesShown = 0, fighting = 0, routing = 0, tunnelling = 0, digging = 0, cleaning = 0, patrolling = 0;
         for (int i = 0; i < u.Count; i++)
         {
             if (u.Owner[i] != LocalPlayer)
@@ -1587,6 +1606,7 @@ public partial class PlayerControl : Node
             if (u.Job[i] == UnitJob.Tunnel) tunnelling++;
             if (u.Job[i] == UnitJob.Dig) digging++;
             if (u.Job[i] == UnitJob.Clean) cleaning++;
+            if (u.Combat[i] == CombatOrder.Patrol) patrolling++;
         }
         int inFormation = 0;
         foreach (int id in own)
@@ -1677,7 +1697,7 @@ public partial class PlayerControl : Node
                $"priorities={(first >= 0 && _sim.Content.Units[u.Def[first]].Role == UnitRole.Worker ? WorkPriorities.ToLog(u.Priorities[first]) : "none")} " +
                $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
-               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} routing={routing} tunnelling={tunnelling} " +
+               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} routing={routing} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +

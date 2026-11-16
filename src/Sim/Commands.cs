@@ -217,6 +217,17 @@ public sealed record AttackMoveCommand(int PlayerId, int[] Units, int X, int Z, 
 }
 
 /// <summary>
+/// The units patrol between where each of them stands and column (X, Z) at level Y (-1 for the top): they
+/// walk there, fighting the enemies they meet on the way as on an attack-move, then walk back to where they
+/// started, and so on until they are given another order.
+/// </summary>
+public sealed record PatrolCommand(int PlayerId, int[] Units, int X, int Z, int Y = -1) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(PatrolCommand? other) => base.Equals(other) && X == other!.X && Z == other.Z && Y == other.Y;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X, Z, Y);
+}
+
+/// <summary>
 /// Sappers dig a tunnel two blocks high from where they stand to column (X, Z), ending with their feet at
 /// level Y, going at most one level up or down per column. Other units ignore it.
 /// </summary>

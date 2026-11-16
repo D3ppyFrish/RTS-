@@ -261,7 +261,7 @@ public sealed partial class CombatSystem
             u.ClearJob(i);
             Halt(i);
         }
-        if (u.Order[i] == UnitOrder.Move && u.Combat[i] != CombatOrder.AttackMove)
+        if (u.Order[i] == UnitOrder.Move && !u.FightsOnTheWay(i))
         {
             // Walking on a plain move: it does not stop to fight.
             u.Target[i] = u.TargetBuilding[i] = 0;
@@ -272,6 +272,7 @@ public sealed partial class CombatSystem
             if (u.Order[i] == UnitOrder.Chase) Halt(i);
             if (u.Combat[i] == CombatOrder.Attack) u.Combat[i] = CombatOrder.Auto;
             else if (u.Combat[i] == CombatOrder.AttackMove && u.Order[i] == UnitOrder.Idle) Resume(i);
+            else if (u.Combat[i] == CombatOrder.Patrol && u.Order[i] == UnitOrder.Idle && Turn(i)) Resume(i);
             return;
         }
         if (InReach(i, def, t, b))
@@ -702,6 +703,42 @@ public sealed partial class CombatSystem
         u.CombatWait[i] = GiveUpTicks;
         if (u.Order[i] == UnitOrder.Chase) Halt(i);
     }
+
+    /// <summary>A patrol order to a goal nearer than this (columns, either way) is only an attack-move there.</summary>
+    public const int PatrolShortest = 3;
+
+    /// <summary>A patrol ends after this many walks in a row end short of where they were going (there is no way there).</summary>
+    public const int PatrolMisses = 2;
+
+    /// <summary>
+    /// A patrolling unit with nothing to fight and nowhere to walk: if it only stopped to fight, it carries on
+    /// to the same end. If its walk is over, it turns round and heads for the other end. A walk that ended
+    /// short of its end (more than <see cref="PatrolSlack"/> columns past the arrival radius) counts as a
+    /// miss, and <see cref="PatrolMisses"/> in a row end the patrol: there is no way between the ends.
+    /// False if the patrol is over.
+    /// </summary>
+    private bool Turn(int i)
+    {
+        var u = U;
+        int state = u.PatrolState[i];
+        if ((state & 1) == 0) return true;
+        Fix64 dx = u.X[i] - (Fix64.FromInt(u.DestX[i]) + Fix64.Half), dz = u.Z[i] - (Fix64.FromInt(u.DestZ[i]) + Fix64.Half);
+        Fix64 near = u.ArriveRadius[i] + Fix64.FromInt(PatrolSlack);
+        int misses = dx * dx + dz * dz <= near * near ? 0 : (state >> 1) + 1;
+        if (misses >= PatrolMisses)
+        {
+            u.ClearCombat(i);
+            return false;
+        }
+        (u.DestX[i], u.PatrolX[i]) = (u.PatrolX[i], u.DestX[i]);
+        (u.DestZ[i], u.PatrolZ[i]) = (u.PatrolZ[i], u.DestZ[i]);
+        (u.DestY[i], u.PatrolY[i]) = (u.PatrolY[i], u.DestY[i]);
+        u.PatrolState[i] = misses << 1;
+        return true;
+    }
+
+    /// <summary>How far (columns) past its arrival radius a patrolling unit may stop and still count as there.</summary>
+    public const int PatrolSlack = 2;
 
     /// <summary>An attack-move with nothing left to fight here carries on to where it was going.</summary>
     private void Resume(int i)
