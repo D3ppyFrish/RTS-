@@ -158,32 +158,76 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   piece that lands as rubble, and tunnels dug under a stretch bring all of it down. The rubble of a wall
   spreads: a block of it slides off any step down (other rubble only off a drop of two or more), on past
   the wall the way it was knocked first, so a column that is broken leaves a low heap that is walked over
-  from both sides, whatever the wall was. Units sent at a
-  building they cannot get to (it is walled in) go for the nearest wall or gate of its owner instead
-  (within 16 columns) and break through.
+  from both sides, whatever the wall was. Units sent at a building they cannot get to break through (below).
 - **Wall tiers** (`"upgrade"`, `"sturdy"` and `"walkway"` in `data/buildings.json`): what is laid is a
   **wooden barrier**, a row of stakes 2 high for 1 wood a column, up in a second and easy to break. It is
-  upgraded where it stands to a **wooden wall** (3 high, 3 wood more, with a walk along its top) and that
-  to a **stone wall** (4 high, 4 stone more, needs masonry). Gates go the same way: a barrier gate (3
-  wood), a wooden gate (5 wood more) and a stone gate (4 high, 2 wood and 5 stone more, masonry); the two
-  upper tiers of gate have the walk too. A column of barrier comes down after 20 damage from its top, of
-  wooden wall after 80 and of stone wall after 200 (everyone but sappers deals a quarter damage to
-  buildings): a lone sapper is through a barrier in about 6 seconds, a wooden wall in 12 and a stone wall
-  in 30. A higher tier is never laid as it is.
+  upgraded where it stands to a **wooden wall** (4 high, 3 wood more, with a walk along its top) and that
+  to a **stone wall** (6 high, 10 stone more, needs masonry), which is three columns thick (below). Gates
+  go the same way: a barrier gate (3 high, 3 wood), a wooden gate (4 high, 5 wood more) and a stone gate
+  (6 high, 4 wood and 12 stone more, masonry), a gatehouse three columns deep; the two upper tiers of gate
+  have the walk too. A column of barrier comes down after 20 damage from its top, of wooden wall after 80
+  and of stone wall after 225 (everyone but sappers deals a quarter damage to buildings). A sapper knocks
+  out the bottom block and the column falls: a lone sapper is through a barrier in about 6 seconds, a
+  wooden wall in 12, and one column of a stone wall in 23, of which there are three to get through. A
+  higher tier is never laid as it is.
+- **Facings** (`"facing"` in the data, `Sides`, `FacingCells`, `MissingFacings`): when a wall's upgrade to
+  stone is done, a facing goes up on each free side of it across the way the line runs, as a site for its
+  builders that is already paid for with the upgrade. Where the line turns, the facing runs on round the
+  outside of the turn, and a wall that stands alone has none. The facing is as high and as sturdy as the
+  wall and has the walk, so the deck of a stone wall is three columns wide. A wall never puts a facing in
+  the way through a gate: the two columns straight out from a gate on each side are kept for the gate (the
+  first is the gate's own facing, a column of gatehouse with leaves in it; the second keeps the way out
+  open where the wall turns beside the gate). A facing is a building of its own, with its own health: it
+  is knocked down by itself, and an attacker has to get through it, then the wall, then the facing behind.
+  A builder who has finished a column goes on to a facing up to 32 columns off (to another column of wall
+  8), so the workers who upgraded a wall face all of it without being sent. Facing that has been lost is
+  put back with the Upgrade order on the wall behind it, at the facing's own price (3 stone a column of
+  wall, 1 wood and 3 stone a column of gatehouse). A facing is never laid by itself.
 - **Upgrading** (`UpgradeCommand`): the upgrade is paid for when it is ordered, and is builders' work like
   a site (any worker with nothing to do comes). The wall stands as it was, and holds, until the work is
   done; then it is the new wall, whole, whatever had been knocked out of it. One order takes the whole
   stretch: every wall and gate of the same tier joined to the one named, nearest first, as far as the
   goods go (at most 256); `Stretch = false` takes only the one. A unit standing on a wall that grows is
   lifted with it.
+- **Towers** (`"kind": "tower"`, `TakesPlaceOf`, `Absorb`; `"aim"` in the data): a **watchtower** (3 by 3
+  columns, 7 high, a timber frame; 30 wood, 25 seconds of work) and a **stone tower** (5 by 5, 9 high;
+  60 stone and 20 wood, 60 seconds, needs masonry). A tower is solid to its deck, so nothing walks or
+  shoots through it. It is placed like any building, on open ground, where it keeps no distance from walls
+  (a wall runs right up to it); or onto the player's own finished walls and facings, any that lie wholly
+  under it. Those stand as they are, and hold, while the tower goes up round and over them; when it is done
+  they are part of it. A stone tower put over a watchtower takes its place the same way. A tower is not put
+  over a gate, a wall that is still a site, or anyone else's wall, and it has no upgrade. A tower sees far,
+  14 columns from a watchtower and 18 from a stone tower, against 2 for a wall, so with fog of war on it
+  shows who is coming long before they reach it. Ranged units are posted on it as on a wall (below), and
+  those on a tower **aim better**: of the shots that would miss because the target is in the dark or the
+  rain, half land from a watchtower and three in four from a stone tower, and 10 and 15 more shots in a
+  hundred find the head (taken from the legs first, then the arms). Units up there hold their ground and
+  see no further than they otherwise would; it is the tower that sees.
 - **Posts** (`PostCommand`): ranged units that fight (archers, mages and the like) are posted on top of a
-  finished wall or gate that has a walk, one to a column: each takes the free column nearest the one
-  named, within 12 columns of it, walks to the foot of the wall on its own side and climbs (half a second
-  a level). Up there it shoots over the wall both ways with the reach, sight and aim of high ground
-  (above), and holds its ground whatever its stance: it does not jump down after anyone. An enemy that
-  cannot get at it goes for the wall under it, and a unit whose wall comes down comes down with it. An
-  order to go somewhere it cannot walk to from up there (off a stone wall, say) has it climb down on the
-  side it is going. Nobody is posted on a barrier, and nobody on a column whose top block is gone.
+  finished wall, gate or tower that has a walk, one to a column, along the **edge of the deck**, where the
+  battlements are: the columns with a side that has nothing as high beside it. So a stone wall holds two
+  rows, one on each face, and a tower a ring (8 on a watchtower, 16 on a stone tower). Each unit takes the
+  free column nearest the one named, within 12 columns of it, walks to the foot of the wall nearest it
+  (the ground within 2 columns of its post) and climbs (half a second a level). Up there it shoots over the
+  wall both ways with the reach, sight and aim of high ground (above), and leans out over the edge: its
+  line of fire starts at the edge of its own column toward the target, so it shoots what stands right at
+  the foot of the wall. It holds its ground whatever its stance: it does not jump down after anyone. An
+  enemy that cannot get at it goes for the wall under it, and a unit whose wall comes down comes down with
+  it. An order to go somewhere it cannot walk to from up there has it climb down on the side it is going.
+  Nobody is posted on a barrier, in the middle of a deck, or on a column whose top block is gone. Units
+  of the order that are up already stay where they are, on the building named, or anywhere along the wall
+  when a wall is named; named a tower, those on the wall beside it go up it, and named a wall, those on a
+  tower come down to it. The game
+  draws a deck half a block below the top of its blocks, between the battlements, and the units on it
+  that much lower.
+- **Breaking through** (`Breach`, `BreachFor`): units sent at a building they cannot get to (it is walled
+  in) go for a wall, gate or facing of its owner within 16 columns instead: one they can get at from where
+  they are, with the shortest way from them through it to the building (ties to the one nearer the
+  building, then straighter ahead), so a group breaks through a thick wall in one place, column behind
+  column, and not along its face. They remember what they were sent at and go on to it when the way is
+  open. A wall as high as a stone wall is struck from the ground and from its own rubble alike. The rubble
+  of a wall spreads as it settles and no longer crushes those standing beside it; a piece that falls
+  straight onto someone still does.
 - **Bridges** (`BridgeCommand`, `EconomySystem.Bridges.cs`): drawn from bank to bank like a wall, a bridge
   is a level plank deck at the standing height of the higher end (the two ends must be ground at most a
   climb apart). Every column of the line that nobody could walk across at about that height (deep water,
@@ -562,11 +606,13 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   for 196 wood. It then upgrades the wall out of what it can spare: only goods that nothing it is saving
   for needs, with 100 wood (and, for stone walls, 60 stone) left in hand, a column at a time with the 6
   waiting columns as before, the side toward the enemy first, and every column to wooden wall (516 wood in
-  all) before the first to stone (658 stone and 36 wood, after masonry). While the wall is all it is
+  all) before the first to stone (1636 stone and 72 wood, after masonry, which pays for the facing that
+  makes the wall three columns thick; a column that will be faced counts as three of the 6 waiting, as its
+  two facings are sites too). While the wall is all it is
   short of stone for it keeps at most 3 workers at the quarry. Every 10 seconds it looks the wall over
   and lays again what has been knocked out (as a barrier, to be upgraded again). Its archers and mages at
   home are posted on the wall by the gate nearest the enemy, as many as there are free columns of walk
-  along that side within 12 columns of the gate, and stay up there when the enemy comes within 20 columns
+  along that side within 12 columns of the gate (on a stone wall, both edges of its deck), and stay up there when the enemy comes within 20 columns
   of them (the rest of its soldiers meet the enemy as before). A town too near the edge of the map for the line to fit gets no wall. Its waves
   leave a quarter of its soldiers at home, not 15%, and the part it sends is what has to be worth 150%
   of the enemy army, so it attacks with a bigger army in all than the Orcs would. At home its soldiers
@@ -579,7 +625,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   it goes slowly, as wood is what Hard runs short of: in the nine matches that went the full 40 minutes
   44 to 160 columns were wooden at the end (96 on average), and one had the whole ring wooden (at 28
   minutes) and had started on stone. A barrier holds a group up for a few blows; a wooden wall takes
-  four times as much, a stone wall ten times, and archers now shoot from the top of both. Hard does not
+  four times as much, a stone wall eleven times for each of its three columns, and archers shoot from the
+  top of both. The computer players do not build towers yet. Hard does not
   fight from behind its wall yet, though: all but its posted archers still go out to meet whoever comes
   near the town, so the wall is worth less to it than it would be to a player who waits behind it.
 - `scripts/ai-versus.sh` plays two levels against each other over 20 seeds with fog of war, the first
@@ -596,6 +643,9 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   Orcs won none, lost 11 and left 9 undecided. The match Hard lost to Normal (seed 19, as the Settlers)
   went at 6 minutes: its soldiers followed raiders seen from its half-built wall out past it, and met
   Normal's whole first wave outside the town.
+  With the bigger walls (stone walls three columns thick, at 10 stone a column) and the towers, Hard beat
+  Classic in all 20 and Normal in 18 (1 lost, the same seed 19, and 1 undecided after 40 minutes; as the
+  Settlers in 28 minutes on average, as the Orcs in 21).
   Before issue #2 Normal (then called Hard) was told where the enemy starts and beat Classic in 15:
   finding the enemy itself costs it and Easy some of that, and Classic still sees through the fog.
 

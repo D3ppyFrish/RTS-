@@ -343,7 +343,10 @@ public partial class Hud : CanvasLayer
         column.AddChild(keys);
     }
 
-    /// <summary>One button per building (with its hotkey and cost, or the tech it needs) and one for roads, down the left side.</summary>
+    /// <summary>
+    /// One button per building (with its hotkey and cost, or the tech it needs) and one for roads, two abreast
+    /// down the left side (one below the other they ran into the selection panel).
+    /// </summary>
     private void BuildBuildPanel(Control root)
     {
         var panel = new PanelContainer();
@@ -364,6 +367,10 @@ public partial class Hud : CanvasLayer
                                       "Placing what you cannot afford makes a plan even with this off.";
         _planModeButton.Pressed += () => _control.TogglePlanMode();
         column.AddChild(_planModeButton);
+        var grid = new GridContainer { Columns = 2 };
+        grid.AddThemeConstantOverride("h_separation", 4);
+        grid.AddThemeConstantOverride("v_separation", 4);
+        column.AddChild(grid);
         foreach (var (key, id) in PlayerControl.BuildKeys)
         {
             if (!_sim.Content.TryGetBuilding(id, out var def)) continue;
@@ -374,7 +381,12 @@ public partial class Hud : CanvasLayer
             if (def.Kind == BuildingKind.Light)
                 b.TooltipText = $"Lights the ground {def.Light} columns around it from dusk to dawn: what stands there is seen from " +
                                 "as far as by day and shot at as by day. A storm puts its open flame out until it passes.";
-            column.AddChild(b);
+            if (def.IsTower)
+                b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
+                                $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +
+                                $"units posted on top (right click it with them) aim better: {def.Aim}% of the shots they would " +
+                                "miss in the dark or the rain land, and they hit the head more often.";
+            grid.AddChild(b);
             _buildButtons.Add((b, def, key));
         }
         if (_sim.Content.TryGetBuilding(PlayerControl.WallBuilding, out var wallDef))
@@ -385,9 +397,10 @@ public partial class Hud : CanvasLayer
             wall.TooltipText = "Drag a line for the selected workers to wall off, a column at a time. " +
                                "Walls join up with each other and with gates; a gate lets only your units through. " +
                                "This is the cheap first tier, easy to knock down: select a column of it to upgrade the " +
-                               "stretch to a wooden wall that archers stand on, and that to a stone wall.";
+                               "stretch to a wooden wall that archers stand on, and that to a stone wall three columns " +
+                               "thick. Put a tower onto a wall for a strong point that sees far.";
             wall.Pressed += () => _control.ToggleWall();
-            column.AddChild(wall);
+            grid.AddChild(wall);
             _buildButtons.Add((wall, wallDef, Key.Y));
         }
         if (_sim.Content.TryGetBuilding(PlayerControl.BridgeBuilding, out var bridgeDef))
@@ -399,14 +412,14 @@ public partial class Hud : CanvasLayer
                                  "chasm or a trench, a column at a time from the ends. Anyone can walk over it; Ctrl+right " +
                                  "click a bridge with soldiers selected to knock that column out.";
             bridge.Pressed += () => _control.ToggleBridge();
-            column.AddChild(bridge);
+            grid.AddChild(bridge);
             _buildButtons.Add((bridge, bridgeDef, Key.Apostrophe));
         }
         var road = MakeToolButton("");
         road.Name = "build_road";
         road.Icon = UiIcons.Get("road");
         road.Pressed += () => _control.StartRoad();
-        column.AddChild(road);
+        grid.AddChild(road);
         _buildButtons.Add((road, null, Key.L));
     }
 
@@ -786,7 +799,7 @@ public partial class Hud : CanvasLayer
             if (def is { Kind: BuildingKind.Wall or BuildingKind.Bridge })
             {
                 needs = Needs(def.Requires, def.Faction);
-                button.Text = $"{def.Name}  [{(key == Key.Apostrophe ? "'" : key.ToString())}]\n{needs ?? CostText(def.Cost) + " a column"}";
+                button.Text = $"{def.Name}  [{KeyText(key)}]\n{needs ?? CostText(def.Cost) + " a column"}";
                 button.Disabled = needs != null || !econ.CanAfford(player, def.Cost);
                 button.SetPressedNoSignal(_control.Tool == (def.IsBridge ? PlayerControl.ToolMode.Bridge : PlayerControl.ToolMode.Wall));
                 continue;
@@ -794,7 +807,7 @@ public partial class Hud : CanvasLayer
             if (def != null)
             {
                 needs = Needs(def.Requires, def.Faction);
-                button.Text = $"{def.Name}  [{(key == Key.Semicolon ? ";" : key.ToString())}]\n{needs ?? CostText(def.Cost)}";
+                button.Text = $"{def.Name}  [{KeyText(key)}]\n{needs ?? CostText(def.Cost)}";
                 // What you cannot afford yet can still be placed, as a plan.
                 button.Disabled = needs != null;
             }
@@ -840,14 +853,40 @@ public partial class Hud : CanvasLayer
         RefreshCities();
     }
 
+    /// <summary>A build key as it is written on its button.</summary>
+    private static string KeyText(Key key) => key switch
+    {
+        Key.Semicolon => ";",
+        Key.Apostrophe => "'",
+        Key.Slash => "/",
+        Key.Backslash => "\\",
+        _ => key.ToString(),
+    };
+
     /// <summary>
     /// The upgrade buttons while a wall or gate of yours that has a tier above it is selected: the whole
     /// stretch it stands in (as far as the goods go), or it alone. Greyed out while you lack the tech or the
-    /// goods for one column, or it is being upgraded already.
+    /// goods for one column, or it is being upgraded already. A stone wall that has lost some of its facing
+    /// has the button too: it puts the facing back.
     /// </summary>
     private void RefreshUpgrade(Building? b)
     {
-        var to = b != null && b.Owner == PlayerControl.LocalPlayer && b.Active ? b.Def.Upgrade : null;
+        bool own = b != null && b.Owner == PlayerControl.LocalPlayer && b.Active;
+        var to = own ? b!.Def.Upgrade : null;
+        if (own && to == null && b!.Def.Facing is { } facing && b.Upgrade == null)
+        {
+            int missing = _sim.Economy.MissingFacings(b).Count;
+            _upgradeRow.Visible = missing > 0;
+            if (missing == 0) return;
+            _upgradeButton.Text = $"Put the facing back  [U]   {CostText(facing.Cost)} a column";
+            _upgradeButton.TooltipText =
+                $"This stretch of {Plural(b.Def.Name).ToLowerInvariant()} has lost some of the facing that makes it three columns thick " +
+                $"({missing} column{(missing == 1 ? "" : "s")} beside this one). Workers put it up again, as far as your goods go.";
+            _upgradeButton.Disabled = _sim.Economy.CanUpgrade(b) != PlaceResult.Ok;
+            _upgradeOneButton.Visible = true;
+            _upgradeOneButton.Disabled = _upgradeButton.Disabled;
+            return;
+        }
         _upgradeRow.Visible = to != null;
         if (to == null) return;
         var result = _sim.Economy.CanUpgrade(b!);
@@ -859,7 +898,8 @@ public partial class Hud : CanvasLayer
         _upgradeButton.TooltipText =
             $"Turns this stretch of {Plural(b.Def.Name).ToLowerInvariant()} ({stretch} joined up here) into {Plural(to.Name).ToLowerInvariant()}, " +
             "nearest first, as far as your goods go. Workers do the work (automatic ones by themselves; or right click the wall with workers), " +
-            "and the wall stands as it is until they are done." + (to.Walkway && !b.Def.Walkway ? " Archers can be posted on top of the new wall." : "");
+            "and the wall stands as it is until they are done." + (to.Walkway && !b.Def.Walkway ? " Archers can be posted on top of the new wall." : "") +
+            (to.Facing != null ? $" A {to.Name.ToLowerInvariant()} is faced on both sides when it is done, at no further cost, so it is three columns thick." : "");
         _upgradeButton.Disabled = result != PlaceResult.Ok;
         _upgradeOneButton.Visible = b.Upgrade == null && needs == null;
         _upgradeOneButton.Disabled = result != PlaceResult.Ok;
@@ -1105,7 +1145,7 @@ public partial class Hud : CanvasLayer
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training   V: stance";
         }
     }
@@ -1262,7 +1302,7 @@ public partial class Hud : CanvasLayer
                 if (_sim.Economy.Population(b.Owner) >= _sim.Economy.Housing(b.Owner)) text.Append("   (needs more houses)");
                 else if (_sim.Economy.Starving(b.Owner)) text.Append("   (needs food)");
             }
-            if (b.Def.IsWall) text.Append(DescribeWall(b));
+            if (b.Def.IsRampart) text.Append(DescribeWall(b));
             if (b.Repeat)
             {
                 text.Append("\nOn repeat");
@@ -1278,20 +1318,45 @@ public partial class Hud : CanvasLayer
         return text.ToString();
     }
 
-    /// <summary>A wall's or gate's place among its tiers, who is posted on it, and how its upgrade is going.</summary>
+    /// <summary>
+    /// A wall's, gate's or tower's place among its tiers, who is posted on it, what a tower does for them, and
+    /// how its upgrade is going.
+    /// </summary>
     private string DescribeWall(Building b)
     {
         var u = _sim.Units;
+        var econ = _sim.Economy;
         var text = new StringBuilder();
-        text.Append(b.Def.Walkway ? "Archers and other ranged units can be posted on top (right click it with them)"
-            : "Too low to post anyone on");
+        if (b.Def.IsTower) text.Append($"Sees {b.Def.Sight} columns around it\n");
+        text.Append(!b.Def.Walkway ? "Too low to post anyone on"
+            : b.Def.IsTower ? "Ranged units are posted on top (right click it with them)"
+            : "Archers and other ranged units can be posted on top (right click it with them)");
         if (b.Def.Walkway)
+        {
+            int posted = 0, first = -1;
             for (int i = 0; i < u.Count; i++)
-                if (u.X[i].FloorToInt() == b.X && u.Z[i].FloorToInt() == b.Z && u.Y[i] == b.Y + b.Def.Height)
+                if (u.Y[i] == b.Y + b.Def.Height && b.Covers(u.X[i].FloorToInt(), u.Z[i].FloorToInt()) && econ.WallUnder(i) == b)
                 {
-                    text.Append($": a {_sim.Content.Units[u.Def[i]].Name.ToLowerInvariant()} stands here");
-                    break;
+                    if (first < 0) first = i;
+                    posted++;
                 }
+            if (b.Def.IsTower)
+            {
+                int free = econ.FreePosts(b);
+                text.Append($"\n{posted} up there, room for {free} more along its edge");
+                if (b.Def.Aim > 0)
+                    text.Append($"\nFrom up here {b.Def.Aim}% of the shots that would miss in the dark\nor the rain land, and more hit the head");
+            }
+            else if (first >= 0) text.Append($": a {_sim.Content.Units[u.Def[first]].Name.ToLowerInvariant()} stands here");
+        }
+        if (b.Def.FacingOf is { } faced)
+            text.Append($"\nThe facing of a {faced.Name.ToLowerInvariant()}: with it the wall is three columns thick");
+        else if (b.Def.Facing != null)
+        {
+            int missing = econ.MissingFacings(b).Count;
+            text.Append(missing > 0 ? $"\nIt has lost its facing on {missing} column{(missing == 1 ? "" : "s")} beside it"
+                : "\nFaced on its free sides: three columns thick");
+        }
         if (b.Upgrade != null)
         {
             int builders = 0;
@@ -1301,7 +1366,7 @@ public partial class Hud : CanvasLayer
                         $"{builders} builder{(builders == 1 ? "" : "s")}");
             if (builders == 0) text.Append(" (right click it with workers)");
         }
-        else if (b.Def.Upgrade == null && b.Def.UpgradeOf != null) text.Append("\nThe strongest there is");
+        else if (b.Def.IsWall && b.Def.Upgrade == null && (b.Def.UpgradeOf != null || b.Def.FacingOf != null)) text.Append("\nThe strongest there is");
         return text.ToString();
     }
 

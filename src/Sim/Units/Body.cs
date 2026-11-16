@@ -61,6 +61,8 @@ public static class Body
     public const int HighShift = 10;
     /// <summary>Percentage points that move to the legs for a blow struck uphill (from the head first, then the torso).</summary>
     public const int UphillShift = 20;
+    /// <summary>A tower's aim (see <see cref="Economy.BuildingDef.Aim"/>) moves a point of the odds to the head for each this many.</summary>
+    public const int AimShare = 5;
 
     /// <summary>How hard a hit on the part hurts, in percent.</summary>
     public static int HurtPercent(BodyPlan plan, BodyPart part) => (plan == BodyPlan.Beast ? BeastHurt : HumanoidHurt)[(int)part];
@@ -95,9 +97,10 @@ public static class Body
     /// <summary>
     /// The part a roll (0 to 99) lands on, for a body of the plan hit from the angle. From above, the head
     /// takes <see cref="HighShift"/> points off the legs; uphill, the legs take <see cref="UphillShift"/>
-    /// points off the head and then the torso.
+    /// points off the head and then the torso. An aimed shot (from a tower) moves <paramref name="aimed"/>
+    /// points more to the head, off the legs and then the arms.
     /// </summary>
-    public static BodyPart Pick(BodyPlan plan, Angle angle, int roll)
+    public static BodyPart Pick(BodyPlan plan, Angle angle, int roll, int aimed = 0)
     {
         var o = plan == BodyPlan.Beast ? BeastOdds : HumanoidOdds;
         int head = o[0], torso = o[1], arms = o[2], legs = o[3];
@@ -114,6 +117,14 @@ public static class Body
             head -= fromHead;
             torso -= fromTorso;
             legs += fromHead + fromTorso;
+        }
+        if (aimed > 0)
+        {
+            int fromLegs = Math.Min(aimed, legs);
+            int fromArms = Math.Min(aimed - fromLegs, arms);
+            legs -= fromLegs;
+            arms -= fromArms;
+            head += fromLegs + fromArms;
         }
         if (roll < head) return BodyPart.Head;
         roll -= head;

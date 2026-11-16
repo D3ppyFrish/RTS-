@@ -1227,7 +1227,7 @@ public sealed partial class AiPlayer
     {
         Building? first = null;
         foreach (var b in sim.Buildings.All)
-            if (b.Owner == Player && b.Def.IsWall && (first == null || b.Def.Tier < first.Def.Tier)
+            if (b.Owner == Player && b.Def.IsWall && b.Def.Upgrade != null && (first == null || b.Def.Tier < first.Def.Tier)
                 && sim.Economy.CanUpgrade(b) == PlaceResult.Ok) first = b;
         if (first == null) return;
         var total = new int[Goods.Count];

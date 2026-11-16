@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Scripted-input screenshot test for walls and gates (issue #44): the starting units are selected, O places
-# a gate by the start and Y draws a wall through it. The workers build the wall a column at a time, leaving
-# the gate in it: a wooden barrier, the first tier. Then a column of it is selected and its Upgrade button
-# turns the stretch into a wooden wall, the units are right-clicked onto it and the archers and mages take posts on
-# top, and with masonry researched it is upgraded again to stone, under them. Saves PNGs to OUT_DIR and
-# fails if the UI state is not as expected.
+# Scripted-input screenshot test for walls, gates and towers (issue #44): the starting units are selected, O
+# places a gate by the start and Y draws a wall through it. The workers build the wall a column at a time,
+# leaving the gate in it: a wooden barrier, the first tier. Then a column of it is selected and its Upgrade
+# button turns the stretch into a wooden wall four blocks high, the units are right-clicked onto it and the
+# archers and mages take posts on top, and with masonry researched it is upgraded again to stone, under
+# them: six blocks high, and faced on both sides when it is done, so it is three columns thick with a
+# gatehouse round the gate. Then \ puts a stone tower onto the wall (its ghost snaps onto the line from the
+# column beside it) and the workers build it round the wall that stands there, / puts a watchtower on open
+# ground beside it, and the archers and mages, those still on the wall too, are sent up the stone tower.
+# Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-wall-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/walls}")"
@@ -87,10 +91,42 @@ print
 dragworld 84,g,258 104,g,270
 wait 2
 clickworld 93,g,266 right
-ticks 1600
+ticks 3600
 wait 5
 print
 shot $OUT/ui-wall-stone.png
+camera 98,267 30 45 22
+wait 5
+key backslash
+mouseworld 102,g,267
+wait 3
+print
+shot $OUT/ui-tower-snap.png
+clickworld 102,g,267
+ticks 2
+print
+ticks 1800
+print
+key slash
+mouseworld 95,g,273
+wait 3
+print
+clickworld 95,g,273
+ticks 2
+print
+ticks 200
+wait 5
+shot $OUT/ui-tower-building.png
+ticks 800
+print
+drag 360,100 1450,780
+wait 2
+clickworld 102,g,266 right
+ticks 800
+clickworld 102,g,266
+wait 5
+print
+shot $OUT/ui-tower-posted.png
 "
 LOG="$OUT/ui-wall.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -100,7 +136,7 @@ fail() { echo "UI wall test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 11 ] || fail "expected 11 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 18 ] || fail "expected 18 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" own)" -gt 8 ] || fail "the starting units are not selected: ${UI[0]}"
 [ "$(field "${UI[1]}" gates)" -eq 1 ] || fail "no gate placed: ${UI[1]}"
 [ "$(field "${UI[2]}" tool)" = Wall ] && [ "$(field "${UI[2]}" wall_preview)" -eq 11 ] || fail "the wall being drawn is not 11 columns round the gate: ${UI[2]}"
@@ -116,5 +152,15 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[9]}" upgrading)" -eq 12 ] || fail "the wooden wall is not being upgraded: ${UI[9]}"
 [ "$(field "${UI[10]}" tier2)" -eq 12 ] && [ "$(field "${UI[10]}" upgrading)" -eq 0 ] || fail "the wooden wall did not become stone: ${UI[10]}"
 [ "$(field "${UI[10]}" posted)" -eq 7 ] || fail "the archers and mages did not stay on the wall as it turned to stone: ${UI[10]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 6 ] || fail "missing screenshots"
+[ "$(field "${UI[10]}" facings)" -eq 24 ] && [ "$(field "${UI[10]}" sites)" -eq 0 ] || fail "the stone wall is not faced on both sides, the gate too: ${UI[10]}"
+[ "$(field "${UI[11]}" tool)" = Build ] && [ "$(field "${UI[11]}" ghost)" = Ok ] || fail "a stone tower does not fit onto the wall: ${UI[11]}"
+[ "$(field "${UI[12]}" towers)" -eq 1 ] && [ "$(field "${UI[12]}" tier2)" -eq 12 ] || fail "no stone tower site on the wall, or the wall under it is gone already: ${UI[12]}"
+[ "$(field "${UI[12]}" stone)" -eq $(($(field "${UI[10]}" stone) - 60)) ] || fail "the stone tower was not paid for (60 stone): ${UI[12]}"
+[ "$(field "${UI[13]}" towers)" -eq 1 ] && [ "$(field "${UI[13]}" sites)" -eq 0 ] || fail "the stone tower is not finished: ${UI[13]}"
+[ "$(field "${UI[13]}" tier2)" -eq 8 ] && [ "$(field "${UI[13]}" facings)" -eq 16 ] || fail "the stone tower did not take in the wall it stands on (4 columns of it, with their facing): ${UI[13]}"
+[ "$(field "${UI[14]}" ghost)" = Ok ] || fail "a watchtower does not fit on open ground: ${UI[14]}"
+[ "$(field "${UI[15]}" towers)" -eq 2 ] && [ "$(field "${UI[15]}" wood)" -eq $(($(field "${UI[13]}" wood) - 30)) ] || fail "no watchtower site (30 wood): ${UI[15]}"
+[ "$(field "${UI[16]}" towers)" -eq 2 ] && [ "$(field "${UI[16]}" sites)" -eq 0 ] || fail "the watchtower is not finished: ${UI[16]}"
+[ "$(field "${UI[17]}" building)" = stone_tower ] && [ "$(field "${UI[17]}" posted_on_towers)" -ge 7 ] && [ "$(field "${UI[17]}" posted_on_towers)" -eq "$(field "${UI[17]}" posted)" ] || fail "the archers and mages, those on the wall beside it too, are not all up on the stone tower: ${UI[17]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 9 ] || fail "missing screenshots"
 echo "UI wall screenshot test OK: $OUT"

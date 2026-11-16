@@ -224,10 +224,15 @@ public sealed class Conditions
         return Math.Max(MinHit, 100 - miss);
     }
 
-    /// <summary>True if unit <paramref name="shooterId"/>'s shot this tick at a target in column (x, z) lands.</summary>
-    public bool ShotLands(int shooterId, int x, int z)
+    /// <summary>
+    /// True if unit <paramref name="shooterId"/>'s shot this tick at a target in column (x, z) lands. With
+    /// <paramref name="aim"/> (a tower's, see <see cref="Economy.BuildingDef.Aim"/>), that many in a hundred of
+    /// the shots that would miss land after all.
+    /// </summary>
+    public bool ShotLands(int shooterId, int x, int z, int aim = 0)
     {
         int chance = HitChance(x, z);
+        chance += (100 - chance) * aim / 100;
         if (chance >= 100) return true;
         return DeterministicRandom.Hash((int)(_sim.Tick & 0x7FFFFFFF), shooterId, _sim.Seed ^ 0xAC0FUL) % 100 < (uint)chance;
     }

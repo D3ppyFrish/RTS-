@@ -39,7 +39,7 @@ public class StructureDetailTests
     public void OnlyBuildingBlocksGetDetail()
     {
         var structures = Enum.GetValues<BlockType>().Where(StructureDetail.IsStructure).ToArray();
-        Assert.Equal(new[] { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Door, BlockType.Gate, BlockType.Palisade },
+        Assert.Equal(new[] { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Door, BlockType.Gate, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle },
             structures);
     }
 
@@ -128,6 +128,150 @@ public class StructureDetailTests
         // A plank wall with a roof on it is a house's: no parapet.
         for (int x = 4; x <= 10; x++) w.Set(x, 4, 8, BlockType.Thatch);
         Assert.True(Gaps(Shape(w, 7, 3, 8)) < F * (F / 2));
+    }
+
+    [Fact]
+    public void ARampartHasBattlementsOnItsOuterEdgesRoundASunkDeck()
+    {
+        // A stone wall three columns thick along x, six high.
+        var w = Ground();
+        for (int x = 4; x <= 12; x++)
+        for (int z = 7; z <= 9; z++)
+        for (int y = 1; y <= 6; y++)
+            w.Set(x, y, z, BlockType.Rampart);
+        int sink = StructureDetail.DeckSink, deck = F - sink - 1;
+        var pale = new[] { StructurePalette.RampartA, StructurePalette.RampartB, StructurePalette.RampartC, StructurePalette.RampartMortar };
+        var dark = new[] { StructurePalette.StoneA, StructurePalette.StoneB, StructurePalette.StoneC, StructurePalette.Mortar };
+
+        // The middle column's top: nothing but the deck, sunk half a block, of the darker flagstones.
+        var mid = Shape(w, 8, 6, 8);
+        for (int z = 0; z < F; z++)
+        for (int x = 0; x < F; x++)
+        {
+            for (int y = deck + 1; y < F; y++) Assert.Equal(StructurePalette.Empty, At(mid, x, y, z));
+            Assert.Contains(At(mid, x, deck, z), dark);
+        }
+        // An outer column's top: the same deck, and along the outer edge only, two voxels thick, a merlon a
+        // block long (blocks at even x) or the gap between two (odd x).
+        foreach (int bx in new[] { 8, 9 })
+        {
+            var edge = Shape(w, bx, 6, 9);
+            bool merlon = bx % 2 == 0;
+            for (int z = 0; z < F; z++)
+            for (int x = 0; x < F; x++)
+            for (int y = deck + 1; y < F; y++)
+                Assert.Equal(merlon && z >= F - 2, At(edge, x, y, z) != StructurePalette.Empty);
+            if (merlon) Assert.Equal(StructurePalette.RampartMortar, At(edge, 3, F - 1, F - 1)); // its capstone
+            Assert.Contains(At(edge, 3, deck, 3), dark);
+            Assert.Contains(At(edge, 3, deck, F - 2), pale); // the wall goes on up to the gap's sill
+            // Under the battlements a smooth band of the palest stone runs round the outside.
+            Assert.Equal(StructurePalette.RampartC, At(edge, 3, 0, F - 1));
+            Assert.Equal(StructurePalette.RampartC, At(edge, 6, 1, F - 1));
+        }
+        // The end of the wall is an outer edge too, and where two edges meet there is always a merlon.
+        var corner = Shape(w, 12, 6, 9);
+        for (int y = deck + 1; y < F; y++)
+        {
+            Assert.NotEqual(StructurePalette.Empty, At(corner, F - 1, y, F - 1));
+            Assert.Equal(StructurePalette.Empty, At(corner, 2, y, 2));
+        }
+        // The faces below are coursed stone, paler than a house's, solid behind the sunk joints.
+        var face = Shape(w, 8, 3, 9);
+        var seen = new HashSet<byte>();
+        for (int y = 0; y < F; y++)
+        for (int x = 0; x < F; x++)
+        {
+            seen.Add(At(face, x, y, F - 1));
+            Assert.Contains(At(face, x, y, F - 2), pale);
+        }
+        Assert.Contains(StructurePalette.Empty, seen); // the joints
+        Assert.Subset(new HashSet<byte>(pale) { StructurePalette.Empty, StructurePalette.Soot }, seen);
+        Assert.DoesNotContain(StructurePalette.RampartMortar, seen);
+
+        // A tower standing three levels over the wall: where the wall's deck runs into it there is no
+        // battlement (the tower's side is no open edge), and inside a turn the corner gets a merlon.
+        for (int x = 13; x <= 17; x++)
+        for (int z = 6; z <= 10; z++)
+        for (int y = 1; y <= 9; y++)
+            w.Set(x, y, z, BlockType.Rampart);
+        var joined = Shape(w, 12, 6, 8);
+        for (int z = 0; z < F; z++)
+        for (int x = 0; x < F; x++)
+            Assert.Equal(StructurePalette.Empty, At(joined, x, F - 1, z));
+        var top = Shape(w, 13, 9, 6);
+        Assert.NotEqual(StructurePalette.Empty, At(top, 0, F - 1, 0));
+        Assert.Equal(StructurePalette.Empty, At(top, F - 1, F - 1, F - 1));
+    }
+
+    [Fact]
+    public void AWatchtowerIsAnOpenFrameRoundALadderUnderARailedDeck()
+    {
+        var w = Ground();
+        for (int x = 4; x <= 6; x++)
+        for (int z = 4; z <= 6; z++)
+        for (int y = 1; y <= 7; y++)
+            w.Set(x, y, z, BlockType.Trestle);
+        int deck = F - StructureDetail.DeckSink - 1;
+        var timber = new[] { StructurePalette.Timber, StructurePalette.StakeA, StructurePalette.StakeB };
+
+        // A corner block: a post two voxels square at the outer corner, all the way up; the rest is mostly air.
+        var corner = Shape(w, 4, 3, 4);
+        for (int y = 0; y < F; y++)
+        {
+            Assert.Equal(StructurePalette.Timber, At(corner, 0, y, 0));
+            Assert.Equal(StructurePalette.Timber, At(corner, 1, y, 1));
+            Assert.Equal(StructurePalette.Empty, At(corner, 4, y, 4));
+        }
+        // The block in the middle of a face: a girt along its top and one brace from corner to corner, on the
+        // outside only; you see through the rest.
+        var side = Shape(w, 5, 3, 4);
+        int filled = 0;
+        for (int y = 0; y < F; y++)
+        for (int z = 0; z < F; z++)
+        for (int x = 0; x < F; x++)
+        {
+            byte c = At(side, x, y, z);
+            if (c == StructurePalette.Empty) continue;
+            filled++;
+            Assert.Equal(0, z);
+            Assert.Contains(c, timber);
+            Assert.True(y == F - 1 || x == y || x == F - 1 - y, $"timber off the girt and the brace at {x}, {y}");
+        }
+        Assert.Equal(F + F - 1, filled);
+        // The braces lean one way and the other by turns up the tower.
+        var above = Shape(w, 5, 4, 4);
+        Assert.NotEqual(At(side, 0, 0, 0) == StructurePalette.Empty, At(above, 0, 0, 0) == StructurePalette.Empty);
+        // The middle of the tower: a ladder, two rails with rungs between them.
+        var core = Shape(w, 5, 3, 5);
+        for (int y = 0; y < F; y++)
+        {
+            Assert.Equal(StructurePalette.StakeB, At(core, 2, y, 3));
+            Assert.Equal(StructurePalette.StakeB, At(core, 5, y, 4));
+            Assert.Equal(y % 2 == 0, At(core, 3, y, 3) != StructurePalette.Empty);
+            Assert.Equal(StructurePalette.Empty, At(core, 0, y, 0));
+        }
+        // The top level: a deck of boards right across, sunk like a wall's, on beams; round the outside a rail
+        // on the corner post and a baluster every four voxels, open between them.
+        var top = Shape(w, 5, 7, 4);
+        var boards = new[] { StructurePalette.PlankA, StructurePalette.PlankB, StructurePalette.PlankC };
+        for (int z = 0; z < F; z++)
+        for (int x = 0; x < F; x++)
+        {
+            Assert.Contains(At(top, x, deck, z), boards);
+            Assert.Equal(z == 0, At(top, x, F - 1, z) != StructurePalette.Empty);
+            for (int y = deck + 1; y < F - 1; y++)
+                Assert.Equal(z == 0 && x % 4 == 0, At(top, x, y, z) != StructurePalette.Empty);
+        }
+        Assert.Contains(At(top, 3, deck - 1, 0), timber);
+        var topCorner = Shape(w, 4, 7, 4);
+        for (int y = 0; y < F; y++) Assert.NotEqual(StructurePalette.Empty, At(topCorner, 0, y, 0));
+        Assert.Equal(StructurePalette.Empty, At(topCorner, 3, F - 2, 3));
+        // The deck's middle block has no rail.
+        var topCore = Shape(w, 5, 7, 5);
+        for (int z = 0; z < F; z++)
+        for (int x = 0; x < F; x++)
+        for (int y = deck + 1; y < F; y++)
+            Assert.Equal(StructurePalette.Empty, At(topCore, x, y, z));
     }
 
     [Fact]

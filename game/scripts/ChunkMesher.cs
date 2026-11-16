@@ -235,6 +235,10 @@ public static class ChunkMesher
         StructurePalette.Sap => new Color(0.55f, 0.04f, 0.05f),
         StructurePalette.StakeA => new Color(0.6f, 0.43f, 0.25f),
         StructurePalette.StakeB => new Color(0.52f, 0.36f, 0.2f),
+        StructurePalette.RampartA => new Color(0.8f, 0.79f, 0.75f),
+        StructurePalette.RampartB => new Color(0.7f, 0.69f, 0.66f),
+        StructurePalette.RampartC => new Color(0.89f, 0.88f, 0.83f),
+        StructurePalette.RampartMortar => new Color(0.5f, 0.49f, 0.46f),
         _ => new Color(1, 0, 1),
     };
 
@@ -260,6 +264,8 @@ public static class ChunkMesher
         BlockType.Door => new Color(0.32f, 0.2f, 0.11f),
         BlockType.Gate => new Color(0.26f, 0.17f, 0.1f),
         BlockType.Palisade => new Color(0.47f, 0.33f, 0.19f),
+        BlockType.Rampart => new Color(0.78f, 0.77f, 0.73f),
+        BlockType.Trestle => new Color(0.5f, 0.35f, 0.2f),
         BlockType.Lava => new Color(1f, 0.3f, 0f),
         BlockType.Farmland => new Color(0.37f, 0.26f, 0.14f),
         BlockType.Road => new Color(0.6f, 0.54f, 0.43f),

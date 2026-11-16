@@ -255,13 +255,15 @@ public sealed partial class AiPlayer
                 if (result is not (PlaceResult.Ok or PlaceResult.CannotAfford)) continue; // no tech yet, or no room above
                 left = true;
                 stone += Price(to.Cost, Good.Stone);
-                if (open >= KeepOpenSites || result != PlaceResult.Ok || !SpareForWall(stock, to.Cost)) continue;
+                // A faced wall is three sites' work: itself, and the facing that goes up on each side of it after.
+                int sites = to.Facing != null ? 3 : 1;
+                if (open + sites > KeepOpenSites || result != PlaceResult.Ok || !SpareForWall(stock, to.Cost)) continue;
                 issue(new UpgradeCommand(Player, none, b.Id, false));
                 Spend(to.Cost);
                 stone -= Price(to.Cost, Good.Stone);
                 spent += Price(to.Cost, Good.Stone);
                 becomes ??= to;
-                open++;
+                open += sites;
                 started++;
             }
             if (started > 0 && sim.Tick >= _strengthenNote)
@@ -296,12 +298,15 @@ public sealed partial class AiPlayer
     // When it may next write in its journal that it is upgrading its wall (once a minute, not every look).
     private long _strengthenNote;
 
-    /// <summary>The columns of its wall waiting to be built or being upgraded.</summary>
+    /// <summary>
+    /// The columns of its wall waiting to be built or being upgraded; one being upgraded to a faced wall counts
+    /// for three, with the facing that goes up beside it when that is done.
+    /// </summary>
     private int OpenWallSites(Simulation sim)
     {
         int open = 0;
         foreach (var b in sim.Buildings.All)
-            if (b.Owner == Player && b.Def.IsWall && b.WantsBuilders && !b.Planned) open++;
+            if (b.Owner == Player && b.Def.IsWall && b.WantsBuilders && !b.Planned) open += b.Upgrade?.Facing != null ? 3 : 1;
         return open;
     }
 
@@ -327,12 +332,15 @@ public sealed partial class AiPlayer
         var going = new List<int>();
         if (at != null && at.Owner == Player && at.Active && at.Def.Walkway)
         {
-            // As many as there are free columns to stand on along that side, within reach of the gate.
+            // As many as there are free columns to stand on along that side, within reach of the gate: the
+            // line's own, or where it is faced with stone the facing's on either side of it.
             int free = 0;
             for (int k = -EconomySystem.PostReach; k <= EconomySystem.PostReach; k++)
+            for (int d = -1; d <= 1; d++)
             {
-                var b = gate.AlongX ? sim.Buildings.AtColumn(gate.X + k, gate.Z) : sim.Buildings.AtColumn(gate.X, gate.Z + k);
-                if (b != null && b.Owner == Player && econ.PostFree(b)) free++;
+                int x = gate.AlongX ? gate.X + k : gate.X + d, z = gate.AlongX ? gate.Z + d : gate.Z + k;
+                var b = sim.Buildings.AtColumn(x, z);
+                if (b != null && b.Owner == Player && econ.PostFree(b, x, z)) free++;
             }
             foreach (int id in home)
             {

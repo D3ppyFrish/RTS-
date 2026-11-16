@@ -322,14 +322,15 @@ public sealed class UnitMovement
     }
 
     /// <summary>
-    /// A unit on top of a wall or gate, with an order and no way on from up there (the wall is too high to
-    /// step off), climbs down: it is set on the ground at the foot of the wall, on the side nearest to where it
-    /// is going, and walks on from there. False if it stands on no wall, or the wall has no ground at its foot.
+    /// A unit on top of a wall, gate or tower, with an order and no way on from up there (it is too high to
+    /// step off), climbs down: it is set on the ground at the foot of the wall (see
+    /// <see cref="Economy.EconomySystem.Foot"/>), on the side nearest to where it is going, and walks on from
+    /// there. False if it stands on no wall, or the wall has no ground at its foot.
     /// </summary>
     private bool ClimbDown(UnitStore u, int i)
     {
         if (_sim.Economy.WallUnder(i) is not { } wall) return false;
-        if (!_sim.Economy.SpotBeside(wall, u.OrderX[i], u.OrderZ[i], out int x, out int z, out int y) || wall.ColumnDistance(x, z) != 1)
+        if (!_sim.Economy.Foot(wall, u.X[i].FloorToInt(), u.Z[i].FloorToInt(), u.OrderX[i], u.OrderZ[i], out int x, out int z, out int y))
             return false;
         u.X[i] = Fix64.FromInt(x) + Fix64.Half;
         u.Z[i] = Fix64.FromInt(z) + Fix64.Half;

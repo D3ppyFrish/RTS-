@@ -193,6 +193,11 @@ public sealed class UnitStore
     public int[] Rout = Array.Empty<int>();
     /// <summary>Chases in a row that ended out of reach of the target.</summary>
     public int[] ChaseRetry = Array.Empty<int>();
+    /// <summary>
+    /// The building (id) it was sent to attack and could not get to, while it breaks through a wall in the way
+    /// (see <see cref="CombatSystem"/>): it goes back to that building when the wall is down. 0 otherwise.
+    /// </summary>
+    public int[] BreachFor = Array.Empty<int>();
     /// <summary>Ticks before it looks for a fight again, after giving up on one.</summary>
     public int[] CombatWait = Array.Empty<int>();
     /// <summary>The nearest unit (id) that hit it in the last tick, or 0.</summary>
@@ -319,7 +324,7 @@ public sealed class UnitStore
         CarryAmount[i] = 0;
         Combat[i] = CombatOrder.Auto;
         Target[i] = TargetBuilding[i] = DestX[i] = DestZ[i] = DestY[i] = 0;
-        Cooldown[i] = Rout[i] = ChaseRetry[i] = CombatWait[i] = HitBy[i] = 0;
+        Cooldown[i] = Rout[i] = ChaseRetry[i] = CombatWait[i] = HitBy[i] = BreachFor[i] = 0;
         Morale[i] = CombatSystem.MaxMorale;
         LosBlocked[i] = false;
         Stance[i] = UnitStance.Aggressive;
@@ -349,7 +354,7 @@ public sealed class UnitStore
     public void ClearCombat(int i)
     {
         Combat[i] = CombatOrder.Auto;
-        Target[i] = TargetBuilding[i] = 0;
+        Target[i] = TargetBuilding[i] = BreachFor[i] = 0;
         ChaseRetry[i] = CombatWait[i] = 0;
         LosBlocked[i] = false;
     }
@@ -414,7 +419,7 @@ public sealed class UnitStore
             Mix((int)JobBlock[i]); Mix(JobTimer[i]); Mix(JobStore[i]); Mix(JobRetry[i]); Mix(JobMisses[i]);
             Mix((int)Carry[i]); Mix(CarryAmount[i]);
             Mix((int)Combat[i]); Mix(Target[i]); Mix(TargetBuilding[i]); Mix(DestX[i]); Mix(DestZ[i]); Mix(DestY[i]);
-            Mix(Cooldown[i]); Mix(Morale[i]); Mix(Rout[i]); Mix(ChaseRetry[i]); Mix(CombatWait[i]); Mix(HitBy[i]);
+            Mix(Cooldown[i]); Mix(Morale[i]); Mix(Rout[i]); Mix(ChaseRetry[i]); Mix(CombatWait[i]); Mix(HitBy[i]); Mix(BreachFor[i]);
             Mix(LosBlocked[i] ? 1 : 0); Mix((int)Stance[i]); Mix(LastFight[i]); Mix(Mending[i].Raw);
             Mix(Auto[i] ? 1 : 0); Mix(Held[i] ? 1 : 0); Mix((long)Priorities[i]);
             Mix(Xp[i]); Mix(Subdued[i] ? 1 : 0); Mix(Town[i]);
@@ -442,7 +447,7 @@ public sealed class UnitStore
         Combat[to] = Combat[from]; Target[to] = Target[from]; TargetBuilding[to] = TargetBuilding[from];
         DestX[to] = DestX[from]; DestZ[to] = DestZ[from]; DestY[to] = DestY[from];
         Cooldown[to] = Cooldown[from]; Morale[to] = Morale[from]; Rout[to] = Rout[from];
-        ChaseRetry[to] = ChaseRetry[from]; CombatWait[to] = CombatWait[from]; HitBy[to] = HitBy[from];
+        ChaseRetry[to] = ChaseRetry[from]; CombatWait[to] = CombatWait[from]; HitBy[to] = HitBy[from]; BreachFor[to] = BreachFor[from];
         LosBlocked[to] = LosBlocked[from]; Stance[to] = Stance[from]; LastFight[to] = LastFight[from]; Mending[to] = Mending[from];
         Auto[to] = Auto[from]; Held[to] = Held[from]; Priorities[to] = Priorities[from];
         Xp[to] = Xp[from]; Subdued[to] = Subdued[from]; Town[to] = Town[from];
@@ -472,6 +477,7 @@ public sealed class UnitStore
         Array.Resize(ref DestX, capacity); Array.Resize(ref DestZ, capacity); Array.Resize(ref DestY, capacity);
         Array.Resize(ref Cooldown, capacity); Array.Resize(ref Morale, capacity); Array.Resize(ref Rout, capacity);
         Array.Resize(ref ChaseRetry, capacity); Array.Resize(ref CombatWait, capacity); Array.Resize(ref HitBy, capacity);
+        Array.Resize(ref BreachFor, capacity);
         Array.Resize(ref LosBlocked, capacity); Array.Resize(ref Stance, capacity);
         Array.Resize(ref LastFight, capacity); Array.Resize(ref Mending, capacity);
         Array.Resize(ref Auto, capacity); Array.Resize(ref Held, capacity); Array.Resize(ref Priorities, capacity);

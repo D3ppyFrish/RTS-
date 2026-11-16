@@ -314,45 +314,115 @@ public sealed partial class EconomySystem
     /// <summary>
     /// Checks whether the player can put a building with its footprint's corner at column (x, z), and the
     /// level it would stand at. The ground may vary by one block (the site is levelled); trees, water and
-    /// other buildings (or the gap around them; walls and gates need none between each other) must not be
-    /// in the way. With <paramref name="checkPlayer"/>
-    /// false only the ground counts, not the player's techs and goods (match setup).
+    /// other buildings (or the gap around them; walls, gates and towers need none between each other) must
+    /// not be in the way. A tower may stand on the player's own walls (see <see cref="TakesPlaceOf"/>). With
+    /// <paramref name="checkPlayer"/> false only the ground counts, not the player's techs and goods (match setup).
     /// A plan is checked with <paramref name="ignore"/>: the building that may stand on its own footprint.
     /// </summary>
     public PlaceResult CanPlace(int player, BuildingDef def, int x, int z, out int baseY, bool checkPlayer = true, Building? ignore = null)
     {
         baseY = -1;
         if (def.IsBridge) return PlaceResult.Blocked; // laid along a line instead (see BridgeCommand)
-        // An upgrade is not placed: the building it comes from is, and then upgraded (see UpgradeCommand).
-        if (checkPlayer && (def.UpgradeOf != null || !Unlocked(player, def))) return PlaceResult.Locked;
+        // An upgrade is not placed: the building it comes from is, and then upgraded (see UpgradeCommand). Nor is
+        // a facing: it goes up beside the wall it faces.
+        if (checkPlayer && (def.UpgradeOf != null || def.FacingOf != null || !Unlocked(player, def))) return PlaceResult.Locked;
         var w = World;
         int x1 = x + def.SizeX - 1, z1 = z + def.SizeZ - 1;
         if (x < 1 || z < 1 || x1 > w.SizeX - 2 || z1 > w.SizeZ - 2) return PlaceResult.OutOfBounds;
+        List<Building>? taken = null;
         foreach (var b in Buildings.All)
         {
             if (b == ignore) continue;
-            // Walls and gates join up with each other; everything else keeps a gap of a column.
-            int gap = def.IsWall && b.Def.IsWall ? 0 : 1;
-            if (x <= b.MaxX + gap && x1 >= b.X - gap && z <= b.MaxZ + gap && z1 >= b.Z - gap) return PlaceResult.Crowded;
+            // Walls, gates and towers join up with each other; everything else keeps a gap of a column.
+            int gap = def.IsRampart && b.Def.IsRampart ? 0 : 1;
+            if (x > b.MaxX + gap || x1 < b.X - gap || z > b.MaxZ + gap || z1 < b.Z - gap) continue;
+            if (!TakesPlaceOf(player, def, x, z, b)) return PlaceResult.Crowded;
+            (taken ??= new List<Building>()).Add(b);
         }
         if (_sim.Cities.Crowds(x, z, x1, z1)) return PlaceResult.Crowded;
 
-        baseY = Walk.GroundLevel(w, x + def.SizeX / 2, z + def.SizeZ / 2);
+        // Under a wall the tower takes the place of, the ground is where the wall stands, and the wall's own
+        // blocks are not in the way.
+        Building? Under(int cx, int cz)
+        {
+            if (taken != null)
+                foreach (var t in taken)
+                    if (t.Covers(cx, cz)) return t;
+            return null;
+        }
+        baseY = Under(x + def.SizeX / 2, z + def.SizeZ / 2)?.Y ?? Walk.GroundLevel(w, x + def.SizeX / 2, z + def.SizeZ / 2);
         int clear = Math.Max(def.Height, Walk.Clearance);
         if (baseY < 2 || baseY + clear >= w.SizeY) return PlaceResult.Uneven;
         for (int cz = z; cz <= z1; cz++)
         for (int cx = x; cx <= x1; cx++)
         {
-            int g = Walk.GroundLevel(w, cx, cz);
+            var under = Under(cx, cz);
+            int g = under?.Y ?? Walk.GroundLevel(w, cx, cz);
             if (g < baseY - 1 || g > baseY + 1) return PlaceResult.Uneven;
             // A high column is cut down: its top block must be plain ground with solid ground under it.
             if (g == baseY + 1 && (!BlockInfo.IsGround(w.Get(cx, baseY, cz)) || !BlockInfo.IsSolid(w.Get(cx, baseY - 1, cz))))
                 return PlaceResult.Blocked;
-            for (int y = Math.Max(g, baseY); y < baseY + clear; y++)
+            int from = under == null ? Math.Max(g, baseY) : Math.Max(under.Y + Math.Max(under.Def.Height, 1), baseY);
+            for (int y = from; y < baseY + clear; y++)
                 if (w.Get(cx, y, cz) is var c && c != BlockType.Air && !BlockInfo.IsLeaves(c)) return PlaceResult.Blocked;
         }
         if (checkPlayer && !CanAfford(player, def.Cost)) return PlaceResult.CannotAfford;
         return PlaceResult.Ok;
+    }
+
+    /// <summary>
+    /// True if a tower with its footprint's corner at column (x, z) takes the place of building b: a finished
+    /// wall of the player's own (a column of any tier, or of a facing; not a gate, since nobody walks through a
+    /// tower) or a smaller finished tower of theirs, wholly inside its footprint. That is how a tower is put
+    /// onto a wall: the wall stands as it is while the tower goes up around and over it, and is part of the
+    /// tower once that is finished (see <see cref="Absorb"/>).
+    /// </summary>
+    public static bool TakesPlaceOf(int player, BuildingDef def, int x, int z, Building b)
+    {
+        if (!def.IsTower || b.Owner != player || !b.Active) return false;
+        if (b.Def.Kind != BuildingKind.Wall && !(b.Def.IsTower && b.Def.SizeX * b.Def.SizeZ < def.SizeX * def.SizeZ)) return false;
+        return b.X >= x && b.Z >= z && b.MaxX <= x + def.SizeX - 1 && b.MaxZ <= z + def.SizeZ - 1;
+    }
+
+    /// <summary>
+    /// A finished tower takes in what it was put onto (see <see cref="TakesPlaceOf"/>): those walls are gone as
+    /// buildings, and their columns are the tower's, whole.
+    /// </summary>
+    private void Absorb(Building tower)
+    {
+        if (!tower.Def.IsTower) return;
+        var all = Buildings.All;
+        int top = tower.Y + tower.Def.Height;
+        List<Building>? taken = null;
+        foreach (var b in all)
+            if (b != tower && TakesPlaceOf(tower.Owner, tower.Def, tower.X, tower.Z, b)) (taken ??= new List<Building>()).Add(b);
+        if (taken == null) return;
+        foreach (var b in taken)
+        {
+            // What it has above or below the tower goes; the rest becomes the tower's own blocks below.
+            for (int k = 0; k < b.Placed; k++)
+            {
+                var t = b.Def.Blocks[k];
+                int x = b.X + t.X, y = b.Y + t.Y, z = b.Z + t.Z;
+                if ((y < tower.Y || y >= top) && World.Get(x, y, z) == t.Block) World.Set(x, y, z, y < tower.Y ? BlockType.Soil : BlockType.Air);
+            }
+            Buildings.Remove(b);
+        }
+        var blocks = tower.Def.Blocks;
+        for (int k = 0; k < blocks.Count; k++)
+        {
+            var t = blocks[k];
+            int x = tower.X + t.X, y = tower.Y + t.Y, z = tower.Z + t.Z;
+            bool inside = false;
+            foreach (var b in taken) inside |= b.Covers(x, z);
+            if (!inside) continue;
+            if (World.Get(x, y, z) != t.Block) World.Set(x, y, z, t.Block);
+            if (tower.Gone != null && tower.Gone[k])
+            {
+                tower.Gone[k] = false;
+                tower.Lost -= tower.Def.BlockToughness(k);
+            }
+        }
     }
 
     /// <summary>
@@ -366,6 +436,7 @@ public sealed partial class EconomySystem
         b.Placed = def.Blocks.Count;
         b.Work = def.BuildTicks;
         b.State = BuildingState.Active;
+        Absorb(b);
         return b;
     }
 
@@ -385,24 +456,36 @@ public sealed partial class EconomySystem
         Buildings.Remove(b);
     }
 
-    /// <summary>Creates the building and levels its site: high columns cut down, low ones filled, leaves cleared.</summary>
+    /// <summary>
+    /// Creates the building and levels its site: high columns cut down, low ones filled, leaves cleared. The
+    /// walls a tower is put onto are left standing (see <see cref="TakesPlaceOf"/>).
+    /// </summary>
     private Building Prepare(int owner, BuildingDef def, int x, int z, int baseY)
     {
-        Level(def, x, z, baseY);
+        Level(owner, def, x, z, baseY);
         return Buildings.Add(owner, def, x, baseY, z);
     }
 
-    private void Level(BuildingDef def, int x, int z, int baseY)
+    private void Level(int owner, BuildingDef def, int x, int z, int baseY)
     {
         var w = World;
         int clear = Math.Max(def.Height, Walk.Clearance);
         for (int cz = z; cz < z + def.SizeZ; cz++)
         for (int cx = x; cx < x + def.SizeX; cx++)
         {
+            if (def.IsTower && OnTaken(owner, def, x, z, cx, cz)) continue;
             if (!BlockInfo.IsSolid(w.Get(cx, baseY - 1, cz))) w.Set(cx, baseY - 1, cz, BlockType.Soil);
             for (int y = baseY; y < baseY + clear; y++)
                 if (w.Get(cx, y, cz) != BlockType.Air) w.Set(cx, y, cz, BlockType.Air);
         }
+    }
+
+    /// <summary>True if column (cx, cz) holds a wall that a tower of the owner's at (x, z) takes the place of.</summary>
+    private bool OnTaken(int owner, BuildingDef def, int x, int z, int cx, int cz)
+    {
+        foreach (var b in Buildings.All)
+            if (b.Covers(cx, cz) && TakesPlaceOf(owner, def, x, z, b)) return true;
+        return false;
     }
 
     /// <summary>
@@ -431,6 +514,7 @@ public sealed partial class EconomySystem
         if (b.Placed == blocks.Count && b.Work >= b.Def.BuildTicks)
         {
             b.State = BuildingState.Active;
+            Absorb(b);
             _sim.Events.BuildingFinished(b);
         }
     }
@@ -470,8 +554,11 @@ public sealed partial class EconomySystem
         }
     }
 
-    /// <summary>The standable column next to the building (within 3 columns) nearest to (x, z).</summary>
-    internal bool SpotBeside(Building b, int x, int z, out int sx, out int sz, out int sy)
+    /// <summary>
+    /// The standable column next to the building (within 3 columns) nearest to (x, z), within
+    /// <paramref name="levels"/> of the level the building stands at.
+    /// </summary>
+    internal bool SpotBeside(Building b, int x, int z, out int sx, out int sz, out int sy, int levels = 2)
     {
         sx = sz = sy = -1;
         long best = long.MaxValue;
@@ -480,7 +567,7 @@ public sealed partial class EconomySystem
         for (int cx = b.X - d; cx <= b.MaxX + d; cx++)
         {
             if (b.ColumnDistance(cx, cz) != d) continue;
-            int y = Walk.NearestStandLevel(World, cx, cz, b.Y, 2);
+            int y = Walk.NearestStandLevel(World, cx, cz, b.Y, levels);
             if (y < 0 || Buildings.AtColumn(cx, cz) != null) continue;
             long dx = cx - x, dz = cz - z, score = dx * dx + dz * dz;
             if (score >= best) continue;
@@ -727,7 +814,7 @@ public sealed partial class EconomySystem
     {
         if (CanPlace(b.Owner, b.Def, b.X, b.Z, out int baseY, ignore: b) != PlaceResult.Ok) return false;
         if (!TrySpend(b.Owner, b.Def.Cost, b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2)) return false;
-        Level(b.Def, b.X, b.Z, baseY);
+        Level(b.Owner, b.Def, b.X, b.Z, baseY);
         b.Y = baseY;
         b.State = BuildingState.Site;
         return true;
