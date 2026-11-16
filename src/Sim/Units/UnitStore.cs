@@ -24,6 +24,11 @@ public enum CombatOrder : byte
     Attack,
     /// <summary>Walks to <see cref="UnitStore.DestX"/>, Y, Z, fighting the enemies it spots on the way.</summary>
     AttackMove,
+    /// <summary>
+    /// Patrols: walks to <see cref="UnitStore.DestX"/>, Y, Z as on an attack-move, then back to
+    /// <see cref="UnitStore.PatrolX"/>, Y, Z, and so on, until it is given another order.
+    /// </summary>
+    Patrol,
 }
 
 /// <summary>
@@ -185,6 +190,15 @@ public sealed class UnitStore
     public int[] DestX = Array.Empty<int>();
     public int[] DestZ = Array.Empty<int>();
     public int[] DestY = Array.Empty<int>();
+    /// <summary>On a patrol, the other end of it (where it walks back to from DestX, DestZ, DestY).</summary>
+    public int[] PatrolX = Array.Empty<int>();
+    public int[] PatrolZ = Array.Empty<int>();
+    public int[] PatrolY = Array.Empty<int>();
+    /// <summary>
+    /// On a patrol: 1 once its walk to the end it is heading for has ended (it turns round), plus 2 for every
+    /// walk in a row that ended short of its end (see <see cref="CombatSystem"/>). 0 otherwise.
+    /// </summary>
+    public int[] PatrolState = Array.Empty<int>();
     /// <summary>Ticks until it can hit again.</summary>
     public int[] Cooldown = Array.Empty<int>();
     /// <summary>0 to <see cref="CombatSystem.MaxMorale"/>: falls when allies die nearby; the unit routs when it breaks.</summary>
@@ -324,6 +338,7 @@ public sealed class UnitStore
         CarryAmount[i] = 0;
         Combat[i] = CombatOrder.Auto;
         Target[i] = TargetBuilding[i] = DestX[i] = DestZ[i] = DestY[i] = 0;
+        PatrolX[i] = PatrolZ[i] = PatrolY[i] = PatrolState[i] = 0;
         Cooldown[i] = Rout[i] = ChaseRetry[i] = CombatWait[i] = HitBy[i] = BreachFor[i] = 0;
         Morale[i] = CombatSystem.MaxMorale;
         LosBlocked[i] = false;
@@ -350,12 +365,16 @@ public sealed class UnitStore
         Loose[i] = 0;
     }
 
+    /// <summary>True if the unit walks somewhere fighting what it meets: an attack-move or a patrol.</summary>
+    public bool FightsOnTheWay(int i) => Combat[i] is CombatOrder.AttackMove or CombatOrder.Patrol;
+
     /// <summary>Back to the default of fighting what it meets while it stands: no target and no attack order.</summary>
     public void ClearCombat(int i)
     {
         Combat[i] = CombatOrder.Auto;
         Target[i] = TargetBuilding[i] = BreachFor[i] = 0;
         ChaseRetry[i] = CombatWait[i] = 0;
+        PatrolX[i] = PatrolZ[i] = PatrolY[i] = PatrolState[i] = 0;
         LosBlocked[i] = false;
     }
 
@@ -419,6 +438,7 @@ public sealed class UnitStore
             Mix((int)JobBlock[i]); Mix(JobTimer[i]); Mix(JobStore[i]); Mix(JobRetry[i]); Mix(JobMisses[i]);
             Mix((int)Carry[i]); Mix(CarryAmount[i]);
             Mix((int)Combat[i]); Mix(Target[i]); Mix(TargetBuilding[i]); Mix(DestX[i]); Mix(DestZ[i]); Mix(DestY[i]);
+            Mix(PatrolX[i]); Mix(PatrolZ[i]); Mix(PatrolY[i]); Mix(PatrolState[i]);
             Mix(Cooldown[i]); Mix(Morale[i]); Mix(Rout[i]); Mix(ChaseRetry[i]); Mix(CombatWait[i]); Mix(HitBy[i]); Mix(BreachFor[i]);
             Mix(LosBlocked[i] ? 1 : 0); Mix((int)Stance[i]); Mix(LastFight[i]); Mix(Mending[i].Raw);
             Mix(Auto[i] ? 1 : 0); Mix(Held[i] ? 1 : 0); Mix((long)Priorities[i]);
@@ -446,6 +466,7 @@ public sealed class UnitStore
         Carry[to] = Carry[from]; CarryAmount[to] = CarryAmount[from];
         Combat[to] = Combat[from]; Target[to] = Target[from]; TargetBuilding[to] = TargetBuilding[from];
         DestX[to] = DestX[from]; DestZ[to] = DestZ[from]; DestY[to] = DestY[from];
+        PatrolX[to] = PatrolX[from]; PatrolZ[to] = PatrolZ[from]; PatrolY[to] = PatrolY[from]; PatrolState[to] = PatrolState[from];
         Cooldown[to] = Cooldown[from]; Morale[to] = Morale[from]; Rout[to] = Rout[from];
         ChaseRetry[to] = ChaseRetry[from]; CombatWait[to] = CombatWait[from]; HitBy[to] = HitBy[from]; BreachFor[to] = BreachFor[from];
         LosBlocked[to] = LosBlocked[from]; Stance[to] = Stance[from]; LastFight[to] = LastFight[from]; Mending[to] = Mending[from];
@@ -475,6 +496,8 @@ public sealed class UnitStore
         Array.Resize(ref JobRetry, capacity); Array.Resize(ref JobMisses, capacity); Array.Resize(ref Carry, capacity); Array.Resize(ref CarryAmount, capacity);
         Array.Resize(ref Combat, capacity); Array.Resize(ref Target, capacity); Array.Resize(ref TargetBuilding, capacity);
         Array.Resize(ref DestX, capacity); Array.Resize(ref DestZ, capacity); Array.Resize(ref DestY, capacity);
+        Array.Resize(ref PatrolX, capacity); Array.Resize(ref PatrolZ, capacity); Array.Resize(ref PatrolY, capacity);
+        Array.Resize(ref PatrolState, capacity);
         Array.Resize(ref Cooldown, capacity); Array.Resize(ref Morale, capacity); Array.Resize(ref Rout, capacity);
         Array.Resize(ref ChaseRetry, capacity); Array.Resize(ref CombatWait, capacity); Array.Resize(ref HitBy, capacity);
         Array.Resize(ref BreachFor, capacity);

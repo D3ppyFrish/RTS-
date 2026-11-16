@@ -199,6 +199,9 @@ public sealed class CommandLog
                 AttackMoveCommand am => am.Y < 0
                     ? string.Create(ci, $"{tick} attack-move {am.PlayerId} {am.X} {am.Z} {Ids(am.Units)}")
                     : string.Create(ci, $"{tick} attack-move {am.PlayerId} {am.X} {am.Z} {Ids(am.Units)} {am.Y}"),
+                PatrolCommand pa => pa.Y < 0
+                    ? string.Create(ci, $"{tick} patrol {pa.PlayerId} {pa.X} {pa.Z} {Ids(pa.Units)}")
+                    : string.Create(ci, $"{tick} patrol {pa.PlayerId} {pa.X} {pa.Z} {Ids(pa.Units)} {pa.Y}"),
                 DigAreaCommand da => string.Create(ci, $"{tick} dig-area {da.PlayerId} {da.X1} {da.Z1} {da.X2} {da.Z2} {da.Y} {Ids(da.Units)}"),
                 TunnelCommand tn => string.Create(ci, $"{tick} tunnel {tn.PlayerId} {tn.X} {tn.Y} {tn.Z} {Ids(tn.Units)}"),
                 AutomateCommand au => string.Create(ci, $"{tick} automate {au.PlayerId} {OnOff(au.On)} {Ids(au.Units)}"),
@@ -314,6 +317,8 @@ public sealed class CommandLog
                             "attack" => new AttackCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
                             "attack-building" => new AttackBuildingCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
                             "attack-move" => new AttackMoveCommand(Int(f[2]), ParseIds(f[5]), Int(f[3]), Int(f[4]),
+                                f.Length > 6 ? Int(f[6]) : -1),
+                            "patrol" => new PatrolCommand(Int(f[2]), ParseIds(f[5]), Int(f[3]), Int(f[4]),
                                 f.Length > 6 ? Int(f[6]) : -1),
                             "dig-area" => new DigAreaCommand(Int(f[2]), ParseIds(f[8]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6]), Int(f[7])),
                             "tunnel" => new TunnelCommand(Int(f[2]), ParseIds(f[6]), Int(f[3]), Int(f[4]), Int(f[5])),

@@ -296,7 +296,7 @@ public sealed class MonsterSystem
         {
             int i = u.IndexOf(id);
             Fix64 d2 = Distance2(i, lair);
-            bool goingHome = u.Order[i] == UnitOrder.Move && u.Combat[i] != CombatOrder.AttackMove
+            bool goingHome = u.Order[i] == UnitOrder.Move && !u.FightsOnTheWay(i)
                 && u.OrderX[i] == lair.X && u.OrderZ[i] == lair.Z;
             Fix64 reach = lair.TrackerIds.Contains(id) ? trackLeash : leash;
             if (d2 > reach * reach)

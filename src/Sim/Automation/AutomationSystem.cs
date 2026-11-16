@@ -679,7 +679,7 @@ public sealed class AutomationSystem
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
             var hall = NearestHall(u.Owner[i], x, z);
             if (hall == null || hall.ColumnDistance(x, z) <= CombatSystem.HomeRadius) continue;
-            if (u.Order[i] == UnitOrder.Move && u.Combat[i] != CombatOrder.AttackMove
+            if (u.Order[i] == UnitOrder.Move && !u.FightsOnTheWay(i)
                 && hall.ColumnDistance(u.OrderX[i], u.OrderZ[i]) <= CombatSystem.HomeRadius)
                 continue;
             groups ??= new SortedDictionary<long, List<int>>();

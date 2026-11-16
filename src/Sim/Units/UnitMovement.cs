@@ -343,6 +343,8 @@ public sealed class UnitMovement
     {
         // The end of an attack-move's walk (arrived, or no way on) is the end of the attack-move.
         if (u.Order[i] == UnitOrder.Move && u.Combat[i] == CombatOrder.AttackMove) u.Combat[i] = CombatOrder.Auto;
+        // On a patrol it turns round (see CombatSystem).
+        if (u.Order[i] == UnitOrder.Move && u.Combat[i] == CombatOrder.Patrol) u.PatrolState[i] |= 1;
         u.Order[i] = UnitOrder.Idle;
         u.Blocked[i] = 0;
         u.Field[i] = 0;

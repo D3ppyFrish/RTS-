@@ -52,7 +52,12 @@ unit of it carried by a worker or held in a building. A player's stock is what t
 
 - **Orders**: an attack order (`AttackCommand`, `AttackBuildingCommand`) sends units after their
   target wherever it goes; an attack-move (`AttackMoveCommand`) walks somewhere and fights what it meets
-  on the way, then carries on; a plain move walks past enemies. Soldiers standing still fight the
+  on the way, then carries on; a plain move walks past enemies. A patrol (`PatrolCommand`) is an
+  attack-move that never ends: each unit walks to the goal fighting what it meets, then back to where it
+  stood when it was given the order, and so on, until it is given another order. A unit that stops to
+  fight carries on to the same end afterwards. A walk that ends more than 2 columns past the arrival
+  radius from its end counts as a miss, and two misses in a row end the patrol (there is no way between
+  the ends); a goal less than 3 columns away is only an attack-move. Soldiers standing still fight the
   nearest enemy they see and answer anyone who hits them; workers fight only when ordered to. A soldier
   on a raid that is attacked drops the raid and fights back.
 - **Damage**: each unit's damage, attack time, range, sight and splash are in `data/units.json`. The role

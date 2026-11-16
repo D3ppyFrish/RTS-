@@ -18,11 +18,11 @@ namespace Rts.Game;
 ///   mouse X,Y            move the mouse (dragging if a button is held)
 ///   down X,Y [right]     press a mouse button (left by default); "here" for X,Y: where the mouse is
 ///   up X,Y [right]       release it
-///   click X,Y [right] [ctrl] [shift]   press and release, optionally holding Ctrl or Shift
+///   click X,Y [right] [ctrl] [shift] [alt]   press and release, optionally holding Ctrl, Shift or Alt
 ///   mouseworld X,Y,Z     move the mouse to the top of block (X, Y, Z) as the camera sees it now (a Y
 ///                        of g means the highest solid block in that column, g+N that many blocks above
 ///                        it: g+1 is the middle of a unit standing there)
-///   clickworld X,Y,Z [right] [ctrl] [shift]   click the top of block (X, Y, Z)
+///   clickworld X,Y,Z [right] [ctrl] [shift] [alt]   click the top of block (X, Y, Z)
 ///   clickui NAME         click the middle of the visible HUD control with that node name (tech_roads,
 ///                        train_worker, build_house, techs_button, ...)
 ///   select NAME N|TEXT   pick item N (from 0) of the visible option list with that node name, or the first
@@ -316,6 +316,7 @@ public sealed class InputScript
             ButtonMask = _held,
             CtrlPressed = parts != null && Has(parts, "ctrl"),
             ShiftPressed = parts != null && Has(parts, "shift"),
+            AltPressed = parts != null && Has(parts, "alt"),
         });
     }
 
