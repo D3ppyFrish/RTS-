@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Rts.Sim.Tests;
 
-/// <summary>Uses for cleared monster dens: the Orcs' wolf lodge, and the hook for a den-only form (issue #70).</summary>
+/// <summary>Uses for cleared monster dens: the Orcs' wolf lodge and the Settlers' Wolfheart (issue #3).</summary>
 public class DenTests
 {
     private const int Ground = 3; // flat test worlds: grass at 3, units stand at 4
@@ -126,8 +126,7 @@ public class DenTests
         Assert.False(lair.Used, "not while the pack is there");
 
         Clear(sim, lair);
-        // The Settlers' den form waits on the designer's choice: for now they have no use for a den.
-        Assert.Null(sim.Content.Faction("settlers").Den);
+        // A Settlers worker cannot take the Settlers' den form (a spearman's), so it cannot use the den.
         Assert.False(sim.Monsters.CanUseDen(Settlers, lair, new[] { Index(sim, settler) }));
         sim.Schedule(sim.Tick, new DenCommand(Settlers, new[] { settler }, lair.Id));
         // Someone else's unit does not count.
@@ -165,41 +164,107 @@ public class DenTests
     }
 
     /// <summary>
-    /// The hook the Settlers' den form will use: with a faction's den use naming a form (here a stand-in, as
-    /// the designer has yet to pick the real one), the unit nearest the den that can take it does, and only there.
+    /// Settlers clear a wolf lair, then use its den on one of their spearmen: that one becomes a Wolfheart, a
+    /// form it can get no other way, and the den is gone. They still get the lair's reward.
+    /// </summary>
+    [Fact]
+    public void SettlersClearALairAndUseTheDenToMakeAWolfheart()
+    {
+        var sim = Flat();
+        var hall = Place(sim, Settlers, "town_hall", 10, 10);
+        var lair = PlaceLair(sim);
+        var spearmen = Squad(sim, Settlers, "spearman", DenX - 24, DenZ - 2, 8);
+        int worker = sim.SpawnUnit(Settlers, "worker", DenX - 4, DenZ - 16);
+        sim.Schedule(0, new AttackMoveCommand(Settlers, spearmen, DenX, DenZ));
+        int food = hall.Stock[(int)Good.Food];
+        RunUntil(sim, () => lair.Cleared, 60 * Tps, "the settlers clear the lair");
+        sim.Step();
+        Assert.True(hall.Stock[(int)Good.Food] > food, "the lair's reward still comes");
+
+        var alive = spearmen.Where(sim.Units.Exists).ToArray();
+        Assert.NotEmpty(alive);
+        var users = alive.Append(worker).ToArray();
+        Assert.True(sim.Monsters.CanUseDen(Settlers, lair, users.Select(id => Index(sim, id))));
+        int nearest = sim.Monsters.DenUser(lair, users.Select(id => Index(sim, id)), sim.Content.Faction("settlers").Den!);
+        int chosen = sim.Units.Id[nearest];
+        int hpBefore = sim.Units.Hp[nearest];
+        sim.Schedule(sim.Tick, new DenCommand(Settlers, users, lair.Id));
+        sim.Step();
+
+        Assert.True(lair.Used);
+        Assert.Equal(Settlers, lair.UsedBy);
+        Assert.Equal(0, lair.Building);
+        var db = sim.Content;
+        Assert.Equal("wolfheart", db.Units[sim.Units.Def[Index(sim, chosen)]].Id);
+        Assert.True(sim.Units.Hp[Index(sim, chosen)] >= hpBefore, "it keeps its share of hit points, or more");
+        Assert.Single(users, id => db.Units[sim.Units.Def[Index(sim, id)]].Id == "wolfheart");
+        Assert.Equal("worker", db.Units[sim.Units.Def[Index(sim, worker)]].Id);
+
+        // A den is used once.
+        Assert.False(sim.Monsters.CanUseDen(Settlers, lair, users.Select(id => Index(sim, id))));
+        sim.Schedule(sim.Tick, new DenCommand(Settlers, users, lair.Id));
+        sim.Step();
+        Assert.Single(users, id => db.Units[sim.Units.Def[Index(sim, id)]].Id == "wolfheart");
+    }
+
+    /// <summary>
+    /// The den form goes to the selected unit nearest the den that can take it, only there and only once the
+    /// lair is cleared; experience never gives it.
     /// </summary>
     [Fact]
     public void ADenFormIsTakenByTheNearestUnitThatCanAndOnlyAtADen()
     {
-        var files = Files();
-        Edit(files, "units.json", "  { \"id\": \"knight\",",
-            "  { \"id\": \"den_test_form\", \"name\": \"Den form\", \"evolvesFrom\": \"spearman\", \"faction\": \"settlers\", \"fromDen\": true,\n" +
-            "    \"role\": \"heavy_infantry\", \"speed\": 4, \"hp\": 200, \"damage\": 20 },\n  { \"id\": \"knight\",");
-        Edit(files, "factions.json", "\"uiLook\": \"stone\",", "\"uiLook\": \"stone\", \"den\": { \"form\": \"den_test_form\" },");
-        var db = ContentLoader.Load(files);
-        Assert.Same(db.Unit("den_test_form"), db.Faction("settlers").Den!.Form);
+        var db = ContentDb.Default;
+        Assert.Same(db.Unit("wolfheart"), db.Faction("settlers").Den!.Form);
 
-        var sim = Flat(db);
+        var sim = Flat();
         var lair = PlaceLair(sim);
+        foreach (int id in lair.Pack.ToArray()) sim.Units.RemoveAt(Index(sim, id)); // cleared on the next tick
         int near = sim.SpawnUnit(Settlers, "spearman", DenX + 2, DenZ);
         int nearer = sim.SpawnUnit(Settlers, "spearman", DenX + 1, DenZ);
         int worker = sim.SpawnUnit(Settlers, "worker", DenX, DenZ + 1);
+        int far = sim.SpawnUnit(Settlers, "spearman", DenX - 20, DenZ);
         sim.Units.Xp[Index(sim, near)] = sim.Units.Xp[Index(sim, nearer)] = 100000;
 
-        // Experience never gives it.
-        Assert.False(sim.Evolution.CanEvolve(Index(sim, nearer), db.Unit("den_test_form")));
-        sim.Schedule(sim.Tick, new EvolveCommand(Settlers, new[] { nearer }, "den_test_form"));
+        // Experience never gives it, and it is not among the forms a spearman picks from.
+        Assert.DoesNotContain(db.Unit("wolfheart"), db.Unit("spearman").Forms);
+        Assert.False(sim.Evolution.CanEvolve(Index(sim, nearer), db.Unit("wolfheart")));
+        sim.Schedule(sim.Tick, new EvolveCommand(Settlers, new[] { nearer }, "wolfheart"));
+        sim.Schedule(sim.Tick, new AutoEvolveCommand(Settlers, "spearman", "wolfheart"));
         sim.Step();
+        Assert.True(lair.Cleared);
         Assert.Equal("spearman", db.Units[sim.Units.Def[Index(sim, nearer)]].Id);
+        Assert.Null(sim.Evolution.AutoForm(Settlers, db.Unit("spearman")));
 
-        Clear(sim, lair);
-        sim.Schedule(sim.Tick, new DenCommand(Settlers, new[] { worker, near, nearer }, lair.Id));
+        // Too far from the den, or no spearman among them: nothing happens.
+        sim.Schedule(sim.Tick, new DenCommand(Settlers, new[] { far }, lair.Id));
+        sim.Schedule(sim.Tick, new DenCommand(Settlers, new[] { worker }, lair.Id));
+        sim.Step();
+        Assert.False(lair.Used);
+
+        sim.Schedule(sim.Tick, new DenCommand(Settlers, new[] { worker, near, nearer, far }, lair.Id));
         sim.Step();
         Assert.True(lair.Used);
         Assert.Equal(0, lair.Building);
-        Assert.Equal("den_test_form", db.Units[sim.Units.Def[Index(sim, nearer)]].Id);
+        Assert.Equal("wolfheart", db.Units[sim.Units.Def[Index(sim, nearer)]].Id);
         Assert.Equal("spearman", db.Units[sim.Units.Def[Index(sim, near)]].Id);
+        Assert.Equal("spearman", db.Units[sim.Units.Def[Index(sim, far)]].Id);
         Assert.Equal("worker", db.Units[sim.Units.Def[Index(sim, worker)]].Id);
+    }
+
+    /// <summary>The Wolfheart is data: what it gives over a spearman, and its one drawback, upkeep.</summary>
+    [Fact]
+    public void TheWolfheartIsData()
+    {
+        var db = ContentDb.Default;
+        var wolfheart = db.Unit("wolfheart");
+        var spearman = db.Unit("spearman");
+        Assert.True(wolfheart.FromDen);
+        Assert.Same(spearman, wolfheart.EvolvesFrom);
+        Assert.Same(db.Faction("settlers"), wolfheart.Faction);
+        Assert.True(wolfheart.MaxHp > spearman.MaxHp && wolfheart.Damage > spearman.Damage && wolfheart.Speed > spearman.Speed && wolfheart.Sight > spearman.Sight);
+        Assert.Equal(3, wolfheart.Upkeep);
+        Assert.Null(wolfheart.TrainedAt);
     }
 
     [Fact]
@@ -251,7 +316,7 @@ public class DenTests
     {
         var files = Files();
         Edit(files, "factions.json", "\"den\": { \"building\": \"wolf_lodge\" }", "\"den\": { \"building\": \"house\", \"form\": \"knight\" }");
-        Edit(files, "factions.json", "\"uiLook\": \"stone\",", "\"uiLook\": \"stone\", \"den\": { \"form\": \"knight\" },");
+        Edit(files, "factions.json", "\"den\": { \"form\": \"wolfheart\" }", "\"den\": { \"form\": \"knight\" }");
         Edit(files, "buildings.json", "\"yieldTime\": 15, ", "");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
         Assert.Contains("factions.json: faction 'orcs', den: needs one of \"building\" (put up on the den) or \"form\" (a unit near the den takes it), not both", e.Errors);
@@ -279,6 +344,7 @@ public class DenTests
         }
         ulong original = ContentDb.Default.Hash;
         Assert.NotEqual(original, Hash("factions.json", ",\n    \"den\": { \"building\": \"wolf_lodge\" }", ""));
+        Assert.NotEqual(original, Hash("factions.json", "\"den\": { \"form\": \"wolfheart\" }, ", ""));
         Assert.NotEqual(original, Hash("buildings.json", "\"yield\": { \"food\": 5 }", "\"yield\": { \"food\": 6 }"));
         Assert.NotEqual(original, Hash("buildings.json", "\"yieldTime\": 15", "\"yieldTime\": 16"));
     }

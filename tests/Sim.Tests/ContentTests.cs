@@ -41,7 +41,7 @@ public class ContentTests
         Assert.Equal(new[] { "town_hall", "storehouse", "house", "farm", "barracks", "smelter", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "goblin_totem", "bridge" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "foreman", "militia", "knight", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
-            "ranger", "lancer", "outrider", "tunneller", "demolisher", "battle_mage", "seer" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
+            "ranger", "lancer", "outrider", "tunneller", "demolisher", "battle_mage", "seer", "wolfheart" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
         Assert.Equal(15, db.Techs.Count);
 
         // A branching tree: shared roots, techs that lead to more than one, long chains, a few per faction.

@@ -129,6 +129,11 @@
     "description": "Sees and strikes from far off, but walks slowly.",
     "speed": 3.5, "hp": 45, "model": "seer", "damage": 10, "attackTime": 2, "range": 11, "sight": 15, "splash": 1.5,
     "attack": "crush" },
+  // Taken only at a cleared wolf den (see "den" in factions.json).
+  { "id": "wolfheart", "name": "Wolfheart", "evolvesFrom": "spearman", "faction": "settlers", "role": "line_infantry", "fromDen": true,
+    "description": "Wears the pelt of the pack it beat: hunts fast and hits hard, and eats like a wolf.",
+    "speed": 5.5, "hp": 110, "model": "wolfheart", "damage": 12, "attackTime": 1, "range": 1.5, "sight": 12,
+    "attack": "pierce", "upkeep": 3, "armor": { "head": 1, "torso": 2 } },
 
   // Monsters.
   { "id": "wolf", "name": "Wolf", "role": "monster",

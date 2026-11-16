@@ -1597,11 +1597,16 @@ public partial class PlayerControl : Node
         var soldiers = OwnSoldiers();
         string stance = soldiers.Count > 0 ? u.Stance[u.IndexOf(soldiers[0])].ToString() : "none";
         var evolution = _sim.Evolution;
-        int canEvolve = 0, evolved = 0;
+        int canEvolve = 0, evolved = 0, denForms = 0;
         foreach (int id in own)
             if (evolution.CanEvolve(u.IndexOf(id))) canEvolve++;
         for (int i = 0; i < u.Count; i++)
-            if (u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].IsForm) evolved++;
+        {
+            if (u.Owner[i] != LocalPlayer) continue;
+            var unitDef = _sim.Content.Units[u.Def[i]];
+            if (unitDef.IsForm) evolved++;
+            if (unitDef.FromDen) denForms++;
+        }
         var autoForms = new List<string>();
         foreach (var def in _sim.Content.Units)
             if (evolution.AutoForm(LocalPlayer, def) is { } form) autoForms.Add($"{def.Id}:{form.Id}");
@@ -1683,7 +1688,7 @@ public partial class PlayerControl : Node
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +
                $"beaten={beaten} monsters={monsters} riders={riders} wild={wild} lairs={lairs} " +
-               $"den_usable={(UsableDen() != null ? 1 : 0)} dens_used={densUsed} den_buildings={lodges} " +
+               $"den_usable={(UsableDen() != null ? 1 : 0)} dens_used={densUsed} den_buildings={lodges} den_forms={denForms} " +
                $"city={(_sim.Cities.Get(SelectedCity)?.Def.Id ?? "none")} holder={town?.Holder ?? -1} " +
                $"totem_owner={(town != null ? _sim.Cities.Totem(town)?.Owner ?? -1 : -1)} guards={town?.Guards.Count() ?? 0} " +
                $"guards_owner={(town != null && town.Guards.Any() ? u.Owner[u.IndexOf(town.Guards.First())] : -1)} tribute={town?.Caravans.Count ?? 0} " +

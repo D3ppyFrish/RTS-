@@ -4,7 +4,8 @@
 # field, now theirs. The Beaten button picks one, which a spearman rides (it becomes a wolf rider), then
 # the next, which is recruited. The units around the cleared den are box-selected and make it a wolf lodge,
 # which their workers build. Then as the Settlers: their starting units clear the lair east of the west
-# start, and the wolves die and pay the lair's reward into the town hall. Saves PNGs to OUT_DIR and fails
+# start, and the wolves die and pay the lair's reward into the town hall; the units around the cleared den
+# are box-selected and use it, and the spearman nearest it becomes a Wolfheart. Saves PNGs to OUT_DIR and fails
 # if the UI state is not as expected.
 # Usage: scripts/ui-monsters-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -88,6 +89,19 @@ key plus*2
 ticks 510
 print
 shot $OUT/ui-wolves-settlers.png
+camera 127,257 30 50 34
+wait 5
+dragworld 116,g,251 134,g,265
+wait 2
+ticks 2
+print
+shot $OUT/ui-den-wolfheart-button.png
+clickui den_use
+ticks 2
+print
+camera 127,257 30 35 10
+wait 5
+shot $OUT/ui-den-wolfheart.png
 "
 LOG="$OUT/ui-monsters.log"
 run() {
@@ -100,7 +114,7 @@ fail() { echo "UI monsters test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step failed: $(grep '^Input script' "$LOG")"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 10 ] || fail "expected 10 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 12 ] || fail "expected 12 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" own)" -eq 24 ] && [ "$(field "${UI[0]}" wild)" -eq 12 ] && [ "$(field "${UI[0]}" lairs)" -eq 3 ] \
   || fail "the Orcs' starting units are not selected, or the three packs are not there: ${UI[0]}"
 # The Orcs beat the whole pack: the four wolves are theirs, waiting, the lair is cleared and pays nothing.
@@ -120,5 +134,9 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[9]}" lairs)" -eq 2 ] && [ "$(field "${UI[9]}" wild)" -eq 8 ] && [ "$(field "${UI[9]}" beaten)" -eq 0 ] \
   && [ "$(field "${UI[9]}" food)" -eq $(( $(field "${UI[8]}" food) + 150 )) ] && [ "$(field "${UI[9]}" iron)" -eq $(( $(field "${UI[8]}" iron) + 20 )) ] \
   || fail "the Settlers did not clear the lair for its reward: ${UI[9]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 6 ] || fail "missing screenshots"
+# Then they use the den: one spearman becomes a Wolfheart, and the den is gone.
+[ "$(field "${UI[10]}" den_usable)" -eq 1 ] && [ "$(field "${UI[10]}" den_forms)" -eq 0 ] || fail "the Settlers cannot use the cleared den: ${UI[10]}"
+[ "$(field "${UI[11]}" den_forms)" -eq 1 ] && [ "$(field "${UI[11]}" dens_used)" -eq 1 ] && [ "$(field "${UI[11]}" den_usable)" -eq 0 ] \
+  || fail "no spearman became a Wolfheart at the den: ${UI[11]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 8 ] || fail "missing screenshots"
 echo "UI monsters screenshot test OK: $OUT"

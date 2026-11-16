@@ -1010,7 +1010,7 @@ public partial class Hud : CanvasLayer
         }
         else if (use.Form is { } form)
         {
-            _denButton.Text = $"Use the {den}: {form.Name.ToLowerInvariant()}";
+            _denButton.Text = $"Make a {form.EvolvesFrom!.Name.ToLowerInvariant()} a {form.Name.ToLowerInvariant()} at the {den}";
             _denButton.Icon = null;
             _denButton.TooltipText = $"The selected {form.EvolvesFrom!.Name.ToLowerInvariant()} nearest the den becomes a " +
                                      $"{form.Name.ToLowerInvariant()}, a form it can get nowhere else. The den is gone.\n{form.Description}";
