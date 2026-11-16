@@ -27,6 +27,23 @@ public sealed class FactionDef
     public DenUse? Den { get; internal set; }
     /// <summary>What its players can do to the dusk tree once its warden is gone (see <see cref="Units.DuskTreeSystem"/>).</summary>
     public DuskTreeUse DuskTree { get; init; }
+    /// <summary>How a computer player plays it (see <see cref="AI.AiPlayer"/>).</summary>
+    public AiStyle AiStyle { get; init; }
+}
+
+/// <summary>
+/// How a computer player plays a faction. What each level makes of it is in <see cref="AI.AiPlayer"/>: the
+/// levels that can build a wall (Normal and Hard) do so only for a balanced faction.
+/// </summary>
+public enum AiStyle : byte
+{
+    /// <summary>It masses its soldiers and sends nearly all of them as one big wave, and builds no walls.</summary>
+    Waves,
+    /// <summary>
+    /// It walls its town, and when it attacks it keeps a good part of its soldiers at home behind the wall
+    /// and sends the rest: smaller attacks than a wave, from a town that is not left open.
+    /// </summary>
+    Balanced,
 }
 
 /// <summary>What a faction can do to the dusk tree once its warden is gone (see <see cref="Units.DuskTreeSystem"/>).</summary>

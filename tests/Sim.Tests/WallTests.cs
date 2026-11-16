@@ -93,6 +93,28 @@ public class WallTests
     }
 
     [Fact]
+    public void ABuilderStandingWhereTheNextColumnGoesStepsAside()
+    {
+        // Two columns of wall side by side, each with its builder standing on the other: a block waits while
+        // a unit stands where it goes, so each would wait on the other for good. A builder at work on
+        // another site is sent off this one, and works on from beside its own.
+        var sim = Flat();
+        Store(sim, 0, stone: 10);
+        sim.Schedule(0, new WallCommand(0, Array.Empty<int>(), "wall", 20, 30, 21, 30));
+        sim.Step();
+        var left = sim.Buildings.AtColumn(20, 30)!;
+        var right = sim.Buildings.AtColumn(21, 30)!;
+        int onLeft = sim.SpawnUnit(0, "worker", 20, 30), onRight = sim.SpawnUnit(0, "worker", 21, 30);
+        sim.Schedule(sim.Tick, new WorkCommand(0, new[] { onLeft }, right.Id));
+        sim.Schedule(sim.Tick, new WorkCommand(0, new[] { onRight }, left.Id));
+        sim.Step();
+        Assert.Equal((right.Id, left.Id), (sim.Units.JobTarget[Index(sim, onLeft)], sim.Units.JobTarget[Index(sim, onRight)]));
+        RunUntil(sim, () => left.Active && right.Active, 30 * Tps, "both columns to go up");
+        foreach (int id in new[] { onLeft, onRight })
+            Assert.Null(sim.Buildings.AtColumn(sim.Units.X[Index(sim, id)].FloorToInt(), sim.Units.Z[Index(sim, id)].FloorToInt()));
+    }
+
+    [Fact]
     public void AWallStopsWhereTheStoneRunsOutAndKeepsAGateItCrosses()
     {
         var sim = Flat();

@@ -224,12 +224,12 @@ public class HardAiTests
     [Fact]
     public void HardMeetsRaidersAtAFarBuildingWithAPartyAndAnAttackOnItsTownWithEveryone()
     {
-        // One enemy spearman by a storehouse sixty columns from the town hall: three of the twelve go.
+        // One enemy spearman by a storehouse forty columns from the town hall: three of the twelve go.
         var sim = WithStarts(160, (40, 80));
         var hall = sim.Economy.TownHall(0)!;
         for (int k = 0; k < 12; k++) sim.SpawnUnit(0, "spearman", hall.X + k % 6, hall.MaxZ + 4 + k / 6);
-        sim.Economy.PlaceFinished(0, sim.Content.Building("storehouse"), 100, 78);
-        int raider = sim.SpawnUnit(1, "spearman", 106, 86);
+        sim.Economy.PlaceFinished(0, sim.Content.Building("storehouse"), 76, 78);
+        int raider = sim.SpawnUnit(1, "spearman", 82, 86);
         sim.Schedule(0, new StanceCommand(1, new[] { raider }, UnitStance.Hold));
         var log = new List<Command>();
         Play(sim, new[] { new AiPlayer(0, 1, AiLevel.Hard) }, () => false, 3 * Tps, log);
@@ -461,6 +461,239 @@ public class HardAiTests
             $"the {left} it had no work for to be sent on to the grove; {Cutting(x => x >= 100)} are");
         Assert.Equal(workers.Count - left, Cutting(x => x == 70)); // the others are still at the lone tree,
         Assert.True(BlockInfo.IsTrunk(sim.World.Get(70, Ground + 1, 80))); // which still stands
+    }
+
+    [Fact]
+    public void WhileHardIsShortOfStoneForSomethingItKeepsOnlyTheStoneInHand()
+    {
+        // Better tools is next (40 wood and 20 stone), and it has wood for that or for fields, not both.
+        // Without the stone it does not sit on the wood: the fields go up. With the stone in hand it keeps
+        // the wood for the research too, and the fields wait.
+        foreach (bool hasStone in new[] { false, true })
+        {
+            var sim = WithStarts(96, (40, 48), (40, 20));
+            var hall = sim.Economy.TownHall(1)!; // the Orcs: no wall to save for
+            sim.Economy.Grant(1, sim.Content.Tech("farming"));
+            for (int k = 0; k < 6; k++) sim.SpawnUnit(1, "worker", hall.X + k, hall.MaxZ + 2);
+            Array.Clear(hall.Stock);
+            hall.Stock[(int)Good.Wood] = 35;
+            hall.Stock[(int)Good.Stone] = hasStone ? 20 : 0;
+            var log = new List<Command>();
+            Play(sim, new[] { new AiPlayer(1, 1, AiLevel.Hard) }, () => false, 3 * Tps, log);
+            Assert.Empty(log.OfType<ResearchCommand>());
+            Assert.Equal(!hasStone, log.OfType<BuildCommand>().Any(b => b.Building == "farm"));
+        }
+    }
+
+    // --- Hard: how it plays each faction -------------------------------------------------------------------
+
+    /// <summary>The game's data with how the computer plays the Settlers and the Orcs (see AiStyle) as given.</summary>
+    private static Content.ContentDb WithStyles(string settlers, string orcs)
+    {
+        var files = new Dictionary<string, string>();
+        foreach (var f in Content.ContentLoader.Files) files[f] = Content.ContentLoader.EmbeddedText(f)!;
+        string text = files["factions.json"];
+        Assert.Contains("\"aiStyle\": \"balanced\"", text);
+        Assert.Contains("\"aiStyle\": \"waves\"", text);
+        files["factions.json"] = text.Replace("\"aiStyle\": \"balanced\"", "\"aiStyle\": \"@settlers\"").Replace("\"aiStyle\": \"waves\"", "\"aiStyle\": \"@orcs\"")
+            .Replace("@settlers", settlers).Replace("@orcs", orcs);
+        return Content.ContentLoader.Load(files);
+    }
+
+    /// <summary>
+    /// A flat world with two towns far apart under fog, and for the player a barracks, twenty workers and
+    /// goods enough to wall the town and build more besides (no trees: what it has is all the wood there is).
+    /// </summary>
+    private static (Simulation Sim, Building Hall) ATownToWall(int player, Content.ContentDb? content = null, int x = 60)
+    {
+        var sim = new Simulation(new RegionMap(1, TestWorlds.Flat(192, 16, 192, Ground)), content);
+        sim.Map.Starts.Add(new StartArea(0, player == 0 ? x : 132, Ground + 1, 96));
+        sim.Map.Starts.Add(new StartArea(1, player == 1 ? x : 132, Ground + 1, 96));
+        sim.PlaceStartingBuildings();
+        sim.Fog = true;
+        var hall = sim.Economy.TownHall(player)!;
+        sim.Economy.PlaceFinished(player, sim.Content.Building("barracks"), hall.X - 9, hall.Z - 9);
+        for (int k = 0; k < 20; k++) sim.SpawnUnit(player, "worker", hall.X + k % 7, hall.MaxZ + 2 + k / 7);
+        hall.Stock[(int)Good.Food] = 600;
+        hall.Stock[(int)Good.Wood] = 2000;
+        hall.Stock[(int)Good.Stone] = 1000;
+        return (sim, hall);
+    }
+
+    [Fact]
+    public void HardWallsATownItPlaysBalancedAFewColumnsAtATimeAndKeepsTheLineClear()
+    {
+        var (sim, hall) = ATownToWall(0); // the Settlers
+        sim.TestMode = true; // only to take a column of the wall away, further down
+        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        var players = new[] { ai };
+        var log = new List<Command>();
+        Play(sim, players, () => false, 1, log);
+
+        // The line is marked out at once, before anything is built: 16 columns out from the town hall, 20
+        // on the side of its door, with a gate in the north and south sides and two in the west and east.
+        Assert.Equal((hall.X - AiPlayer.KeepGap, hall.Z - AiPlayer.KeepGap, hall.MaxX + AiPlayer.KeepGap, hall.MaxZ + AiPlayer.KeepYard), ai.TownWall);
+        var (x0, z0, x1, z1) = ai.TownWall!.Value;
+        Assert.Equal(6, ai.TownGates.Count);
+        Assert.Equal((1, 1), (ai.TownGates.Count(g => g.AlongX && g.Z == z0), ai.TownGates.Count(g => g.AlongX && g.Z == z1)));
+        Assert.Equal((2, 2), (ai.TownGates.Count(g => !g.AlongX && g.X == x0), ai.TownGates.Count(g => !g.AlongX && g.X == x1)));
+        Assert.Contains(ai.Journal, j => j.Text.StartsWith("marks out a wall round its town hall"));
+        var line = new List<(int X, int Z)>();
+        for (int x = x0; x <= x1; x++) line.AddRange(new[] { (x, z0), (x, z1) });
+        for (int z = z0 + 1; z < z1; z++) line.AddRange(new[] { (x0, z), (x1, z) });
+        bool InGate(int x, int z) => ai.TownGates.Any(g => g.AlongX ? z == g.Z && Math.Abs(x - g.X) <= AiPlayer.KeepGate / 2 : x == g.X && Math.Abs(z - g.Z) <= AiPlayer.KeepGate / 2);
+
+        // It lays the wall a few columns at a time, and its workers build it as they do any site.
+        int most = 0;
+        bool Whole() => line.All(c => sim.Buildings.AtColumn(c.X, c.Z) is { Owner: 0, State: BuildingState.Active } b && b.Def.IsWall);
+        Assert.True(Play(sim, players, () =>
+        {
+            most = Math.Max(most, sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsWall && b.State == BuildingState.Site));
+            return Whole();
+        }, 8 * 60 * Tps, log), $"the wall to be whole; {line.Count(c => sim.Buildings.AtColumn(c.X, c.Z) == null)} of {line.Count} columns are not laid");
+        Assert.InRange(most, 2, AiPlayer.KeepOpenSites);
+        Assert.Contains(ai.Journal, j => j.Text.Contains("side of its wall"));
+        foreach (var (x, z) in line)
+            Assert.Equal(InGate(x, z) ? BuildingKind.Gate : BuildingKind.Wall, sim.Buildings.AtColumn(x, z)!.Def.Kind);
+        Assert.Equal(6 * AiPlayer.KeepGate, line.Count(c => InGate(c.X, c.Z)));
+
+        // Meanwhile its town has grown, and nothing stands on the line, right beside it (which would leave a
+        // hole: a wall column cannot stand against another building) or in the way through a gate.
+        var town = sim.Buildings.All.Where(b => b.Owner == 0 && !b.Def.IsWall && b.Def.Kind != BuildingKind.TownHall).ToList();
+        Assert.True(town.Count >= 6, $"{town.Count} buildings");
+        foreach (var b in town)
+        {
+            bool inside = b.X > x0 + 1 && b.MaxX < x1 - 1 && b.Z > z0 + 1 && b.MaxZ < z1 - 1;
+            bool outside = b.MaxX < x0 - 1 || b.X > x1 + 1 || b.MaxZ < z0 - 1 || b.Z > z1 + 1;
+            Assert.True(inside || outside, $"a {b.Def.Id} at {b.X},{b.Z} is on the line of the wall");
+            foreach (var g in ai.TownGates)
+            {
+                int wx = g.AlongX ? AiPlayer.KeepGate / 2 : AiPlayer.KeepLane, wz = g.AlongX ? AiPlayer.KeepLane : AiPlayer.KeepGate / 2;
+                Assert.False(b.X <= g.X + wx && b.MaxX >= g.X - wx && b.Z <= g.Z + wz && b.MaxZ >= g.Z - wz, $"a {b.Def.Id} at {b.X},{b.Z} is in the way through the gate at {g.X},{g.Z}");
+            }
+        }
+        Assert.Contains(town, b => b.X > x0 && b.MaxX < x1 && b.Z > z0 && b.MaxZ < z1); // some of it within the wall
+
+        // A column knocked out is laid again the next time it looks at its wall.
+        var (kx, kz) = (x0, z0 + 5);
+        log.Clear();
+        sim.Schedule(sim.Tick, new SandboxClearCommand(0, kx, kz, 0));
+        sim.Step();
+        Assert.Null(sim.Buildings.AtColumn(kx, kz));
+        Assert.True(Play(sim, players, () => log.OfType<WallCommand>().Any(), AiPlayer.KeepLookTicks + 2 * Tps, log), "the column to be laid again");
+        var again = Assert.Single(log.OfType<WallCommand>());
+        Assert.Equal(("wall", kx, kz, kx, kz), (again.Building, again.X1, again.Z1, again.X2, again.Z2));
+    }
+
+    [Fact]
+    public void AWaveLeavesAQuarterOfTheSoldiersAtHomeForABalancedFactionAndFewerForOneItPlaysInWaves()
+    {
+        foreach (int player in new[] { 0, 1 })
+        {
+            // The same army for the Settlers (balanced) and the Orcs (waves): the twenty a player starts with
+            // (it takes the enemy to have as many), then forty more. Three quarters of the sixty are enough
+            // to attack with: the part it sends is what has to be half again as strong as the enemy's.
+            var sim = WithStarts(192, (20, 96), (170, 96));
+            sim.Fog = true;
+            var hall = sim.Economy.TownHall(player)!;
+            sim.SpawnUnit(player, "rider", hall.X + 7, hall.MaxZ + 5);
+            for (int k = 0; k < 19; k++) sim.SpawnUnit(player, "spearman", hall.X - 7 + k % 10, hall.MaxZ + 7 + k / 10);
+            var ai = new AiPlayer(player, 1, AiLevel.Hard);
+            var players = new[] { ai };
+            Play(sim, players, () => false, 1); // it takes stock of what it starts with
+            for (int k = 0; k < 40; k++) sim.SpawnUnit(player, "spearman", hall.X - 7 + k % 10, hall.MaxZ + 11 + k / 10);
+            Assert.True(Play(sim, players, () => ai.Waves == 1, 4 * 60 * Tps), $"player {player}'s wave to set out");
+            int left = 60 - ai.Wave.Count;
+            int share = player == 0 ? AiPlayer.KeepGuardPercent : AiPlayer.HardGuardPercent;
+            Assert.InRange(left, 60 * share / 100 - 1, 60 * share / 100 + 1); // 15 of the Settlers', 9 of the Orcs', give or take the rider
+        }
+        Assert.True(AiPlayer.KeepGuardPercent > AiPlayer.HardGuardPercent);
+    }
+
+    [Fact]
+    public void AWalledTownDoesNotSendItsSoldiersAfterRaidersAtAnOutpost()
+    {
+        // One enemy spearman by a storehouse sixty columns from the town hall, forty outside the line of the
+        // wall. The Orcs, with no wall, send a party of three. The Settlers send nobody: their soldiers would
+        // leave through the gates a few at a time for a fight far from home. They meet the enemy at the town.
+        foreach (int player in new[] { 0, 1 })
+        {
+            var sim = WithStarts(160, player == 0 ? (40, 80) : (140, 20), player == 0 ? (140, 20) : (40, 80));
+            sim.Fog = true;
+            var hall = sim.Economy.TownHall(player)!;
+            for (int k = 0; k < 12; k++) sim.SpawnUnit(player, "spearman", hall.X + k % 6, hall.MaxZ + 4 + k / 6);
+            sim.Economy.PlaceFinished(player, sim.Content.Building("storehouse"), 100, 78);
+            int raider = sim.SpawnUnit(1 - player, "spearman", 106, 86);
+            sim.Schedule(0, new StanceCommand(1 - player, new[] { raider }, UnitStance.Hold));
+            var ai = new AiPlayer(player, 1, AiLevel.Hard);
+            var log = new List<Command>();
+            Play(sim, new[] { ai }, () => false, 3 * Tps, log);
+            var sent = log.Where(c => c is FormationMoveCommand or AttackMoveCommand).Cast<UnitsCommand>().SelectMany(c => c.Units).Distinct().Count();
+            Assert.Equal(player == 0 ? 0 : 3, sent);
+            // The storehouse (its middle is at 102) is more than 24 columns outside the line. Nearer than that
+            // the Settlers send their party too: see HardMeetsRaidersAtAFarBuildingWithAPartyAndAnAttackOnItsTownWithEveryone.
+            if (player == 0) Assert.True(102 > ai.TownWall!.Value.X1 + AiPlayer.KeepReach);
+            else Assert.Null(ai.TownWall);
+        }
+    }
+
+    [Fact]
+    public void HardBuildsNoWallForAFactionItPlaysInWaves()
+    {
+        // The Orcs' town with all it takes to start a wall: none is marked out and none is laid.
+        var (sim, _) = ATownToWall(1);
+        var ai = new AiPlayer(1, 1, AiLevel.Hard);
+        var log = new List<Command>();
+        Play(sim, new[] { ai }, () => false, 30 * Tps, log);
+        Assert.Null(ai.TownWall);
+        Assert.Empty(ai.TownGates);
+        Assert.Empty(log.OfType<WallCommand>());
+        Assert.NotEmpty(log.OfType<BuildCommand>()); // it is building its town all the same
+
+        // It goes by how the data says the faction is played, not by which faction it is: with the two the
+        // other way round the Orcs wall their town and the Settlers do not.
+        var swapped = WithStyles(settlers: "waves", orcs: "balanced");
+        foreach (int player in new[] { 0, 1 })
+        {
+            (sim, _) = ATownToWall(player, swapped);
+            ai = new AiPlayer(player, 1, AiLevel.Hard);
+            log.Clear();
+            Play(sim, new[] { ai }, () => false, 30 * Tps, log);
+            Assert.Equal(player == 1, ai.TownWall != null);
+            Assert.Equal(player == 1, log.OfType<WallCommand>().Any());
+        }
+
+        // And a town too near the edge of the map for the line to fit gets none.
+        (sim, _) = ATownToWall(0, x: 20);
+        ai = new AiPlayer(0, 1, AiLevel.Hard);
+        log.Clear();
+        Play(sim, new[] { ai }, () => false, 30 * Tps, log);
+        Assert.Null(ai.TownWall);
+        Assert.Empty(log.OfType<WallCommand>());
+    }
+
+    [Fact]
+    public void WhileOnlyItsWallWantsStoneHardKeepsAFewWorkersAtItsQuarry()
+    {
+        // Thirty-six workers, every tech, a barracks and no stone. A town with no wall to build keeps five
+        // workers on stone; one that wants the stone only for its wall keeps three, and the wall goes up as
+        // the stone comes in.
+        foreach (int player in new[] { 0, 1 })
+        {
+            var (sim, hall) = ATownToWall(player);
+            foreach (var tech in sim.Content.Techs) sim.Economy.Grant(player, tech);
+            for (int k = 0; k < 16; k++) sim.SpawnUnit(player, "worker", hall.X + k % 7, hall.MaxZ + 5 + k / 7);
+            Array.Clear(hall.Stock);
+            hall.Stock[(int)Good.Food] = 300;
+            var ai = new AiPlayer(player, 1, AiLevel.Hard);
+            int most = 0;
+            Play(sim, new[] { ai }, () =>
+            {
+                most = Math.Max(most, ai.Masons.Count);
+                return false;
+            }, 5 * AiPlayer.AssignTicks);
+            Assert.Equal(player == 0 ? AiPlayer.KeepMasons : AiPlayer.MostMasons, most);
+        }
     }
 
     [Fact]

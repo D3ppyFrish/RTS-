@@ -390,5 +390,15 @@ public class AiTests
         var normalLog = new List<Command>();
         PlayLogged(normal, new[] { new AiPlayer(0, 1, AiLevel.Easy) }, normalLog, () => false, AiPlayer.WallTicks + 10 * Tps);
         Assert.Empty(normalLog.OfType<WallCommand>());
+
+        // Nor does Normal for a faction the computer plays in waves (the Orcs, player 1): walls are for a
+        // faction it plays balanced, as it does the Settlers above.
+        var orcs = WithStarts(96, (40, 20), (40, 60));
+        Assert.Equal(Content.AiStyle.Waves, orcs.Economy.Faction(1).AiStyle);
+        orcs.Economy.TownHall(1)!.Stock[(int)Good.Stone] = 1000;
+        orcs.Economy.TownHall(1)!.Stock[(int)Good.Wood] = 200;
+        var orcLog = new List<Command>();
+        PlayLogged(orcs, new[] { new AiPlayer(1, 1, AiLevel.Normal) }, orcLog, () => false, AiPlayer.WallTicks + 10 * Tps);
+        Assert.Empty(orcLog.OfType<WallCommand>());
     }
 }

@@ -216,7 +216,7 @@ public static class ContentLoader
         private void ReadFaction(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "den", "duskTree");
+            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "den", "duskTree", "aiStyle");
             if (id == null) return;
             if (_db.TryGetFaction(id, out _) || id == _db.Wild.Id)
             {
@@ -232,6 +232,7 @@ public static class ContentLoader
                 Experience = Experience(o),
                 TamesMonsters = o.Bool("tamesMonsters"),
                 DuskTree = o.Enum("duskTree", DuskTreeUse.None, required: false),
+                AiStyle = o.Enum("aiStyle", AiStyle.Waves, required: false),
             };
             _db.Add(faction);
             Den(o, faction);
@@ -1033,6 +1034,7 @@ public static class ContentLoader
                 h.Add(f.Id);
                 h.Add(f.TamesMonsters ? 1 : 0);
                 h.Add((int)f.DuskTree);
+                h.Add((int)f.AiStyle);
                 h.Add(f.Den?.Building?.Index ?? -1);
                 h.Add(f.Den?.Form?.Index ?? -1);
                 if (f.Experience is not { } x)

@@ -179,6 +179,25 @@ public class ContentTests
         Assert.Equal(ContentDb.Default.Hash, changed.Hash);
     }
 
+    /// <summary>How a computer player plays a faction is data: in waves, unless the file says balanced.</summary>
+    [Fact]
+    public void HowTheComputerPlaysAFactionIsDataAndChangesTheHash()
+    {
+        var db = ContentLoader.LoadEmbedded();
+        Assert.Equal((AiStyle.Balanced, AiStyle.Waves), (db.Faction("settlers").AiStyle, db.Faction("orcs").AiStyle));
+
+        var files = Files();
+        Edit(files, "factions.json", ", \"aiStyle\": \"balanced\"", "");
+        var changed = ContentLoader.Load(files);
+        Assert.Equal(AiStyle.Waves, changed.Faction("settlers").AiStyle); // what it is when the file does not say
+        Assert.NotEqual(ContentDb.Default.Hash, changed.Hash); // a computer player's commands depend on it
+
+        files = Files();
+        Edit(files, "factions.json", "\"aiStyle\": \"waves\"", "\"aiStyle\": \"turtle\"");
+        var e = Fails(files);
+        Assert.Contains(e.Errors, m => m.StartsWith("factions.json: faction 'orcs': \"aiStyle\" is \"turtle\", which is not one of: waves, balanced"));
+    }
+
     [Fact]
     public void TheFilesInTheDataFolderAreTheOnesBuiltIn()
     {
@@ -359,7 +378,7 @@ public class ContentTests
         var files = Files();
         Edit(files, "factions.json", "\"name\": \"Orcs\",", "\"name\": \"Orcs\"");
         var e = Fails(files);
-        Assert.StartsWith("factions.json line 24: ", e.Errors[0]);
+        Assert.StartsWith("factions.json line 28: ", e.Errors[0]); // the line of the Orcs in the file
 
         files = Files();
         files["units.json"] = "{ \"id\": \"worker\" }";

@@ -17,10 +17,14 @@
 // duskTree (optional): what the faction's players can do to the map's dusk tree once its warden is gone:
 // heal (a unit that heals tends it, grows its canopy and takes up the Dusk Staff) or raze (any of their
 // fighting units hack it down, so nobody gets the staff). See "Dusk tree" in docs/rules.md.
+// aiStyle (optional): how a computer player plays the faction: waves (the default: it masses its soldiers
+// and sends nearly all of them as one big wave, and builds no walls) or balanced (it walls its town, and
+// when it attacks it keeps a good part of its soldiers at home behind the wall and sends the rest). See
+// "Winning and computer players" in docs/rules.md for what each level makes of it.
 [
   { "id": "settlers", "name": "Settlers", "uiLook": "stone", "description": "Humans who grow their units into new forms through experience.",
     "experience": { "levels": [150], "perDamage": 1, "perKill": 10, "perBuildSecond": 1, "perMinute": 5 },
-    "duskTree": "heal" },
+    "duskTree": "heal", "aiStyle": "balanced" },
   { "id": "orcs", "name": "Orcs", "uiLook": "timber", "description": "Clans who tame and ride the monsters they defeat.", "tamesMonsters": true,
-    "den": { "building": "wolf_lodge" }, "duskTree": "raze" }
+    "den": { "building": "wolf_lodge" }, "duskTree": "raze", "aiStyle": "waves" }
 ]

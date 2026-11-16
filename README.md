@@ -116,8 +116,9 @@ replay made with different data says so instead of drifting apart.
   heal (see [Combat](docs/rules.md#combat)).
 - **Buildings and units** name the techs they need; the barracks trains spearmen at once, and archers,
   riders, sappers and mages after their techs. `units.json` also holds the forms units evolve into and the
-  monsters, and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)) and whether it
-  tames monsters.
+  monsters, and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)), whether it
+  tames monsters, and how a computer player plays it (`aiStyle`: `waves` or `balanced`, see
+  [Winning and computer players](docs/rules.md#winning-and-computer-players)).
 - **City-states** (`citystates.json`): each town's totem (a building of kind `totem` in `buildings.json`)
   and how soon it stands again, its guards, the tribute its holder gets, what its caravans trade, its
   mercenaries (units whose `hiredFrom` names it), its lair monster and what its huts are built of (see
