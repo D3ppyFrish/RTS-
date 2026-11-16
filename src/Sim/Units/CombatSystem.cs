@@ -309,8 +309,16 @@ public sealed partial class CombatSystem
         {
             b = Buildings.Get(u.TargetBuilding[i]);
             if (b != null && !b.Planned && (b.Owner != u.Owner[i] || b.Def.IsBridge) && !guard) return true;
+            // The wall it was breaking through is down: back to the building it was sent at (see Breach).
+            b = u.BreachFor[i] != 0 ? Buildings.Get(u.BreachFor[i]) : null;
+            u.TargetBuilding[i] = u.BreachFor[i] = 0;
+            if (b != null && !b.Planned && b.Owner != u.Owner[i] && !guard)
+            {
+                u.TargetBuilding[i] = b.Id;
+                u.ChaseRetry[i] = 0;
+                return true;
+            }
             b = null;
-            u.TargetBuilding[i] = 0;
         }
         // Holding its ground, it only fights what it can reach from where it stands.
         bool hold = order == CombatOrder.Auto && Holding(i);
@@ -423,6 +431,32 @@ public sealed partial class CombatSystem
         return def.IsRanged && U.Y[i] - U.Y[t] >= HighGround ? s * HighGroundBonus : s;
     }
 
+    /// <summary>
+    /// How much better unit i aims for shooting from a tower (see <see cref="BuildingDef.Aim"/>): 0 anywhere
+    /// else, and for a unit that does not shoot.
+    /// </summary>
+    public int Aim(int i) => Def(i).IsRanged && _sim.Economy.WallUnder(i) is { Active: true } b ? b.Def.Aim : 0;
+
+    /// <summary>How far (blocks) from the edge of its column a unit on a wall leans out to shoot (see <see cref="ClearShot"/>).</summary>
+    public static readonly Fix64 LeanEdge = Fix64.FromRatio(1, 16);
+
+    /// <summary>
+    /// True if unit i has a clear line to unit t (see <see cref="ClearLine"/>). A unit on top of a wall, gate or
+    /// tower leans out over its edge toward the target, so it shoots what stands at the foot of the wall under it.
+    /// </summary>
+    public bool ClearShot(int i, int t)
+    {
+        var u = U;
+        Fix64 x = u.X[i], z = u.Z[i];
+        if (_sim.Economy.WallUnder(i) != null)
+        {
+            int cx = x.FloorToInt(), cz = z.FloorToInt();
+            x = Fix64.Clamp(u.X[t], Fix64.FromInt(cx) + LeanEdge, Fix64.FromInt(cx + 1) - LeanEdge);
+            z = Fix64.Clamp(u.Z[t], Fix64.FromInt(cz) + LeanEdge, Fix64.FromInt(cz + 1) - LeanEdge);
+        }
+        return ClearLine(x, u.Y[i], z, u.X[t], u.Y[t], u.Z[t]);
+    }
+
     private bool Within(int i, int t, Fix64 radius)
     {
         var u = U;
@@ -451,21 +485,27 @@ public sealed partial class CombatSystem
         {
             return true;
         }
-        u.LosBlocked[i] = !ClearLine(u.X[i], u.Y[i], u.Z[i], u.X[t], u.Y[t], u.Z[t]);
+        u.LosBlocked[i] = !ClearShot(i, t);
         return !u.LosBlocked[i];
     }
 
-    /// <summary>True if unit i can hit the building: within reach of its footprint, at about its level if melee.</summary>
+    /// <summary>
+    /// True if unit i can hit the building: within reach of its footprint, and if melee at about its level, or
+    /// beside it higher up (on the rubble heaped against a tall wall), no higher than its top.
+    /// </summary>
     private bool InReach(int i, UnitDef def, Building b)
     {
         var u = U;
         int dy = u.Y[i] - b.Y;
-        if (!def.IsRanged && (dy < -1 || dy > 3)) return false;
+        if (!def.IsRanged && (dy < -1 || dy > Math.Max(3, b.Def.Height))) return false;
         Fix64 reach = def.IsRanged && dy >= HighGround ? def.Range * HighGroundBonus : def.Range;
         Fix64 dx = Gap(u.X[i], b.X, b.MaxX + 1), dz = Gap(u.Z[i], b.Z, b.MaxZ + 1);
         if (dx > reach || dz > reach) return false;
         return dx * dx + dz * dz <= reach * reach;
     }
+
+    /// <summary>Distance (columns) from v to the span [lo, hi] (0 inside it).</summary>
+    private static int Gap(int v, int lo, int hi) => v < lo ? lo - v : v > hi ? v - hi : 0;
 
     /// <summary>Distance from v to the span [lo, hi] (0 inside it).</summary>
     private static Fix64 Gap(Fix64 v, int lo, int hi) =>
@@ -556,7 +596,8 @@ public sealed partial class CombatSystem
         int gx, gz, gy;
         if (b != null)
         {
-            if (!_sim.Economy.SpotBeside(b, x, z, out gx, out gz, out gy))
+            // Beside it, as high up as a blow still reaches it from: the rubble heaped against a tall wall counts.
+            if (!_sim.Economy.SpotBeside(b, x, z, out gx, out gz, out gy, Math.Max(3, b.Def.Height)))
             {
                 GiveUp(i);
                 return;
@@ -577,29 +618,62 @@ public sealed partial class CombatSystem
     public const int BreachRange = 16;
 
     /// <summary>
-    /// Unit i cannot get to building b (it is walled in): it goes for the wall or gate of b's owner nearest to
-    /// it instead (ties to the lowest id), to break through. False if there is none within
-    /// <see cref="BreachRange"/>, or b is a wall itself.
+    /// Unit i cannot get to building b (it is walled in): it goes for a wall or gate of b's owner instead, to
+    /// break through, and when that is down goes on with b (through the next wall in the way, where a wall is
+    /// thick). The wall is one it can get at from its side (see <see cref="Exposed"/>) with the shortest way by
+    /// it, from the unit to it and on to b (ties to the one nearer b, then the one straighter ahead, then the
+    /// lowest id), so a thick wall is broken straight through; with none it can get at, the nearest. A wall it
+    /// went for like this and could not get to is given up for another. False if there is no wall within
+    /// <see cref="BreachRange"/> of the unit, or b is a wall it was sent at itself.
     /// </summary>
     private bool Breach(int i, Building b)
     {
-        if (b.Def.IsWall) return false;
         var u = U;
+        Building? not = null;
+        if (b.Def.IsWall)
+        {
+            // A wall in the way of the building it is after: another one, then.
+            if (u.BreachFor[i] == 0 || Buildings.Get(u.BreachFor[i]) is not { Def.IsWall: false } goal || goal.Owner == u.Owner[i]) return false;
+            (not, b) = (b, goal);
+        }
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
-        Building? best = null;
-        int bestD = BreachRange + 1;
+        Building? best = null, nearest = null;
+        int bestWay = int.MaxValue, bestOn = int.MaxValue, bestAhead = int.MaxValue, nearestD = BreachRange + 1;
         foreach (var w in Buildings.All)
         {
-            if (w.Owner != b.Owner || !w.Def.IsWall || w.Planned) continue;
+            if (w == not || w.Owner != b.Owner || !w.Def.IsWall || w.Planned) continue;
             int d = w.ColumnDistance(x, z);
-            if (d >= bestD) continue;
-            (best, bestD) = (w, d);
+            if (d > BreachRange) continue;
+            if (d < nearestD) (nearest, nearestD) = (w, d);
+            int on = Math.Max(Gap(w.X, b.X, b.MaxX), Gap(w.Z, b.Z, b.MaxZ));
+            int ahead = (w.X - x) * (w.X - x) + (w.Z - z) * (w.Z - z);
+            if (d + on != bestWay ? d + on > bestWay : on != bestOn ? on > bestOn : ahead >= bestAhead) continue;
+            if (!Exposed(w, x, z, d)) continue;
+            (best, bestWay, bestOn, bestAhead) = (w, d + on, on, ahead);
         }
+        best ??= nearest;
         if (best == null) return false;
         u.TargetBuilding[i] = best.Id;
+        u.BreachFor[i] = b.Id;
         u.ChaseRetry[i] = 0;
         if (u.Order[i] == UnitOrder.Chase) Halt(i);
         return true;
+    }
+
+    /// <summary>
+    /// True if wall w, d columns from column (x, z), can be got at from that side: beside it, nearer to (x, z)
+    /// than it is, there is a column with no building on it to stand on (the ground, or the rubble of a wall
+    /// that stood in front of it), no higher than the wall's top.
+    /// </summary>
+    private bool Exposed(Building w, int x, int z, int d)
+    {
+        foreach (var (dx, dz) in WalkGraph.Dirs)
+        {
+            int cx = w.X + dx, cz = w.Z + dz;
+            if (Math.Max(Math.Abs(cx - x), Math.Abs(cz - z)) >= d || !World.InBounds(cx, 0, cz)) continue;
+            if (Walk.NearestStandLevel(World, cx, cz, w.Y, Math.Max(3, w.Def.Height)) >= 0 && Buildings.AtColumn(cx, cz) == null) return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -621,7 +695,7 @@ public sealed partial class CombatSystem
     private void GiveUp(int i)
     {
         var u = U;
-        u.Target[i] = u.TargetBuilding[i] = 0;
+        u.Target[i] = u.TargetBuilding[i] = u.BreachFor[i] = 0;
         u.ChaseRetry[i] = 0;
         u.LosBlocked[i] = false;
         if (u.Combat[i] == CombatOrder.Attack) u.Combat[i] = CombatOrder.Auto;
@@ -678,7 +752,7 @@ public sealed partial class CombatSystem
         }
         Fought(i);
         // A ranged shot can miss in the dark or in bad weather (see Conditions): it lands beside the target.
-        if (def.IsRanged && !_sim.Conditions.ShotLands(u.Id[i], u.X[t].FloorToInt(), u.Z[t].FloorToInt()))
+        if (def.IsRanged && !_sim.Conditions.ShotLands(u.Id[i], u.X[t].FloorToInt(), u.Z[t].FloorToInt(), Aim(i)))
         {
             Fix64 side = (u.Id[i] & 1) == 0 ? Fix64.One : -Fix64.One;
             AddShot(i, def, u.X[t] + side, u.Y[t], u.Z[t] + side / 2);
@@ -776,7 +850,7 @@ public sealed partial class CombatSystem
     {
         var u = U;
         int roll = (int)(DeterministicRandom.Hash((int)(_sim.Tick & 0x7FFFFFFF), u.Id[i] * 65599 ^ u.Id[t], _sim.Seed ^ 0xB0D7UL) % 100);
-        return Body.Pick(Def(t).Body, AngleOf(i, t), roll);
+        return Body.Pick(Def(t).Body, AngleOf(i, t), roll, Aim(i) / Body.AimShare);
     }
 
     /// <summary>
@@ -844,7 +918,7 @@ public sealed partial class CombatSystem
                 bestD = d;
             }
         }
-        if (best >= 0 && def.IsRanged && !ClearLine(u.X[i], u.Y[i], u.Z[i], u.X[best], u.Y[best], u.Z[best])) return -1;
+        if (best >= 0 && def.IsRanged && !ClearShot(i, best)) return -1;
         return best;
     }
 

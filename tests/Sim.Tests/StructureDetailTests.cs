@@ -39,7 +39,7 @@ public class StructureDetailTests
     public void OnlyBuildingBlocksGetDetail()
     {
         var structures = Enum.GetValues<BlockType>().Where(StructureDetail.IsStructure).ToArray();
-        Assert.Equal(new[] { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Door, BlockType.Gate, BlockType.Palisade },
+        Assert.Equal(new[] { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Door, BlockType.Gate, BlockType.Palisade, BlockType.Rampart },
             structures);
     }
 

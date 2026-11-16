@@ -54,7 +54,7 @@ public static class ContentLoader
     };
 
     /// <summary>Building materials a building's walls, footing and roof may use.</summary>
-    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade };
+    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart };
 
     /// <summary>Loads the game's own data, built into the core.</summary>
     public static ContentDb LoadEmbedded() => Load(EmbeddedText);
@@ -399,7 +399,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "walkway", "upgrade");
+                "sturdy", "walkway", "upgrade", "facing", "aim");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -411,9 +411,9 @@ public static class ContentLoader
             int slots = o.Int("workerSlots", 0, 20, 0);
             if (kind is BuildingKind.Farm or BuildingKind.Smelter && slots == 0)
                 o.Error($"a {SnakeName(kind)} needs \"workerSlots\" of 1 or more, or nobody can work it");
-            int wallHeight = o.Int("wallHeight", 1, 8, 3);
-            if (kind == BuildingKind.Wall && wallHeight <= Walk.MaxClimb)
-                o.Error($"a wall needs \"wallHeight\" of {Walk.MaxClimb + 1} or more, or units step over it");
+            int wallHeight = o.Int("wallHeight", 1, 12, 3);
+            if (kind is BuildingKind.Wall or BuildingKind.Tower && wallHeight <= Walk.MaxClimb)
+                o.Error($"a {SnakeName(kind)} needs \"wallHeight\" of {Walk.MaxClimb + 1} or more, or units step over it");
             if (kind == BuildingKind.Gate && wallHeight <= Walk.Clearance)
                 o.Error($"a gate needs \"wallHeight\" of {Walk.Clearance + 1} or more: its leaves are {Walk.Clearance} high, with wall over them");
             if (kind == BuildingKind.Bridge && (sizeX != 1 || sizeZ != 1 || wallHeight != 1))
@@ -444,25 +444,44 @@ public static class ContentLoader
                 YieldTicks = o.Int("yieldTime", 1, MaxSeconds, 0) * Tps,
                 Sturdy = o.Int("sturdy", 1, 1000, 1),
                 Walkway = o.Bool("walkway"),
+                Aim = o.Int("aim", 0, 100, 0),
             };
-            bool wall = kind is BuildingKind.Wall or BuildingKind.Gate;
-            if (def.Walkway && !wall) o.Error("only a wall or gate has a \"walkway\"");
+            bool wall = kind is BuildingKind.Wall or BuildingKind.Gate, tower = kind == BuildingKind.Tower;
+            if (def.Walkway && !wall && !tower) o.Error("only a wall, gate or tower has a \"walkway\"");
+            if (def.Aim > 0 && !tower) o.Error("only a tower has \"aim\"");
+            if (def.Aim > 0 && !def.Walkway) o.Error("\"aim\" is for the units posted on it: it needs a \"walkway\"");
             if (def.Walkway && wallHeight <= CombatSystem.MeleeHeight + 1)
                 o.Error($"a \"walkway\" needs \"wallHeight\" of {CombatSystem.MeleeHeight + 2} or more, or blows from the ground reach the units on it");
             if ((def.Yield.Length > 0) != (def.YieldTicks > 0))
                 o.Error("\"yield\" and \"yieldTime\" go together: the goods it brings in, and the seconds between");
-            if (def.FromDen && kind is BuildingKind.TownHall or BuildingKind.Wall or BuildingKind.Gate or BuildingKind.Totem or BuildingKind.Bridge)
+            if (def.FromDen && kind is BuildingKind.TownHall or BuildingKind.Wall or BuildingKind.Gate or BuildingKind.Totem or BuildingKind.Bridge or BuildingKind.Tower)
                 o.Error($"a {SnakeName(kind)} cannot be built on a den (\"fromDen\")");
             _db.Add(def);
             var faction = o.Str("faction", false);
             var requires = o.Ids("requires");
             var upgrade = o.Str("upgrade", false);
-            if (upgrade != null && !wall) o.Error("only a wall or gate has an \"upgrade\"");
+            if (upgrade != null && !wall && !tower) o.Error("only a wall, gate or tower has an \"upgrade\"");
+            var facing = o.Str("facing", false);
+            if (facing != null && (!wall || sizeX != 1 || sizeZ != 1)) o.Error("only a wall or gate one column across has a \"facing\"");
             _resolve.Add(() =>
             {
                 def.Faction = Faction(o, faction);
                 def.Requires = Techs(o, "requires", requires);
-                if (upgrade == null || !wall) return;
+                if (facing != null && wall)
+                {
+                    // A facing stands beside what it faces, level with it: the same kind and height, one column across.
+                    if (!_db.TryGetBuilding(facing, out var face)) o.Error($"\"facing\": there is no building \"{facing}\"");
+                    else if (face == def) o.Error("\"facing\": a building is not its own facing");
+                    else if (face.Kind != def.Kind || face.SizeX != 1 || face.SizeZ != 1 || face.WallHeight != def.WallHeight)
+                        o.Error($"\"facing\": \"{facing}\" must be of the same kind and height, one column across");
+                    else if (face.FacingOf != null) o.Error($"\"facing\": \"{facing}\" is already the facing of \"{face.FacingOf.Id}\"");
+                    else
+                    {
+                        def.Facing = face;
+                        face.FacingOf = def;
+                    }
+                }
+                if (upgrade == null || (!wall && !tower)) return;
                 if (!_db.TryGetBuilding(upgrade, out var to))
                 {
                     o.Error($"\"upgrade\": there is no building \"{upgrade}\"");
@@ -1023,7 +1042,15 @@ public static class ContentLoader
                 if (from == null) b.Tier = tier;
                 else if (from == b)
                     _errors.Add($"buildings.json: building '{b.Id}' is its own upgrade, by way of '{b.UpgradeOf!.Id}'");
+                // A facing goes up beside a wall when that wall's upgrade is finished, and is only ever that.
+                if (b.Facing != null && b.UpgradeOf == null)
+                    _errors.Add($"buildings.json: building '{b.Id}' has a \"facing\", so it must be the upgrade of another (it is faced when the upgrade is finished)");
+                if (b.FacingOf != null && (b.Upgrade != null || b.UpgradeOf != null || b.Facing != null))
+                    _errors.Add($"buildings.json: building '{b.Id}' is the facing of '{b.FacingOf.Id}', so it can have no \"upgrade\" or \"facing\" and be no upgrade itself");
             }
+            // A facing counts as of the tier of the wall it faces.
+            foreach (var b in _db.Buildings)
+                if (b.FacingOf != null) b.Tier = b.FacingOf.Tier;
         }
 
         /// <summary>The content the game itself relies on.</summary>
@@ -1145,6 +1172,8 @@ public static class ContentLoader
                 h.Add(b.Sturdy);
                 h.Add(b.Walkway ? 1 : 0);
                 h.Add(b.Upgrade?.Index ?? -1);
+                h.Add(b.Facing?.Index ?? -1);
+                h.Add(b.Aim);
             }
             h.Add(db.Units.Count);
             foreach (var u in db.Units)

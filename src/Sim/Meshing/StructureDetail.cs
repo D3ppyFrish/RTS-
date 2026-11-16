@@ -62,6 +62,12 @@ public static class StructureDetail
     public const int Size = 8;
     public const int Volume = Size * Size * Size;
 
+    /// <summary>
+    /// How many fine voxels the deck on top of a wall, gate or tower is sunk into its top block, so the
+    /// parapet around it stands that much above it. The game draws whoever stands up there that much lower.
+    /// </summary>
+    public const int DeckSink = 4;
+
     // Directions, numbered as quad faces: 0 +X, 1 -X, 2 +Y, 3 -Y, 4 +Z, 5 -Z.
     private const int PX = 0, NX = 1, PY = 2, NY = 3, PZ = 4, NZ = 5;
     private static readonly int[] Horizontal = { PX, NX, PZ, NZ };
@@ -69,7 +75,7 @@ public static class StructureDetail
     /// <summary>Building blocks, drawn with fine detail instead of as plain blocks.</summary>
     public static bool IsStructure(BlockType t) =>
         t is BlockType.Planks or BlockType.Thatch or BlockType.RoofTile or BlockType.StoneBrick
-            or BlockType.Door or BlockType.Gate or BlockType.Palisade;
+            or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Rampart;
 
     /// <summary>
     /// Blocks drawn as fine voxels: building blocks, and the rubble collapses leave, drawn as heaps of lumps.
@@ -116,12 +122,16 @@ public static class StructureDetail
 
     private static bool IsTimberWall(BlockType t) => t is BlockType.Planks or BlockType.Door;
 
+    /// <summary>The four corners of a block's level: the diagonal neighbours.</summary>
+    private static readonly (int X, int Z)[] Corners = { (1, 1), (-1, 1), (1, -1), (-1, -1) };
+
     /// <summary>One block and what is around it, for working out its voxels.</summary>
     private readonly ref struct Block
     {
         private readonly BlockType _self;
         private readonly BlockType _px, _nx, _py, _ny, _pz, _nz;
         private readonly int _open; // bit per direction: nothing solid there, so that side shows
+        private readonly int _openCorners; // bit per corner (see Corners): nothing solid there, at this level
         private readonly int _links;  // the dusk tree: bit per neighbour (NeighbourIndex) that is its wood
         private readonly int _wx, _wy, _wz;
         private readonly int _window; // the side a plank wall's window faces, or -1
@@ -147,6 +157,9 @@ public static class StructureDetail
                     if (k != 13 && BlockInfo.IsDuskTree(n[k])) _links |= 1 << k;
             for (int d = 0; d < 6; d++)
                 if (!BlockInfo.IsSolid(NeighbourOf(d))) _open |= 1 << d;
+            _openCorners = 0;
+            for (int k = 0; k < Corners.Length; k++)
+                if (!BlockInfo.IsSolid(n[NeighbourIndex(Corners[k].X, 0, Corners[k].Z)])) _openCorners |= 1 << k;
 
             bool xPair = Open(PX) && Open(NX), zPair = Open(PZ) && Open(NZ);
             bool anySide = (_open & (1 << PX | 1 << NX | 1 << PZ | 1 << NZ)) != 0;
@@ -173,6 +186,38 @@ public static class StructureDetail
                 if (ta == BlockType.Planks && tb == BlockType.Planks && ((Tangent(d, wx, wz) + wy) & 1) == 0)
                     _window = d;
             }
+        }
+
+        /// <summary>
+        /// Whether voxel column (x, z) of a deck block (the open top of a wall, gate or tower) is in its parapet:
+        /// <paramref name="thick"/> voxels in from every open side, and the corner voxels on the inside of a turn.
+        /// <paramref name="merlon"/>: a merlon stands there, not a gap to shoot through. Stone merlons and gaps
+        /// are a block long each; boards (<paramref name="boards"/>) have a gap of three voxels in every block.
+        /// Where two sides meet there is always a merlon.
+        /// </summary>
+        private bool Parapet(int x, int z, int thick, bool boards, out bool merlon)
+        {
+            merlon = false;
+            int sides = 0;
+            int gx = _wx * Size + x, gz = _wz * Size + z;
+            foreach (int d in Horizontal)
+            {
+                if (!Open(d) || Depth(d, x, 0, z) >= thick) continue;
+                sides++;
+                int gu = Tangent(d, gx, gz);
+                merlon |= boards ? (gu & (Size - 1)) < 5 : ((gu >> 3) & 1) == 0;
+            }
+            if (sides > 1) merlon = true;
+            if (sides > 0) return true;
+            for (int k = 0; k < Corners.Length; k++)
+            {
+                if ((_openCorners & (1 << k)) == 0) continue;
+                int dx = Corners[k].X > 0 ? Size - 1 - x : x, dz = Corners[k].Z > 0 ? Size - 1 - z : z;
+                if (dx >= thick || dz >= thick) continue;
+                merlon = true;
+                return true;
+            }
+            return false;
         }
 
         private BlockType NeighbourOf(int d) => d switch
@@ -225,6 +270,7 @@ public static class StructureDetail
             BlockType.Palisade => Stakes(x, y, z),
             BlockType.Thatch or BlockType.RoofTile => _kind == Kind.Slope ? Slope(x, y, z) : RoofColour(x, y, z, -1),
             BlockType.StoneBrick => Stone(x, y, z),
+            BlockType.Rampart => Rampart(x, y, z),
             BlockType.TreeRubble => Log(x, y, z),
             BlockType.DuskWood => DuskTrunk(x, y, z),
             BlockType.DuskBranch => DuskBranch(x, y, z),
@@ -241,12 +287,16 @@ public static class StructureDetail
         private byte TimberWall(int x, int y, int z)
         {
             int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
-            // The top of a wall that stands free (a wooden wall, not a house's): a parapet of boards with
-            // gaps to shoot through, like a stone wall's battlements.
-            if (y >= Size / 2 && Open(PY) && ((Open(PX) && Open(NX)) ^ (Open(PZ) && Open(NZ))))
+            // The top of a wall or tower that stands free (not a house's, which has a roof on it, nor a post):
+            // a deck of boards sunk between parapets of boards with gaps to shoot through.
+            if (Open(PY) && SideCount() < 4)
             {
-                int along = Open(PX) && Open(NX) ? gz : gx;
-                if ((along & (Size - 1)) >= 5) return StructurePalette.Empty;
+                if (y >= Size - DeckSink)
+                {
+                    if (!Parapet(x, z, 1, true, out bool merlon) || !merlon) return StructurePalette.Empty;
+                    return y == Size - 1 ? StructurePalette.Timber : Boards(gy, gx + gz);
+                }
+                if (y == Size - DeckSink - 1 && !Parapet(x, z, 1, true, out _)) return Boards(gz, gx);
             }
             var (d, depth) = Nearest(x, y, z, false);
             if (d < 0) return Boards(gy, gx + gz);
@@ -436,6 +486,44 @@ public static class StructureDetail
                 {
                     int u = Tangent(side, x, z);
                     int depth = Math.Min(Depth(side, x, y, z), Depth(Opposite(side), x, y, z));
+                    if (u is 3 or 4 && y >= 1 && y <= 6 && depth <= 1) return StructurePalette.Empty;
+                    if (u is 3 or 4 && y >= 1 && y <= 6 && depth == 2) return StructurePalette.Soot;
+                }
+            }
+            return Masonry(x, y, z);
+        }
+
+        /// <summary>
+        /// A rampart (stone walls, gatehouses and towers): coursed stone, with arrow slits here and there in its
+        /// outer faces. Its open top is a deck of flagstones sunk between battlements: merlons two voxels
+        /// thick along every outer edge, a block long with a block's gap between them.
+        /// </summary>
+        private byte Rampart(int x, int y, int z)
+        {
+            if (Open(PY))
+            {
+                if (y >= Size - DeckSink)
+                {
+                    if (!Parapet(x, z, 2, false, out bool merlon) || !merlon) return StructurePalette.Empty;
+                    int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
+                    // A merlon: a capstone on dressed blocks.
+                    if (y == Size - 1) return StructurePalette.Mortar;
+                    return StoneShade(gy >> 2, (gx + gz) >> 2, 2);
+                }
+                if (y == Size - DeckSink - 1 && !Parapet(x, z, 2, false, out _))
+                {
+                    int gx = _wx * Size + x, gz = _wz * Size + z;
+                    bool joint = (gx & 3) == 3 || (gz & 7) == 7;
+                    return joint ? StructurePalette.Mortar : StoneShade(gx >> 2, gz >> 3, 1);
+                }
+            }
+            else if (SideCount() == 1 && _py == BlockType.Rampart && _ny == BlockType.Rampart)
+            {
+                // An arrow slit in an outer face, two voxels wide, in some blocks of every third course.
+                int side = _face;
+                if (_wy % 3 == 1 && Hash(Tangent(side, _wx, _wz), _wy, 7) % 2 == 0)
+                {
+                    int u = Tangent(side, x, z), depth = Depth(side, x, y, z);
                     if (u is 3 or 4 && y >= 1 && y <= 6 && depth <= 1) return StructurePalette.Empty;
                     if (u is 3 or 4 && y >= 1 && y <= 6 && depth == 2) return StructurePalette.Soot;
                 }

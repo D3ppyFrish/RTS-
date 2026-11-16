@@ -1,15 +1,22 @@
 // Building types. kind sets what the building does: town_hall (stores goods, houses people, trains
 // workers and researches techs), storehouse, house, farm, smelter, barracks, wall (solid to wallHeight, laid
-// in lines a column at a time, and put right next to other walls) or gate (a wall whose bottom two levels
-// are gate leaves that only its owner's units walk through). size is [x, z] in blocks
+// in lines a column at a time, and put right next to other walls), gate (a wall whose bottom two levels
+// are gate leaves that only its owner's units walk through) or tower (solid to wallHeight across its whole
+// footprint, put up alone or onto the player's own walls, which become part of it). size is [x, z] in blocks
 // (the door is on the +z side); wallHeight is in blocks; wall, footing (the bottom course, if different)
-// and roof are building materials: planks, thatch, roof_tile, stone_brick or palisade (a barrier's stakes);
-// chimney adds a stone chimney.
-// Walls and gates come in tiers. upgrade (optional, walls and gates) names the building this one is turned
-// into where it stands, for that building's cost and buildTime: a building named as an upgrade is never laid
-// as it is, only reached by upgrading. sturdy (optional, 1 if not given) is how many times the damage of the
-// same block elsewhere each of its blocks takes before it is knocked out. walkway (optional, walls and gates):
-// ranged units can be posted on top of it.
+// and roof are building materials: planks, thatch, roof_tile, stone_brick, palisade (a barrier's stakes) or
+// rampart (dressed stone drawn with battlements); chimney adds a stone chimney.
+// Walls and gates come in tiers. upgrade (optional, walls, gates and towers) names the building this one is
+// turned into where it stands, for that building's cost and buildTime: a building named as an upgrade is never
+// laid as it is, only reached by upgrading. facing (optional, an upgrade one column across) names the building
+// that goes up on each free side of this one when its upgrade is finished, so the wall is three columns thick:
+// the upgrade's cost covers it, and a facing's own cost is what it takes to put a lost one back. A facing is
+// of the same kind and height, and is never laid as it is. sturdy (optional, 1 if not given) is how many times
+// the damage of the same block elsewhere each of its blocks takes before it is knocked out. walkway (optional,
+// walls, gates and towers): ranged units can be posted on top of it, along its edges. aim (optional, towers
+// with a walkway): of the shots of those posted on it that would miss in the dark or bad weather, aim in a
+// hundred land after all, and a fifth of aim more in a hundred of their hits land on the head. A tower sees
+// far: give it a large sight.
 // buildTime is the seconds one worker takes; cost is in goods; housing is the people it houses; storage
 // means goods are delivered and kept there; raidable means enemies can capture or burn it; workerSlots is
 // how many workers can work a farm or smelter at once; sight is how far (columns) beyond its walls its
@@ -44,16 +51,27 @@
     "cost": { "stone": 30, "wood": 10 }, "buildTime": 20, "workerSlots": 1, "requires": "smelting", "light": 3 },
   { "id": "barrier", "name": "Wooden barrier", "kind": "wall", "size": [1, 1], "wallHeight": 2, "wall": "palisade",
     "cost": { "wood": 1 }, "buildTime": 1, "sight": 2, "sturdy": 2, "icon": "wall", "upgrade": "wooden_wall" },
-  { "id": "wooden_wall", "name": "Wooden wall", "kind": "wall", "size": [1, 1], "wallHeight": 3, "wall": "planks",
+  { "id": "wooden_wall", "name": "Wooden wall", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "planks",
     "cost": { "wood": 3 }, "buildTime": 3, "sight": 2, "sturdy": 4, "walkway": true, "icon": "wall", "upgrade": "stone_wall" },
-  { "id": "stone_wall", "name": "Stone wall", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "stone_brick",
-    "cost": { "stone": 4 }, "buildTime": 4, "sight": 2, "sturdy": 4, "walkway": true, "icon": "wall", "requires": "masonry" },
+  { "id": "stone_wall", "name": "Stone wall", "kind": "wall", "size": [1, 1], "wallHeight": 6, "wall": "rampart",
+    "cost": { "stone": 10 }, "buildTime": 6, "sight": 2, "sturdy": 3, "walkway": true, "icon": "wall", "requires": "masonry",
+    "facing": "stone_facing" },
+  { "id": "stone_facing", "name": "Stone wall facing", "kind": "wall", "size": [1, 1], "wallHeight": 6, "wall": "rampart",
+    "cost": { "stone": 3 }, "buildTime": 4, "sight": 2, "sturdy": 3, "walkway": true, "icon": "wall" },
   { "id": "barrier_gate", "name": "Barrier gate", "kind": "gate", "size": [1, 1], "wallHeight": 3, "wall": "palisade",
     "cost": { "wood": 3 }, "buildTime": 2, "sight": 2, "sturdy": 2, "icon": "gate", "upgrade": "wooden_gate" },
-  { "id": "wooden_gate", "name": "Wooden gate", "kind": "gate", "size": [1, 1], "wallHeight": 3, "wall": "planks",
+  { "id": "wooden_gate", "name": "Wooden gate", "kind": "gate", "size": [1, 1], "wallHeight": 4, "wall": "planks",
     "cost": { "wood": 5 }, "buildTime": 4, "sight": 2, "sturdy": 4, "walkway": true, "icon": "gate", "upgrade": "stone_gate" },
-  { "id": "stone_gate", "name": "Stone gate", "kind": "gate", "size": [1, 1], "wallHeight": 4, "wall": "stone_brick",
-    "cost": { "wood": 2, "stone": 5 }, "buildTime": 5, "sight": 2, "sturdy": 4, "walkway": true, "icon": "gate", "requires": "masonry" },
+  { "id": "stone_gate", "name": "Stone gate", "kind": "gate", "size": [1, 1], "wallHeight": 6, "wall": "rampart",
+    "cost": { "wood": 4, "stone": 12 }, "buildTime": 6, "sight": 2, "sturdy": 3, "walkway": true, "icon": "gate", "requires": "masonry",
+    "facing": "stone_gate_facing" },
+  { "id": "stone_gate_facing", "name": "Stone gatehouse", "kind": "gate", "size": [1, 1], "wallHeight": 6, "wall": "rampart",
+    "cost": { "wood": 1, "stone": 3 }, "buildTime": 4, "sight": 2, "sturdy": 3, "walkway": true, "icon": "gate" },
+  { "id": "watchtower", "name": "Watchtower", "kind": "tower", "size": [3, 3], "wallHeight": 7, "wall": "planks",
+    "cost": { "wood": 30 }, "buildTime": 25, "sight": 14, "sturdy": 2, "walkway": true, "aim": 50, "icon": "tower" },
+  { "id": "stone_tower", "name": "Stone tower", "kind": "tower", "size": [5, 5], "wallHeight": 9, "wall": "rampart",
+    "cost": { "stone": 60, "wood": 20 }, "buildTime": 60, "sight": 18, "walkway": true, "aim": 75, "icon": "tower",
+    "requires": "masonry" },
   { "id": "torch", "name": "Torch", "kind": "light", "size": [1, 1], "wallHeight": 2, "wall": "planks",
     "cost": { "wood": 1 }, "buildTime": 2, "sight": 2, "light": 7 },
   { "id": "campfire", "name": "Campfire", "kind": "light", "size": [1, 1], "wallHeight": 1, "wall": "stone_brick",

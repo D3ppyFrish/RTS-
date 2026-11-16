@@ -47,6 +47,13 @@ public enum BuildingKind : byte
     /// units stand one above it. Anyone walks over it; a blow knocks the deck out and it falls.
     /// </summary>
     Bridge,
+    /// <summary>
+    /// A tower: a solid block of its wall material, taller than a wall, with a deck on top that ranged units
+    /// are posted on (see <see cref="PostCommand"/>). Placed like any building, on open ground or onto a wall
+    /// of its owner's, whose columns under it become part of it; it joins walls and gates without a gap.
+    /// It sees far (<see cref="BuildingDef.Sight"/>), and those posted on it aim better (<see cref="BuildingDef.Aim"/>).
+    /// </summary>
+    Tower,
 }
 
 /// <summary>One block of a building, relative to its footprint corner and base level.</summary>
@@ -131,12 +138,29 @@ public sealed class BuildingDef
     public BuildingDef? UpgradeOf { get; internal set; }
     /// <summary>How many upgrades it is from a building that is placed: 0 for one that is, 1 for its upgrade, and so on.</summary>
     public int Tier { get; internal set; }
+    /// <summary>
+    /// A wall or gate that is faced: when it is finished (it is an upgrade), a column of this building goes up
+    /// on each side of it, so the wall is three columns thick (see <see cref="Economy.EconomySystem.FacingCells"/>).
+    /// Null for a wall one column thick.
+    /// </summary>
+    public BuildingDef? Facing { get; internal set; }
+    /// <summary>The wall or gate this one is the facing of; null if it is none. A facing is never placed as it is.</summary>
+    public BuildingDef? FacingOf { get; internal set; }
+    /// <summary>
+    /// How much better units posted on it aim: the share (percent) of their misses in the dark and bad weather
+    /// that land after all, and a fifth as many points of their odds moved to the head; a tower's.
+    /// </summary>
+    public int Aim { get; init; }
 
     /// <summary>Units stand on it rather than next to it.</summary>
     public bool Walkable => Kind == BuildingKind.Farm;
 
     /// <summary>A wall or gate: laid in lines, and put right next to other walls and gates.</summary>
     public bool IsWall => Kind is BuildingKind.Wall or BuildingKind.Gate;
+    /// <summary>A tower (see <see cref="BuildingKind.Tower"/>).</summary>
+    public bool IsTower => Kind == BuildingKind.Tower;
+    /// <summary>A wall, gate or tower: they join up without a gap, and units are posted on top of them.</summary>
+    public bool IsRampart => IsWall || IsTower;
 
     /// <summary>A column of bridge deck (see <see cref="BuildingKind.Bridge"/>).</summary>
     public bool IsBridge => Kind == BuildingKind.Bridge;
@@ -227,7 +251,7 @@ public sealed class BuildingDef
             for (int y = 1; y < WallHeight; y++) list.Add(new TemplateBlock(SizeX / 2, y, SizeZ / 2, Wall));
             return list.ToArray();
         }
-        if (IsWall || Kind is BuildingKind.Light or BuildingKind.Bridge)
+        if (IsRampart || Kind is BuildingKind.Light or BuildingKind.Bridge)
         {
             // Solid to the top (a bridge is one deck block); a gate's bottom two levels (a unit's height) are its leaves.
             for (int y = 0; y < WallHeight; y++)

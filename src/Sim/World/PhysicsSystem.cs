@@ -762,9 +762,14 @@ public sealed class PhysicsSystem
         return y;
     }
 
-    /// <summary>Units whose body a piece's rubble settled in are hurt (unless the piece already hit them).</summary>
+    /// <summary>
+    /// Units whose body a piece's rubble settled in are hurt (unless the piece already hit them). Not by a
+    /// wall's rubble as it spreads over the ground (see <see cref="FallingSection.Spreads"/>): that slides
+    /// round their feet, and they climb out of it (see <see cref="FreeUnits"/>).
+    /// </summary>
     private void CrushSettled(FallingSection s)
     {
+        if (s.Spreads) return;
         var u = _sim.Units;
         for (int i = 0; i < u.Count; i++)
         {

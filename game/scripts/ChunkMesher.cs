@@ -260,6 +260,7 @@ public static class ChunkMesher
         BlockType.Door => new Color(0.32f, 0.2f, 0.11f),
         BlockType.Gate => new Color(0.26f, 0.17f, 0.1f),
         BlockType.Palisade => new Color(0.47f, 0.33f, 0.19f),
+        BlockType.Rampart => new Color(0.6f, 0.58f, 0.55f),
         BlockType.Lava => new Color(1f, 0.3f, 0f),
         BlockType.Farmland => new Color(0.37f, 0.26f, 0.14f),
         BlockType.Road => new Color(0.6f, 0.54f, 0.43f),

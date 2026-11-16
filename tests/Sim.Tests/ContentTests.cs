@@ -38,7 +38,7 @@ public class ContentTests
     {
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs" }, db.Factions.Select(f => f.Id));
-        Assert.Equal(new[] { "town_hall", "storehouse", "house", "farm", "barracks", "smelter", "barrier", "wooden_wall", "stone_wall", "barrier_gate", "wooden_gate", "stone_gate", "torch", "campfire", "wolf_lodge", "goblin_totem", "bridge" }, db.Buildings.Select(b => b.Id));
+        Assert.Equal(new[] { "town_hall", "storehouse", "house", "farm", "barracks", "smelter", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "goblin_totem", "bridge" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "foreman", "militia", "knight", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
             "ranger", "lancer", "outrider", "tunneller", "demolisher", "battle_mage", "seer" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
@@ -261,7 +261,7 @@ public class ContentTests
         }
         Assert.Equal(BlockType.Palisade, db.Building("barrier").Blocks[0].Block);
         Assert.Equal(BlockType.Planks, db.Building("wooden_wall").Blocks[0].Block);
-        Assert.Equal(BlockType.StoneBrick, db.Building("stone_wall").Blocks[0].Block);
+        Assert.Equal(BlockType.Rampart, db.Building("stone_wall").Blocks[0].Block);
         Assert.Equal(BlockInfo.Toughness(BlockType.Planks) * db.Building("wooden_wall").Sturdy, db.Building("wooden_wall").BlockToughness(0));
         Assert.Null(db.Building("house").Upgrade);
         Assert.Equal(1, db.Building("house").Sturdy);
@@ -274,9 +274,11 @@ public class ContentTests
     [InlineData("\"upgrade\": \"wooden_wall\"", "\"upgrade\": \"wooden_gate\"", "building 'barrier': \"upgrade\": \"wooden_gate\" must be of the same kind and size")]
     [InlineData("\"upgrade\": \"stone_wall\"", "\"upgrade\": \"barrier\"", "building 'wooden_wall': \"upgrade\": \"barrier\" must be at least as tall")]
     [InlineData("\"upgrade\": \"wooden_gate\"", "\"upgrade\": \"stone_gate\"", "building 'wooden_gate': \"upgrade\": \"stone_gate\" is already the upgrade of \"barrier_gate\"")]
-    [InlineData("\"upgrade\": \"stone_gate\"", "\"upgrade\": \"barrier_gate\"", "building 'barrier_gate' is its own upgrade, by way of 'wooden_gate'")]
-    [InlineData("\"light\": 7", "\"light\": 7, \"upgrade\": \"campfire\"", "building 'torch': only a wall or gate has an \"upgrade\"")]
-    [InlineData("\"light\": 7", "\"light\": 7, \"walkway\": true", "building 'torch': only a wall or gate has a \"walkway\"")]
+    [InlineData("\"wallHeight\": 4, \"wall\": \"planks\",\n    \"cost\": { \"wood\": 5 }, \"buildTime\": 4, \"sight\": 2, \"sturdy\": 4, \"walkway\": true, \"icon\": \"gate\", \"upgrade\": \"stone_gate\"",
+        "\"wallHeight\": 3, \"wall\": \"planks\", \"cost\": { \"wood\": 5 }, \"buildTime\": 4, \"icon\": \"gate\", \"upgrade\": \"barrier_gate\"",
+        "building 'barrier_gate' is its own upgrade, by way of 'wooden_gate'")]
+    [InlineData("\"light\": 7", "\"light\": 7, \"upgrade\": \"campfire\"", "building 'torch': only a wall, gate or tower has an \"upgrade\"")]
+    [InlineData("\"light\": 7", "\"light\": 7, \"walkway\": true", "building 'torch': only a wall, gate or tower has a \"walkway\"")]
     [InlineData("\"sturdy\": 2, \"icon\": \"wall\"", "\"sturdy\": 2, \"walkway\": true, \"icon\": \"wall\"",
         "building 'barrier': a \"walkway\" needs \"wallHeight\" of 3 or more, or blows from the ground reach the units on it")]
     [InlineData("\"sturdy\": 2, \"icon\": \"wall\"", "\"sturdy\": 0, \"icon\": \"wall\"", "building 'barrier': \"sturdy\" is 0; it should be from 1 to 1000")]
@@ -292,12 +294,80 @@ public class ContentTests
     [Theory]
     [InlineData("\"sturdy\": 4, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"", "\"sturdy\": 5, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"")]
     [InlineData("\"sturdy\": 4, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"", "\"sturdy\": 4, \"icon\": \"wall\", \"upgrade\"")]
-    [InlineData("\"walkway\": true, \"icon\": \"gate\", \"upgrade\": \"stone_gate\"", "\"walkway\": true, \"icon\": \"gate\"")]
+    [InlineData("\"aim\": 50", "\"aim\": 40")]
+    [InlineData("\"facing\": \"stone_facing\" },", "\"facing\": \"stone_spare\" },\n  { \"id\": \"stone_spare\", \"name\": \"Spare\", \"kind\": \"wall\", \"size\": [1, 1], \"wallHeight\": 6, \"wall\": \"rampart\", \"buildTime\": 4 },")]
     public void ChangingATierChangesTheContentHash(string old, string replacement)
     {
         var files = Files();
         Edit(files, "buildings.json", old, replacement);
         Assert.NotEqual(ContentDb.Default.Hash, ContentLoader.Load(files).Hash);
+    }
+
+    /// <summary>
+    /// The top tier of walls and gates is faced: the facing is of the same kind and height, stands for the same
+    /// tier, and is never laid as it is. Towers are their own kind, with a walkway and what it gives.
+    /// </summary>
+    [Fact]
+    public void StoneWallsAreFacedAndTowersGiveSightAndAim()
+    {
+        var db = ContentDb.Default;
+        foreach (var (id, facing) in new[] { ("stone_wall", "stone_facing"), ("stone_gate", "stone_gate_facing") })
+        {
+            var wall = db.Building(id);
+            var face = db.Building(facing);
+            Assert.Same(face, wall.Facing);
+            Assert.Same(wall, face.FacingOf);
+            Assert.Equal(wall.Kind, face.Kind);
+            Assert.Equal(wall.Height, face.Height);
+            Assert.Equal(wall.Tier, face.Tier);
+            Assert.Equal(BlockType.Rampart, face.Blocks[^1].Block);
+            Assert.True(face.Walkway);
+            Assert.Null(face.Upgrade);
+            Assert.Null(face.UpgradeOf);
+            Assert.Null(face.Facing);
+        }
+        Assert.Null(db.Building("wooden_wall").Facing);
+        var wood = db.Building("watchtower");
+        var stone = db.Building("stone_tower");
+        foreach (var tower in new[] { wood, stone })
+        {
+            Assert.Equal(BuildingKind.Tower, tower.Kind);
+            Assert.True(tower.IsTower && tower.IsRampart && !tower.IsWall);
+            Assert.True(tower.Walkway);
+            Assert.Equal(tower.SizeX * tower.SizeZ * tower.Height, tower.Blocks.Count); // solid to the top
+            Assert.True(tower.Aim > 0);
+            Assert.True(tower.Sight > db.Building("town_hall").Sight); // it sees further than anything else that is built
+        }
+        // Each tower stands over the walls of its time, and the stone one is the bigger and better.
+        Assert.True(wood.Height > db.Building("wooden_wall").Height && stone.Height > db.Building("stone_wall").Height);
+        Assert.True(stone.SizeX > wood.SizeX && stone.Height > wood.Height);
+        Assert.True(stone.Aim > wood.Aim && stone.Sight > wood.Sight);
+        Assert.Empty(wood.Requires);
+        Assert.Equal(new[] { "masonry" }, stone.Requires.Select(t => t.Id));
+        Assert.Equal(BlockType.Planks, wood.Blocks[0].Block);
+        Assert.Equal(BlockType.Rampart, stone.Blocks[0].Block);
+    }
+
+    /// <summary>A facing and what a tower gives are checked like the rest of the data.</summary>
+    [Theory]
+    [InlineData("\"facing\": \"stone_facing\"", "\"facing\": \"stone_facin\"", "building 'stone_wall': \"facing\": there is no building \"stone_facin\"")]
+    [InlineData("\"facing\": \"stone_facing\"", "\"facing\": \"stone_wall\"", "building 'stone_wall': \"facing\": a building is not its own facing")]
+    [InlineData("\"facing\": \"stone_facing\"", "\"facing\": \"stone_gate_facing\"", "building 'stone_wall': \"facing\": \"stone_gate_facing\" must be of the same kind and height, one column across")]
+    [InlineData("\"facing\": \"stone_facing\"", "\"facing\": \"wooden_wall\"", "building 'stone_wall': \"facing\": \"wooden_wall\" must be of the same kind and height, one column across")]
+    [InlineData("\"light\": 7", "\"light\": 7, \"facing\": \"campfire\"", "building 'torch': only a wall or gate one column across has a \"facing\"")]
+    [InlineData("\"sturdy\": 2, \"icon\": \"wall\"", "\"sturdy\": 2, \"facing\": \"wooden_wall\", \"icon\": \"wall\"", "building 'barrier': \"facing\": \"wooden_wall\" must be of the same kind and height, one column across")]
+    [InlineData("\"walkway\": true, \"icon\": \"wall\" },", "\"walkway\": true, \"icon\": \"wall\", \"upgrade\": \"stone_spare\" },\n  { \"id\": \"stone_spare\", \"name\": \"Spare\", \"kind\": \"wall\", \"size\": [1, 1], \"wallHeight\": 6, \"wall\": \"rampart\", \"buildTime\": 4 },",
+        "building 'stone_facing' is the facing of 'stone_wall', so it can have no \"upgrade\" or \"facing\" and be no upgrade itself")]
+    [InlineData("\"light\": 7", "\"light\": 7, \"aim\": 20", "building 'torch': only a tower has \"aim\"")]
+    [InlineData("\"walkway\": true, \"aim\": 50", "\"aim\": 50", "building 'watchtower': \"aim\" is for the units posted on it: it needs a \"walkway\"")]
+    [InlineData("\"aim\": 50", "\"aim\": 101", "building 'watchtower': \"aim\" is 101; it should be from 0 to 100")]
+    [InlineData("\"kind\": \"tower\", \"size\": [3, 3], \"wallHeight\": 7", "\"kind\": \"tower\", \"size\": [3, 3], \"wallHeight\": 2", "building 'watchtower': ")]
+    public void FacingsAndTowersAreChecked(string old, string replacement, string message)
+    {
+        var files = Files();
+        Edit(files, "buildings.json", old, replacement);
+        var e = Fails(files);
+        Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: " + message));
     }
 
     /// <summary>Issue #9's check, part two: a reference to an id that does not exist fails the load.</summary>
