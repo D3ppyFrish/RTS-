@@ -5,6 +5,7 @@ using Rts.Sim;
 using Rts.Sim.Economy;
 using Rts.Sim.Meshing;
 using Rts.Sim.Units;
+using Rts.Game.Detail;
 
 namespace Rts.Game;
 
@@ -58,6 +59,24 @@ public partial class UnitRenderer : Node3D
     /// <summary>A totem's paint while nobody holds its town.</summary>
     private static readonly Color Neutral = new(0.86f, 0.84f, 0.78f);
     private float[] _yawById = new float[1024];
+    // Detailed units near the camera (see DetailedUnits): the model each player's units of each type use, and
+    // per unit id the walk cycle's phase and how much of a stride it is taking.
+    private DetailedUnits _detail = null!;
+    private string[][] _modelByOwnerDef = Array.Empty<string[]>();
+    private float[] _phaseById = new float[1024];
+    private float[] _strideById = new float[1024];
+    private float _time;
+
+    /// <summary>Average milliseconds UpdateInstances has taken (all units, plain and detailed) since the first frame.</summary>
+    public double AverageUpdateMs => _updates == 0 ? 0 : _updateMs / _updates;
+    private double _updateMs;
+    private int _updates;
+
+    /// <summary>Of <see cref="AverageUpdateMs"/>, the average spent animating detailed units and uploading them.</summary>
+    public string DetailSplit => _detail.Frames == 0 ? "-" : $"{_detail.PlaceMs / _detail.Frames:F2}/{_detail.UploadMs / _detail.Frames:F2}";
+
+    /// <summary>Units drawn detailed last frame.</summary>
+    public int DetailedCount => _detail.Drawn;
     private ShaderMaterial _material = null!;
 
     /// <summary>
@@ -100,6 +119,17 @@ void fragment() {
 ";
 
     public ShaderMaterial Material => _material;
+    public ShaderMaterial DetailMaterial => _detail.Material;
+
+    /// <summary>F7 turns detailed units on and off, to compare the looks and the frame time.</summary>
+    public override void _UnhandledKeyInput(InputEvent e)
+    {
+        if (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.F7 })
+        {
+            DetailedUnits.Enabled = !DetailedUnits.Enabled;
+            GD.Print($"Detailed units {(DetailedUnits.Enabled ? "on" : "off")}");
+        }
+    }
 
     /// <summary>The colour of a load of each good.</summary>
     public static Color LoadColor(Good g) => g switch
@@ -121,13 +151,18 @@ void fragment() {
         var worldBox = new Aabb(new Vector3(-8, -8, -8),
             new Vector3(sim.World.SizeX + 16, sim.World.SizeY + 16, sim.World.SizeZ + 16) * ChunkMesher.BlockSize);
         _batchByOwnerDef = new Batch[Simulation.WildPlayer + 1][];
+        _modelByOwnerDef = new string[Simulation.WildPlayer + 1][];
+        _detail = new DetailedUnits();
+        AddChild(_detail);
+        _detail.Init(worldBox);
         for (int owner = 0; owner <= Simulation.WildPlayer; owner++)
         {
             string faction = sim.Economy.Faction(owner).Id;
             var row = _batchByOwnerDef[owner] = new Batch[defs.Count];
+            var models = _modelByOwnerDef[owner] = new string[defs.Count];
             for (int d = 0; d < defs.Count; d++)
             {
-                string model = UnitModels.ForFaction(defs[d].Model, faction);
+                string model = models[d] = UnitModels.ForFaction(defs[d].Model, faction);
                 if (!_batches.TryGetValue(model, out var batch))
                 {
                     var mm = new MultiMesh
@@ -189,6 +224,7 @@ void fragment() {
     /// <summary>Updates every instance. <paramref name="alpha"/> is how far we are between the last tick and the next (0..1).</summary>
     public void UpdateInstances(float alpha, float delta)
     {
+        long started = System.Diagnostics.Stopwatch.GetTimestamp();
         var u = _sim.Units;
         foreach (var b in _batches.Values) b.Count = 0;
         for (int i = 0; i < u.Count; i++)
@@ -212,6 +248,13 @@ void fragment() {
 
         float bs = ChunkMesher.BlockSize;
         float turn = Math.Min(1f, delta * 12f);
+        _time += delta;
+        _detail.BeginFrame();
+        bool detailed = DetailedUnits.Enabled;
+        var camera = GetViewport()?.GetCamera3D();
+        var eye = camera?.GlobalPosition ?? Vector3.Zero;
+        float near2 = DetailedUnits.Distance * DetailedUnits.Distance;
+        var defs = _sim.Content.Units;
         for (int i = 0; i < u.Count; i++)
         {
             if (!_fog.Shows(i)) continue;
@@ -238,18 +281,39 @@ void fragment() {
             float s = Mathf.Sin(yaw), c = Mathf.Cos(yaw);
             var team = TeamColors[u.Owner[i] & 7];
 
-            Write(b, c, s, x * bs, y * bs, z * bs, team);
             if (u.CarryAmount[i] > 0) Write(_loads, c, s, x * bs, y * bs, z * bs, LoadColor(u.Carry[i]));
+            var at = new Vector3(x * bs, y * bs, z * bs);
+            if (detailed && camera != null && at.DistanceSquaredTo(eye) < near2 && !_sim.DuskTree.HasStaff(i))
+            {
+                if (id >= _phaseById.Length)
+                {
+                    Array.Resize(ref _phaseById, _yawById.Length);
+                    Array.Resize(ref _strideById, _yawById.Length);
+                }
+                // Walk cycle: one stride every 1.6 blocks walked; the stride eases in and out.
+                float speed = Mathf.Sqrt(dx * dx + dz * dz) * Simulation.TicksPerSecond;
+                _strideById[id] = Mathf.Lerp(_strideById[id], speed > 0.05f ? 1f : 0f, Math.Min(1f, delta * 8f));
+                _phaseById[id] = Mathf.PosMod(_phaseById[id] + speed * delta * Mathf.Tau / 1.6f, Mathf.Tau);
+                var def = defs[u.Def[i]];
+                float strike = u.Target[i] != 0 && u.Cooldown[i] > 0 && def.AttackTicks > 0
+                    ? 1f - Math.Clamp((u.Cooldown[i] - alpha) / def.AttackTicks, 0f, 1f) : -1f;
+                if (_detail.Add(_modelByOwnerDef[u.Owner[i] & 7][u.Def[i]], at, yaw, team, _phaseById[id], _strideById[id], strike, _time, id))
+                    continue;
+            }
+            Write(b, c, s, x * bs, y * bs, z * bs, team);
         }
         foreach (var town in _sim.Cities.Towns)
             if (_fog.HasSeen(town.X, town.Z)) WriteTotem(town, bs);
         foreach (var (node, lair) in _dens) node.Visible = !lair.Used && _fog.HasSeen(lair.X, lair.Z); // a used den is gone
 
+        _detail.EndFrame();
         foreach (var b in _batches.Values)
         {
             RenderingServer.MultimeshSetBuffer(b.Mesh.GetRid(), b.Buffer);
             b.Mesh.VisibleInstanceCount = b.Count;
         }
+        _updateMs += (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        _updates++;
     }
 
     private Batch BatchOf(int i) =>

@@ -42,6 +42,7 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 | Movement and pathfinding | `Units/UnitMovement.cs`, `Units/WalkGraph.cs`, `Units/FlowField.cs` | `UnitTests.cs`, `PathTests.cs` | none |
 | Map generation | `World/RegionGenerator.cs`, `World/RegionMap.cs` | `RegionGeneratorTests.cs` | none |
 | Building, tree and unit looks | `Meshing/StructureMesher.cs`, `Meshing/StructureDetail.cs`; game: `UnitModels.cs`, `UnitIcons.cs`, `FallingRenderer.cs` (falling ground and trees) | `StructureDetailTests.cs` | `ui-structure-screenshots.sh`, `ui-tree-screenshots.sh`, `ui-lineup-screenshots.sh` |
+| Detail prototype (finer, animated units near the camera; detailed castle scenery) | game: `Detail/FineModel.cs` (grid, mesher, shader), `Detail/DetailedUnits.cs` (drawn from `UnitRenderer.cs`), `Detail/DetailedKeep.cs` (`--keeps`) | none (no tests for `game/`) | none; `--benchmark` with `--detail=off/on`, `--keeps=N` |
 | UI (HUD, input, camera, selection) | game: `Hud.cs`, `PlayerControl.cs`, `CameraRig.cs`, `SelectionRenderer.cs`, `TechTreePanel.cs`; scripted input: `InputScript.cs` | none (no tests for `game/`) | `ui-screenshots.sh` |
 | Test mode (spawn anything, cheats, scenarios) | `Sandbox/SandboxSystem.cs`, `World/Trees.cs`; game: `TestPanel.cs` | `SandboxTests.cs` | `ui-test-mode-screenshots.sh` |
 | Day, night and weather (rules: sight, aim, lights, lava) | `Conditions.cs` | `ConditionsTests.cs` | `ui-daynight-screenshots.sh` |

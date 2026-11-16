@@ -30,6 +30,11 @@ public sealed class Benchmark
     private int _digCarry;
 
     private readonly string _outPath;
+    private readonly List<double> _tris = new();
+    private readonly List<double> _draws = new();
+
+    /// <summary>More to add to the result line (what was drawn and how), worked out when the run ends.</summary>
+    public Func<string>? Extra;
 
     public Benchmark(double seconds, ulong seed, double loadMs, string outPath)
     {
@@ -83,6 +88,8 @@ public sealed class Benchmark
         if (_warmup > 0) { _warmup--; return false; }
         if (_rebuildsAtStart < 0) _rebuildsAtStart = chunks.RebuildsCompleted;
         _frameMs.Add(delta * 1000.0);
+        _tris.Add(RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame));
+        _draws.Add(RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame));
         // Main-thread time spent on our own work this frame: simulation ticks plus chunk dispatch and upload.
         _processMs.Add(gameMs + chunks.LastProcessMs);
         _maxPending = Math.Max(_maxPending, chunks.PendingCount);
@@ -101,6 +108,8 @@ public sealed class Benchmark
             _loadMs, sorted.Length, _elapsed, sorted.Length / _elapsed, avg, P(0.5), P(0.95), P(0.99), sorted[^1], slow,
             _digsScheduled, chunks.RebuildsCompleted - _rebuildsAtStart, _maxPending, chunks.ChunkNodeCount,
             _processMs.Average(), _processMs.Max(), RenderingServer.GetVideoAdapterName(), _unitsMoving);
+        line += string.Format(ci, " avg_tris={0:F0} avg_draws={1:F0}", _tris.Average(), _draws.Average());
+        if (Extra != null) line += " " + Extra();
         GD.Print(line);
         // Release builds on Windows have no console, so also append the result to a file.
         using (var file = FileAccess.Open(_outPath, FileAccess.ModeFlags.ReadWrite) ?? FileAccess.Open(_outPath, FileAccess.ModeFlags.Write))

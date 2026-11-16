@@ -283,6 +283,7 @@ public sealed class InputScript
         "backslash" => Key.Backslash,
         "f1" => Key.F1,
         "f2" => Key.F2,
+        "f7" => Key.F7,
         _ when n.Length == 1 && char.IsDigit(n[0]) => Key.Key0 + (n[0] - '0'),
         _ when n.Length == 1 && char.IsLetter(n[0]) => Key.A + (char.ToUpperInvariant(n[0]) - 'A'),
         _ => throw new FormatException($"Input script: unknown key '{n}'"),
