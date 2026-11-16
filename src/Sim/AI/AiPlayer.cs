@@ -657,7 +657,7 @@ public sealed partial class AiPlayer
     private BuildingDef? FirstBuilding(Simulation sim, BuildingKind kind)
     {
         foreach (var d in sim.Content.Buildings)
-            if (d.Kind == kind && sim.Economy.Unlocked(Player, d)) return d;
+            if (d.Kind == kind && d.UpgradeOf == null && sim.Economy.Unlocked(Player, d)) return d;
         return null;
     }
 
@@ -949,7 +949,7 @@ public sealed partial class AiPlayer
     /// <summary>
     /// True if unit i stands where there is no step to take in any direction: a hole one column wide. Ground
     /// levelled for buildings on a slope can leave one between them, and a soldier standing there when they
-    /// went up is shut in for good.
+    /// went up is shut in for good. (One posted on a lone column of wall is not: see <see cref="Units.UnitMovement.ClimbDown"/>.)
     /// </summary>
     private static bool ShutIn(Simulation sim, int i)
     {
@@ -959,7 +959,7 @@ public sealed partial class AiPlayer
         if (node < 0) return false;
         for (int d = 0; d < WalkGraph.Dirs.Length; d++)
             if (g.Step(node, d) >= 0) return false;
-        return true;
+        return sim.Economy.WallUnder(i) == null; // posted on a wall, it climbs down when it is sent somewhere
     }
 
     /// <summary>The units that are not fighting or running: no attack order or target, and not routing.</summary>

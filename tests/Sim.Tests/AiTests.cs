@@ -377,12 +377,31 @@ public class AiTests
         PlayLogged(sim, new[] { ai }, log, () => false, 10 * Tps);
         // Walls and gates on all four sides.
         var walls = log.OfType<WallCommand>().ToList();
-        Assert.Contains(walls, w => w.Building == "gate" && w.Z1 > hall.MaxZ);
-        Assert.Contains(walls, w => w.Building == "gate" && w.Z1 < hall.Z);
-        Assert.Contains(walls, w => w.Building == "wall" && w.X1 == w.X2 && w.X1 < hall.X);
-        Assert.Contains(walls, w => w.Building == "wall" && w.X1 == w.X2 && w.X1 > hall.MaxX);
+        Assert.Contains(walls, w => w.Building == "barrier_gate" && w.Z1 > hall.MaxZ);
+        Assert.Contains(walls, w => w.Building == "barrier_gate" && w.Z1 < hall.Z);
+        Assert.Contains(walls, w => w.Building == "barrier" && w.X1 == w.X2 && w.X1 < hall.X);
+        Assert.Contains(walls, w => w.Building == "barrier" && w.X1 == w.X2 && w.X1 > hall.MaxX);
         Assert.True(sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.Kind == BuildingKind.Gate) >= 3, "gates " + sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.Kind == BuildingKind.Gate));
         Assert.True(sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsWall) >= 24, "walls " + sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsWall) + " stone " + hall.Stock[(int)Good.Stone]);
+
+        // It is a ring of barriers, the first tier. With the goods for all of it and a hundred of each to
+        // spare, it upgrades the whole of it to wooden walls, and with masonry to stone.
+        Assert.Empty(log.OfType<UpgradeCommand>());
+        Assert.True(PlayLogged(sim, new[] { ai }, log, () =>
+        {
+            hall.Stock[(int)Good.Wood] = Math.Max(hall.Stock[(int)Good.Wood], 1000);
+            return sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.Id is "wooden_wall" or "wooden_gate") >= 24;
+        }, 8 * 60 * Tps), "the wall to be made wooden");
+        Assert.All(log.OfType<UpgradeCommand>(), c => Assert.True(c.Stretch));
+        Assert.Contains(ai.Journal, j => j.Text == "upgrades its wall to wooden wall" || j.Text == "upgrades its wall to wooden gate");
+        Assert.DoesNotContain(sim.Buildings.All, b => b.Owner == 0 && b.Def.Tier == 2);
+        sim.Economy.Grant(0, sim.Content.Tech("masonry"));
+        Assert.True(PlayLogged(sim, new[] { ai }, log, () =>
+        {
+            hall.Stock[(int)Good.Wood] = Math.Max(hall.Stock[(int)Good.Wood], 1000);
+            hall.Stock[(int)Good.Stone] = Math.Max(hall.Stock[(int)Good.Stone], 1000);
+            return sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.Id is "stone_wall" or "stone_gate") >= 24;
+        }, 8 * 60 * Tps), "the wall to be made stone");
 
         // Easy does not wall.
         var normal = WithStarts(96, (40, 48));

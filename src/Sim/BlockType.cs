@@ -86,12 +86,14 @@ public enum BlockType : byte
     DuskWood,
     /// <summary>The dusk tree's bare, twisting branches and twigs (see <see cref="DuskWood"/>).</summary>
     DuskBranch,
+    /// <summary>A wooden barrier's stakes: upright logs set side by side, pointed on top (a building block).</summary>
+    Palisade,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.DuskBranch;
+    public const BlockType Last = BlockType.Palisade;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
@@ -104,12 +106,13 @@ public static class BlockInfo
     /// <summary>Solid ground nothing can stand on (lava).</summary>
     public static bool CanStandOn(BlockType t) => IsSolid(t) && t != BlockType.Lava;
 
-    /// <summary>Blocks that buildings are made of (walls, roofs, doors, gates, fields and roads).</summary>
-    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t == BlockType.Gate;
+    /// <summary>Blocks that buildings are made of (walls, roofs, doors, gates, stakes, fields and roads).</summary>
+    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade;
 
     /// <summary>
     /// Damage a building's block takes before it is knocked out (see <see cref="Units.CombatSystem"/>); 0 for
-    /// blocks that are not part of buildings (roads, and everything natural).
+    /// blocks that are not part of buildings (roads, and everything natural). A building can be sturdier than
+    /// its blocks (see <see cref="Economy.BuildingDef.Sturdy"/>).
     /// </summary>
     public static int Toughness(BlockType t) => t switch
     {
@@ -120,6 +123,7 @@ public static class BlockInfo
         BlockType.Door => 8,
         BlockType.Farmland => 4,
         BlockType.Gate => 12,
+        BlockType.Palisade => 10,
         _ => 0,
     };
 
@@ -152,7 +156,7 @@ public static class BlockInfo
         BlockType.Stone or BlockType.Crystal or BlockType.StoneBrick or BlockType.RoofTile => BlockType.StoneRubble,
         BlockType.IronOre => BlockType.OreRubble,
         BlockType.Coal => BlockType.CoalRubble,
-        BlockType.Planks or BlockType.Door or BlockType.Gate => BlockType.WoodRubble,
+        BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade => BlockType.WoodRubble,
         _ when IsTrunk(t) => BlockType.WoodRubble,
         _ when IsRubble(t) => t,
         _ => BlockType.Rubble,

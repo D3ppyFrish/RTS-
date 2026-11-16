@@ -6,7 +6,8 @@ namespace Rts.Sim.Units;
 /// Moves units each tick: following their order's flow field (or straight at the target until it is
 /// ready), separation so crowds spread out, stepping across terrain (up one block, down up to three),
 /// falling when the ground is dug away, and settling when a group reaches its destination. Units on a
-/// road walk twice as fast.
+/// road walk twice as fast. A unit posted on a wall too high to step off climbs down when an order takes it
+/// somewhere it cannot walk to from up there.
 /// </summary>
 public sealed class UnitMovement
 {
@@ -144,7 +145,7 @@ public sealed class UnitMovement
                 // a new way, so then wait for its update.
                 if (pathDist == FlowField.Unreachable || (field.Complete && !field.Dirty))
                 {
-                    EndOrder(u, i);
+                    if (!ClimbDown(u, i)) EndOrder(u, i);
                     return;
                 }
                 field.WantsMore = true;
@@ -272,7 +273,7 @@ public sealed class UnitMovement
                 {
                     if (pathDist == FlowField.Unreachable || (field.Complete && !field.Dirty))
                     {
-                        EndOrder(u, i);
+                        if (!ClimbDown(u, i)) EndOrder(u, i);
                         return;
                     }
                     field.WantsMore = true;
@@ -318,6 +319,23 @@ public sealed class UnitMovement
         x = u.X[t];
         z = u.Z[t];
         return Fix64.Abs(x - u.X[i]) <= ChaseClose && Fix64.Abs(z - u.Z[i]) <= ChaseClose;
+    }
+
+    /// <summary>
+    /// A unit on top of a wall or gate, with an order and no way on from up there (the wall is too high to
+    /// step off), climbs down: it is set on the ground at the foot of the wall, on the side nearest to where it
+    /// is going, and walks on from there. False if it stands on no wall, or the wall has no ground at its foot.
+    /// </summary>
+    private bool ClimbDown(UnitStore u, int i)
+    {
+        if (_sim.Economy.WallUnder(i) is not { } wall) return false;
+        if (!_sim.Economy.SpotBeside(wall, u.OrderX[i], u.OrderZ[i], out int x, out int z, out int y) || wall.ColumnDistance(x, z) != 1)
+            return false;
+        u.X[i] = Fix64.FromInt(x) + Fix64.Half;
+        u.Z[i] = Fix64.FromInt(z) + Fix64.Half;
+        u.Y[i] = y;
+        u.Blocked[i] = 0;
+        return true;
     }
 
     private static void EndOrder(UnitStore u, int i)

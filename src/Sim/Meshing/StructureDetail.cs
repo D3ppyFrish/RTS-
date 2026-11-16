@@ -30,8 +30,10 @@ public static class StructurePalette
     public const byte CapA = 58, CapB = 59, CapSpot = 60, Gills = 61, GillsDark = 62;
     /// <summary>The dusk tree: grey bark in three shades, the cyan glow in its cracks, a skull's bone and its hollows, red sap.</summary>
     public const byte DuskBarkA = 63, DuskBarkB = 64, DuskBarkDark = 65, DuskVein = 66, Bone = 67, BoneDark = 68, Sap = 69;
+    /// <summary>A barrier's stakes: weathered logs in two shades.</summary>
+    public const byte StakeA = 70, StakeB = 71;
     /// <summary>One more than the highest colour.</summary>
-    public const byte Count = 70;
+    public const byte Count = 72;
 
     /// <summary>Leaf colours: drawn swaying in the wind.</summary>
     public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark;
@@ -47,7 +49,8 @@ public static class StructurePalette
 /// shaped by its material and its six neighbours: plank walls get a dark timber frame, recessed boards and
 /// windows with shutters, doors get boards, iron straps and a frame, roofs slope at 45 degrees in shingle or
 /// straw courses, stone gets coursed blocks with sunken mortar, wall tops get battlements and arrow slits,
-/// chimneys a sooty mouth, and gates banded boards. Rubble is a heap of lumps of what it was made of. Trees
+/// chimneys a sooty mouth, gates banded boards, free-standing plank walls a parapet, and a barrier is a
+/// row of pointed stakes. Rubble is a heap of lumps of what it was made of. Trees
 /// are drawn the same way: round trunks of furrowed bark that flare into roots at the ground, crowns of
 /// leaf clumps with ragged, rounded edges in several greens, and felled trees as logs lying along their
 /// line with cut ends and leafy twigs. A shape never leaves its block, so what is drawn always
@@ -66,7 +69,7 @@ public static class StructureDetail
     /// <summary>Building blocks, drawn with fine detail instead of as plain blocks.</summary>
     public static bool IsStructure(BlockType t) =>
         t is BlockType.Planks or BlockType.Thatch or BlockType.RoofTile or BlockType.StoneBrick
-            or BlockType.Door or BlockType.Gate;
+            or BlockType.Door or BlockType.Gate or BlockType.Palisade;
 
     /// <summary>
     /// Blocks drawn as fine voxels: building blocks, and the rubble collapses leave, drawn as heaps of lumps.
@@ -219,6 +222,7 @@ public static class StructureDetail
             BlockType.Planks => TimberWall(x, y, z),
             BlockType.Door => Door(x, y, z),
             BlockType.Gate => Gate(x, y, z),
+            BlockType.Palisade => Stakes(x, y, z),
             BlockType.Thatch or BlockType.RoofTile => _kind == Kind.Slope ? Slope(x, y, z) : RoofColour(x, y, z, -1),
             BlockType.StoneBrick => Stone(x, y, z),
             BlockType.TreeRubble => Log(x, y, z),
@@ -237,6 +241,13 @@ public static class StructureDetail
         private byte TimberWall(int x, int y, int z)
         {
             int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
+            // The top of a wall that stands free (a wooden wall, not a house's): a parapet of boards with
+            // gaps to shoot through, like a stone wall's battlements.
+            if (y >= Size / 2 && Open(PY) && ((Open(PX) && Open(NX)) ^ (Open(PZ) && Open(NZ))))
+            {
+                int along = Open(PX) && Open(NX) ? gz : gx;
+                if ((along & (Size - 1)) >= 5) return StructurePalette.Empty;
+            }
             var (d, depth) = Nearest(x, y, z, false);
             if (d < 0) return Boards(gy, gx + gz);
             int gu = Tangent(d, gx, gz), u = gu & (Size - 1);
@@ -279,6 +290,28 @@ public static class StructureDetail
                 2 or 3 => StructurePalette.PlankB,
                 _ => StructurePalette.PlankC,
             };
+        }
+
+        /// <summary>
+        /// A barrier: upright stakes, four to a block, each a log with its corners rounded off, the bark left
+        /// on, and at the top of the barrier cut to a pale point.
+        /// </summary>
+        private byte Stakes(int x, int y, int z)
+        {
+            int sx = x & 3, sz = z & 3;
+            bool edgeX = sx is 0 or 3, edgeZ = sz is 0 or 3;
+            if (edgeX && edgeZ) return StructurePalette.Empty;
+            if (_py != BlockType.Palisade && y >= Size - 2)
+            {
+                if (y == Size - 1 && (edgeX || edgeZ)) return StructurePalette.Empty;
+                return StructurePalette.Heartwood;
+            }
+            int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
+            int stake = Hash(gx >> 2, gz >> 2, 3);
+            // A dark furrow here and there up the bark, and a rope of darker wood binding the stakes.
+            if ((gy & 15) == 9 && (edgeX || edgeZ)) return StructurePalette.TimberDark;
+            if (Hash(gx, gz, stake) % 7 == 0) return StructurePalette.BarkA;
+            return stake % 2 == 0 ? StructurePalette.StakeA : StructurePalette.StakeB;
         }
 
         // --- Doors and gates ---------------------------------------------------------------------------

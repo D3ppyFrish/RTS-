@@ -52,6 +52,9 @@ public partial class Hud : CanvasLayer
     private Button _planModeButton = null!;
     private HBoxContainer _planRow = null!;
     private Button _startPlanButton = null!;
+    private HBoxContainer _upgradeRow = null!;
+    private Button _upgradeButton = null!;
+    private Button _upgradeOneButton = null!;
     private VBoxContainer _evolveBox = null!;
     private readonly List<EvolveRow> _evolveRows = new();
     private string _evolveKey = "";
@@ -380,7 +383,9 @@ public partial class Hud : CanvasLayer
             wall.Name = "build_wall";
             wall.Icon = UiIcons.Get(wallDef.Icon.Length > 0 ? wallDef.Icon : wallDef.Id);
             wall.TooltipText = "Drag a line for the selected workers to wall off, a column at a time. " +
-                               "Walls join up with each other and with gates; a gate lets only your units through.";
+                               "Walls join up with each other and with gates; a gate lets only your units through. " +
+                               "This is the cheap first tier, easy to knock down: select a column of it to upgrade the " +
+                               "stretch to a wooden wall that archers stand on, and that to a stone wall.";
             wall.Pressed += () => _control.ToggleWall();
             column.AddChild(wall);
             _buildButtons.Add((wall, wallDef, Key.Y));
@@ -441,6 +446,20 @@ public partial class Hud : CanvasLayer
         cancel.Pressed += () => _control.CancelSelectedPlan();
         _planRow.AddChild(cancel);
         column.AddChild(_planRow);
+        _upgradeRow = new HBoxContainer { Visible = false };
+        _upgradeRow.AddThemeConstantOverride("separation", 4);
+        _upgradeButton = MakeToolButton("Upgrade");
+        _upgradeButton.Name = "wall_upgrade";
+        _upgradeButton.ToggleMode = false;
+        _upgradeButton.Pressed += () => _control.UpgradeSelected(stretch: true);
+        _upgradeRow.AddChild(_upgradeButton);
+        _upgradeOneButton = MakeToolButton("Only this one");
+        _upgradeOneButton.Name = "wall_upgrade_one";
+        _upgradeOneButton.ToggleMode = false;
+        _upgradeOneButton.TooltipText = "Upgrade this column only.";
+        _upgradeOneButton.Pressed += () => _control.UpgradeSelected(stretch: false);
+        _upgradeRow.AddChild(_upgradeOneButton);
+        column.AddChild(_upgradeRow);
         _evolveBox = new VBoxContainer();
         _evolveBox.AddThemeConstantOverride("separation", 4);
         column.AddChild(_evolveBox);
@@ -793,6 +812,7 @@ public partial class Hud : CanvasLayer
         bool plan = b is { Planned: true } && b.Owner == player;
         _planRow.Visible = plan;
         if (plan) _startPlanButton.Disabled = econ.CanStart(b!) != PlaceResult.Ok;
+        RefreshUpgrade(b);
         bool trains = b != null && b.Owner == player && b.Active && b.Def.Trains.Length > 0;
         var trainFor = trains ? b!.Def : null;
         if (trainFor != _trainFor) BuildTrainButtons(trainFor);
@@ -818,6 +838,31 @@ public partial class Hud : CanvasLayer
         RefreshDen();
         RefreshBloom();
         RefreshCities();
+    }
+
+    /// <summary>
+    /// The upgrade buttons while a wall or gate of yours that has a tier above it is selected: the whole
+    /// stretch it stands in (as far as the goods go), or it alone. Greyed out while you lack the tech or the
+    /// goods for one column, or it is being upgraded already.
+    /// </summary>
+    private void RefreshUpgrade(Building? b)
+    {
+        var to = b != null && b.Owner == PlayerControl.LocalPlayer && b.Active ? b.Def.Upgrade : null;
+        _upgradeRow.Visible = to != null;
+        if (to == null) return;
+        var result = _sim.Economy.CanUpgrade(b!);
+        string? needs = Needs(to.Requires, to.Faction);
+        int stretch = b!.Upgrade != null ? 0 : _sim.Economy.Stretch(b).Count;
+        _upgradeButton.Text = b.Upgrade != null ? $"Becoming a {to.Name.ToLowerInvariant()}: {100L * b.UpgradeWork / Math.Max(1, to.BuildTicks)}%"
+            : needs != null ? $"{to.Name}: {needs}"
+            : $"Upgrade to {to.Name.ToLowerInvariant()}  [U]   {CostText(to.Cost)} a column";
+        _upgradeButton.TooltipText =
+            $"Turns this stretch of {Plural(b.Def.Name).ToLowerInvariant()} ({stretch} joined up here) into {Plural(to.Name).ToLowerInvariant()}, " +
+            "nearest first, as far as your goods go. Workers do the work (automatic ones by themselves; or right click the wall with workers), " +
+            "and the wall stands as it is until they are done." + (to.Walkway && !b.Def.Walkway ? " Archers can be posted on top of the new wall." : "");
+        _upgradeButton.Disabled = result != PlaceResult.Ok;
+        _upgradeOneButton.Visible = b.Upgrade == null && needs == null;
+        _upgradeOneButton.Disabled = result != PlaceResult.Ok;
     }
 
     /// <summary>
@@ -1217,6 +1262,7 @@ public partial class Hud : CanvasLayer
                 if (_sim.Economy.Population(b.Owner) >= _sim.Economy.Housing(b.Owner)) text.Append("   (needs more houses)");
                 else if (_sim.Economy.Starving(b.Owner)) text.Append("   (needs food)");
             }
+            if (b.Def.IsWall) text.Append(DescribeWall(b));
             if (b.Repeat)
             {
                 text.Append("\nOn repeat");
@@ -1229,6 +1275,33 @@ public partial class Hud : CanvasLayer
             int total = b.Raid == RaidKind.Capture ? EconomySystem.CaptureTicks : EconomySystem.BurnTicks;
             text.Append($"\n{(b.Raid == RaidKind.Capture ? "Being captured" : "Burning")} by {PlayerName(b.RaidPlayer)}: {100L * b.RaidTicks / total}%");
         }
+        return text.ToString();
+    }
+
+    /// <summary>A wall's or gate's place among its tiers, who is posted on it, and how its upgrade is going.</summary>
+    private string DescribeWall(Building b)
+    {
+        var u = _sim.Units;
+        var text = new StringBuilder();
+        text.Append(b.Def.Walkway ? "Archers and other ranged units can be posted on top (right click it with them)"
+            : "Too low to post anyone on");
+        if (b.Def.Walkway)
+            for (int i = 0; i < u.Count; i++)
+                if (u.X[i].FloorToInt() == b.X && u.Z[i].FloorToInt() == b.Z && u.Y[i] == b.Y + b.Def.Height)
+                {
+                    text.Append($": a {_sim.Content.Units[u.Def[i]].Name.ToLowerInvariant()} stands here");
+                    break;
+                }
+        if (b.Upgrade != null)
+        {
+            int builders = 0;
+            for (int i = 0; i < u.Count; i++)
+                if (u.Job[i] == UnitJob.Build && u.JobTarget[i] == b.Id) builders++;
+            text.Append($"\nBeing made a {b.Upgrade.Name.ToLowerInvariant()}: {100L * b.UpgradeWork / Math.Max(1, b.Upgrade.BuildTicks)}%   " +
+                        $"{builders} builder{(builders == 1 ? "" : "s")}");
+            if (builders == 0) text.Append(" (right click it with workers)");
+        }
+        else if (b.Def.Upgrade == null && b.Def.UpgradeOf != null) text.Append("\nThe strongest there is");
         return text.ToString();
     }
 
@@ -1310,6 +1383,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Burn => "burning a storehouse",
         UnitJob.Tunnel => "tunnelling",
         UnitJob.Clean => u.Phase[i] == JobPhase.Working ? "scrubbing blood" : "cleaning blood",
+        UnitJob.Post => u.Phase[i] == JobPhase.Working ? "climbing a wall" : "going to its post on a wall",
         UnitJob.Dig => u.Phase[i] switch
         {
             JobPhase.ToStore => "digging an area: taking what it dug to storage",

@@ -21,7 +21,8 @@ public enum BuildingKind : byte
     Barracks,
     /// <summary>
     /// A stretch of wall: solid blocks the full height of the footprint, no roof. Laid along a line, column by
-    /// column (see <see cref="WallCommand"/>), and set next to other walls and gates without a gap.
+    /// column (see <see cref="WallCommand"/>), and set next to other walls and gates without a gap. Walls come
+    /// in tiers: the one that is laid, and those it is upgraded to in place (see <see cref="BuildingDef.Upgrade"/>).
     /// </summary>
     Wall,
     /// <summary>
@@ -109,6 +110,27 @@ public sealed class BuildingDef
     public GoodAmount[] Yield { get; init; } = Array.Empty<GoodAmount>();
     /// <summary>Ticks between its yields; 0 when it has none.</summary>
     public int YieldTicks { get; init; }
+    /// <summary>
+    /// How many times the damage of the same block elsewhere each of its blocks takes before it is knocked out
+    /// (1 unless given): what makes one tier of wall sturdier than the last (see <see cref="BlockToughness"/>).
+    /// </summary>
+    public int Sturdy { get; init; } = 1;
+    /// <summary>
+    /// A wall or gate with a walk along its top: ranged units can be posted on it (see <see cref="PostCommand"/>).
+    /// </summary>
+    public bool Walkway { get; init; }
+    /// <summary>
+    /// What it can be turned into where it stands (see <see cref="UpgradeCommand"/>), for that building's cost and
+    /// building time; null if nothing. Walls and gates only.
+    /// </summary>
+    public BuildingDef? Upgrade { get; internal set; }
+    /// <summary>
+    /// The building this one is an upgrade of; null if it is none. An upgrade is never placed as it is: the
+    /// building it comes from is, and then upgraded.
+    /// </summary>
+    public BuildingDef? UpgradeOf { get; internal set; }
+    /// <summary>How many upgrades it is from a building that is placed: 0 for one that is, 1 for its upgrade, and so on.</summary>
+    public int Tier { get; internal set; }
 
     /// <summary>Units stand on it rather than next to it.</summary>
     public bool Walkable => Kind == BuildingKind.Farm;
@@ -129,6 +151,12 @@ public sealed class BuildingDef
     /// <summary>The toughness of all its blocks together (see <see cref="BlockInfo.Toughness"/>).</summary>
     public int Toughness => ToughnessOf(Blocks.Count);
 
+    /// <summary>
+    /// The damage block k of <see cref="Blocks"/> takes before it is knocked out: its material's toughness
+    /// (see <see cref="BlockInfo.Toughness"/>) times <see cref="Sturdy"/>.
+    /// </summary>
+    public int BlockToughness(int k) => BlockInfo.Toughness(Blocks[k].Block) * Sturdy;
+
     /// <summary>The toughness of its first <paramref name="placed"/> blocks in build order.</summary>
     public int ToughnessOf(int placed)
     {
@@ -138,7 +166,7 @@ public sealed class BuildingDef
             // Built in a local first: definitions are shared, and another thread may be reading them.
             var blocks = Blocks;
             sums = new int[blocks.Count + 1];
-            for (int k = 0; k < blocks.Count; k++) sums[k + 1] = sums[k] + BlockInfo.Toughness(blocks[k].Block);
+            for (int k = 0; k < blocks.Count; k++) sums[k + 1] = sums[k] + BlockToughness(k);
             _toughness = sums;
         }
         return sums[Math.Clamp(placed, 0, sums.Length - 1)];

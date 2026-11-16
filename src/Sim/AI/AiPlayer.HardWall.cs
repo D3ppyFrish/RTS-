@@ -2,13 +2,15 @@ using System;
 using System.Collections.Generic;
 using Rts.Sim.Content;
 using Rts.Sim.Economy;
+using Rts.Sim.Units;
 
 namespace Rts.Sim.AI;
 
 // How Hard plays each faction (see AiStyle in the game data). A faction the computer plays balanced (the
 // Settlers) gets a wall round the middle of its town, and a quarter of its soldiers stay behind it when the
 // rest attack; a faction it plays in waves (the Orcs) builds no wall and sends nearly everyone. This file is
-// the wall and the guard.
+// the wall (laid as barriers, then made wooden and stone out of what it can spare), the archers on it, and
+// the guard.
 public sealed partial class AiPlayer
 {
     /// <summary>
@@ -25,13 +27,28 @@ public sealed partial class AiPlayer
     /// <summary>Hard, balanced: it starts on its wall once it has a barracks and this many workers.</summary>
     public const int KeepWorkers = 16;
     /// <summary>
-    /// Hard, balanced: while its wall is the only thing it is short of stone for, it keeps at most this many
-    /// workers at its quarry (it keeps that many there early on anyway, see <see cref="MostMasons"/>): the
-    /// wall goes up as the stone comes in, and is not worth taking more workers off the fields and the trees.
+    /// Hard, balanced: while its wall is the only thing it is short of stone for (the stone to make it a
+    /// stone wall, mostly), it keeps at most this many workers at its quarry (it keeps that many there early
+    /// on anyway, see <see cref="MostMasons"/>): the wall gets its stone as it comes in, and is not worth
+    /// taking more workers off the fields and the trees.
     /// </summary>
     public const int KeepMasons = 3;
-    /// <summary>Hard, balanced: at most this many columns of its wall wait to be built at a time (see <see cref="HardWall"/>).</summary>
+    /// <summary>
+    /// Hard, balanced: at most this many columns of its wall wait to be built or are being upgraded at a time
+    /// (see <see cref="HardWall"/>).
+    /// </summary>
     public const int KeepOpenSites = 6;
+    /// <summary>
+    /// Hard, balanced: it upgrades its wall only out of what it can spare: a column at a time while it has
+    /// this much wood, and this much stone, left over on top of what it keeps in hand for anything else.
+    /// Soldiers and houses come first; the wall gets stronger as the goods pile up.
+    /// </summary>
+    public const int KeepSpareWood = 100, KeepSpareStone = StoneWanted;
+    /// <summary>
+    /// Hard, balanced: an archer on its wall this near (columns) to the enemies at its town stays up there
+    /// and shoots; the others at home go to meet them as ever.
+    /// </summary>
+    public const int KeepPostHold = 20;
     /// <summary>Hard, balanced: ticks between looks at its wall (what is not laid yet, and what has been knocked out).</summary>
     public const int KeepLookTicks = 10 * Tps;
     /// <summary>
@@ -60,8 +77,10 @@ public sealed partial class AiPlayer
     private bool _ringPlanned;
     private long _ringAt;
     private GoodAmount[]? _ringCost;
-    // The stone kept in hand for the wall this look (0 when it wants none).
-    private int _ringStone;
+    // The stone its wall wants this look (0 when it wants none), how much of that it keeps in hand (the
+    // price of what it is laying; an upgrade is never saved for), and what the tier it is upgrading to
+    // still wanted of stone the last time it looked.
+    private int _ringStone, _ringKept, _upgradeStone;
     // The columns of the side it is laying that are still to lay, in order along the side.
     private readonly List<(int X, int Z, bool Gate)> _laying = new();
 
@@ -148,10 +167,12 @@ public sealed partial class AiPlayer
     /// more than <see cref="KeepOpenSites"/> waiting to be built: every site calls the nearest worker with
     /// nothing to do, so a whole side at once would call in half its workers from the trees, most of them
     /// for nothing. Its automatic workers build the columns as they do any site, and move on along the wall.
+    /// The wall is laid as barriers, the first tier, which cost a little wood; once no column is missing it
+    /// is made stronger (see <see cref="StrengthenWall"/>).
     /// </summary>
     private void HardWall(Simulation sim, Building hall, Census c, Action<Command> issue)
     {
-        _ringStone = 0;
+        _ringStone = _ringKept = 0;
         if (_ring is not var (x0, z0, x1, z1) || hall.Id != _ringHall) return;
         if (c.Barracks < 1 || c.Workers < KeepWorkers) return;
         var wall = FirstBuilding(sim, BuildingKind.Wall);
@@ -165,10 +186,12 @@ public sealed partial class AiPlayer
         if (sim.Tick < _ringAt)
         {
             if (_ringCost != null) SaveForWall(_ringCost);
+            else _ringStone = _upgradeStone;
             return;
         }
         _ringAt = sim.Tick + KeepLookTicks;
         _ringCost = null;
+        _upgradeStone = 0;
         var (hx, hz) = Middle(hall);
         var guesses = HallGuesses(sim, hx, hz);
         var enemy = KnownHall(hx, hz) is { } k ? (k.X, k.Z) : guesses.Count > 0 ? guesses[0] : (sim.World.SizeX / 2, sim.World.SizeZ / 2);
@@ -194,6 +217,132 @@ public sealed partial class AiPlayer
             LayNext(sim, wall, gate, issue);
             return;
         }
+        StrengthenWall(sim, WallSides(x0, z0, x1, z1, enemy.Item1, enemy.Item2), issue);
+    }
+
+    /// <summary>
+    /// Hard, balanced: with its wall laid all round, it upgrades it a tier at a time, the whole line to
+    /// wooden walls (which its archers stand on, see <see cref="PostGuard"/>) before any of it to stone, the
+    /// side toward the enemy first and a few columns at a time (see <see cref="KeepOpenSites"/>), each paid
+    /// for out of what it can spare (see <see cref="KeepSpareWood"/>). It never saves up for this: while
+    /// soldiers, houses or research want the goods, the wall waits. A tier it has not the tech for waits too.
+    /// </summary>
+    private void StrengthenWall(Simulation sim, List<(string Name, List<(int X, int Z, bool Gate)> Columns)> sides, Action<Command> issue)
+    {
+        int open = OpenWallSites(sim);
+        var none = Array.Empty<int>();
+        var stock = sim.Economy.Stockpile(Player);
+        int tiers = 0;
+        foreach (var d in sim.Content.Buildings)
+            if (d.IsWall) tiers = Math.Max(tiers, d.Tier);
+        for (int tier = 0; tier < tiers; tier++)
+        {
+            bool left = false;
+            int started = 0, stone = 0, spent = 0;
+            BuildingDef? becomes = null;
+            foreach (var (_, columns) in sides)
+            foreach (var (x, z, _) in columns)
+            {
+                var b = sim.Buildings.AtColumn(x, z);
+                if (b == null || b.Owner != Player || !b.Def.IsWall || b.Def.Tier != tier) continue;
+                if (b.Def.Upgrade is not { } to) continue;
+                if (b.State != BuildingState.Active || b.Upgrade != null)
+                {
+                    left = true; // still going up, or being upgraded now
+                    continue;
+                }
+                var result = sim.Economy.CanUpgrade(b);
+                if (result is not (PlaceResult.Ok or PlaceResult.CannotAfford)) continue; // no tech yet, or no room above
+                left = true;
+                stone += Price(to.Cost, Good.Stone);
+                if (open >= KeepOpenSites || result != PlaceResult.Ok || !SpareForWall(stock, to.Cost)) continue;
+                issue(new UpgradeCommand(Player, none, b.Id, false));
+                Spend(to.Cost);
+                stone -= Price(to.Cost, Good.Stone);
+                spent += Price(to.Cost, Good.Stone);
+                becomes ??= to;
+                open++;
+                started++;
+            }
+            if (started > 0 && sim.Tick >= _strengthenNote)
+            {
+                _strengthenNote = sim.Tick + 60 * Tps;
+                Note(sim, $"upgrades {started} columns of its wall to {becomes!.Name.ToLowerInvariant()}");
+            }
+            if (left)
+            {
+                // What the tier still wants of stone: a few workers stay at the quarry for it (see KeepMasons).
+                _ringStone = _upgradeStone = stone;
+                _ringKept = spent;
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// True if it can pay the cost of a column's upgrade out of what it can spare: every good of it, on top of
+    /// what it keeps in hand, with <see cref="KeepSpareWood"/> wood left over and, if it takes stone,
+    /// <see cref="KeepSpareStone"/> stone.
+    /// </summary>
+    private bool SpareForWall(int[] stock, GoodAmount[] cost)
+    {
+        foreach (var g in cost)
+            if (stock[(int)g.Good] < g.Amount + _keep[(int)g.Good]) return false;
+        int wood = Price(cost, Good.Wood), stone = Price(cost, Good.Stone);
+        return stock[(int)Good.Wood] >= wood + _keep[(int)Good.Wood] + KeepSpareWood
+            && (stone == 0 || stock[(int)Good.Stone] >= stone + _keep[(int)Good.Stone] + KeepSpareStone);
+    }
+
+    // When it may next write in its journal that it is upgrading its wall (once a minute, not every look).
+    private long _strengthenNote;
+
+    /// <summary>The columns of its wall waiting to be built or being upgraded.</summary>
+    private int OpenWallSites(Simulation sim)
+    {
+        int open = 0;
+        foreach (var b in sim.Buildings.All)
+            if (b.Owner == Player && b.Def.IsWall && b.WantsBuilders && !b.Planned) open++;
+        return open;
+    }
+
+    /// <summary>True if the unit stands on a wall or gate, or is on its way to a post on one.</summary>
+    private static bool Posted(Simulation sim, int i) => sim.Units.Job[i] == UnitJob.Post || sim.Economy.WallUnder(i) != null;
+
+    /// <summary>
+    /// Hard, balanced: its archers and other ranged soldiers at home stand on its wall, by the gate nearest
+    /// the enemy, once the wall there can be stood on: they see and shoot further from up there, and blows
+    /// from the ground do not reach them. Those posted (or on their way up) are taken out of
+    /// <paramref name="home"/>, so they are not called back to where the others gather. They come down when
+    /// a wave they are part of sets out, or to meet enemies somewhere else.
+    /// </summary>
+    private void PostGuard(Simulation sim, List<int> home, (int X, int Z) enemy, Action<Command> issue)
+    {
+        if (_ring == null || _gates.Count == 0) return;
+        var u = sim.Units;
+        var econ = sim.Economy;
+        var gate = _gates[0];
+        foreach (var g in _gates)
+            if (Dist2(g.X, g.Z, enemy.X, enemy.Z) < Dist2(gate.X, gate.Z, enemy.X, enemy.Z)) gate = g;
+        var at = sim.Buildings.AtColumn(gate.X, gate.Z);
+        var going = new List<int>();
+        if (at != null && at.Owner == Player && at.Active && at.Def.Walkway)
+        {
+            // As many as there are free columns to stand on along that side, within reach of the gate.
+            int free = 0;
+            for (int k = -EconomySystem.PostReach; k <= EconomySystem.PostReach; k++)
+            {
+                var b = gate.AlongX ? sim.Buildings.AtColumn(gate.X + k, gate.Z) : sim.Buildings.AtColumn(gate.X, gate.Z + k);
+                if (b != null && b.Owner == Player && econ.PostFree(b)) free++;
+            }
+            foreach (int id in home)
+            {
+                if (going.Count >= free) break;
+                int i = u.IndexOf(id);
+                if (i >= 0 && !Posted(sim, i) && econ.CanPost(i) && u.Rout[i] == 0 && u.Target[i] == 0) going.Add(id);
+            }
+            if (going.Count > 0) issue(new PostCommand(Player, going.ToArray(), at.Id));
+        }
+        home.RemoveAll(id => going.Contains(id) || (u.IndexOf(id) is >= 0 and var i && Posted(sim, i)));
     }
 
     /// <summary>True if the column of its wall has nothing on it and could take a wall or gate now (goods aside).</summary>
@@ -206,9 +355,7 @@ public sealed partial class AiPlayer
     /// </summary>
     private void LayNext(Simulation sim, BuildingDef wall, BuildingDef gate, Action<Command> issue)
     {
-        int open = 0;
-        foreach (var b in sim.Buildings.All)
-            if (b.Owner == Player && b.Def.IsWall && b.State == BuildingState.Site) open++;
+        int open = OpenWallSites(sim);
         var none = Array.Empty<int>();
         while (_laying.Count > 0 && open < KeepOpenSites)
         {
@@ -223,6 +370,8 @@ public sealed partial class AiPlayer
             _laying.RemoveAt(0);
             issue(new WallCommand(Player, none, def.Id, x, z, x, z));
             Spend(def.Cost);
+            _ringStone += Price(def.Cost, Good.Stone);
+            _ringKept += Price(def.Cost, Good.Stone);
             open++;
         }
         int walls = 0, gates = 0;
@@ -235,7 +384,8 @@ public sealed partial class AiPlayer
     private void SaveForWall(GoodAmount[] cost)
     {
         Save(cost);
-        _ringStone = Price(cost, Good.Stone);
+        _ringStone += Price(cost, Good.Stone);
+        _ringKept += Price(cost, Good.Stone);
     }
 
     /// <summary>The price of <paramref name="n"/> of one thing and <paramref name="m"/> of another, good by good.</summary>

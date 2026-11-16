@@ -189,6 +189,8 @@ public sealed class CommandLog
                 BurnCommand bn => string.Create(ci, $"{tick} burn {bn.PlayerId} {bn.Building} {Ids(bn.Units)}"),
                 WallCommand wc => string.Create(ci, $"{tick} wall {wc.PlayerId} {Name(wc.Building)} {wc.X1} {wc.Z1} {wc.X2} {wc.Z2} {Ids(wc.Units)}"),
                 BridgeCommand bc => string.Create(ci, $"{tick} bridge {bc.PlayerId} {Name(bc.Building)} {bc.X1} {bc.Z1} {bc.X2} {bc.Z2} {Ids(bc.Units)}"),
+                UpgradeCommand up => string.Create(ci, $"{tick} upgrade {up.PlayerId} {up.Building} {(up.Stretch ? "stretch" : "one")} {Ids(up.Units)}"),
+                PostCommand po => string.Create(ci, $"{tick} post {po.PlayerId} {po.Building} {Ids(po.Units)}"),
                 RoadCommand r => string.Create(ci, $"{tick} road {r.PlayerId} {r.X1} {r.Z1} {r.X2} {r.Z2}"),
                 TrainCommand t => string.Create(ci, $"{tick} train {t.PlayerId} {t.Building} {Name(t.Unit)}"),
                 ResearchCommand rs => string.Create(ci, $"{tick} research {rs.PlayerId} {Name(rs.Tech)}"),
@@ -304,6 +306,8 @@ public sealed class CommandLog
                             "burn" => new BurnCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
                             "wall" => new WallCommand(Int(f[2]), ParseIds(f[8]), Name(f[3]), Int(f[4]), Int(f[5]), Int(f[6]), Int(f[7])),
                             "bridge" => new BridgeCommand(Int(f[2]), ParseIds(f[8]), Name(f[3]), Int(f[4]), Int(f[5]), Int(f[6]), Int(f[7])),
+                            "upgrade" => new UpgradeCommand(Int(f[2]), ParseIds(f[5]), Int(f[3]), ParseStretch(f[4])),
+                            "post" => new PostCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
                             "road" => new RoadCommand(Int(f[2]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6])),
                             "train" => new TrainCommand(Int(f[2]), Int(f[3]), Name(f[4])),
                             "research" => new ResearchCommand(Int(f[2]), Name(f[3])),
@@ -419,6 +423,13 @@ public sealed class CommandLog
         "on" => true,
         "off" => false,
         _ => throw new FormatException($"Expected on or off, not '{s}'"),
+    };
+
+    private static bool ParseStretch(string s) => s switch
+    {
+        "stretch" => true,
+        "one" => false,
+        _ => throw new FormatException($"Expected stretch or one, not '{s}'"),
     };
 
     private static string StanceName(UnitStance stance) => stance switch

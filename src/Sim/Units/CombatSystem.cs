@@ -397,12 +397,15 @@ public sealed partial class CombatSystem
     private Fix64 Reach(int i, UnitDef def, int t) =>
         def.IsRanged && U.Y[i] - U.Y[t] >= HighGround ? def.Range * HighGroundBonus : def.Range;
 
-    /// <summary>True if the unit holds its ground when it has no order: on the hold stance, or on the retreat stance and hurt.</summary>
+    /// <summary>
+    /// True if the unit holds its ground when it has no order: on the hold stance, on the retreat stance and
+    /// hurt, or standing on top of a wall or gate (it does not jump down after an enemy).
+    /// </summary>
     public bool Holding(int i) => U.Stance[i] switch
     {
         UnitStance.Hold => true,
-        UnitStance.Retreat => Hurt(i),
-        _ => false,
+        UnitStance.Retreat => Hurt(i) || _sim.Economy.WallUnder(i) != null,
+        _ => _sim.Economy.WallUnder(i) != null,
     };
 
     /// <summary>True if the unit is down to <see cref="RetreatPercent"/> of its hit points or less.</summary>
@@ -547,7 +550,7 @@ public sealed partial class CombatSystem
         }
         else if (u.Order[i] == UnitOrder.Idle && u.ChaseRetry[i]++ >= MaxChaseRetries)
         {
-            if (b == null || !Breach(i, b)) GiveUp(i);
+            if (b == null ? !BringDown(i, t) : !Breach(i, b)) GiveUp(i);
             return;
         }
         int gx, gz, gy;
@@ -596,6 +599,21 @@ public sealed partial class CombatSystem
         u.TargetBuilding[i] = best.Id;
         u.ChaseRetry[i] = 0;
         if (u.Order[i] == UnitOrder.Chase) Halt(i);
+        return true;
+    }
+
+    /// <summary>
+    /// Unit i cannot get to unit t, which stands on top of a wall or gate that is not i's own: it goes for
+    /// that wall instead, to bring it down under it. False if t stands on no such wall.
+    /// </summary>
+    private bool BringDown(int i, int t)
+    {
+        var u = U;
+        if (_sim.Economy.WallUnder(t) is not { } wall || wall.Owner == u.Owner[i]) return false;
+        u.Target[i] = 0;
+        u.TargetBuilding[i] = wall.Id;
+        u.ChaseRetry[i] = 0;
+        u.LosBlocked[i] = false;
         return true;
     }
 

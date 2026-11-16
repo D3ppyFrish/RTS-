@@ -39,7 +39,7 @@ public class StructureDetailTests
     public void OnlyBuildingBlocksGetDetail()
     {
         var structures = Enum.GetValues<BlockType>().Where(StructureDetail.IsStructure).ToArray();
-        Assert.Equal(new[] { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Door, BlockType.Gate },
+        Assert.Equal(new[] { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Door, BlockType.Gate, BlockType.Palisade },
             structures);
     }
 
@@ -80,6 +80,54 @@ public class StructureDetailTests
         // The crenel runs along the wall: the same columns are open on both faces.
         for (int x = 0; x < F; x++)
             Assert.Equal(At(top, x, F - 1, 0) == StructurePalette.Empty, At(top, x, F - 1, F - 1) == StructurePalette.Empty);
+    }
+
+    [Fact]
+    public void ABarrierIsARowOfPointedStakes()
+    {
+        var w = Ground();
+        for (int x = 4; x <= 10; x++)
+        for (int y = 1; y <= 2; y++)
+            w.Set(x, y, 8, BlockType.Palisade);
+        var bottom = Shape(w, 7, 1, 8);
+        var top = Shape(w, 7, 2, 8);
+        for (int y = 0; y < F; y++)
+        for (int z = 0; z < F; z++)
+        for (int x = 0; x < F; x++)
+        {
+            // Four stakes to a block, each four voxels across with its corners rounded off, the same all the way up...
+            bool corner = (x % 4 is 0 or 3) && (z % 4 is 0 or 3);
+            Assert.Equal(corner, At(bottom, x, y, z) == StructurePalette.Empty);
+            // ...and cut to a point at the top of the barrier: only the middle of each stake reaches the last voxel.
+            bool tip = x % 4 is 1 or 2 && z % 4 is 1 or 2;
+            Assert.Equal(y == F - 1 ? !tip : corner, At(top, x, y, z) == StructurePalette.Empty);
+        }
+        Assert.Equal(StructurePalette.Heartwood, At(top, 1, F - 1, 1)); // the cut wood is pale
+        Assert.Contains(At(bottom, 1, 0, 0), new[] { StructurePalette.StakeA, StructurePalette.StakeB, StructurePalette.BarkA, StructurePalette.TimberDark });
+    }
+
+    [Fact]
+    public void AWoodenWallHasAParapetAndAHouseWallDoesNot()
+    {
+        var w = Ground();
+        for (int x = 4; x <= 10; x++)
+        for (int y = 1; y <= 3; y++)
+            w.Set(x, y, 8, BlockType.Planks);
+        int Gaps(byte[] shape)
+        {
+            int gaps = 0;
+            for (int y = F / 2; y < F; y++)
+            for (int z = 0; z < F; z++)
+            for (int x = 0; x < F; x++)
+                if (x >= 5 && At(shape, x, y, z) == StructurePalette.Empty) gaps++;
+            return gaps;
+        }
+        // The top block of a wall standing free has a gap three voxels wide and four deep, right through it.
+        Assert.Equal(3 * F * (F / 2), Gaps(Shape(w, 7, 3, 8)));
+        Assert.True(Gaps(Shape(w, 7, 2, 8)) < F * (F / 2)); // the block under it is whole (but for its sunk boards)
+        // A plank wall with a roof on it is a house's: no parapet.
+        for (int x = 4; x <= 10; x++) w.Set(x, 4, 8, BlockType.Thatch);
+        Assert.True(Gaps(Shape(w, 7, 3, 8)) < F * (F / 2));
     }
 
     [Fact]

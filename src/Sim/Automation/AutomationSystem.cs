@@ -388,7 +388,7 @@ public sealed class AutomationSystem
         if (b.Planned) return -1; // not started: the player starts it
         int working = _working.GetValueOrDefault(b.Id);
         // A bridge's deck is built from beside it: not before there is ground or deck to stand on there.
-        if (b.State == BuildingState.Site) return working < MaxBuilders(b.Def) && (!b.Def.IsBridge || Economy.BridgeAccess(b, out _, out _, out _)) ? 0 : -1;
+        if (b.WantsBuilders) return working < MaxBuilders(b.Upgrade ?? b.Def) && (!b.Def.IsBridge || Economy.BridgeAccess(b, out _, out _, out _)) ? 0 : -1;
         if (b.Def.Kind == BuildingKind.Farm) return working < b.Def.WorkerSlots ? 1 : -1;
         if (b.Def.Kind != BuildingKind.Smelter || working >= b.Def.WorkerSlots) return -1;
         bool inputs = b.Stock[(int)Good.IronOre] + s.Stock[(int)Good.IronOre] >= EconomySystem.OrePerIngot
@@ -524,7 +524,7 @@ public sealed class AutomationSystem
         else
         {
             var b = Buildings.Get(a.Building);
-            untouched = b != null && (a.Job == UnitJob.Build ? b.State == BuildingState.Site : b.Active);
+            untouched = b != null && (a.Job == UnitJob.Build ? b.WantsBuilders : b.Active);
             key = -(long)a.Building;
         }
         if (tick - a.Tick >= QuickFailTicks || !untouched)

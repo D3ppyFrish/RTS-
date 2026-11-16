@@ -74,11 +74,11 @@ public partial class PlayerControl : Node
     public static readonly (Key Key, string Building)[] BuildKeys =
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
-        (Key.O, "gate"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
+        (Key.O, "barrier_gate"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
     /// <summary>The building the wall tool lays, a column at a time.</summary>
-    public const string WallBuilding = "wall";
+    public const string WallBuilding = "barrier";
     /// <summary>The building the bridge tool lays, a deck column at a time.</summary>
     public const string BridgeBuilding = "bridge";
 
@@ -341,7 +341,10 @@ public partial class PlayerControl : Node
             case Key.Comma: Bloom(); break;
             case Key.Y: ToggleWall(); break;
             case Key.Apostrophe: ToggleBridge(); break;
-            case Key.U: TrainAtSelected(null); break;
+            case Key.U:
+                if (_sim.Buildings.Get(SelectedBuilding) is { Def.IsWall: true }) UpgradeSelected(stretch: !key.ShiftPressed);
+                else TrainAtSelected(null);
+                break;
             case Key.J:
                 if (key.CtrlPressed) TogglePriorities();
                 else if (key.ShiftPressed) ToggleAutoAll();
@@ -550,7 +553,8 @@ public partial class PlayerControl : Node
 
     /// <summary>
     /// A right click: on an enemy unit, attack it (units that cannot fight go to it); on a building of
-    /// yours, workers build it, work it or unload there (the rest go to its door); on an enemy storehouse,
+    /// yours, workers build it, work it or unload there, and ranged units take posts on top of a wall they
+    /// can stand on (the rest go to its door); on an enemy storehouse,
     /// capture it (burn it with Ctrl); on another enemy building, attack it; on a tree, bush, stone or ore,
     /// workers gather it (the rest go next to it); anywhere else, move there, or with Ctrl attack-move there.
     /// </summary>
@@ -731,10 +735,21 @@ public partial class PlayerControl : Node
         var working = new List<int>();
         if (b.Owner == LocalPlayer)
             foreach (int id in OwnWorkers(own))
-                if (b.State == BuildingState.Site || b.Def.WorkerSlots > 0 || (b.Def.Storage && u.CarryAmount[u.IndexOf(id)] > 0))
+                if (b.WantsBuilders || b.Def.WorkerSlots > 0 || (b.Def.Storage && u.CarryAmount[u.IndexOf(id)] > 0))
                     working.Add(id);
         if (working.Count > 0) _sim.Schedule(_sim.Tick, new WorkCommand(LocalPlayer, working.ToArray(), b.Id));
         own.RemoveAll(working.Contains);
+        // Archers and other ranged units sent at a wall of yours they can stand on take posts on top of it.
+        if (b.Def.Walkway && b.Active)
+        {
+            var posted = own.FindAll(id => _sim.Economy.CanPost(u.IndexOf(id)));
+            if (posted.Count > 0)
+            {
+                _sim.Schedule(_sim.Tick, new PostCommand(LocalPlayer, posted.ToArray(), b.Id));
+                own.RemoveAll(posted.Contains);
+                working.AddRange(posted);
+            }
+        }
         if (own.Count > 0 && _sim.Economy.AccessSpot(b, out int ax, out int az, out int ay))
             _sim.Schedule(_sim.Tick, new MoveCommand(LocalPlayer, own.ToArray(), ax, az, ay));
         _rings.ShowMarker(centre, working.Count > 0 ? SelectionRenderer.Work : SelectionRenderer.Own);
@@ -932,6 +947,19 @@ public partial class PlayerControl : Node
         unit ??= b.Def.Trains[0];
         if (Array.IndexOf(b.Def.Trains, unit) < 0) return;
         _sim.Schedule(_sim.Tick, new TrainCommand(LocalPlayer, b.Id, unit));
+    }
+
+    /// <summary>
+    /// Upgrades the selected wall or gate of yours to its next tier: the whole stretch of that tier it stands
+    /// in, as far as the goods go, or with <paramref name="stretch"/> off that column alone.
+    /// </summary>
+    public void UpgradeSelected(bool stretch)
+    {
+        var b = _sim.Buildings.Get(SelectedBuilding);
+        if (b == null || b.Owner != LocalPlayer || _sim.Economy.CanUpgrade(b) != PlaceResult.Ok) return;
+        _sim.Schedule(_sim.Tick, new UpgradeCommand(LocalPlayer, System.Array.Empty<int>(), b.Id, stretch));
+        _rings.ShowMarker(new Vector3(b.X + 0.5f, b.Y, b.Z + 0.5f) * ChunkMesher.BlockSize, SelectionRenderer.Work);
+        Changed?.Invoke();
     }
 
     // ---- Automation ----
@@ -1626,6 +1654,7 @@ public partial class PlayerControl : Node
                $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} routing={routing} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
+               $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} " +
@@ -1640,6 +1669,34 @@ public partial class PlayerControl : Node
                $"idle={_sim.Economy.IdleWorkers(LocalPlayer).Count} camera={cam.X},{cam.Z} " +
                $"dusk_tree={duskState} warden={warden} staff={staff} staff_at={staffAt} tending={tending} bloom_ready={(StaffSelected() is int sb && sb != 0 && dusk.CanBloom(u.IndexOf(sb)) ? 1 : 0)} " +
                $"formation={inFormation} line_preview={_formationPreview.Count} spread={Spread(own)}";
+    }
+
+    /// <summary>Your walls and gates of a tier (0 the barrier, 1 the wooden wall, 2 the stone wall).</summary>
+    private int OwnTier(int tier)
+    {
+        int n = 0;
+        foreach (var b in _sim.Buildings.All)
+            if (b.Owner == LocalPlayer && b.Def.IsWall && b.Def.Tier == tier) n++;
+        return n;
+    }
+
+    /// <summary>Your walls and gates being upgraded.</summary>
+    private int OwnUpgrading()
+    {
+        int n = 0;
+        foreach (var b in _sim.Buildings.All)
+            if (b.Owner == LocalPlayer && b.Upgrade != null) n++;
+        return n;
+    }
+
+    /// <summary>Your units standing on top of a wall or gate.</summary>
+    private int OwnPosted()
+    {
+        int n = 0;
+        var u = _sim.Units;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == LocalPlayer && _sim.Economy.WallUnder(i) != null) n++;
+        return n;
     }
 
     private int OwnWalls(BuildingKind kind)

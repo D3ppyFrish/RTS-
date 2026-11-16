@@ -79,6 +79,11 @@ public enum UnitJob : byte
     /// (x * SizeZ + z), scrubbing the stain on column (<see cref="UnitStore.JobX"/>, JobZ) at level JobY. Workers.
     /// </summary>
     Clean,
+    /// <summary>
+    /// Go up onto the wall or gate <see cref="UnitStore.JobTarget"/> (see <see cref="PostCommand"/>): walk to its
+    /// foot, then climb. The job ends on top. Ranged units.
+    /// </summary>
+    Post,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

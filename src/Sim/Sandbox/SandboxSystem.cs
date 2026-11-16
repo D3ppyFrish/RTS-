@@ -98,6 +98,7 @@ public sealed class SandboxSystem
         foreach (var b in _sim.Buildings.All)
         {
             if (b.State == BuildingState.Site && Has(b.Owner, SandboxCheat.InstantBuild)) b.Work = b.Def.BuildTicks;
+            else if (b.Upgrade != null && Has(b.Owner, SandboxCheat.InstantBuild)) b.UpgradeWork = b.Upgrade.BuildTicks;
             else if (b.Active && b.Queue.Count > 0 && Has(b.Owner, SandboxCheat.InstantTrain))
                 b.TrainTicks = Math.Max(b.TrainTicks, _sim.Content.Units[b.Queue[0]].TrainTicks);
         }

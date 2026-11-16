@@ -260,6 +260,7 @@ public sealed partial class EconomySystem
             }
             else if (b.Active)
             {
+                if (b.Upgrade != null) StepUpgrade(b);
                 if (b.Def.Kind == BuildingKind.Smelter) StepSmelter(b);
                 if (b.Queue.Count > 0) StepTraining(b);
                 if (b.Def.YieldTicks > 0 && (_sim.Tick + b.Id) % b.Def.YieldTicks == 0) BringYield(b);
@@ -322,7 +323,8 @@ public sealed partial class EconomySystem
     {
         baseY = -1;
         if (def.IsBridge) return PlaceResult.Blocked; // laid along a line instead (see BridgeCommand)
-        if (checkPlayer && !Unlocked(player, def)) return PlaceResult.Locked;
+        // An upgrade is not placed: the building it comes from is, and then upgraded (see UpgradeCommand).
+        if (checkPlayer && (def.UpgradeOf != null || !Unlocked(player, def))) return PlaceResult.Locked;
         var w = World;
         int x1 = x + def.SizeX - 1, z1 = z + def.SizeZ - 1;
         if (x < 1 || z < 1 || x1 > w.SizeX - 2 || z1 > w.SizeZ - 2) return PlaceResult.OutOfBounds;
@@ -802,7 +804,7 @@ public sealed partial class EconomySystem
         if (b.Planned && !StartPlan(b)) return;
         foreach (int i in Workers(c))
         {
-            if (b.State == BuildingState.Site)
+            if (b.WantsBuilders)
             {
                 StartJob(i, UnitJob.Build, b.Id);
             }

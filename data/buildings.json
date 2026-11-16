@@ -3,7 +3,13 @@
 // in lines a column at a time, and put right next to other walls) or gate (a wall whose bottom two levels
 // are gate leaves that only its owner's units walk through). size is [x, z] in blocks
 // (the door is on the +z side); wallHeight is in blocks; wall, footing (the bottom course, if different)
-// and roof are building materials: planks, thatch, roof_tile or stone_brick; chimney adds a stone chimney.
+// and roof are building materials: planks, thatch, roof_tile, stone_brick or palisade (a barrier's stakes);
+// chimney adds a stone chimney.
+// Walls and gates come in tiers. upgrade (optional, walls and gates) names the building this one is turned
+// into where it stands, for that building's cost and buildTime: a building named as an upgrade is never laid
+// as it is, only reached by upgrading. sturdy (optional, 1 if not given) is how many times the damage of the
+// same block elsewhere each of its blocks takes before it is knocked out. walkway (optional, walls and gates):
+// ranged units can be posted on top of it.
 // buildTime is the seconds one worker takes; cost is in goods; housing is the people it houses; storage
 // means goods are delivered and kept there; raidable means enemies can capture or burn it; workerSlots is
 // how many workers can work a farm or smelter at once; sight is how far (columns) beyond its walls its
@@ -36,10 +42,18 @@
   { "id": "smelter", "name": "Smelter", "kind": "smelter", "size": [3, 3], "wallHeight": 3,
     "wall": "stone_brick", "roof": "stone_brick", "chimney": true,
     "cost": { "stone": 30, "wood": 10 }, "buildTime": 20, "workerSlots": 1, "requires": "smelting", "light": 3 },
-  { "id": "wall", "name": "Wall", "kind": "wall", "size": [1, 1], "wallHeight": 3, "wall": "stone_brick",
-    "cost": { "stone": 2 }, "buildTime": 2, "sight": 2 },
-  { "id": "gate", "name": "Gate", "kind": "gate", "size": [1, 1], "wallHeight": 3, "wall": "stone_brick",
-    "cost": { "wood": 4, "stone": 2 }, "buildTime": 4, "sight": 2 },
+  { "id": "barrier", "name": "Wooden barrier", "kind": "wall", "size": [1, 1], "wallHeight": 2, "wall": "palisade",
+    "cost": { "wood": 1 }, "buildTime": 1, "sight": 2, "sturdy": 2, "icon": "wall", "upgrade": "wooden_wall" },
+  { "id": "wooden_wall", "name": "Wooden wall", "kind": "wall", "size": [1, 1], "wallHeight": 3, "wall": "planks",
+    "cost": { "wood": 3 }, "buildTime": 3, "sight": 2, "sturdy": 4, "walkway": true, "icon": "wall", "upgrade": "stone_wall" },
+  { "id": "stone_wall", "name": "Stone wall", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "stone_brick",
+    "cost": { "stone": 4 }, "buildTime": 4, "sight": 2, "sturdy": 4, "walkway": true, "icon": "wall", "requires": "masonry" },
+  { "id": "barrier_gate", "name": "Barrier gate", "kind": "gate", "size": [1, 1], "wallHeight": 3, "wall": "palisade",
+    "cost": { "wood": 3 }, "buildTime": 2, "sight": 2, "sturdy": 2, "icon": "gate", "upgrade": "wooden_gate" },
+  { "id": "wooden_gate", "name": "Wooden gate", "kind": "gate", "size": [1, 1], "wallHeight": 3, "wall": "planks",
+    "cost": { "wood": 5 }, "buildTime": 4, "sight": 2, "sturdy": 4, "walkway": true, "icon": "gate", "upgrade": "stone_gate" },
+  { "id": "stone_gate", "name": "Stone gate", "kind": "gate", "size": [1, 1], "wallHeight": 4, "wall": "stone_brick",
+    "cost": { "wood": 2, "stone": 5 }, "buildTime": 5, "sight": 2, "sturdy": 4, "walkway": true, "icon": "gate", "requires": "masonry" },
   { "id": "torch", "name": "Torch", "kind": "light", "size": [1, 1], "wallHeight": 2, "wall": "planks",
     "cost": { "wood": 1 }, "buildTime": 2, "sight": 2, "light": 7 },
   { "id": "campfire", "name": "Campfire", "kind": "light", "size": [1, 1], "wallHeight": 1, "wall": "stone_brick",
