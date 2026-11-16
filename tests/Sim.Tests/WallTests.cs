@@ -572,6 +572,29 @@ public class WallTests
     }
 
     [Fact]
+    public void ABuilderGoesOnToFacingsFurtherOffThanItLooksForMoreWall()
+    {
+        var sim = FlatWithTechs("masonry");
+        Store(sim, 0, stone: 500, wood: 100);
+        // A stone wall that has its facing in the middle only: the ends, twenty columns apart, have lost theirs.
+        var line = Line(sim, 0, "stone_wall", 16, 47, 30);
+        Line(sim, 0, "stone_facing", 22, 41, 29);
+        Line(sim, 0, "stone_facing", 22, 41, 31);
+        int worker = sim.SpawnUnit(0, "worker", 16, 33);
+        sim.Step();
+        sim.Schedule(sim.Tick, new UpgradeCommand(0, new[] { worker }, line[0].Id));
+        sim.Step();
+        Assert.Equal(40 + 24, Facings(sim).Length);
+        Assert.Equal(24, sim.Buildings.All.Count(b => b.State == BuildingState.Site));
+        // The one worker faces the west end, and then the east end too: that is further off than it would go
+        // for another column of wall (nobody laid these out, so nobody was sent to each), but not for a facing.
+        Assert.True(42 - 21 > EconomySystem.WallReach && 42 - 21 <= EconomySystem.FacingReach);
+        RunUntil(sim, () => sim.Buildings.All.All(b => b.Active), 300 * Tps, "the worker to face both ends of the wall");
+        sim.Run(2);
+        Assert.Equal(UnitJob.None, sim.Units.Job[Index(sim, worker)]);
+    }
+
+    [Fact]
     public void AFacingLeavesTheWayThroughAGateOpenAndAStoneGateIsAGatehouse()
     {
         var sim = Instant();

@@ -32,8 +32,10 @@ public static class StructurePalette
     public const byte DuskBarkA = 63, DuskBarkB = 64, DuskBarkDark = 65, DuskVein = 66, Bone = 67, BoneDark = 68, Sap = 69;
     /// <summary>A barrier's stakes: weathered logs in two shades.</summary>
     public const byte StakeA = 70, StakeB = 71;
+    /// <summary>A rampart's dressed stone: paler than a house's stone, in three shades, and its mortar.</summary>
+    public const byte RampartA = 72, RampartB = 73, RampartC = 74, RampartMortar = 75;
     /// <summary>One more than the highest colour.</summary>
-    public const byte Count = 72;
+    public const byte Count = 76;
 
     /// <summary>Leaf colours: drawn swaying in the wind.</summary>
     public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark;
@@ -50,7 +52,9 @@ public static class StructurePalette
 /// windows with shutters, doors get boards, iron straps and a frame, roofs slope at 45 degrees in shingle or
 /// straw courses, stone gets coursed blocks with sunken mortar, wall tops get battlements and arrow slits,
 /// chimneys a sooty mouth, gates banded boards, free-standing plank walls a parapet, and a barrier is a
-/// row of pointed stakes. Rubble is a heap of lumps of what it was made of. Trees
+/// row of pointed stakes. Ramparts are paler stone under a sunk deck with battlements on the outer edges, and
+/// a watchtower is an open frame of posts and braces round a ladder, under a railed deck. Rubble is a heap of
+/// lumps of what it was made of. Trees
 /// are drawn the same way: round trunks of furrowed bark that flare into roots at the ground, crowns of
 /// leaf clumps with ragged, rounded edges in several greens, and felled trees as logs lying along their
 /// line with cut ends and leafy twigs. A shape never leaves its block, so what is drawn always
@@ -75,7 +79,7 @@ public static class StructureDetail
     /// <summary>Building blocks, drawn with fine detail instead of as plain blocks.</summary>
     public static bool IsStructure(BlockType t) =>
         t is BlockType.Planks or BlockType.Thatch or BlockType.RoofTile or BlockType.StoneBrick
-            or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Rampart;
+            or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle;
 
     /// <summary>
     /// Blocks drawn as fine voxels: building blocks, and the rubble collapses leave, drawn as heaps of lumps.
@@ -271,6 +275,7 @@ public static class StructureDetail
             BlockType.Thatch or BlockType.RoofTile => _kind == Kind.Slope ? Slope(x, y, z) : RoofColour(x, y, z, -1),
             BlockType.StoneBrick => Stone(x, y, z),
             BlockType.Rampart => Rampart(x, y, z),
+            BlockType.Trestle => Trestle(x, y, z),
             BlockType.TreeRubble => Log(x, y, z),
             BlockType.DuskWood => DuskTrunk(x, y, z),
             BlockType.DuskBranch => DuskBranch(x, y, z),
@@ -502,16 +507,19 @@ public static class StructureDetail
         {
             if (Open(PY))
             {
+                // A string course under the battlements: a smooth band of the palest stone round the outside.
+                if (y <= 1 && Nearest(x, y, z, false) is (>= 0, 0)) return StructurePalette.RampartC;
                 if (y >= Size - DeckSink)
                 {
                     if (!Parapet(x, z, 2, false, out bool merlon) || !merlon) return StructurePalette.Empty;
                     int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
                     // A merlon: a capstone on dressed blocks.
-                    if (y == Size - 1) return StructurePalette.Mortar;
-                    return StoneShade(gy >> 2, (gx + gz) >> 2, 2);
+                    if (y == Size - 1) return StructurePalette.RampartMortar;
+                    return Pale(StoneShade(gy >> 2, (gx + gz) >> 2, 2));
                 }
                 if (y == Size - DeckSink - 1 && !Parapet(x, z, 2, false, out _))
                 {
+                    // The deck: flagstones of the darker stone houses are built of, so it reads as a walk.
                     int gx = _wx * Size + x, gz = _wz * Size + z;
                     bool joint = (gx & 3) == 3 || (gz & 7) == 7;
                     return joint ? StructurePalette.Mortar : StoneShade(gx >> 2, gz >> 3, 1);
@@ -528,7 +536,66 @@ public static class StructureDetail
                     if (u is 3 or 4 && y >= 1 && y <= 6 && depth == 2) return StructurePalette.Soot;
                 }
             }
-            return Masonry(x, y, z);
+            return Pale(Masonry(x, y, z));
+        }
+
+        /// <summary>A rampart's stone is paler than a house's: the same pattern in its own shades.</summary>
+        private static byte Pale(byte c) => c switch
+        {
+            StructurePalette.StoneA => StructurePalette.RampartA,
+            StructurePalette.StoneB => StructurePalette.RampartB,
+            StructurePalette.StoneC => StructurePalette.RampartC,
+            StructurePalette.Mortar => StructurePalette.RampartMortar,
+            _ => c,
+        };
+
+        // --- A watchtower's frame ----------------------------------------------------------------------
+
+        /// <summary>
+        /// A watchtower (<see cref="BlockType.Trestle"/>): an open timber frame. A post two voxels square stands
+        /// at every outer corner; each outer face has a girt along the top of every level and a brace across it,
+        /// leaning one way and the other by turns; a ladder runs up the middle of what is closed in on all
+        /// sides. The top level is the deck: boards, sunk like a wall's (see <see cref="DeckSink"/>), on a rim
+        /// of beams, with a rail on balusters round the open sides. The rest is empty, so the frame is seen
+        /// through; it is solid all the same to whoever would walk or shoot through it.
+        /// </summary>
+        private byte Trestle(int x, int y, int z)
+        {
+            int gx = _wx * Size + x, gz = _wz * Size + z;
+            var (d, depth) = Nearest(x, y, z, false);
+            bool post = false;
+            if (d >= 0 && depth <= 1)
+            {
+                var (a, b) = Tangents(d);
+                post = (Open(a) && Depth(a, x, y, z) <= 1) || (Open(b) && Depth(b, x, y, z) <= 1);
+            }
+            if (Open(PY))
+            {
+                int deck = Size - DeckSink - 1;
+                if (y > deck)
+                {
+                    // The rail: a top rail on the corner posts and on a baluster every four voxels.
+                    if (d < 0 || depth > 0) return StructurePalette.Empty;
+                    return y == Size - 1 || post || (Tangent(d, gx, gz) & 3) == 0 ? StructurePalette.Timber : StructurePalette.Empty;
+                }
+                if (y == deck) return Boards(gz, gx);
+                // The beams the deck lies on: a rim round the outside, and a joist across the middle of each block.
+                if (y >= deck - 2 && ((d >= 0 && depth <= 1) || x is 3 or 4)) return StructurePalette.Timber;
+            }
+            if (post) return StructurePalette.Timber;
+            if (d < 0)
+            {
+                // Closed in on all sides: the ladder, two rails and a rung every other voxel.
+                if (z is not (3 or 4)) return StructurePalette.Empty;
+                if (x is 2 or 5) return StructurePalette.StakeB;
+                return x is 3 or 4 && z == 3 && (y & 1) == 0 ? StructurePalette.PlankB : StructurePalette.Empty;
+            }
+            if (depth > 0) return StructurePalette.Empty;
+            // An outer face: the girt along its top, and the brace.
+            if (y == Size - 1) return StructurePalette.StakeB;
+            int u = Tangent(d, gx, gz) & (Size - 1);
+            bool lean = ((Tangent(d, _wx, _wz) + _wy) & 1) == 0;
+            return (lean ? u : Size - 1 - u) == y ? StructurePalette.StakeA : StructurePalette.Empty;
         }
 
         /// <summary>

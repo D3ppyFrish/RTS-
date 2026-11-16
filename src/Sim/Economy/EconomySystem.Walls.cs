@@ -70,24 +70,36 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>
+    /// How far (columns) a builder who has finished a column of wall goes on to a facing that waits for its
+    /// builders: further than <see cref="WallReach"/>, as nobody laid the facings out (they come with a stone
+    /// wall when it is done, see <see cref="FinishUpgrade"/>), so nobody was sent to each of them.
+    /// </summary>
+    public const int FacingReach = 32;
+
+    /// <summary>
     /// The player's wall or gate site (or one being upgraded) nearest to column (x, z), within
-    /// <see cref="WallReach"/> of it, with the fewest workers on it (ties to the nearest, then the lowest id);
-    /// null if there is none.
+    /// <see cref="WallReach"/> of it, with the fewest workers on it (ties to the nearest, then the lowest id).
+    /// With none that near, the nearest facing site within <see cref="FacingReach"/> (the lowest id of those as
+    /// near); null if there is none.
     /// </summary>
     private Building? NextWallSite(int player, int x, int z)
     {
-        Building? best = null;
-        int bestWorkers = 0, bestD = 0;
+        Building? best = null, facing = null;
+        int bestWorkers = 0, bestD = 0, facingD = 0;
         foreach (var b in Buildings.All)
         {
             if (b.Owner != player || !b.WantsBuilders || !b.Def.IsWall) continue;
             int d = b.ColumnDistance(x, z);
-            if (d > WallReach) continue;
+            if (d > WallReach)
+            {
+                if (b.Def.FacingOf != null && d <= FacingReach && (facing == null || d < facingD)) (facing, facingD) = (b, d);
+                continue;
+            }
             int workers = WorkersAt(b, UnitJob.Build);
             if (best != null && (workers > bestWorkers || (workers == bestWorkers && d >= bestD))) continue;
             (best, bestWorkers, bestD) = (b, workers, d);
         }
-        return best;
+        return best ?? facing;
     }
 
     // --- Upgrades ----------------------------------------------------------------------------------
@@ -336,7 +348,7 @@ public sealed partial class EconomySystem
     {
         int x = U.X[i].FloorToInt(), y = U.Y[i] - 1, z = U.Z[i].FloorToInt();
         // The block first: almost every unit stands on plain ground, and that is settled without a look at the buildings.
-        if (World.Get(x, y, z) is not (BlockType.Planks or BlockType.StoneBrick or BlockType.Palisade or BlockType.Gate or BlockType.Rampart)) return null;
+        if (World.Get(x, y, z) is not (BlockType.Planks or BlockType.StoneBrick or BlockType.Palisade or BlockType.Gate or BlockType.Rampart or BlockType.Trestle)) return null;
         var b = Buildings.At(x, y, z);
         return b != null && b.Def.IsRampart ? b : null;
     }

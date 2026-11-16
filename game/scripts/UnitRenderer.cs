@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Godot;
 using Rts.Sim;
 using Rts.Sim.Economy;
+using Rts.Sim.Meshing;
 using Rts.Sim.Units;
 
 namespace Rts.Game;
@@ -20,6 +21,14 @@ namespace Rts.Game;
 /// </summary>
 public partial class UnitRenderer : Node3D
 {
+    /// <summary>
+    /// How much lower (blocks, negative) unit i is drawn than it stands: on the deck of a wall, gate or tower,
+    /// which is drawn sunk between its battlements (see <see cref="StructureDetail.DeckSink"/>), its feet are
+    /// on the deck. 0 anywhere else.
+    /// </summary>
+    public static float DeckOffset(Simulation sim, int i) =>
+        sim.Economy.WallUnder(i) is { Def.Walkway: true } ? -StructureDetail.DeckSink / (float)StructureDetail.Size : 0f;
+
     // 12 transform + 4 colour (always white) + 4 custom data (team colour). The colour slot is unused but
     // switched on: the Compatibility renderer reads custom data wrongly when instance colours are off.
     private const int FloatsPerInstance = 20;
@@ -210,7 +219,7 @@ void fragment() {
             float px = u.PrevX[i].ToFloat(), pz = u.PrevZ[i].ToFloat();
             float cx = u.X[i].ToFloat(), cz = u.Z[i].ToFloat();
             float x = Mathf.Lerp(px, cx, alpha), z = Mathf.Lerp(pz, cz, alpha);
-            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha);
+            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + DeckOffset(_sim, i);
 
             int id = u.Id[i];
             if (id >= _yawById.Length) Array.Resize(ref _yawById, Math.Max(id + 1, _yawById.Length * 2));

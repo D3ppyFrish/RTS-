@@ -4,8 +4,9 @@
 // are gate leaves that only its owner's units walk through) or tower (solid to wallHeight across its whole
 // footprint, put up alone or onto the player's own walls, which become part of it). size is [x, z] in blocks
 // (the door is on the +z side); wallHeight is in blocks; wall, footing (the bottom course, if different)
-// and roof are building materials: planks, thatch, roof_tile, stone_brick, palisade (a barrier's stakes) or
-// rampart (dressed stone drawn with battlements); chimney adds a stone chimney.
+// and roof are building materials: planks, thatch, roof_tile, stone_brick, palisade (a barrier's stakes),
+// rampart (dressed stone drawn with battlements) or trestle (a watchtower's timber frame under a railed
+// deck); chimney adds a stone chimney.
 // Walls and gates come in tiers. upgrade (optional, walls, gates and towers) names the building this one is
 // turned into where it stands, for that building's cost and buildTime: a building named as an upgrade is never
 // laid as it is, only reached by upgrading. facing (optional, an upgrade one column across) names the building
@@ -67,7 +68,7 @@
     "facing": "stone_gate_facing" },
   { "id": "stone_gate_facing", "name": "Stone gatehouse", "kind": "gate", "size": [1, 1], "wallHeight": 6, "wall": "rampart",
     "cost": { "wood": 1, "stone": 3 }, "buildTime": 4, "sight": 2, "sturdy": 3, "walkway": true, "icon": "gate" },
-  { "id": "watchtower", "name": "Watchtower", "kind": "tower", "size": [3, 3], "wallHeight": 7, "wall": "planks",
+  { "id": "watchtower", "name": "Watchtower", "kind": "tower", "size": [3, 3], "wallHeight": 7, "wall": "trestle",
     "cost": { "wood": 30 }, "buildTime": 25, "sight": 14, "sturdy": 2, "walkway": true, "aim": 50, "icon": "tower" },
   { "id": "stone_tower", "name": "Stone tower", "kind": "tower", "size": [5, 5], "wallHeight": 9, "wall": "rampart",
     "cost": { "stone": 60, "wood": 20 }, "buildTime": 60, "sight": 18, "walkway": true, "aim": 75, "icon": "tower",

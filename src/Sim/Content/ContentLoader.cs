@@ -54,7 +54,7 @@ public static class ContentLoader
     };
 
     /// <summary>Building materials a building's walls, footing and roof may use.</summary>
-    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart };
+    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle };
 
     /// <summary>Loads the game's own data, built into the core.</summary>
     public static ContentDb LoadEmbedded() => Load(EmbeddedText);

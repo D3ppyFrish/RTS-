@@ -214,6 +214,11 @@ public static class UiIcons
             "kkk.kkk.kkk.", "kskkkskkkskk", "kssssssssssk", "ksssskkssssk", "ksskkbbkkssk", "kskbbbbbbksk",
             "kskbBbbBbksk", "kskbbbbbbksk", "kskbBbbBbksk", "kskbbbbbbksk", "kSkbBbbBbkSk", "kkkkkkkkkkkk",
         },
+        ["tower"] = new[]
+        {
+            ".kk..kk..kk.", ".kskkskkksk.", ".kssssssssk.", ".kkkkkkkkkk.", "..kssssssk..", "..ksskksSk..",
+            "..ksskkssk..", "..kSsssssk..", "..kssssSsk..", "..kskkkksk..", "..kskbbksk..", "..kkkkkkkk..",
+        },
         ["bridge"] = new[]
         {
             "............", "............", ".k..k..k..k.", ".kb.kb.kb.kb", "kkkkkkkkkkkk", "kobobobobobk",

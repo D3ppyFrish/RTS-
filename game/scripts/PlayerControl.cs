@@ -74,7 +74,7 @@ public partial class PlayerControl : Node
     public static readonly (Key Key, string Building)[] BuildKeys =
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
-        (Key.O, "barrier_gate"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
+        (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
     /// <summary>The building the wall tool lays, a column at a time.</summary>
@@ -1248,9 +1248,30 @@ public partial class PlayerControl : Node
             Ghost = default;
             return;
         }
+        if (def.IsTower) SnapToWall(ref x, ref z);
         int cx = x - def.SizeX / 2, cz = z - def.SizeZ / 2;
         var result = _sim.Economy.CanPlace(LocalPlayer, def, cx, cz, out int baseY);
         Ghost = new Placement(true, cx, baseY >= 0 ? baseY : y, cz, result);
+    }
+
+    /// <summary>
+    /// A tower snaps onto a wall: with the cursor on a finished wall of yours, or right beside one, its middle
+    /// goes on that wall's column (the nearest, straight across before cornerwise), so it stands in the line.
+    /// Two columns or more from a wall it goes where the cursor is, alone or up against the wall.
+    /// </summary>
+    private void SnapToWall(ref int x, ref int z)
+    {
+        int best = int.MaxValue, bx = x, bz = z;
+        for (int dz = -1; dz <= 1; dz++)
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            var b = _sim.Buildings.AtColumn(x + dx, z + dz);
+            if (b == null || b.Owner != LocalPlayer || b.Def.Kind != BuildingKind.Wall || !b.Active) continue;
+            // The wall of the line itself before its facing, then the nearest.
+            int score = (b.Def.FacingOf != null ? 4 : 0) + dx * dx + dz * dz;
+            if (score < best) (best, bx, bz) = (score, x + dx, z + dz);
+        }
+        (x, z) = (bx, bz);
     }
 
     private void PlaceBuilding(bool keepPlacing)
@@ -1655,6 +1676,7 @@ public partial class PlayerControl : Node
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
+               $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
                $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} " +
@@ -1676,7 +1698,16 @@ public partial class PlayerControl : Node
     {
         int n = 0;
         foreach (var b in _sim.Buildings.All)
-            if (b.Owner == LocalPlayer && b.Def.IsWall && b.Def.Tier == tier) n++;
+            if (b.Owner == LocalPlayer && b.Def.IsWall && b.Def.FacingOf == null && b.Def.Tier == tier) n++;
+        return n;
+    }
+
+    /// <summary>The columns of facing on your stone walls and gates (sites too).</summary>
+    private int OwnFacings()
+    {
+        int n = 0;
+        foreach (var b in _sim.Buildings.All)
+            if (b.Owner == LocalPlayer && b.Def.FacingOf != null) n++;
         return n;
     }
 
@@ -1689,21 +1720,22 @@ public partial class PlayerControl : Node
         return n;
     }
 
-    /// <summary>Your units standing on top of a wall or gate.</summary>
-    private int OwnPosted()
+    /// <summary>Your units standing on top of a wall, gate or tower; or on a tower only.</summary>
+    private int OwnPosted(bool towers = false)
     {
         int n = 0;
         var u = _sim.Units;
         for (int i = 0; i < u.Count; i++)
-            if (u.Owner[i] == LocalPlayer && _sim.Economy.WallUnder(i) != null) n++;
+            if (u.Owner[i] == LocalPlayer && _sim.Economy.WallUnder(i) is { } b && (!towers || b.Def.IsTower)) n++;
         return n;
     }
 
+    /// <summary>Your buildings of a kind; of walls and gates, those of the line itself, not their facings.</summary>
     private int OwnWalls(BuildingKind kind)
     {
         int n = 0;
         foreach (var b in _sim.Buildings.All)
-            if (b.Owner == LocalPlayer && b.Def.Kind == kind) n++;
+            if (b.Owner == LocalPlayer && b.Def.Kind == kind && b.Def.FacingOf == null) n++;
         return n;
     }
 

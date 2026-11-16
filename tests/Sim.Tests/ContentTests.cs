@@ -344,7 +344,7 @@ public class ContentTests
         Assert.True(stone.Aim > wood.Aim && stone.Sight > wood.Sight);
         Assert.Empty(wood.Requires);
         Assert.Equal(new[] { "masonry" }, stone.Requires.Select(t => t.Id));
-        Assert.Equal(BlockType.Planks, wood.Blocks[0].Block);
+        Assert.Equal(BlockType.Trestle, wood.Blocks[0].Block);
         Assert.Equal(BlockType.Rampart, stone.Blocks[0].Block);
     }
 

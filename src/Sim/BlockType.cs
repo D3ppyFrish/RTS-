@@ -43,7 +43,7 @@ public enum BlockType : byte
     OreRubble,
     /// <summary>Broken coal: clearing it gives coal.</summary>
     CoalRubble,
-    /// <summary>Broken timber (planks, doors): clearing it gives wood.</summary>
+    /// <summary>Broken timber (planks, doors, stakes, a watchtower's frame): clearing it gives wood.</summary>
     WoodRubble,
     /// <summary>
     /// A gate's leaf, in a wall: solid to everyone but its owner, whose units walk through it (see
@@ -93,12 +93,17 @@ public enum BlockType : byte
     /// As tough as <see cref="StoneBrick"/>; its open tops are drawn with battlements along their outer edges.
     /// </summary>
     Rampart,
+    /// <summary>
+    /// A watchtower's timber frame: posts, braces and a ladder under a deck of boards with a rail round it (a
+    /// building block). As solid as planks to whoever would walk or shoot through it.
+    /// </summary>
+    Trestle,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Rampart;
+    public const BlockType Last = BlockType.Trestle;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
@@ -112,7 +117,7 @@ public static class BlockInfo
     public static bool CanStandOn(BlockType t) => IsSolid(t) && t != BlockType.Lava;
 
     /// <summary>Blocks that buildings are made of (walls, roofs, doors, gates, stakes, fields and roads).</summary>
-    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade or BlockType.Rampart;
+    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle;
 
     /// <summary>
     /// Damage a building's block takes before it is knocked out (see <see cref="Units.CombatSystem"/>); 0 for
@@ -130,6 +135,7 @@ public static class BlockInfo
         BlockType.Gate => 12,
         BlockType.Palisade => 10,
         BlockType.Rampart => 25,
+        BlockType.Trestle => 10,
         _ => 0,
     };
 
@@ -162,7 +168,7 @@ public static class BlockInfo
         BlockType.Stone or BlockType.Crystal or BlockType.StoneBrick or BlockType.RoofTile or BlockType.Rampart => BlockType.StoneRubble,
         BlockType.IronOre => BlockType.OreRubble,
         BlockType.Coal => BlockType.CoalRubble,
-        BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade => BlockType.WoodRubble,
+        BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Trestle => BlockType.WoodRubble,
         _ when IsTrunk(t) => BlockType.WoodRubble,
         _ when IsRubble(t) => t,
         _ => BlockType.Rubble,

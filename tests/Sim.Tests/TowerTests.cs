@@ -75,7 +75,7 @@ public class TowerTests
         RunUntil(sim, () => tower.Active, 60 * Tps, "the worker to build the tower");
         // Three by three and seven high, timber all through.
         Assert.Equal((3, 3, 7), (def.SizeX, def.SizeZ, def.Height));
-        AssertSolid(sim, tower, BlockType.Planks);
+        AssertSolid(sim, tower, BlockType.Trestle);
         Assert.Equal(BlockType.Air, sim.World.Get(21, tower.Y + 7, 21));
         // It keeps no distance from walls, which run right up to it, but does from other buildings.
         Assert.Equal(PlaceResult.Ok, sim.Economy.CanPlace(0, sim.Content.Building("barrier"), 23, 21, out _, checkPlayer: false));
@@ -139,7 +139,7 @@ public class TowerTests
             Assert.Null(sim.Buildings.Get(walls[k].Id));
             Assert.Same(tower, sim.Buildings.AtColumn(20 + k, 30));
         }
-        AssertSolid(sim, tower, BlockType.Planks);
+        AssertSolid(sim, tower, BlockType.Trestle);
         Assert.Equal(tower.MaxHealth, tower.Health);
         // The wall runs into it on both sides with no gap.
         Assert.Same(walls[3], sim.Buildings.AtColumn(23, 30));
@@ -210,7 +210,7 @@ public class TowerTests
         // Its middle on the low side: the high columns are cut down to its level, wall and all.
         var low = Place(sim, 0, "watchtower", 23, 29);
         Assert.Equal(Ground + 1, low.Y);
-        AssertSolid(sim, low, BlockType.Planks);
+        AssertSolid(sim, low, BlockType.Trestle);
         Assert.Equal(BlockType.Air, sim.World.Get(25, low.Y + 7, 30)); // what the higher wall had above the tower's top is gone
         Assert.Null(sim.Buildings.Get(walls[5].Id));
         // Its middle on the high side: the low column of wall under it is ground now.
@@ -220,7 +220,7 @@ public class TowerTests
         var walls2 = Line(sim2, 0, "wooden_wall", 20, 30, 30);
         var over = Place(sim2, 0, "watchtower", 24, 29);
         Assert.Equal(Ground + 2, over.Y);
-        AssertSolid(sim2, over, BlockType.Planks);
+        AssertSolid(sim2, over, BlockType.Trestle);
         Assert.Null(sim2.Buildings.Get(walls2[4].Id));
         Assert.True(BlockInfo.IsSolid(sim2.World.Get(24, Ground + 1, 30)));
         Assert.False(BlockInfo.IsBuilt(sim2.World.Get(24, Ground + 1, 30)));
