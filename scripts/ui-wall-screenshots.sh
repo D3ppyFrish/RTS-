@@ -5,10 +5,10 @@
 # button turns the stretch into a wooden wall four blocks high, the units are right-clicked onto it and the
 # archers and mages take posts on top, and with masonry researched it is upgraded again to stone, under
 # them: six blocks high, and faced on both sides when it is done, so it is three columns thick with a
-# gatehouse round the gate. Then / puts a watchtower onto the wall (its ghost snaps onto the line from the
-# column beside it) and \ a stone tower across it, the workers build them round the wall that stands there,
-# and the archers are sent up the stone tower. Saves PNGs to OUT_DIR and fails if the UI state is not as
-# expected.
+# gatehouse round the gate. Then \ puts a stone tower onto the wall (its ghost snaps onto the line from the
+# column beside it) and the workers build it round the wall that stands there, / puts a watchtower on open
+# ground beside it, and the archers and mages, those still on the wall too, are sent up the stone tower.
+# Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-wall-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/walls}")"
@@ -119,10 +119,10 @@ wait 5
 shot $OUT/ui-tower-building.png
 ticks 800
 print
-dragworld 84,g,258 106,g,276
+drag 360,100 1450,780
 wait 2
 clickworld 102,g,266 right
-ticks 600
+ticks 800
 clickworld 102,g,266
 wait 5
 print
@@ -161,6 +161,6 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[14]}" ghost)" = Ok ] || fail "a watchtower does not fit on open ground: ${UI[14]}"
 [ "$(field "${UI[15]}" towers)" -eq 2 ] && [ "$(field "${UI[15]}" wood)" -eq $(($(field "${UI[13]}" wood) - 30)) ] || fail "no watchtower site (30 wood): ${UI[15]}"
 [ "$(field "${UI[16]}" towers)" -eq 2 ] && [ "$(field "${UI[16]}" sites)" -eq 0 ] || fail "the watchtower is not finished: ${UI[16]}"
-[ "$(field "${UI[17]}" building)" = stone_tower ] && [ "$(field "${UI[17]}" posted_on_towers)" -ge 5 ] || fail "the archers and mages are not up on the stone tower: ${UI[17]}"
+[ "$(field "${UI[17]}" building)" = stone_tower ] && [ "$(field "${UI[17]}" posted_on_towers)" -ge 7 ] && [ "$(field "${UI[17]}" posted_on_towers)" -eq "$(field "${UI[17]}" posted)" ] || fail "the archers and mages, those on the wall beside it too, are not all up on the stone tower: ${UI[17]}"
 [ "$(grep -c '^Saved screenshot' "$LOG")" -eq 9 ] || fail "missing screenshots"
 echo "UI wall screenshot test OK: $OUT"
