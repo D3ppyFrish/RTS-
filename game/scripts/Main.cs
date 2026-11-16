@@ -75,6 +75,12 @@ namespace Rts.Game;
 ///   --scenario=PATH       start from a saved scenario (a test mode match's command log), played back to the
 ///                         moment it was saved, paused
 ///   --scenarios=DIR       save and list scenarios in DIR instead of user://scenarios
+///   --detail[=off]        detailed, animated units near the camera (on unless =off; F7 toggles it in a match;
+///                         see Detail/DetailedUnits)
+///   --detail-distance=M   how near the camera (metres, default 40) units are drawn detailed
+///   --keeps=N             N detailed stone castles (scenery, not buildings of the rules) on flat ground round the
+///                         camera focus, the first one next to it (see Detail/DetailedKeep); --keep-lod=off draws
+///                         them all at full detail however far away
 ///   --fog[=off]           fog of war (see FogOfWar): a match started from the command line has it only with
 ///                         --fog, and on the start screen it is ticked unless --fog=off
 /// A match from the usual start is recorded as it is played and saved as a replay at its end; --map,
@@ -325,6 +331,17 @@ public partial class Main : Node3D
         _unitRenderer = new UnitRenderer();
         _match.AddChild(_unitRenderer);
         _unitRenderer.Init(_sim, _fog);
+        Detail.DetailedUnits.Enabled = !(_args.TryGetValue("detail", out var detail) && detail == "off");
+        Detail.DetailedUnits.Distance = ArgFloat(_args, "detail-distance", 40f);
+        if (_args.TryGetValue("keeps", out var keepArg) && int.TryParse(keepArg, out var keepCount) && keepCount > 0)
+        {
+            Detail.DetailedKeep.Lod = !(_args.TryGetValue("keep-lod", out var keepLod) && keepLod == "off");
+            var keeps = new Detail.DetailedKeep();
+            _match.AddChild(keeps);
+            var spots = keeps.Place(_sim, keepCount, fx, fz, UnitRenderer.TeamColors[PlayerControl.LocalPlayer & 7]);
+            GD.Print($"Keeps: {spots.Count} placed, first at {(spots.Count > 0 ? spots[0].ToString() : "-")}, " +
+                     $"{Detail.DetailedKeep.Voxels} voxels and {Detail.DetailedKeep.Triangles} triangles each ({Detail.DetailedKeep.FarTriangles} far out), built in {Detail.DetailedKeep.BuildMs:F0} ms");
+        }
         _selectionRenderer = new SelectionRenderer();
         _match.AddChild(_selectionRenderer);
         _selectionRenderer.Init(_sim);
@@ -380,6 +397,9 @@ public partial class Main : Node3D
             DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
             _benchmark = new Benchmark(seconds, setup.Seed, loadTimer.Elapsed.TotalMilliseconds,
                 _args.TryGetValue("benchmark-out", out var outPath) ? outPath : "user://benchmark.txt");
+            _benchmark.Extra = () => $"detail={(Detail.DetailedUnits.Enabled ? "on" : "off")} detailed_units={_unitRenderer.DetailedCount} unit_draw_ms={_unitRenderer.AverageUpdateMs:F2} detail_place_upload_ms={_unitRenderer.DetailSplit} " +
+                $"keeps={_args.GetValueOrDefault("keeps", "0")} keep_tris={Detail.DetailedKeep.Triangles}/{Detail.DetailedKeep.FarTriangles} keep_lod={(Detail.DetailedKeep.Lod ? "on" : "off")} " +
+                $"unit_build_ms={Detail.DetailedUnits.BuildMs:F0} unit_tris={string.Join(",", Detail.DetailedUnits.Triangles.Select(t => $"{t.Key}:{t.Value}"))}";
         }
     }
 
@@ -710,6 +730,7 @@ public partial class Main : Node3D
         _terrain.SetSlice(cut);
         float y = cut ?? 100000f;
         _unitRenderer.Material.SetShaderParameter("slice_y", y);
+        _unitRenderer.DetailMaterial.SetShaderParameter("slice_y", y);
         _selectionRenderer.Material.SetShaderParameter("slice_y", y);
         _ghostRenderer.SetSlice(y);
         _combatRenderer.Material.SetShaderParameter("slice_y", y);

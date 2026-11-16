@@ -61,6 +61,7 @@ Controls:
 | . | select your next idle worker and look at it (as the Idle workers button does) |
 | Ctrl+1..9, 1..9 | assign a control group, recall it (press twice to centre the camera on it) |
 | Space, - and + | pause (orders still work), slower and faster: 0.5x, 1x, 2x, 4x |
+| F7 | detailed units on or off: near the camera, Settlers workers, spearmen and archers are drawn finer and swing their arms and legs as they walk and fight (a prototype; see the README) |
 | PgDn, PgUp, Home | height slice: hide every layer above a cut to see tunnels and caves; Home turns it off |
 | T | terrain tool, for trying things out (not in matches from the start screen): left click digs a block, right click places stone (T or Esc to leave) |
 | X | tunnel tool: the selected sappers dig to the block clicked, a level up or down each column; click a building to dig just under it so that part of it falls in (Shift+click digs another; right click or Esc stops) |

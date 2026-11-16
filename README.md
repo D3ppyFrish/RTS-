@@ -218,4 +218,26 @@ sent to one new point near the camera, so they keep walking around the holes bei
 (`RTS.exe -- --benchmark --units=1000`).
 The cloud dev container only has a software renderer, so its FPS numbers are not representative.
 
+### Detail prototype
+
+A prototype of finer buildings and units, to see how close the game can get to the moodboard's
+diorama look on a full-size map (`game/scripts/Detail/`). Everything is drawn from voxels a sixteenth of
+a block across (3.1 cm, half the size of today's unit voxels), greedy-meshed into rectangles of one
+material; stones, planks, shingles and a shade per voxel are drawn by the shader
+(`DetailShader`), so they cost no triangles.
+
+- **Units** (`DetailedUnits`): the Settlers' worker, spearman and archer have detailed versions in six
+  parts (legs, body, head, arms) that swing as they walk, and thrust in time with their attacks (from
+  the attack cooldown). Each part is a MultiMesh, so any crowd is 18 draw calls; only units within
+  `--detail-distance` (40 m) of the camera are drawn this way, the rest with their usual model. On by
+  default; `--detail=off` or F7 turns them off.
+- **Castle** (`DetailedKeep`): `--keeps=N` puts N stone castles (curtain wall, round towers, gatehouse,
+  keep, banners in your colour) on flat ground round the camera focus. They are scenery, not buildings of
+  the rules: units walk through them. Past 60 m each is drawn with a mesh a quarter as fine
+  (`--keep-lod=off` turns that off).
+- The benchmark line adds `avg_tris`, `avg_draws`, `detailed_units`, `unit_draw_ms` (time to place every
+  unit, plain and detailed, per frame) and the triangle counts of the detailed models, so
+  `RTS.exe -- --benchmark --units=2000 --detail=off` and the same with `--detail=on` (or `--keeps=30`)
+  compare the cost on real hardware.
+
 To open in the editor, open `game/project.godot` with Godot 4.7.2 (.NET edition).
