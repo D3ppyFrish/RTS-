@@ -46,7 +46,7 @@ public class PriorityTests
         Assert.Equal(WorkPriorities.Nothing, WorkPriorities.Pack());
         Assert.NotEqual(WorkPriorities.UseDefault, WorkPriorities.Pack());
         Assert.Empty(WorkPriorities.Unpack(WorkPriorities.Nothing));
-        Assert.Equal(new[] { WorkKind.Build, WorkKind.Farm, WorkKind.Smelt, WorkKind.Needed },
+        Assert.Equal(new[] { WorkKind.Build, WorkKind.Farm, WorkKind.Smelt, WorkKind.Supply, WorkKind.Needed },
             WorkPriorities.Unpack(WorkPriorities.Standard));
     }
 
@@ -213,7 +213,7 @@ public class PriorityTests
         Assert.Contains("1 priority 0 wood,iron-ore,build 1,2\n", text);
         Assert.Contains("2 priority 1 default 3\n", text);
         Assert.Contains("2 priority 1 none 4\n", text);
-        Assert.Contains("3 default-priority 0 build,farm,smelt,needed\n", text);
+        Assert.Contains("3 default-priority 0 build,farm,smelt,supply,needed\n", text);
         var copy = CommandLog.Parse(text);
         Assert.Equal(log.Commands, copy.Commands);
         Assert.Equal(text, copy.ToString());

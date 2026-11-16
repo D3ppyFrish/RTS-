@@ -19,6 +19,8 @@ public enum WorkKind : byte
     Stone,
     IronOre,
     Coal,
+    /// <summary>Supply duty: carry goods to storage that is short under its supply rules (see <see cref="SupplyCommand"/>).</summary>
+    Supply,
 }
 
 /// <summary>
@@ -38,12 +40,12 @@ public static class WorkPriorities
     /// <summary>Every kind, in the order a list shows the kinds left off it.</summary>
     public static readonly WorkKind[] All =
     {
-        WorkKind.Build, WorkKind.Farm, WorkKind.Smelt, WorkKind.Needed,
+        WorkKind.Build, WorkKind.Farm, WorkKind.Smelt, WorkKind.Supply, WorkKind.Needed,
         WorkKind.Food, WorkKind.Wood, WorkKind.Stone, WorkKind.IronOre, WorkKind.Coal,
     };
 
-    /// <summary>The list players start with: build, farm, smelt, then gather what is needed most.</summary>
-    public static readonly ulong Standard = Pack(WorkKind.Build, WorkKind.Farm, WorkKind.Smelt, WorkKind.Needed);
+    /// <summary>The list players start with: build, farm, smelt, supply, then gather what is needed most.</summary>
+    public static readonly ulong Standard = Pack(WorkKind.Build, WorkKind.Farm, WorkKind.Smelt, WorkKind.Supply, WorkKind.Needed);
 
     /// <summary>Packs kinds into a list, in order; repeats and unknown kinds are left out.</summary>
     public static ulong Pack(params WorkKind[] kinds) => Pack((IReadOnlyList<WorkKind>)kinds);
@@ -113,6 +115,7 @@ public static class WorkPriorities
         WorkKind.Build => "Build",
         WorkKind.Farm => "Farm",
         WorkKind.Smelt => "Smelt",
+        WorkKind.Supply => "Supply storehouses",
         WorkKind.Needed => "Gather what's needed",
         WorkKind.Food => "Gather food",
         WorkKind.Wood => "Gather wood",
@@ -128,6 +131,7 @@ public static class WorkPriorities
         WorkKind.Build => "build",
         WorkKind.Farm => "farm",
         WorkKind.Smelt => "smelt",
+        WorkKind.Supply => "supply",
         WorkKind.Needed => "needed",
         WorkKind.Food => "food",
         WorkKind.Wood => "wood",

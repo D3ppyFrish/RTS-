@@ -36,7 +36,7 @@ Controls:
 | WASD / arrows, Q/E, R/F | pan, rotate, tilt the camera |
 | Middle mouse drag (Shift to pan), wheel | orbit, zoom |
 | Left click, left drag | select a unit or building, box-select your units (Shift adds, double-click picks that type on screen) |
-| Right click | depends on what is under the cursor: units attack an enemy unit or building (an enemy storehouse they capture instead); workers gather a tree (or a felled tree's rubble), berry bush, stone or ore, build a site or start a plan, or work a farm or smelter, or clean up blood on the ground (the stains within 8 columns, nearest first); caravans trade with a city-state's town; otherwise move there |
+| Right click | depends on what is under the cursor: units attack an enemy unit or building (an enemy storehouse they capture instead); workers gather a tree (or a felled tree's rubble), berry bush, stone or ore, build a site or start a plan, or work a farm or smelter, go on supply duty at a storehouse or town hall of yours that has supply rules, or clean up blood on the ground (the stains within 8 columns, nearest first); caravans trade with a city-state's town; otherwise move there |
 | Ctrl+right click | attack-move: walk there and fight whatever is met on the way; on an enemy storehouse, burn it |
 | Alt+right click | patrol: the selected soldiers walk there and back again and again, fighting whatever they meet, until given another order (units that cannot fight just walk there); the selection panel says "patrolling" |
 | Alt+right click on one of your units or buildings | guard it: the selected units that can fight keep near it, follow it, and fight enemies that come near it or hit it, until given another order or it is gone; the selection panel says "guarding" |
@@ -76,7 +76,8 @@ being researched, the tech tree, automatic workers and speed buttons, the Idle w
 tech for says which tech it needs), the height slice slider and what is selected: a unit's hit points,
 what it is doing, its load and morale, its level and experience and what its type is about, or a
 building's health, progress, goods, workers and training queue (with train buttons and a repeat
-button). Units that can evolve get a row of evolve buttons per type (hover one for what the form gains
+button); a storehouse or town hall of yours has a Keep stocked button per good for its supply rules (click
+for more, right click for less; see [Supply rules](rules.md#automation)). Units that can evolve get a row of evolve buttons per type (hover one for what the form gains
 and gives up). Workers carrying goods have a load on their back in the goods' colour.
 Hurt and selected units and damaged buildings have a health bar; arrows, blasts and blows are drawn as
 they land, units that have broken and are running away have a white ring under them, and your units

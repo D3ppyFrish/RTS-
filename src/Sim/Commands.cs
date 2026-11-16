@@ -299,6 +299,13 @@ public sealed record DefaultPriorityCommand(int PlayerId, ulong List) : Command(
 public sealed record RepeatCommand(int PlayerId, int Building, bool On) : Command(PlayerId);
 
 /// <summary>
+/// Supply rules: sets how much of a good the player's storage building <paramref name="Building"/> should keep
+/// (0 to <see cref="Economy.EconomySystem.MaxSupply"/>; 0 clears it). Workers on supply duty there carry the
+/// good to it from the player's other storage, where it is not wanted as badly (see <see cref="Units.UnitJob.Supply"/>).
+/// </summary>
+public sealed record SupplyCommand(int PlayerId, int Building, Economy.Good Good, int Amount) : Command(PlayerId);
+
+/// <summary>
 /// Turns the player's rebuild orders on or off: with them on, each of their finished buildings that is
 /// destroyed is put back where it stood, once it is safe and they can pay (see <see cref="Automation.AutomationSystem"/>).
 /// </summary>

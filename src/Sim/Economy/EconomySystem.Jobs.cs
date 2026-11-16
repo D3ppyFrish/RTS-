@@ -35,6 +35,7 @@ public sealed partial class EconomySystem
             case UnitJob.Dig: StepDig(i); break;
             case UnitJob.Clean: StepClean(i); break;
             case UnitJob.Post: StepPost(i); break;
+            case UnitJob.Supply: StepSupply(i); break;
         }
     }
 
