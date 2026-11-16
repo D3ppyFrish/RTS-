@@ -65,7 +65,8 @@ of a terrain block across, tinted in the owner's colour. Each player starts with
 start area and four of every unit type that is trained in front of it (except caravans), a wolf lair
 lies on the way to the map centre (see [Monsters and taming](docs/rules.md#monsters-and-taming)) and each city-state has a town (see
 [City-states](docs/rules.md#city-states)); `--goods=N` gives every town hall N more of every good, and `--houses=N` puts N houses
-behind yours, since the start has more people than room. `--units=N` instead spawns N of your units
+behind yours, since the start has more people than room; `--raid=N` sends N enemy sappers at the one of
+those nearest your start (to try out rebuild orders, see [Automation](docs/rules.md#automation)). `--units=N` instead spawns N of your units
 around the camera focus (all on one side, so they walk rather than fight), and `--battle=N` sets two
 armies of N soldiers each facing each other at the camera focus, with an enemy house nearby.
 `--player=1` plays the Orcs at the east start instead of the Settlers at the west one, `--ai` has

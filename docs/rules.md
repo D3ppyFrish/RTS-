@@ -310,6 +310,17 @@ its commands played back ends the same. An order of the player's always comes fi
   than 100 plus two minutes' worth), no farm has a free place and there are fewer farm places than a
   third of the workers. They go on the nearest free spot within 24 columns of the town hall, keeping 3
   columns in front of every door clear, and the automatic workers build them.
+- **Rebuild orders** (`RebuildCommand`, Shift+P, `AutomationSystem.Rebuild.cs`): with them on, each finished
+  building of yours that is destroyed (knocked down, undermined, collapsed or burned; not one that is
+  captured) is remembered as a ruin and drawn as a pale ghost where it stood. Every 2 seconds automation
+  looks at it: while an enemy is within 12 columns of its middle nothing happens; while rubble lies on its
+  footprint, idle automatic workers with build on their priority list clear it (at most 2 on a ruin, only
+  when no site wants a builder, highest rubble first); then, once you can pay, it places the building again
+  as a site, through the same command you would give, and the automatic workers build it like any site. A
+  wall, gate or tower comes back at its first tier; bridges and a stone wall's facings are not remembered.
+  A ruin is forgotten when someone builds on its spot, when it is no longer yours to build, after 10
+  minutes without being rebuilt (a crater where it stood, say), or when you turn rebuild orders off. Without
+  automatic workers the rubble stays until you clear it yourself.
 - **Stances** (`StanceCommand`, V): soldiers are aggressive (they chase what they see), hold their
   ground (they fight only what is in reach and never move to chase), or retreat when hurt (aggressive
   until down to a third of their hit points, then they hold their ground, and when hit away from home

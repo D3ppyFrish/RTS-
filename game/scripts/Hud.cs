@@ -73,6 +73,7 @@ public partial class Hud : CanvasLayer
     private Button? _repeatButton;
     private BuildingDef? _trainFor;
     private Button _autoButton = null!;
+    private Button _rebuildButton = null!;
     private readonly List<(Button Button, BuildingDef? Def, Key Key)> _buildButtons = new();
     private Label _researchLabel = null!;
     private Button _techButton = null!;
@@ -192,6 +193,11 @@ public partial class Hud : CanvasLayer
         _autoButton.TooltipText = "All your workers, and those you train, find their own jobs; houses and farms go up when needed";
         _autoButton.Pressed += () => _control.ToggleAutoAll();
         row.AddChild(_autoButton);
+        _rebuildButton = MakeButton("Rebuild [Shift+P]");
+        _rebuildButton.Name = "rebuild_button";
+        _rebuildButton.TooltipText = "Rebuild orders: your destroyed buildings are cleared and put back where they stood, once no enemy is near and you can pay";
+        _rebuildButton.Pressed += () => _control.ToggleRebuild();
+        row.AddChild(_rebuildButton);
         _prioritiesButton = MakeButton("Priorities");
         _prioritiesButton.Name = "priorities_button";
         _prioritiesButton.TooltipText = "Work priorities [Ctrl+J]: what each automatic worker does first, and the default list for new workers";
@@ -675,6 +681,7 @@ public partial class Hud : CanvasLayer
         _pauseButton.SetPressedNoSignal(_clock.Paused);
         _techButton.SetPressedNoSignal(_control.TechTreeOpen);
         _autoButton.SetPressedNoSignal(_sim.Economy.AutoWorkers(PlayerControl.LocalPlayer));
+        _rebuildButton.SetPressedNoSignal(_sim.Economy.Rebuilds(PlayerControl.LocalPlayer));
         _techPanel.Visible = _control.TechTreeOpen;
         _prioritiesButton.SetPressedNoSignal(_control.PrioritiesOpen);
         if (_control.PrioritiesOpen && !_prioritiesPanel.Visible)
@@ -1146,7 +1153,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training   V: stance";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance";
         }
     }
 

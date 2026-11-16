@@ -36,7 +36,7 @@ namespace Rts.Sim.Automation;
 /// Which worker looks for work when, and the places it gave up on, are automation's own bookkeeping: they
 /// only decide which commands it gives, so they are not part of the state hash.
 /// </summary>
-public sealed class AutomationSystem
+public sealed partial class AutomationSystem
 {
     private const int Tps = Simulation.TicksPerSecond;
 
@@ -184,6 +184,7 @@ public sealed class AutomationSystem
             if ((tick + p * 7) % PlanTicks == 0 && Economy.AutoWorkers(p)) Plan(p);
 
         StepEvolution();
+        StepRebuild();
 
         if (tick % CleanupTicks == 0) Cleanup();
     }
@@ -353,7 +354,12 @@ public sealed class AutomationSystem
             int rank = kind switch { WorkKind.Build => 0, WorkKind.Farm => 1, WorkKind.Smelt => 2, _ => -1 };
             if (rank >= 0)
             {
-                if (nearest[rank] < 0) continue;
+                if (nearest[rank] < 0)
+                {
+                    // No site wants a builder: clearing a ruin's rubble so it can be rebuilt is building work too.
+                    if (rank == 0 && ClearRuin(i, out assignment) is { } clear) return clear;
+                    continue;
+                }
                 var best = all[nearest[rank]];
                 var job = rank == 0 ? UnitJob.Build : rank == 1 ? UnitJob.Farm : UnitJob.Haul;
                 assignment = new Assignment(tick, job, best.Id, 0, 0, 0, BlockType.Air);
