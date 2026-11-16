@@ -691,6 +691,7 @@ public sealed partial class EconomySystem
             b.TrainTicks = 0;
             b.Repeat = false;
             b.Owed.Clear();
+            Array.Clear(b.Supply); // the old owner's supply rules go with it
             return false;
         }
         // Burned: the goods are lost and what is left of it crumbles.
@@ -922,6 +923,13 @@ public sealed partial class EconomySystem
                 StartJob(i, UnitJob.Deliver, 0);
                 U.JobStore[i] = b.Id;
                 SetPhase(i, JobPhase.ToStore);
+            }
+            else if (b.Def.Storage && b.Active && b.HasSupply)
+            {
+                // Empty-handed at storage with supply rules: supply duty there.
+                if (U.Job[i] == UnitJob.Supply && U.JobTarget[i] == b.Id) continue;
+                StartJob(i, UnitJob.Supply, b.Id);
+                DecideSupply(i, b);
             }
         }
     }

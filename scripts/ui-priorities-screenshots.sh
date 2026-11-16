@@ -32,6 +32,8 @@ clickui prio_up_wood
 wait 2
 clickui prio_up_wood
 wait 2
+clickui prio_up_wood
+wait 2
 key space
 ticks 2
 key space
@@ -62,9 +64,9 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "${#UI[@]}" -eq 4 ] || fail "expected 4 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" priorities_menu)" -eq 1 ] && [ "$(field "${UI[0]}" priorities)" = default ] \
   || fail "menu not open on a worker following the default: ${UI[0]}"
-[ "$(field "${UI[1]}" priorities)" = wood,build,farm,smelt,needed ] || fail "wood not put first on the worker's list: ${UI[1]}"
-[ "$(field "${UI[1]}" default_priorities)" = build,farm,smelt,needed ] || fail "default list changed too soon: ${UI[1]}"
-[ "$(field "${UI[2]}" default_priorities)" = build,farm,needed ] && [ "$(field "${UI[2]}" priorities)" = wood,build,farm,smelt,needed ] \
+[ "$(field "${UI[1]}" priorities)" = wood,build,farm,smelt,supply,needed ] || fail "wood not put first on the worker's list: ${UI[1]}"
+[ "$(field "${UI[1]}" default_priorities)" = build,farm,smelt,supply,needed ] || fail "default list changed too soon: ${UI[1]}"
+[ "$(field "${UI[2]}" default_priorities)" = build,farm,supply,needed ] && [ "$(field "${UI[2]}" priorities)" = wood,build,farm,smelt,supply,needed ] \
   || fail "smelting not taken off the default list (or the worker's own list changed): ${UI[2]}"
 [ "$(field "${UI[3]}" priorities_menu)" -eq 0 ] || fail "Escape did not close the menu: ${UI[3]}"
 [ "$(grep -c '^Saved screenshot' "$LOG")" -eq 3 ] || fail "missing screenshots"

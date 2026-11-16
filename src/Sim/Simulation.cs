@@ -389,6 +389,7 @@ public sealed class Simulation
             case TrainCommand t: Economy.Apply(t); break;
             case ResearchCommand r: Economy.Apply(r); break;
             case RepeatCommand r: Economy.Apply(r); break;
+            case SupplyCommand sp: Economy.Apply(sp); break;
             case StanceCommand st: Combat.Apply(st); break;
             case AutomateCommand a: Automation.Apply(a); break;
             case AutomateAllCommand a: Automation.Apply(a); break;

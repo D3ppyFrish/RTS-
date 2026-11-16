@@ -95,6 +95,12 @@ public enum UnitJob : byte
     /// foot, then climb. The job ends on top. Ranged units.
     /// </summary>
     Post,
+    /// <summary>
+    /// Supply duty at the storage building <see cref="UnitStore.JobTarget"/> (see <see cref="SupplyCommand"/>):
+    /// fetch the good it is shortest of from the owner's other storage (<see cref="UnitStore.JobStore"/>, the good
+    /// in <see cref="UnitStore.JobX"/>) and carry it there, again and again. Workers.
+    /// </summary>
+    Supply,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

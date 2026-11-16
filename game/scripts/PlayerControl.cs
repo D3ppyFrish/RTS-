@@ -794,12 +794,13 @@ public partial class PlayerControl : Node
             StartPlan(b, own);
             return;
         }
-        // Workers with something to do there: build the site, work the farm or smelter, unload at storage.
+        // Workers with something to do there: build the site, work the farm or smelter, unload at storage, or
+        // go on supply duty at storage with supply rules.
         var u = _sim.Units;
         var working = new List<int>();
         if (b.Owner == LocalPlayer)
             foreach (int id in OwnWorkers(own))
-                if (b.WantsBuilders || b.Def.WorkerSlots > 0 || (b.Def.Storage && u.CarryAmount[u.IndexOf(id)] > 0))
+                if (b.WantsBuilders || b.Def.WorkerSlots > 0 || (b.Def.Storage && (u.CarryAmount[u.IndexOf(id)] > 0 || b.HasSupply && b.Active)))
                     working.Add(id);
         if (working.Count > 0) _sim.Schedule(_sim.Tick, new WorkCommand(LocalPlayer, working.ToArray(), b.Id));
         own.RemoveAll(working.Contains);
@@ -1068,6 +1069,33 @@ public partial class PlayerControl : Node
         var b = _sim.Buildings.Get(SelectedBuilding);
         if (b == null || b.Owner != LocalPlayer || b.Def.Trains.Length == 0) return;
         _sim.Schedule(_sim.Tick, new RepeatCommand(LocalPlayer, b.Id, !b.Repeat));
+        Changed?.Invoke();
+    }
+
+    /// <summary>Supply rule amounts, in the order a supply button steps through them.</summary>
+    public static readonly int[] SupplySteps = { 0, 25, 50, 100, 200 };
+
+    /// <summary>
+    /// The selected storage building of yours keeps the next amount of a good (by <see cref="SupplySteps"/>,
+    /// back to none after the last), or the one before with <paramref name="back"/>.
+    /// </summary>
+    public void CycleSupply(Good good, bool back = false)
+    {
+        var b = _sim.Buildings.Get(SelectedBuilding);
+        if (b == null || b.Owner != LocalPlayer || !b.Def.Storage || b.Planned) return;
+        int now = b.Supply[(int)good], n = SupplySteps.Length;
+        int next = back ? SupplySteps[n - 1] : SupplySteps[0]; // wraps round past either end
+        if (back)
+        {
+            for (int k = n - 1; k >= 0; k--)
+                if (SupplySteps[k] < now) { next = SupplySteps[k]; break; }
+        }
+        else
+        {
+            foreach (int step in SupplySteps)
+                if (step > now) { next = step; break; }
+        }
+        _sim.Schedule(_sim.Tick, new SupplyCommand(LocalPlayer, b.Id, good, next));
         Changed?.Invoke();
     }
 
@@ -1735,6 +1763,14 @@ public partial class PlayerControl : Node
         int bearer = dusk.StaffBearer != 0 ? u.IndexOf(dusk.StaffBearer) : -1;
         string staff = bearer < 0 ? "none" : u.Owner[bearer] == LocalPlayer ? "own" : "other";
         string staffAt = bearer < 0 ? "none" : $"{u.X[bearer].FloorToInt()},{u.Y[bearer]},{u.Z[bearer].FloorToInt()}";
+        int onSupply = 0;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Supply) onSupply++;
+        // The selected building's supply rules and what it holds of those goods, as good:held/kept.
+        var supply = new List<string>();
+        if (sel != null)
+            foreach (var g in Goods.All)
+                if (sel.Supply[(int)g] > 0) supply.Add($"{g}:{sel.Stock[(int)g]}/{sel.Supply[(int)g]}");
         int tending = 0;
         var ownSet = new HashSet<int>(own);
         foreach (int id in dusk.Tending)
@@ -1744,6 +1780,7 @@ public partial class PlayerControl : Node
                $"working={working} buildings={buildings} sites={sites} building={building} queue={sel?.Queue.Count ?? 0} rally={(sel is { HasRally: true } ? $"{sel.RallyX},{sel.RallyZ}" : "none")} " +
                $"ghost={(Ghost.Visible ? Ghost.Result.ToString() : "none")} road={_roadPreview.Count} " +
                $"plans={plans} plans_ready={ready} plan_mode={(PlanMode ? 1 : 0)} " +
+               $"supply={(supply.Count > 0 ? string.Join(',', supply) : "none")} on_supply={onSupply} " +
                $"food={stock[(int)Good.Food]} wood={stock[(int)Good.Wood]} stone={stock[(int)Good.Stone]} iron={stock[(int)Good.Iron]} " +
                $"techtree={(TechTreeOpen ? 1 : 0)} priorities_menu={(PrioritiesOpen ? 1 : 0)} " +
                $"default_priorities={WorkPriorities.ToLog(_sim.Automation.DefaultPriorities(LocalPlayer))} " +

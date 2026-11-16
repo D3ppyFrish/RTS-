@@ -53,6 +53,9 @@ public partial class Hud : CanvasLayer
     private HBoxContainer _planRow = null!;
     private Button _startPlanButton = null!;
     private HBoxContainer _upgradeRow = null!;
+    // Supply rules of the selected storage building of yours: a button per good.
+    private VBoxContainer _supplyBox = null!;
+    private readonly Button[] _supplyButtons = new Button[Goods.Count];
     private Button _upgradeButton = null!;
     private Button _upgradeOneButton = null!;
     private VBoxContainer _evolveBox = null!;
@@ -479,6 +482,7 @@ public partial class Hud : CanvasLayer
         _upgradeOneButton.Pressed += () => _control.UpgradeSelected(stretch: false);
         _upgradeRow.AddChild(_upgradeOneButton);
         column.AddChild(_upgradeRow);
+        BuildSupplyRow(column);
         _evolveBox = new VBoxContainer();
         _evolveBox.AddThemeConstantOverride("separation", 4);
         column.AddChild(_evolveBox);
@@ -675,6 +679,60 @@ public partial class Hud : CanvasLayer
         _trainBox.AddChild(_repeatButton);
     }
 
+    /// <summary>
+    /// "Keep stocked here": one button per good for the selected storage building's supply rules. A click
+    /// steps the amount up (25, 50, 100, 200, then none), a right click steps it down.
+    /// </summary>
+    private void BuildSupplyRow(VBoxContainer column)
+    {
+        _supplyBox = new VBoxContainer { Name = "supply_box", Visible = false };
+        _supplyBox.AddThemeConstantOverride("separation", 4);
+        var title = MakeLabel("Keep stocked here (workers on supply duty fetch it from your other storage):", 13);
+        title.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        title.CustomMinimumSize = new Vector2(360, 0);
+        title.ThemeTypeVariation = UiStyle.Dim;
+        _supplyBox.AddChild(title);
+        var grid = new GridContainer { Columns = 3 };
+        grid.AddThemeConstantOverride("h_separation", 4);
+        grid.AddThemeConstantOverride("v_separation", 4);
+        _supplyBox.AddChild(grid);
+        foreach (var good in Goods.All)
+        {
+            var g = good;
+            var button = MakeToolButton("");
+            button.Name = "supply_" + g.ToString().ToLowerInvariant();
+            button.Icon = UiIcons.For(g);
+            button.CustomMinimumSize = new Vector2(118, 0);
+            button.TooltipText = $"How much {Goods.Name(g).ToLowerInvariant()} to keep here. Click for more, right click for less. " +
+                                 "Automatic workers with supply on their priority list fetch it from your other storage, " +
+                                 "or right click this building with workers to put them on supply duty.";
+            button.Pressed += () => _control.CycleSupply(g);
+            button.GuiInput += e =>
+            {
+                if (e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true })
+                    _control.CycleSupply(g, back: true);
+            };
+            grid.AddChild(button);
+            _supplyButtons[(int)g] = button;
+        }
+        column.AddChild(_supplyBox);
+    }
+
+    /// <summary>Shows the supply buttons for a finished storage building of yours.</summary>
+    private void RefreshSupply(Building? b)
+    {
+        bool show = b != null && b.Owner == PlayerControl.LocalPlayer && b.Def.Storage && b.Active;
+        _supplyBox.Visible = show;
+        if (!show) return;
+        foreach (var g in Goods.All)
+        {
+            int want = b!.Supply[(int)g];
+            var button = _supplyButtons[(int)g];
+            button.Text = want > 0 ? $"{Goods.Name(g)}: {want}" : $"{Goods.Name(g)}: -";
+            button.SetPressedNoSignal(want > 0);
+        }
+    }
+
     /// <summary>Updates the HUD: buttons, banner and selection box every frame, texts ten times a second.</summary>
     public void Refresh(double delta)
     {
@@ -833,6 +891,7 @@ public partial class Hud : CanvasLayer
         _planRow.Visible = plan;
         if (plan) _startPlanButton.Disabled = econ.CanStart(b!) != PlaceResult.Ok;
         RefreshUpgrade(b);
+        RefreshSupply(b);
         bool trains = b != null && b.Owner == player && b.Active && b.Def.Trains.Length > 0;
         var trainFor = trains ? b!.Def : null;
         if (trainFor != _trainFor) BuildTrainButtons(trainFor);
@@ -1304,6 +1363,7 @@ public partial class Hud : CanvasLayer
                     if (b.Stock[(int)g] > 0) goods.Add($"{b.Stock[(int)g]} {Goods.Name(g).ToLowerInvariant()}");
                 if (parts.Count > 0) text.Append('\n');
                 text.Append(goods.Count > 0 ? "Holds " + string.Join(", ", goods) : "Empty");
+                if (b.Def.Storage && b.HasSupply) text.Append(DescribeSupply(b));
             }
             if (b.Queue.Count > 0)
             {
@@ -1331,6 +1391,24 @@ public partial class Hud : CanvasLayer
             text.Append($"\n{(b.Raid == RaidKind.Capture ? "Being captured" : "Burning")} by {PlayerName(b.RaidPlayer)}: {100L * b.RaidTicks / total}%");
         }
         return text.ToString();
+    }
+
+    /// <summary>The building's supply rules: what it keeps, what is still missing, and who is on supply duty.</summary>
+    private string DescribeSupply(Building b)
+    {
+        var u = _sim.Units;
+        int duty = 0;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Job[i] == UnitJob.Supply && u.JobTarget[i] == b.Id) duty++;
+        var rules = new List<string>();
+        foreach (var g in Goods.All)
+        {
+            int want = b.Supply[(int)g];
+            if (want == 0) continue;
+            int missing = EconomySystem.Short(b, g);
+            rules.Add($"{want} {Goods.Name(g).ToLowerInvariant()}{(missing > 0 ? $" ({missing} short)" : "")}");
+        }
+        return $"\nKeeps {string.Join(", ", rules)}   {duty} on supply duty";
     }
 
     /// <summary>
@@ -1474,6 +1552,12 @@ public partial class Hud : CanvasLayer
         UnitJob.Build => "building",
         UnitJob.Farm => "farming",
         UnitJob.Haul => "supplying the smelter",
+        UnitJob.Supply => u.Phase[i] switch
+        {
+            JobPhase.Fetch => "on supply duty: fetching a load",
+            JobPhase.Wait => "on supply duty: waiting for goods to fetch",
+            _ => "on supply duty: bringing a load",
+        },
         UnitJob.Deliver => "taking goods to storage",
         UnitJob.Capture => "capturing a storehouse",
         UnitJob.Burn => "burning a storehouse",

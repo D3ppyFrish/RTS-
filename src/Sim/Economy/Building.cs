@@ -44,6 +44,13 @@ public sealed class Building
     public int Placed { get; internal set; }
     /// <summary>Goods inside, by <see cref="Good"/>: a store's stock, or a smelter's inputs and output.</summary>
     public int[] Stock { get; } = new int[Goods.Count];
+    /// <summary>
+    /// Supply rules, by <see cref="Good"/>: how much of each good a storage building should keep (0 for no rule).
+    /// Workers on supply duty fill it from the owner's other storage (see <see cref="SupplyCommand"/>).
+    /// </summary>
+    public int[] Supply { get; } = new int[Goods.Count];
+    /// <summary>True if it has a supply rule for any good.</summary>
+    public bool HasSupply => Array.Exists(Supply, a => a > 0);
 
     /// <summary>The player capturing or burning it, or -1.</summary>
     public int RaidPlayer { get; internal set; } = -1;
@@ -204,6 +211,7 @@ public sealed class BuildingStore
             Mix(b.Id); Mix(b.Owner); Mix(b.Def.Index); Mix(b.X); Mix(b.Y); Mix(b.Z);
             Mix((int)b.State); Mix(b.Work); Mix(b.Placed);
             foreach (int s in b.Stock) Mix(s);
+            foreach (int s in b.Supply) Mix(s);
             Mix(b.RaidPlayer); Mix((int)b.Raid); Mix(b.RaidTicks); Mix(b.SmeltTicks);
             Mix(b.Queue.Count);
             foreach (int q in b.Queue) Mix(q);
