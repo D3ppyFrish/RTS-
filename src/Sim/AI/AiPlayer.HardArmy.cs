@@ -19,7 +19,10 @@ public sealed partial class AiPlayer
     /// fight at their door is a lost one.
     /// </summary>
     public const int HardEdgePercent = 150;
-    /// <summary>Hard: a wave leaves this share (percent) of the soldiers at home behind (at least <see cref="LeastGuard"/>).</summary>
+    /// <summary>
+    /// Hard: a wave leaves this share (percent) of the soldiers at home behind (at least <see cref="LeastGuard"/>);
+    /// more for a faction it plays balanced (see <see cref="KeepGuardPercent"/>).
+    /// </summary>
     public const int HardGuardPercent = 15;
     /// <summary>Hard: soldiers trained while a wave is out follow it in groups of this many.</summary>
     public const int JoinSize = 8;
@@ -220,7 +223,7 @@ public sealed partial class AiPlayer
         Doing = "gather";
         home.RemoveAll(_mending.Contains);
         var enemyHall = EnemyHall(sim, hx, hz);
-        int guard = Math.Max(LeastGuard, home.Count * HardGuardPercent / 100);
+        int guard = Math.Max(LeastGuard, home.Count * HomeGuardPercent(sim) / 100);
         int ready = home.Count - guard;
         var target = enemyHall ?? KnownBuilding(hx, hz);
         var goal = target is { } t ? (t.AX, t.AZ) : SearchGoal(sim, hx, hz, hx, hz);
@@ -349,6 +352,7 @@ public sealed partial class AiPlayer
         {
             if (b.Owner != Player || b.Planned || b.Def.IsWall) continue;
             var (mx, mz) = Middle(b);
+            if (b.Def.Kind != BuildingKind.TownHall && Outpost(mx, mz)) continue; // a walled town does not go out that far
             long r = b.Def.Kind == BuildingKind.TownHall ? HardHallRadius : HardDefendRadius;
             mine.Add((mx, mz, r * r));
         }
@@ -433,7 +437,7 @@ public sealed partial class AiPlayer
         }
         var ready = new List<int>(home);
         ready.RemoveAll(_mending.Contains);
-        int guard = Math.Max(LeastGuard, ready.Count * HardGuardPercent / 100);
+        int guard = Math.Max(LeastGuard, ready.Count * HomeGuardPercent(sim) / 100);
         if (ready.Count - guard >= JoinSize) _joining.AddRange(ready.GetRange(0, ready.Count - guard));
         if (_joining.Count == 0 || sim.Tick % (5 * ArmyTicks) >= ArmyTicks) return;
         var go = Unordered(sim, _joining, cx, cz);

@@ -197,8 +197,9 @@ public sealed partial class AiPlayer
     /// In order: houses before its people run out of room; soldiers, while its army is short (see
     /// <see cref="ArmyShort"/>); workers, all the time, at every town hall; a first barracks; a storehouse
     /// where work is far from storage; research; farms for its share of farmers (<see cref="FarmShare"/>);
-    /// more barracks while goods pile up; a second town hall (<see cref="HardExpand"/>); and soldiers with
-    /// what is left. While enemies are at its buildings it saves up only for houses and soldiers.
+    /// more barracks while goods pile up; its wall, for a faction it plays balanced (<see cref="HardWall"/>);
+    /// a second town hall (<see cref="HardExpand"/>); and soldiers with what is left. While enemies are at
+    /// its buildings it saves up only for houses and soldiers.
     /// </summary>
     private void HardEconomy(Simulation sim, Building hall, Action<Command> issue)
     {
@@ -210,7 +211,9 @@ public sealed partial class AiPlayer
         var c = Count(sim);
         int minutes = (int)(sim.Tick / (60 * Tps));
         bool calm = sim.Tick - _alarm > AlarmTicks;
-        // The ground for its quarry is picked before the town grows over it, and kept clear.
+        // The line of its wall, if it is to have one, and the ground for its quarry are picked before the
+        // town grows over them, and kept clear.
+        PlanWall(sim, hall);
         if (_quarry == null && sim.Tick % QuarryLookTicks < EconomyTicks) MarkQuarry(sim, hall, settle: sim.Tick >= QuarrySettleTicks);
 
         // Houses: room for what is being trained and a little more, more of it the more buildings train.
@@ -289,7 +292,7 @@ public sealed partial class AiPlayer
                     Spend(tech.Cost);
                     Note(sim, $"researches {tech.Name}");
                 }
-                else if (calm && (k <= 2 || c.Barracks >= 1)) Save(tech.Cost);
+                else if (calm && (k <= 2 || c.Barracks >= 1)) SaveUp(sim, tech.Cost);
                 break;
             }
         }
@@ -305,6 +308,8 @@ public sealed partial class AiPlayer
             && c.Housing > c.Population + c.Queued && Spare(sim, barracks.Cost, HardSpareFood, HardSpareWood))
             Want(sim, barracks, hall, HardTownRadius, false, issue);
 
+        // Its wall (a faction it plays balanced), before it settles new ground.
+        if (calm) HardWall(sim, hall, c, issue);
         if (calm) HardExpand(sim, hall, c, issue);
         if (!armyFirst) SmartTrain(sim, issue, anyAffordable: false);
         if (sim.Tick >= _assignAt)
@@ -429,6 +434,8 @@ public sealed partial class AiPlayer
         int over = stone - _keep[(int)Good.Stone];
         int masons = over < StoneWanted ? Math.Min(MostMasons, 2 + c.Workers / MasonsPer) : over >= StonePlenty ? 1 : Math.Max(1, _masons.Count);
         if (c.Workers < QuarryWorkers && over >= 0) masons = 0; // food and wood first
+        // Its wall is not worth more diggers than that: it goes up as the stone comes in.
+        if (_ringStone > 0 && _keep[(int)Good.Stone] <= _ringStone) masons = Math.Min(masons, KeepMasons);
         if (masons > _masons.Count)
         {
             var from = idle.Count > 0 ? idle : farming > want ? farmers : cutters;
@@ -560,6 +567,7 @@ public sealed partial class AiPlayer
     {
         var w = sim.World;
         if (x1 < 3 || z1 < 3 || x2 >= w.SizeX - 3 || z2 >= w.SizeZ - 3) return null;
+        if (!ClearOfWall(x1, z1, x2, z2, 3)) return null; // off the line of its wall, and out of the way through a gate
         int low = int.MaxValue, high = int.MinValue;
         for (int z = z1 - 2; z <= z2 + 2; z++)
         for (int x = x1 - 2; x <= x2 + 2; x++)
@@ -591,7 +599,7 @@ public sealed partial class AiPlayer
     {
         if (!Affordable(sim, def.Cost))
         {
-            if (save) Save(def.Cost);
+            if (save) SaveUp(sim, def.Cost);
             return;
         }
         if (Room(sim, def, Middle(hall), radius, out int x, out int z))
@@ -604,12 +612,14 @@ public sealed partial class AiPlayer
 
     /// <summary>
     /// Room for the building near the point (see <see cref="Automation.AutomationSystem.FindRoom"/>), clear of
-    /// its quarry pits and of where its soldiers gather (see <see cref="RallyClear"/>).
+    /// its quarry pits, of the line of its wall (see <see cref="ClearOfWall(BuildingDef, int, int)"/>) and of
+    /// where its soldiers gather (see <see cref="RallyClear"/>).
     /// </summary>
     private bool Room(Simulation sim, BuildingDef def, (int X, int Z) at, int radius, out int x, out int z)
     {
         var rally = GatheringGround(sim);
         return sim.Automation.FindRoom(Player, def, at.X, at.Z, radius, out x, out z, (bx, bz) => ClearOfPits(def, bx, bz)
+            && ClearOfWall(def, bx, bz)
             && (rally is not var (rx, rz) || bx > rx + RallyClear || bx + def.SizeX - 1 < rx - RallyClear
                 || bz > rz + RallyClear || bz + def.SizeZ - 1 < rz - RallyClear));
     }
@@ -626,6 +636,19 @@ public sealed partial class AiPlayer
     private void Save(GoodAmount[] cost)
     {
         foreach (var g in cost) _keep[(int)g.Good] += g.Amount;
+    }
+
+    /// <summary>
+    /// Saves up for the cost (see <see cref="Save"/>); but while it has not the stone, it keeps only the
+    /// stone in hand. Stone comes in slowly (a few workers dig it, and a wall takes a lot of it), and the
+    /// food and wood kept idle until it came would be soldiers not trained; they are soon gathered again
+    /// once the stone is there.
+    /// </summary>
+    private void SaveUp(Simulation sim, GoodAmount[] cost)
+    {
+        int stone = Price(cost, Good.Stone);
+        if (stone > 0 && sim.Economy.Stockpile(Player)[(int)Good.Stone] < stone + _keep[(int)Good.Stone]) _keep[(int)Good.Stone] += stone;
+        else Save(cost);
     }
 
     /// <summary>
@@ -665,7 +688,7 @@ public sealed partial class AiPlayer
         if (def == null) return;
         if (!Affordable(sim, def.Cost))
         {
-            Save(def.Cost);
+            SaveUp(sim, def.Cost);
             return;
         }
         var (hx, hz) = Middle(hall);

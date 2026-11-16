@@ -146,7 +146,10 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   that is not on their way, so they don't slip into a pit when cutting a corner along its rim.
 - **Walls and gates** (`WallCommand`, `EconomySystem.Walls.cs`): a wall is laid along a straight line, one
   building per column (3 stone bricks high, 2 stone each), paid for column by column until the goods run
-  out. Workers build it a column at a time and move on to the next unfinished column nearby. Walls and
+  out. Workers build it a column at a time and move on to the next unfinished column nearby. A block of
+  a site waits while a unit stands where it goes: idle units are sent off the site, and so is a builder
+  at work on the column next to it, who works on from beside its own (two builders each standing on the
+  other's column would otherwise wait on each other for good). Walls and
   gates join up without the gap other buildings keep, and a line that steps diagonally still shuts the way
   (nobody cuts a corner between two blocked columns). A gate is a wall column whose two bottom blocks are
   gate leaves (`BlockType.Gate`): its owner's units walk through, everyone else finds it shut. Flow fields
@@ -462,7 +465,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   against, else the one with the fewest hit points, and riders and spearmen switch onto enemies they
   are strong against; up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
   second town hall where its workers gather far from storage; and after 9 minutes, with the stone, a
-  wall round the town hall 4 columns out with two gates three wide.
+  wall round the town hall 4 columns out with two gates three wide, for a faction it plays balanced
+  (the Settlers; see the styles below).
 - **Hard** knows and has no more than Easy; it plays as well as it can with it. Its **town**: it runs
   its workers itself. They are automatic, but on its own priority lists (building, then food or wood,
   and nothing else, so none wanders off to dig), and every 8 seconds it moves up to two between the
@@ -476,9 +480,12 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   minute played, up to 48), when workers come first; workers; the first barracks at 8 workers; a storehouse where 3 or more workers gather 14
   columns or more from storage; research in its own order (farming, tools, crop rotation, horse
   breeding, roads, carts, archery, masonry, then the rest); farms for its farmers; another barracks (up
-  to 6) when every one is training and goods are still piling up; a second town hall 44 columns out on
+  to 6) when every one is training and goods are still piling up; its wall, for a faction it plays
+  balanced (below); a second town hall 44 columns out on
   the side away from the enemy once it has 30 workers and 2 barracks; and soldiers again with whatever
-  is left. Upkeep is paid once a minute, so it puts the next payment's food by over the minute and is
+  is left. While it has not the stone for something it is saving for, it keeps only the stone in hand
+  and goes on spending its food and wood: stone comes in slowly, and what waited for it would be soldiers
+  not trained. Upkeep is paid once a minute, so it puts the next payment's food by over the minute and is
   never caught short. For stone it marks out a quarry early (a pit 14 by 6 dug 12 deep, 14 to 30
   columns from the town hall; a smaller or further one if after 2 minutes there is no such ground),
   builds nothing there, and from 16 workers on keeps two to five of them digging it while stone is
@@ -495,7 +502,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   was worth. While its own army is worth less than 120% of that, soldiers come before everything but
   houses. Its barracks weigh a unit as Easy's do, times what it is worth in a fight for its price. It
   scouts the enemy town only when it means to attack (every look risks a rider, who comes home at 85%
-  of its hit points): a wave of at least 12, leaving 15% at home, sets out when it is worth 150% of the
+  of its hit points): a wave of at least 12, leaving 15% at home (a quarter for a faction it plays
+  balanced), sets out when it is worth 150% of the
   enemy army and a scout has been for a look at their town in the last 3 minutes, or been chased off
   trying (with no one fast enough to scout, it goes without). Soldiers trained while the wave is out
   follow it in groups of 8. While a wave of its own is looking for the enemy (it set out for a guess, or
@@ -508,11 +516,42 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   real force (half its own worth or more) is waited for in a line 10 columns out from the town hall,
   where its new soldiers come out. A wave that is out is called home only for enemies worth more than
   80% of the soldiers at home, and from more than 48 columns away only when they are by a town hall. It
-  fights with Normal's focus fire, sends totem parties and hires as the others do. It does not wall its
-  town hall or raid yet, and in a long match it runs short of wood once the trees near its town are gone.
+  fights with Normal's focus fire, sends totem parties and hires as the others do. It does not raid
+  yet, and in a long match it runs short of wood once the trees near its town are gone.
+- **Styles**: how the computer plays a faction is in the game data (`aiStyle` in `data/factions.json`).
+  The Orcs are played in **waves**: no walls, and nearly every soldier goes with the wave. The Settlers
+  are played **balanced**: a walled town, and attacks that leave a good part of the army at home behind
+  the wall. Easy and Classic play both the same; Normal walls only a balanced faction. Hard, balanced,
+  marks out the line of its wall before it builds anything: round the middle of its town, 16 columns out
+  from the town hall and 20 on the side of its door (where its soldiers gather), so its first farms and
+  houses stand inside as near the town hall as they would without a wall (farmers carry every load to
+  storage). There is a gate three columns wide in the north and south sides and two in the west and the
+  east. It builds nothing on the line, right beside it, or within 4 columns of a gate in line with it,
+  and digs no quarry within 3. It starts on the wall once it has a barracks and 16 workers, the side
+  toward the enemy first: it saves up for a side, then lays it from one end to the other with never
+  more than 6 columns waiting to be built (every site calls the nearest worker with nothing to do, so a
+  whole side at once would call in half its workers). While the wall is all it is short of stone for it
+  keeps at most 3 workers at the quarry. Every 10 seconds it looks the wall over and lays again what
+  has been knocked out. A town too near the edge of the map for the line to fit gets no wall. Its waves
+  leave a quarter of its soldiers at home, not 15%, and the part it sends is what has to be worth 150%
+  of the enemy army, so it attacks with a bigger army in all than the Orcs would. At home its soldiers
+  do not go out after raiders at a building more than 24 columns outside the line of the wall (they
+  would leave through the gates a few at a time for a fight far from home, and be beaten in parts):
+  they meet the enemy at the town. A town hall is always defended. The whole wall is 160
+  columns (320 stone and 72 wood). Over 20 seeds against Hard's Orcs it started on the first side at 5
+  to 8 minutes and on the last at 10 to 20 (17 on average): the later sides wait for stone, and for calm
+  after the first fights. As the rules are, a wall holds
+  a wave up for seconds rather than minutes (a group knocks a column out in a few blows) and stops its
+  owner's archers shooting out as well as the enemy's shooting in, so it is more a mark of the style
+  than a defence yet.
 - `scripts/ai-versus.sh` plays two levels against each other over 20 seeds with fog of war, the first
   level on a different side of the map each seed. With issue #2, Hard beat Normal and Classic in all
-  20; Normal beat Classic in 12 (6 lost, 2 undecided after 40 minutes) and Easy in 9 (11 lost).
+  20; Normal beat Classic in 12 (6 lost, 2 undecided after 40 minutes) and Easy in 9 (11 lost). Since
+  the styles Hard still wins all 20 against each, but playing the Settlers balanced it takes longer
+  over Normal (28 minutes on average, 22 before; 21 as the Orcs, as before). Hard's Settlers against
+  Hard's Orcs (`--levels=hard,hard`) over 20 seeds: the Settlers won 2, the Orcs 10, 8 undecided (before
+  the styles 5, 8 and 7): the wall costs the Settlers about a tenth of their army at 15 minutes and a
+  quarter of it stays home, and a wall does not yet give that back.
   Before issue #2 Normal (then called Hard) was told where the enemy starts and beat Classic in 15:
   finding the enemy itself costs it and Easy some of that, and Classic still sees through the fog.
 
@@ -526,7 +565,8 @@ dotnet run -c Release --project tools/MatchRunner -- --ai --seed=3 --record=ai.l
 
 CI runs `scripts/ai-matches.sh`, issue #15's check: on seeds 1 to 5 (512×512 maps) every match must be
 won within 40 game minutes, and replaying its log must give the same hashes and winner. Since issue #47
-the matches are Hard against Classic with fog of war; with issue #2's Hard they are won in 20 to 27 minutes.
+the matches are Hard against Classic with fog of war; Hard plays the Settlers there, and since
+it plays them balanced they are won in 23 to 34 minutes (20 to 27 before).
 All the numbers are first guesses for playtesting.
 
 ## Fog of war

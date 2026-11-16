@@ -1134,13 +1134,13 @@ public sealed partial class AiPlayer
 
     // --- Economy -----------------------------------------------------------------------------------
 
-    /// <summary>Normal: a second town hall on new ground, and a wall round the first.</summary>
+    /// <summary>Normal: a second town hall on new ground, and for a faction it plays balanced (see <see cref="Content.AiStyle"/>) a wall round the first.</summary>
     private void SmartEconomy(Simulation sim, Building hall, Action<Command> issue)
     {
         if (!Skilled) return;
         long tick = sim.Tick;
         if (tick >= ExpandTicks) Expand(sim, hall, issue);
-        if (!_walled && tick >= WallTicks) Wall(sim, hall, issue);
+        if (!_walled && tick >= WallTicks && Style(sim) == Content.AiStyle.Balanced) Wall(sim, hall, issue);
     }
 
     /// <summary>

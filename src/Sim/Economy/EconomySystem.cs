@@ -405,7 +405,8 @@ public sealed partial class EconomySystem
 
     /// <summary>
     /// A site goes up as it is worked: its blocks appear bottom layer first, in step with the work done.
-    /// A block waits while a unit stands where it goes; idle units on the site are sent off it.
+    /// A block waits while a unit stands where it goes; idle units on the site are sent off it, and so are
+    /// builders at work on another site (see <see cref="ClearSite"/>).
     /// </summary>
     private void StepSite(Building b)
     {
@@ -441,16 +442,29 @@ public sealed partial class EconomySystem
         return false;
     }
 
-    /// <summary>Sends idle units standing on a building site to the nearest free spot beside it.</summary>
+    /// <summary>
+    /// Sends units standing on a building site off it: idle ones to the nearest free spot beside it, and a
+    /// builder at work on another site to the nearest free spot beside the site it is building (it works on
+    /// from there). Without the second, two columns of a wall side by side, each with its builder standing
+    /// where the other's blocks go, would wait on each other for good.
+    /// </summary>
     private void ClearSite(Building b)
     {
         var u = U;
         for (int i = 0; i < u.Count; i++)
         {
-            if (u.Order[i] != UnitOrder.Idle || u.Job[i] != UnitJob.None) continue;
+            var from = b;
+            if (u.Job[i] == UnitJob.Build)
+            {
+                if (u.JobTarget[i] == b.Id || u.Phase[i] != JobPhase.Working || u.Order[i] != UnitOrder.Idle) continue;
+                var own = Buildings.Get(u.JobTarget[i]);
+                if (own == null) continue;
+                from = own;
+            }
+            else if (u.Order[i] != UnitOrder.Idle || u.Job[i] != UnitJob.None) continue;
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
             if (!b.Covers(x, z) || u.Y[i] < b.Y - 1 || u.Y[i] > b.Y + b.Def.Height) continue;
-            if (SpotBeside(b, x, z, out int sx, out int sz, out int sy)) _sim.SendUnit(i, sx, sz, sy);
+            if (SpotBeside(from, x, z, out int sx, out int sz, out int sy)) _sim.SendUnit(i, sx, sz, sy);
         }
     }
 

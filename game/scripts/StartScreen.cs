@@ -49,8 +49,8 @@ public partial class StartScreen : CanvasLayer
     private static readonly (AiLevel Level, string Name, string Tip)[] Levels =
     {
         (AiLevel.Easy, "Easy", "Scouts, plays by the fog of war, trains counters to what it sees and pulls its wounded back to heal."),
-        (AiLevel.Normal, "Normal", "As Easy, and focuses its fire, builds more, walls its town hall and settles new ground."),
-        (AiLevel.Hard, "Hard", "The best it can play with no more than you have: it knows only what it has seen and spends only what it gathers. A big town, an army kept ahead of yours, and it attacks when it is clearly the stronger."),
+        (AiLevel.Normal, "Normal", "As Easy, and focuses its fire, builds more, settles new ground, and as the Settlers walls its town hall."),
+        (AiLevel.Hard, "Hard", "The best it can play with no more than you have: it knows only what it has seen and spends only what it gathers. A big town and an army kept ahead of yours. As the Orcs it attacks in big waves, as the Settlers from a walled town."),
         (AiLevel.Classic, "Classic", "The first computer player: it sees through the fog of war and fights simply."),
     };
     private Label _loading = null!;
