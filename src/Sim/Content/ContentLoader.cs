@@ -54,7 +54,7 @@ public static class ContentLoader
     };
 
     /// <summary>Building materials a building's walls, footing and roof may use.</summary>
-    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick };
+    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade };
 
     /// <summary>Loads the game's own data, built into the core.</summary>
     public static ContentDb LoadEmbedded() => Load(EmbeddedText);
@@ -158,6 +158,7 @@ public static class ContentLoader
                 CheckTree();
                 CheckFactions();
                 CheckForms();
+                CheckUpgrades();
                 CheckRequired();
                 if (_errors.Count > 0) throw new ContentException(_errors);
                 Finish();
@@ -397,7 +398,8 @@ public static class ContentLoader
         {
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
-                "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime");
+                "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
+                "sturdy", "walkway", "upgrade");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -440,7 +442,13 @@ public static class ContentLoader
                 FromDen = o.Bool("fromDen"),
                 Yield = o.Cost("yield"),
                 YieldTicks = o.Int("yieldTime", 1, MaxSeconds, 0) * Tps,
+                Sturdy = o.Int("sturdy", 1, 1000, 1),
+                Walkway = o.Bool("walkway"),
             };
+            bool wall = kind is BuildingKind.Wall or BuildingKind.Gate;
+            if (def.Walkway && !wall) o.Error("only a wall or gate has a \"walkway\"");
+            if (def.Walkway && wallHeight <= CombatSystem.MeleeHeight + 1)
+                o.Error($"a \"walkway\" needs \"wallHeight\" of {CombatSystem.MeleeHeight + 2} or more, or blows from the ground reach the units on it");
             if ((def.Yield.Length > 0) != (def.YieldTicks > 0))
                 o.Error("\"yield\" and \"yieldTime\" go together: the goods it brings in, and the seconds between");
             if (def.FromDen && kind is BuildingKind.TownHall or BuildingKind.Wall or BuildingKind.Gate or BuildingKind.Totem or BuildingKind.Bridge)
@@ -448,10 +456,31 @@ public static class ContentLoader
             _db.Add(def);
             var faction = o.Str("faction", false);
             var requires = o.Ids("requires");
+            var upgrade = o.Str("upgrade", false);
+            if (upgrade != null && !wall) o.Error("only a wall or gate has an \"upgrade\"");
             _resolve.Add(() =>
             {
                 def.Faction = Faction(o, faction);
                 def.Requires = Techs(o, "requires", requires);
+                if (upgrade == null || !wall) return;
+                if (!_db.TryGetBuilding(upgrade, out var to))
+                {
+                    o.Error($"\"upgrade\": there is no building \"{upgrade}\"");
+                    return;
+                }
+                // An upgrade takes the place of what stands there: the same kind and footprint, at least as tall,
+                // and each building is the upgrade of one other at most, so every wall has one way up.
+                if (to == def) o.Error("\"upgrade\": a building is not its own upgrade");
+                else if (to.Kind != def.Kind || to.SizeX != def.SizeX || to.SizeZ != def.SizeZ)
+                    o.Error($"\"upgrade\": \"{upgrade}\" must be of the same kind and size");
+                else if (to.WallHeight < def.WallHeight) o.Error($"\"upgrade\": \"{upgrade}\" must be at least as tall");
+                else if (to.UpgradeOf != null) o.Error($"\"upgrade\": \"{upgrade}\" is already the upgrade of \"{to.UpgradeOf.Id}\"");
+                else if (to.FromDen || def.FromDen) o.Error("\"upgrade\": not for a building put up on a den");
+                else
+                {
+                    def.Upgrade = to;
+                    to.UpgradeOf = def;
+                }
             });
         }
 
@@ -976,6 +1005,27 @@ public static class ContentLoader
             }
         }
 
+        /// <summary>
+        /// Sets each building's tier (how many upgrades it is from one that is placed), if no building is an
+        /// upgrade of itself by way of others.
+        /// </summary>
+        private void CheckUpgrades()
+        {
+            foreach (var b in _db.Buildings)
+            {
+                int tier = 0;
+                var from = b.UpgradeOf;
+                while (from != null && from != b && tier <= _db.Buildings.Count)
+                {
+                    tier++;
+                    from = from.UpgradeOf;
+                }
+                if (from == null) b.Tier = tier;
+                else if (from == b)
+                    _errors.Add($"buildings.json: building '{b.Id}' is its own upgrade, by way of '{b.UpgradeOf!.Id}'");
+            }
+        }
+
         /// <summary>The content the game itself relies on.</summary>
         private void CheckRequired()
         {
@@ -1092,6 +1142,9 @@ public static class ContentLoader
                 h.Add(b.YieldTicks);
                 h.Add(b.Requires);
                 h.Add(b.Faction?.Index ?? -1);
+                h.Add(b.Sturdy);
+                h.Add(b.Walkway ? 1 : 0);
+                h.Add(b.Upgrade?.Index ?? -1);
             }
             h.Add(db.Units.Count);
             foreach (var u in db.Units)

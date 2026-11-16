@@ -32,7 +32,8 @@ public sealed class Building
 {
     public int Id { get; }
     public int Owner { get; internal set; }
-    public BuildingDef Def { get; }
+    /// <summary>What it is. Changes only when an upgrade is finished (see <see cref="Upgrade"/>).</summary>
+    public BuildingDef Def { get; internal set; }
     public int X { get; }
     public int Y { get; internal set; }
     public int Z { get; }
@@ -72,6 +73,16 @@ public sealed class Building
     public int Damage { get; internal set; }
     /// <summary>Which of its blocks (by index in the template) are counted in <see cref="Lost"/>; null while none are.</summary>
     internal bool[]? Gone;
+
+    /// <summary>
+    /// What it is being turned into, paid for and waiting for its builders, or null (see <see cref="UpgradeCommand"/>).
+    /// Until the work is done it stands as it is.
+    /// </summary>
+    public BuildingDef? Upgrade { get; internal set; }
+    /// <summary>Worker-ticks of work done on its upgrade (finished at the upgrade's <see cref="BuildingDef.BuildTicks"/>).</summary>
+    public int UpgradeWork { get; internal set; }
+    /// <summary>True if builders have work to do on it: a site going up, or a building being upgraded.</summary>
+    public bool WantsBuilders => State == BuildingState.Site || Upgrade != null;
 
     /// <summary>The toughness of the blocks placed so far.</summary>
     public int Built => Def.ToughnessOf(Placed);
@@ -191,6 +202,7 @@ public sealed class BuildingStore
             Mix(b.Owed.Count);
             foreach (int o in b.Owed) Mix(o);
             Mix(b.Lost); Mix(b.Damage);
+            Mix(b.Upgrade?.Index ?? -1); Mix(b.UpgradeWork);
         }
         return h;
     }

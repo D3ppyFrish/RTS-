@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Scripted-input screenshot test for walls and gates (issue #44): the starting units are selected, O places
 # a gate by the start and Y draws a wall through it. The workers build the wall a column at a time, leaving
-# the gate in it. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
+# the gate in it: a wooden barrier, the first tier. Then a column of it is selected and its Upgrade button
+# turns the stretch into a wooden wall, the units are right-clicked onto it and the archers and mages take posts on
+# top, and with masonry researched it is upgraded again to stone, under them. Saves PNGs to OUT_DIR and
+# fails if the UI state is not as expected.
 # Usage: scripts/ui-wall-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/walls}")"
@@ -48,21 +51,70 @@ camera 97,262 20 40 16
 wait 5
 print
 shot $OUT/ui-wall-done.png
+key k
+wait 3
+clickui tech_tools
+mouse 1500,820
+key k
+clickworld 93,g,266
+wait 3
+print
+shot $OUT/ui-wall-upgrade-button.png
+clickui wall_upgrade
+ticks 2
+print
+dragworld 84,g,258 104,g,270
+wait 2
+clickworld 93,g,266 right
+ticks 1300
+key k
+wait 3
+clickui tech_masonry
+mouse 1500,820
+key k
+print
+clickworld 100,g,266 right
+ticks 400
+wait 5
+print
+shot $OUT/ui-wall-posted.png
+ticks 400
+clickworld 93,g,266
+wait 3
+clickui wall_upgrade
+ticks 2
+print
+dragworld 84,g,258 104,g,270
+wait 2
+clickworld 93,g,266 right
+ticks 1600
+wait 5
+print
+shot $OUT/ui-wall-stone.png
 "
 LOG="$OUT/ui-wall.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --goods=500 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI wall test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 5 ] || fail "expected 5 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 11 ] || fail "expected 11 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" own)" -gt 8 ] || fail "the starting units are not selected: ${UI[0]}"
 [ "$(field "${UI[1]}" gates)" -eq 1 ] || fail "no gate placed: ${UI[1]}"
 [ "$(field "${UI[2]}" tool)" = Wall ] && [ "$(field "${UI[2]}" wall_preview)" -eq 11 ] || fail "the wall being drawn is not 11 columns round the gate: ${UI[2]}"
 [ "$(field "${UI[3]}" tool)" = Select ] && [ "$(field "${UI[3]}" walls)" -eq 11 ] || fail "no wall laid: ${UI[3]}"
 [ "$(field "${UI[4]}" walls)" -eq 11 ] && [ "$(field "${UI[4]}" gates)" -eq 1 ] || fail "the wall or gate is gone: ${UI[4]}"
 [ "$(field "${UI[4]}" sites)" -eq 0 ] || fail "the wall is not finished: ${UI[4]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 3 ] || fail "missing screenshots"
+[ "$(field "${UI[5]}" building)" = barrier ] || fail "the barrier is not selected: ${UI[5]}"
+[ "$(field "${UI[6]}" upgrading)" -eq 12 ] || fail "the stretch is not being upgraded: ${UI[6]}"
+[ "$(field "${UI[6]}" wood)" -eq $(($(field "${UI[5]}" wood) - 38)) ] || fail "the upgrade was not paid for (3 wood a wall, 5 the gate): ${UI[6]}"
+[ "$(field "${UI[7]}" tier1)" -eq 12 ] && [ "$(field "${UI[7]}" upgrading)" -eq 0 ] || fail "the barrier did not become a wooden wall: ${UI[7]}"
+[ "$(field "${UI[7]}" posted)" -eq 0 ] || fail "somebody is on the wall before being sent: ${UI[7]}"
+[ "$(field "${UI[8]}" posted)" -eq 7 ] || fail "the archers and mages are not posted on the wall: ${UI[8]}"
+[ "$(field "${UI[9]}" upgrading)" -eq 12 ] || fail "the wooden wall is not being upgraded: ${UI[9]}"
+[ "$(field "${UI[10]}" tier2)" -eq 12 ] && [ "$(field "${UI[10]}" upgrading)" -eq 0 ] || fail "the wooden wall did not become stone: ${UI[10]}"
+[ "$(field "${UI[10]}" posted)" -eq 7 ] || fail "the archers and mages did not stay on the wall as it turned to stone: ${UI[10]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 6 ] || fail "missing screenshots"
 echo "UI wall screenshot test OK: $OUT"

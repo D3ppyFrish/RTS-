@@ -38,7 +38,7 @@ public class ContentTests
     {
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs" }, db.Factions.Select(f => f.Id));
-        Assert.Equal(new[] { "town_hall", "storehouse", "house", "farm", "barracks", "smelter", "wall", "gate", "torch", "campfire", "wolf_lodge", "goblin_totem", "bridge" }, db.Buildings.Select(b => b.Id));
+        Assert.Equal(new[] { "town_hall", "storehouse", "house", "farm", "barracks", "smelter", "barrier", "wooden_wall", "stone_wall", "barrier_gate", "wooden_gate", "stone_gate", "torch", "campfire", "wolf_lodge", "goblin_totem", "bridge" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "foreman", "militia", "knight", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
             "ranger", "lancer", "outrider", "tunneller", "demolisher", "battle_mage", "seer" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
@@ -222,10 +222,10 @@ public class ContentTests
 
     /// <summary>Walls too low to stop anyone, and gates with no room for their leaves, fail the load.</summary>
     [Theory]
-    [InlineData("\"kind\": \"wall\", \"size\": [1, 1], \"wallHeight\": 3", "\"kind\": \"wall\", \"size\": [1, 1], \"wallHeight\": 1",
-        "building 'wall': a wall needs \"wallHeight\" of 2 or more, or units step over it")]
+    [InlineData("\"kind\": \"wall\", \"size\": [1, 1], \"wallHeight\": 2", "\"kind\": \"wall\", \"size\": [1, 1], \"wallHeight\": 1",
+        "building 'barrier': a wall needs \"wallHeight\" of 2 or more, or units step over it")]
     [InlineData("\"kind\": \"gate\", \"size\": [1, 1], \"wallHeight\": 3", "\"kind\": \"gate\", \"size\": [1, 1], \"wallHeight\": 2",
-        "building 'gate': a gate needs \"wallHeight\" of 3 or more")]
+        "building 'barrier_gate': a gate needs \"wallHeight\" of 3 or more")]
     [InlineData("\"kind\": \"bridge\", \"size\": [1, 1], \"wallHeight\": 1", "\"kind\": \"bridge\", \"size\": [1, 2], \"wallHeight\": 1",
         "building 'bridge': a bridge is laid a column at a time, one deck block each")]
     public void WallsAndGatesMustBeTallEnough(string old, string replacement, string message)
@@ -234,6 +234,70 @@ public class ContentTests
         Edit(files, "buildings.json", old, replacement);
         var e = Fails(files);
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: " + message));
+    }
+
+    /// <summary>Walls and gates come in three tiers, each the upgrade of the one before.</summary>
+    [Fact]
+    public void WallsAndGatesComeInTiersLinkedByTheirUpgrades()
+    {
+        var db = ContentDb.Default;
+        foreach (var ids in new[] { new[] { "barrier", "wooden_wall", "stone_wall" }, new[] { "barrier_gate", "wooden_gate", "stone_gate" } })
+        {
+            var tiers = ids.Select(db.Building).ToArray();
+            Assert.Equal(new[] { 0, 1, 2 }, tiers.Select(t => t.Tier));
+            Assert.Equal(new[] { tiers[1], tiers[2], null }, tiers.Select(t => t.Upgrade));
+            Assert.Equal(new[] { null, tiers[0], tiers[1] }, tiers.Select(t => t.UpgradeOf));
+            Assert.All(tiers, t => Assert.Equal(tiers[0].Kind, t.Kind));
+            // Each is at least as tall and tougher, block for block and all told, than the one before.
+            Assert.True(tiers[0].Height <= tiers[1].Height && tiers[1].Height < tiers[2].Height);
+            Assert.True(tiers[0].Toughness * 2 <= tiers[1].Toughness && tiers[1].Toughness * 2 <= tiers[2].Toughness);
+            // Only the base is wood a worker can spare; the top tier is stone and needs masonry.
+            Assert.Equal(new[] { false, true, true }, tiers.Select(t => t.Walkway));
+            Assert.Empty(tiers[0].Requires);
+            Assert.DoesNotContain(tiers[0].Cost, c => c.Good == Good.Stone);
+            Assert.DoesNotContain(tiers[1].Cost, c => c.Good == Good.Stone);
+            Assert.Contains(tiers[2].Cost, c => c.Good == Good.Stone);
+            Assert.Equal(new[] { "masonry" }, tiers[2].Requires.Select(t => t.Id));
+        }
+        Assert.Equal(BlockType.Palisade, db.Building("barrier").Blocks[0].Block);
+        Assert.Equal(BlockType.Planks, db.Building("wooden_wall").Blocks[0].Block);
+        Assert.Equal(BlockType.StoneBrick, db.Building("stone_wall").Blocks[0].Block);
+        Assert.Equal(BlockInfo.Toughness(BlockType.Planks) * db.Building("wooden_wall").Sturdy, db.Building("wooden_wall").BlockToughness(0));
+        Assert.Null(db.Building("house").Upgrade);
+        Assert.Equal(1, db.Building("house").Sturdy);
+    }
+
+    /// <summary>An upgrade has to take the place of what stands there, and only walls have them or walkways.</summary>
+    [Theory]
+    [InlineData("\"upgrade\": \"wooden_wall\"", "\"upgrade\": \"wooden_wal\"", "building 'barrier': \"upgrade\": there is no building \"wooden_wal\"")]
+    [InlineData("\"upgrade\": \"wooden_wall\"", "\"upgrade\": \"barrier\"", "building 'barrier': \"upgrade\": a building is not its own upgrade")]
+    [InlineData("\"upgrade\": \"wooden_wall\"", "\"upgrade\": \"wooden_gate\"", "building 'barrier': \"upgrade\": \"wooden_gate\" must be of the same kind and size")]
+    [InlineData("\"upgrade\": \"stone_wall\"", "\"upgrade\": \"barrier\"", "building 'wooden_wall': \"upgrade\": \"barrier\" must be at least as tall")]
+    [InlineData("\"upgrade\": \"wooden_gate\"", "\"upgrade\": \"stone_gate\"", "building 'wooden_gate': \"upgrade\": \"stone_gate\" is already the upgrade of \"barrier_gate\"")]
+    [InlineData("\"upgrade\": \"stone_gate\"", "\"upgrade\": \"barrier_gate\"", "building 'barrier_gate' is its own upgrade, by way of 'wooden_gate'")]
+    [InlineData("\"light\": 7", "\"light\": 7, \"upgrade\": \"campfire\"", "building 'torch': only a wall or gate has an \"upgrade\"")]
+    [InlineData("\"light\": 7", "\"light\": 7, \"walkway\": true", "building 'torch': only a wall or gate has a \"walkway\"")]
+    [InlineData("\"sturdy\": 2, \"icon\": \"wall\"", "\"sturdy\": 2, \"walkway\": true, \"icon\": \"wall\"",
+        "building 'barrier': a \"walkway\" needs \"wallHeight\" of 3 or more, or blows from the ground reach the units on it")]
+    [InlineData("\"sturdy\": 2, \"icon\": \"wall\"", "\"sturdy\": 0, \"icon\": \"wall\"", "building 'barrier': \"sturdy\" is 0; it should be from 1 to 1000")]
+    public void UpgradesSturdinessAndWalkwaysAreChecked(string old, string replacement, string message)
+    {
+        var files = Files();
+        Edit(files, "buildings.json", old, replacement);
+        var e = Fails(files);
+        Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: " + message));
+    }
+
+    /// <summary>The tiers are part of the rules, so they are part of the content's hash.</summary>
+    [Theory]
+    [InlineData("\"sturdy\": 4, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"", "\"sturdy\": 5, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"")]
+    [InlineData("\"sturdy\": 4, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"", "\"sturdy\": 4, \"icon\": \"wall\", \"upgrade\"")]
+    [InlineData("\"walkway\": true, \"icon\": \"gate\", \"upgrade\": \"stone_gate\"", "\"walkway\": true, \"icon\": \"gate\"")]
+    public void ChangingATierChangesTheContentHash(string old, string replacement)
+    {
+        var files = Files();
+        Edit(files, "buildings.json", old, replacement);
+        Assert.NotEqual(ContentDb.Default.Hash, ContentLoader.Load(files).Hash);
     }
 
     /// <summary>Issue #9's check, part two: a reference to an id that does not exist fails the load.</summary>

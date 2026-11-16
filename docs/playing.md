@@ -13,8 +13,9 @@ world seed, whether the computer plays the other side and how well (Computer lev
 is the default, Hard, or Classic, the first computer player; hover a level to read how it plays. No level
 is given anything you are not, and only Classic sees through the fog of war), and whether there is fog of
 war, then Start match. The computer plays the two factions differently: the Orcs mass their soldiers and
-come in big waves from an open town; the Settlers (at Normal and Hard) wall their town, and at Hard keep
-a quarter of their soldiers at home behind the wall when the rest attack.
+come in big waves from an open town; the Settlers (at Normal and Hard) wall their town and make the wall
+stronger as the match goes on, and at Hard post their archers on it and keep a quarter of their soldiers
+at home behind it when the rest attack.
 Each faction has its own look for the menus, panels and buttons: castle stone for the Settlers, rough
 timber for the Orcs. The start screen changes to the look of the faction you pick. Destroy the other side's
 town hall to win; the Surrender button under the right end of the top bar gives up. When the match is
@@ -39,9 +40,11 @@ Controls:
 | Ctrl+right click | attack-move: walk there and fight whatever is met on the way; on an enemy storehouse, burn it |
 | H, G, C, B, M, N | place a house, storehouse, farm, barracks, smelter or town hall; a see-through model of it follows the cursor, amber where it will be built, cyan or violet where it will be a plan, red where it does not fit. The selected workers build it (Shift+click places more; right click or Esc stops). Something you cannot afford yet is placed as a plan |
 | Tab | plan mode (also the Plan mode button at the top of the Build panel): what you place is a plan, marked out but not paid for or built. Plans show as a see-through model: violet while you cannot pay for it, cyan (pulsing) once you can. Right click a plan, with workers selected or not, to pay and start building it; select it for Start building and Remove plan (Delete) buttons |
-| O | place a gate: a wall column whose bottom is a gate only your units walk through (draw a wall through it, or up to it) |
+| O | place a gate (a barrier gate, 3 wood): a wall column whose bottom is a gate only your units walk through (draw a wall through it, or up to it) |
 | I, ; | place a torch (1 wood) or a campfire (3 wood): from dusk to dawn they light the ground around them, so what stands there is seen and shot at as by day; a storm puts them out until it passes |
-| Y | wall tool (also the Wall button): drag a line for the selected workers to wall off, a column at a time, 2 stone a column; columns with no room or that you cannot pay for show red; Shift keeps the tool for another stretch; right click or Esc stops |
+| Y | wall tool (also the Wall button): drag a line for the selected workers to wall off, a column at a time, with wooden barriers at 1 wood a column (the first tier of wall: cheap, low and easy to knock down); columns with no room or that you cannot pay for show red; Shift keeps the tool for another stretch; right click or Esc stops |
+| Upgrade button, U | with a wall or gate of yours selected: upgrade the stretch of that tier it stands in (every wall and gate joined to it, nearest first, as far as your goods go) to the next tier; Only this one (Shift+U) upgrades that column alone. A barrier becomes a wooden wall (3 wood a column) that archers stand on, and that a stone wall (4 stone, needs Masonry), taller and much sturdier; gates go the same way. Workers do the work (automatic ones by themselves, or right click the wall with workers), and the wall stands as it is until they are done |
+| Right click a wall of yours | with archers, mages or other ranged units selected, on a wooden or stone wall or gate: they climb up and take posts on top, one to a column, the nearest free columns to the one clicked. Up there they see and shoot a quarter further, blows from the ground do not reach them, and they hold their ground; order them anywhere to bring them down |
 | ' | bridge tool (also the Bridge button): drag from bank to bank for the selected workers to lay a level plank deck across deep water, a drop or a trench, 3 wood a column; columns with no room or that you cannot pay for show red, and nothing shows while the ends are not ground about level with each other; Shift keeps the tool; right click or Esc stops. Anyone walks over a bridge; Ctrl+right click one with soldiers selected (yours too) to knock that column out (see [Combat](rules.md#combat)) |
 | L | lay a road: click where it starts, then where it ends (Shift carries on from there) |
 | U | train at the selected building: a worker at a town hall, a spearman at a barracks (its panel has a button for each unit it trains) |

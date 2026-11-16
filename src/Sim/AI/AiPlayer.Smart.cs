@@ -79,6 +79,11 @@ public sealed partial class AiPlayer
     /// <summary>Normal: a wall round the town hall from this tick on, this many columns out from its walls.</summary>
     public const int WallTicks = 9 * 60 * Tps, WallGap = 4;
     /// <summary>
+    /// Normal: ticks between looks at whether it can upgrade its wall, and what it wants left over of each
+    /// good the upgrade takes after paying for all of it.
+    /// </summary>
+    public const int WallUpgradeTicks = 60 * Tps, WallUpgradeSpare = 100;
+    /// <summary>
     /// The smart levels send a party of this many soldiers to break the totem of the nearest city-state town
     /// they do not hold, from this tick on, while no wave is out and enough soldiers are home; a party that
     /// fails is tried again this long after (ticks), and one that has not won in that long comes home.
@@ -125,6 +130,7 @@ public sealed partial class AiPlayer
     private List<int>? _sappers;
     // Normal: the wall round the town hall has been laid out.
     private bool _walled;
+    private long _wallUpgradeAt;
     // The party sent to break a city-state's totem (unit ids), the town, when it set out, and when the next may.
     private readonly List<int> _totemParty = new();
     private int _totemTown;
@@ -1141,6 +1147,11 @@ public sealed partial class AiPlayer
         long tick = sim.Tick;
         if (tick >= ExpandTicks) Expand(sim, hall, issue);
         if (!_walled && tick >= WallTicks && Style(sim) == Content.AiStyle.Balanced) Wall(sim, hall, issue);
+        else if (_walled && tick >= _wallUpgradeAt)
+        {
+            _wallUpgradeAt = tick + WallUpgradeTicks;
+            UpgradeWall(sim, issue);
+        }
     }
 
     /// <summary>
@@ -1174,14 +1185,13 @@ public sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// A stone wall round the town hall, <see cref="WallGap"/> columns out, with gates in the middle of the
-    /// door side and the far side, once it has the stone. Its own units walk through the gates; enemies have
-    /// to break through while its soldiers fight them.
+    /// A wall round the town hall, <see cref="WallGap"/> columns out, with gates in the middle of the door
+    /// side and the far side, once it has the goods: barriers, the first tier (see <see cref="UpgradeWall"/>).
+    /// Its own units walk through the gates; enemies have to break through while its soldiers fight them.
     /// </summary>
     private void Wall(Simulation sim, Building hall, Action<Command> issue)
     {
-        if (!sim.Content.TryGetBuilding("wall", out var wall) || !sim.Content.TryGetBuilding("gate", out var gate)) return;
-        if (!sim.Economy.Unlocked(Player, wall) || !sim.Economy.Unlocked(Player, gate)) return;
+        if (FirstBuilding(sim, BuildingKind.Wall) is not { } wall || FirstBuilding(sim, BuildingKind.Gate) is not { } gate) return;
         int x0 = hall.X - WallGap - 1, z0 = hall.Z - WallGap - 1, x1 = hall.MaxX + WallGap + 1, z1 = hall.MaxZ + WallGap + 1;
         var w = sim.World;
         if (x0 < 1 || z0 < 1 || x1 >= w.SizeX - 1 || z1 >= w.SizeZ - 1) return;
@@ -1206,5 +1216,27 @@ public sealed partial class AiPlayer
         }
         issue(new WallCommand(Player, none, wid, x0, z0 + 1, x0, z1 - 1));
         issue(new WallCommand(Player, none, wid, x1, z0 + 1, x1, z1 - 1));
+    }
+
+    /// <summary>
+    /// Normal: when it has the goods to upgrade the whole of its wall to the next tier (and the tech, for
+    /// stone) with <see cref="WallUpgradeSpare"/> of each left over, it does, all of it at once: barriers to
+    /// wooden walls, then those to stone.
+    /// </summary>
+    private void UpgradeWall(Simulation sim, Action<Command> issue)
+    {
+        Building? first = null;
+        foreach (var b in sim.Buildings.All)
+            if (b.Owner == Player && b.Def.IsWall && (first == null || b.Def.Tier < first.Def.Tier)
+                && sim.Economy.CanUpgrade(b) == PlaceResult.Ok) first = b;
+        if (first == null) return;
+        var total = new int[Goods.Count];
+        foreach (var b in sim.Economy.Stretch(first))
+            foreach (var g in b.Def.Upgrade!.Cost) total[(int)g.Good] += g.Amount;
+        var stock = sim.Economy.Stockpile(Player);
+        foreach (var good in Goods.All)
+            if (total[(int)good] > 0 && stock[(int)good] < total[(int)good] + _keep[(int)good] + WallUpgradeSpare) return;
+        issue(new UpgradeCommand(Player, Array.Empty<int>(), first.Id));
+        Note(sim, $"upgrades its wall to {first.Def.Upgrade!.Name.ToLowerInvariant()}");
     }
 }

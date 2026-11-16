@@ -142,6 +142,31 @@ public sealed record WallCommand(int PlayerId, int[] Units, string Building, int
 }
 
 /// <summary>
+/// Upgrade one of the player's walls or gates (by id) to the building its type is upgraded to (see
+/// <see cref="Economy.BuildingDef.Upgrade"/>), paying that building's cost; with <paramref name="Stretch"/>, every
+/// wall and gate of the player's joined to it that is of the same tier too, nearest first, each paid for in
+/// turn until the goods run out. A wall stands as it is until its builders have done the upgrade's work, then
+/// it is the new building, whole. The workers among the units go and do the work (see <see cref="Economy.EconomySystem"/>).
+/// </summary>
+public sealed record UpgradeCommand(int PlayerId, int[] Units, int Building, bool Stretch = true) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(UpgradeCommand? other) => base.Equals(other) && Building == other!.Building && Stretch == other.Stretch;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building, Stretch);
+}
+
+/// <summary>
+/// Post the ranged units among the units on top of one of the player's walls or gates (by id) that has a
+/// walkway (see <see cref="Economy.BuildingDef.Walkway"/>): each takes the free column of walkway nearest to
+/// that one, walks to its foot, climbs up and stands on top, one unit to a column. Up there it holds its
+/// ground and shoots from the height; any other order brings it down again (see <see cref="Economy.EconomySystem"/>).
+/// </summary>
+public sealed record PostCommand(int PlayerId, int[] Units, int Building) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(PostCommand? other) => base.Equals(other) && Building == other!.Building;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building);
+}
+
+/// <summary>
 /// Lay a bridge (a building of kind bridge, by definition id) along the straight line from column (X1, Z1)
 /// to (X2, Z2): a level deck at the height of the higher end, on every column of the line too low or too
 /// wet to walk at that height (see <see cref="Economy.EconomySystem.PlanBridge"/>), each paid for as it is

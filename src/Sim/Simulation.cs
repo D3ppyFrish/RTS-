@@ -378,6 +378,8 @@ public sealed class Simulation
             case BurnCommand b: Economy.Apply(b); break;
             case RoadCommand r: Economy.Apply(r); break;
             case WallCommand wc: Economy.Apply(wc); break;
+            case UpgradeCommand up: Economy.Apply(up); break;
+            case PostCommand po: Economy.Apply(po); break;
             case BridgeCommand bc: Economy.Apply(bc); break;
             case TrainCommand t: Economy.Apply(t); break;
             case ResearchCommand r: Economy.Apply(r); break;

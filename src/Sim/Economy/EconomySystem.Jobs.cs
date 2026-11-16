@@ -34,6 +34,7 @@ public sealed partial class EconomySystem
             case UnitJob.Trade: StepTrade(i); break;
             case UnitJob.Dig: StepDig(i); break;
             case UnitJob.Clean: StepClean(i); break;
+            case UnitJob.Post: StepPost(i); break;
         }
     }
 
@@ -166,9 +167,9 @@ public sealed partial class EconomySystem
     private void StepBuild(int i)
     {
         var b = Buildings.Get(U.JobTarget[i]);
-        if (b != null && b.Owner == U.Owner[i] && (b.Def.IsWall || b.Def.IsBridge) && b.State != BuildingState.Site)
+        if (b != null && b.Owner == U.Owner[i] && (b.Def.IsWall || b.Def.IsBridge) && !b.WantsBuilders)
         {
-            // That stretch of wall (or bridge) is up: on to the next one along.
+            // That stretch of wall (or bridge) is up, or upgraded: on to the next one along.
             var next = b.Def.IsBridge ? NextBridgeSite(U.Owner[i], b.X, b.Z) : NextWallSite(U.Owner[i], b.X, b.Z);
             if (next != null)
             {
@@ -176,7 +177,7 @@ public sealed partial class EconomySystem
                 b = next;
             }
         }
-        if (b == null || b.Owner != U.Owner[i] || b.State != BuildingState.Site)
+        if (b == null || b.Owner != U.Owner[i] || !b.WantsBuilders)
         {
             EndJob(i);
             return;
@@ -187,11 +188,15 @@ public sealed partial class EconomySystem
             SetPhase(i, JobPhase.ToWork);
             return;
         }
-        // A tick of work for each 100 of the unit's work speed (JobTimer keeps the rest).
+        // A tick of work for each 100 of the unit's work speed (JobTimer keeps the rest): on the site, or on
+        // the upgrade of a building that stands.
         var u = U;
         u.JobTimer[i] += Content.Units[u.Def[i]].WorkPercent;
         for (; u.JobTimer[i] >= 100; u.JobTimer[i] -= 100)
-            if (b.Work < b.Def.BuildTicks) b.Work++;
+        {
+            if (b.Upgrade != null) b.UpgradeWork = Math.Min(b.UpgradeWork + 1, b.Upgrade.BuildTicks);
+            else if (b.Work < b.Def.BuildTicks) b.Work++;
+        }
         if ((_sim.Tick + u.Id[i]) % Tps == 0) _sim.Evolution.Built(i);
     }
 
@@ -379,7 +384,10 @@ public sealed partial class EconomySystem
                 SetPhase(i, JobPhase.Working);
                 break;
             case Travel.NeedSpot:
-                if (AccessSpot(b, out int x, out int z, out int y)) _sim.SendUnit(i, x, z, y);
+                // A wall has no door: its builder goes to the side of it it is on (and tries the other after).
+                if (b.Def.IsWall && U.JobRetry[i] == 1 && SpotBeside(b, U.X[i].FloorToInt(), U.Z[i].FloorToInt(), out int x, out int z, out int y))
+                    _sim.SendUnit(i, x, z, y);
+                else if (AccessSpot(b, out x, out z, out y)) _sim.SendUnit(i, x, z, y);
                 else EndJob(i);
                 break;
             case Travel.Failed:

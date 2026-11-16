@@ -22,6 +22,11 @@ public sealed class FallingSection
     public int Generation { get; }
     /// <summary>The tick it started.</summary>
     public long Started { get; }
+    /// <summary>
+    /// True for a piece of a wall or gate: its rubble does not heap, each block sliding off any step down
+    /// (see <see cref="PhysicsSystem.Release"/>), so a gap in a wall is not filled as high as the wall was.
+    /// </summary>
+    public bool Spreads { get; internal set; }
 
     /// <summary>Whole blocks moved, along x, y (up) and z.</summary>
     public int OffX { get; internal set; }
@@ -326,9 +331,10 @@ public sealed class PhysicsSystem
     /// The blocks at these places come away from the world and fall, one piece for each group joined face to
     /// face, each pushed away from (fromX, fromZ) at <paramref name="push"/> 64ths of a block per tick (straight
     /// down from there). Buildings use this for blocks that lose their support, are knocked out, or collapse.
-    /// Places that hold nothing solid are skipped.
+    /// Places that hold nothing solid are skipped. With <paramref name="spread"/> the pieces' rubble spreads
+    /// out when it settles (see <see cref="FallingSection.Spreads"/>).
     /// </summary>
-    public void Release(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX, int fromZ, int push)
+    public void Release(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX, int fromZ, int push, bool spread = false)
     {
         _seen.Clear();
         foreach (var c in cells)
@@ -353,6 +359,7 @@ public sealed class PhysicsSystem
                 }
             }
             var s = Start(0);
+            s.Spreads = spread;
             long cx = 0, cz = 0;
             foreach (var b in s._blocks) { cx += b.X; cz += b.Z; }
             (s.VelX, s.VelZ) = Away((int)(cx * 2 / s._blocks.Count) + 1 - fromX * 2 - 1, (int)(cz * 2 / s._blocks.Count) + 1 - fromZ * 2 - 1, push);
@@ -387,7 +394,7 @@ public sealed class PhysicsSystem
             list.Add((x, y, z));
         }
         int cx = b.X + b.Def.SizeX / 2, cz = b.Z + b.Def.SizeZ / 2;
-        foreach (var list in chunks.Values) Release(list, cx, cz, CrumbleSpeed);
+        foreach (var list in chunks.Values) Release(list, cx, cz, CrumbleSpeed, b.Def.IsWall);
     }
 
     /// <summary>A velocity of about <paramref name="speed"/> in the direction (dx, dz); none if that is zero.</summary>
@@ -691,7 +698,7 @@ public sealed class PhysicsSystem
                 gx += b.X; gz += b.Z;
             }
             blocks.Sort((a, c) => Key(a.X, a.Y, a.Z).CompareTo(Key(c.X, c.Y, c.Z)));
-            var f = new FallingSection(_nextSection++, _sim.Tick, s.Generation + 1, blocks);
+            var f = new FallingSection(_nextSection++, _sim.Tick, s.Generation + 1, blocks) { Spreads = s.Spreads };
             var (vx, vz) = Away((int)(gx * 2 / group.Count) - mx, (int)(gz * 2 / group.Count) - mz, spread);
             f.VelX = Math.Clamp(vx + rng.Range(-spread / 3, spread / 3 + 1), -MaxSpeed, MaxSpeed);
             f.VelZ = Math.Clamp(vz + rng.Range(-spread / 3, spread / 3 + 1), -MaxSpeed, MaxSpeed);
@@ -704,7 +711,9 @@ public sealed class PhysicsSystem
     /// <summary>
     /// The piece settles as rubble, lowest blocks first: each drops straight down its column onto whatever is
     /// there and slides off any step of two or more (up to <see cref="MaxSlides"/> columns), so it ends up as
-    /// a heap. Units it settles on are hurt.
+    /// a heap. A piece that spreads (see <see cref="FallingSection.Spreads"/>) slides off any step at all, the
+    /// way it was going where it has the choice, so it ends up as flat as there is room for. Units it settles
+    /// on are hurt.
     /// </summary>
     private void Settle(FallingSection s)
     {
@@ -718,15 +727,19 @@ public sealed class PhysicsSystem
             int x = b.X + s.OffX, y = b.Y + s.OffY, z = b.Z + s.OffZ;
             while (y < _w.SizeY - 1 && BlockInfo.IsSolid(_w.Get(x, y, z))) y++; // something moved in
             y = Floor(x, y, z);
+            int step = s.Spreads ? 1 : 2;
             for (int slide = 0; slide < MaxSlides; slide++)
             {
                 int bestX = x, bestZ = z, bestY = y;
+                bool bestOnward = false;
                 for (int f = 1; f <= 4; f++)
                 {
                     int nx = x + Faces[f].X, nz = z + Faces[f].Z;
                     if (!_w.InBounds(nx, y, nz) || BlockInfo.IsSolid(_w.Get(nx, y, nz))) continue;
                     int ny = Floor(nx, y, nz);
-                    if (ny <= y - 2 && ny < bestY) (bestX, bestY, bestZ) = (nx, ny, nz);
+                    if (ny > y - step) continue;
+                    bool onward = s.Spreads && Faces[f].X * s.VelX + Faces[f].Z * s.VelZ > 0;
+                    if (ny < bestY || (ny == bestY && onward && !bestOnward)) (bestX, bestY, bestZ, bestOnward) = (nx, ny, nz, onward);
                 }
                 if (bestY == y) break;
                 (x, y, z) = (bestX, bestY, bestZ);
@@ -864,7 +877,7 @@ public sealed class PhysicsSystem
 
         void MixSection(FallingSection s)
         {
-            Mix(s.Id); Mix(s.Generation); Mix(s.PosX); Mix(s.PosY); Mix(s.PosZ);
+            Mix(s.Id); Mix(s.Generation); Mix(s.Spreads ? 1 : 0); Mix(s.PosX); Mix(s.PosY); Mix(s.PosZ);
             Mix(s.VelX); Mix(s.VelY); Mix(s.VelZ); Mix(s._blocks.Count);
             foreach (var b in s._blocks) Mix(Key(b.X, b.Y, b.Z) * 31 + (long)b.Block);
             foreach (int id in s.Hit) Mix(id);

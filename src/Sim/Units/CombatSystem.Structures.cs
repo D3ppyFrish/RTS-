@@ -5,7 +5,7 @@ namespace Rts.Sim.Units;
 
 /// <summary>
 /// Buildings are made of blocks, so damage to them knocks out real blocks and opens real gaps. Hits on a
-/// building add up; each time they reach the toughness of a block (see <see cref="BlockInfo.Toughness"/>)
+/// building add up; each time they reach the toughness of a block (see <see cref="BuildingDef.BlockToughness"/>)
 /// one comes out of the column nearest the attacker: its top block, so walls are worn down where they are
 /// hit, or for a sapper its bottom block, so the column falls. Knocked-out blocks fly off as debris. Any building
 /// block left with nothing under it falls, with the blocks on it, whatever took its support away (a sapper's blow, a tunnel dug under the wall, a dig), and a
@@ -48,7 +48,7 @@ public sealed partial class CombatSystem
                 Collapse(b);
                 return;
             }
-            int tough = BlockInfo.Toughness(b.Def.Blocks[k].Block);
+            int tough = b.Def.BlockToughness(k);
             if (b.Damage < tough) return;
             b.Damage -= tough;
             KnockOut(b, k, U.X[i].FloorToInt(), U.Z[i].FloorToInt());
@@ -93,14 +93,15 @@ public sealed partial class CombatSystem
 
     /// <summary>
     /// Block k is knocked out of the building by a blow from (fromX, fromZ): it flies off away from the blow
-    /// and comes down as rubble (see <see cref="World.PhysicsSystem"/>). A field's block just turns to soil.
+    /// and comes down as rubble (see <see cref="World.PhysicsSystem"/>). A wall's or gate's rubble spreads
+    /// out, so the gap it leaves can be walked through. A field's block just turns to soil.
     /// </summary>
     private void KnockOut(Building b, int k, int fromX, int fromZ)
     {
         var t = b.Def.Blocks[k];
         int x = b.X + t.X, y = b.Y + t.Y, z = b.Z + t.Z;
         if (t.Y < 0) World.Set(x, y, z, BlockType.Soil);
-        else _sim.Physics.Release(new[] { (x, y, z) }, fromX, fromZ, KnockSpeed);
+        else _sim.Physics.Release(new[] { (x, y, z) }, fromX, fromZ, KnockSpeed, b.Def.IsWall);
         _changed.Add(Key(x, y, z)); // a field's block turns to soil, which the change event does not report
     }
 
@@ -162,7 +163,7 @@ public sealed partial class CombatSystem
         b.Gone ??= new bool[b.Def.Blocks.Count];
         if (b.Gone[k]) return;
         b.Gone[k] = true;
-        b.Lost += BlockInfo.Toughness(t.Block);
+        b.Lost += b.Def.BlockToughness(k);
         _hurt.Add(b);
     }
 
@@ -182,7 +183,7 @@ public sealed partial class CombatSystem
             if (!BlockInfo.IsBuilt(t) || t is BlockType.Road or BlockType.Farmland || Buildings.At(x, cy, z) != b) break;
             _column.Add((x, cy, z));
         }
-        if (_column.Count > 0) _sim.Physics.Release(_column, x, z, 0);
+        if (_column.Count > 0) _sim.Physics.Release(_column, x, z, 0, b.Def.IsWall);
     }
 
     private readonly List<(int X, int Y, int Z)> _column = new();

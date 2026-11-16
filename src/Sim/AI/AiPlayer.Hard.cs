@@ -435,7 +435,7 @@ public sealed partial class AiPlayer
         int masons = over < StoneWanted ? Math.Min(MostMasons, 2 + c.Workers / MasonsPer) : over >= StonePlenty ? 1 : Math.Max(1, _masons.Count);
         if (c.Workers < QuarryWorkers && over >= 0) masons = 0; // food and wood first
         // Its wall is not worth more diggers than that: it goes up as the stone comes in.
-        if (_ringStone > 0 && _keep[(int)Good.Stone] <= _ringStone) masons = Math.Min(masons, KeepMasons);
+        if (_ringStone > 0 && _keep[(int)Good.Stone] <= _ringKept) masons = Math.Min(masons, KeepMasons);
         if (masons > _masons.Count)
         {
             var from = idle.Count > 0 ? idle : farming > want ? farmers : cutters;

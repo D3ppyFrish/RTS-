@@ -524,7 +524,10 @@ public class HardAiTests
     public void HardWallsATownItPlaysBalancedAFewColumnsAtATimeAndKeepsTheLineClear()
     {
         var (sim, hall) = ATownToWall(0); // the Settlers
-        sim.TestMode = true; // only to take a column of the wall away, further down
+        // Test mode only to take a column of the wall away, further down, and so that the other town cannot be
+        // razed: the match has to last until the wall is stone.
+        sim.TestMode = true;
+        sim.Schedule(0, new SandboxCheatCommand(0, 1, SandboxCheat.Invulnerable, true));
         var ai = new AiPlayer(0, 1, AiLevel.Hard);
         var players = new[] { ai };
         var log = new List<Command>();
@@ -548,7 +551,7 @@ public class HardAiTests
         bool Whole() => line.All(c => sim.Buildings.AtColumn(c.X, c.Z) is { Owner: 0, State: BuildingState.Active } b && b.Def.IsWall);
         Assert.True(Play(sim, players, () =>
         {
-            most = Math.Max(most, sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsWall && b.State == BuildingState.Site));
+            most = Math.Max(most, sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsWall && b.WantsBuilders));
             return Whole();
         }, 8 * 60 * Tps, log), $"the wall to be whole; {line.Count(c => sim.Buildings.AtColumn(c.X, c.Z) == null)} of {line.Count} columns are not laid");
         Assert.InRange(most, 2, AiPlayer.KeepOpenSites);
@@ -556,6 +559,10 @@ public class HardAiTests
         foreach (var (x, z) in line)
             Assert.Equal(InGate(x, z) ? BuildingKind.Gate : BuildingKind.Wall, sim.Buildings.AtColumn(x, z)!.Def.Kind);
         Assert.Equal(6 * AiPlayer.KeepGate, line.Count(c => InGate(c.X, c.Z)));
+        // It is laid as barriers, the cheap first tier: no column is upgraded while one is still missing.
+        Assert.All(log.OfType<WallCommand>(), c => Assert.Contains(c.Building, new[] { "barrier", "barrier_gate" }));
+        int firstUpgrade = log.FindIndex(c => c is UpgradeCommand);
+        Assert.True(firstUpgrade < 0 || firstUpgrade > log.FindLastIndex(c => c is WallCommand), "an upgrade before the line was laid");
 
         // Meanwhile its town has grown, and nothing stands on the line, right beside it (which would leave a
         // hole: a wall column cannot stand against another building) or in the way through a gate.
@@ -574,7 +581,47 @@ public class HardAiTests
         }
         Assert.Contains(town, b => b.X > x0 && b.MaxX < x1 && b.Z > z0 && b.MaxZ < z1); // some of it within the wall
 
-        // A column knocked out is laid again the next time it looks at its wall.
+        // With the line whole it makes it stronger out of what it can spare, a few columns at a time: all of
+        // it to wooden walls first, the side toward the enemy (east) before the others, and only then, with
+        // masonry, to stone.
+        int Tier(int x, int z) => sim.Buildings.AtColumn(x, z) is { Owner: 0, Upgrade: null } b ? b.Def.Tier : -1;
+        bool AllOf(int tier) => line.All(c => Tier(c.X, c.Z) == tier);
+        void KeepStocked()
+        {
+            hall.Stock[(int)Good.Wood] = Math.Max(hall.Stock[(int)Good.Wood], 1000);
+            hall.Stock[(int)Good.Stone] = Math.Max(hall.Stock[(int)Good.Stone], 1000);
+        }
+        most = 0;
+        bool eastFirst = false, wooden = false;
+        Assert.True(Play(sim, players, () =>
+        {
+            KeepStocked();
+            most = Math.Max(most, sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsWall && b.WantsBuilders));
+            bool barriers = line.Any(c => sim.Buildings.AtColumn(c.X, c.Z)!.Def.Tier == 0);
+            bool stone = sim.Buildings.All.Any(b => b.Owner == 0 && b.Def.IsWall && (b.Def.Tier == 2 || b.Upgrade?.Tier == 2));
+            Assert.False(barriers && stone, "a column is being made stone while another is still a barrier");
+            if (!eastFirst && line.Where(c => c.X == x1 && c.Z > z0 && c.Z < z1).All(c => Tier(c.X, c.Z) == 1))
+            {
+                eastFirst = true;
+                Assert.Contains(line, c => c.X == x0 && Tier(c.X, c.Z) == 0); // the west side has not been reached yet
+            }
+            if (!wooden && AllOf(1))
+            {
+                wooden = true;
+                sim.Economy.Grant(0, sim.Content.Tech("masonry")); // if it has not researched it by now
+            }
+            return AllOf(2);
+        }, 25 * 60 * Tps, log), $"the wall to be stone all round; {line.Count(c => Tier(c.X, c.Z) != 2)} of {line.Count} columns are not: " +
+            $"{line.Count(c => Tier(c.X, c.Z) == 0)} barriers, {line.Count(c => Tier(c.X, c.Z) == 1)} wooden, {line.Count(c => Tier(c.X, c.Z) < 0)} being upgraded or gone; " +
+            string.Join("; ", ai.Journal.TakeLast(6).Select(j => $"{j.Tick / Tps}s {j.Text}")));
+        Assert.True(eastFirst && wooden);
+        Assert.InRange(most, 2, AiPlayer.KeepOpenSites);
+        Assert.All(log.OfType<UpgradeCommand>(), c => Assert.False(c.Stretch));
+        Assert.Contains(ai.Journal, j => j.Text.Contains("columns of its wall to wooden wall"));
+        Assert.Contains(ai.Journal, j => j.Text.Contains("columns of its wall to stone wall"));
+        Assert.Equal(sim.Content.Building("stone_gate"), sim.Buildings.AtColumn(ai.TownGates[0].X, ai.TownGates[0].Z)!.Def);
+
+        // A column knocked out is laid again the next time it looks at its wall (as a barrier, to be upgraded in its turn).
         var (kx, kz) = (x0, z0 + 5);
         log.Clear();
         sim.Schedule(sim.Tick, new SandboxClearCommand(0, kx, kz, 0));
@@ -582,7 +629,71 @@ public class HardAiTests
         Assert.Null(sim.Buildings.AtColumn(kx, kz));
         Assert.True(Play(sim, players, () => log.OfType<WallCommand>().Any(), AiPlayer.KeepLookTicks + 2 * Tps, log), "the column to be laid again");
         var again = Assert.Single(log.OfType<WallCommand>());
-        Assert.Equal(("wall", kx, kz, kx, kz), (again.Building, again.X1, again.Z1, again.X2, again.Z2));
+        Assert.Equal(("barrier", kx, kz, kx, kz), (again.Building, again.X1, again.Z1, again.X2, again.Z2));
+        Assert.True(Play(sim, players, () =>
+        {
+            KeepStocked();
+            return AllOf(2);
+        }, 3 * 60 * Tps, log), "the new column to be made stone like the rest");
+    }
+
+    /// <summary>
+    /// Puts a finished wall of the tier (wooden or stone) on the line Hard marks out round the town hall (see
+    /// <see cref="AiPlayer.KeepGap"/>), gates and all, before it has had its first look at its town.
+    /// </summary>
+    private static void FinishWall(Simulation sim, Building hall, string tier)
+    {
+        int x0 = hall.X - AiPlayer.KeepGap, z0 = hall.Z - AiPlayer.KeepGap, x1 = hall.MaxX + AiPlayer.KeepGap, z1 = hall.MaxZ + AiPlayer.KeepYard;
+        var (hx, hz) = Middle(hall);
+        int yard = (hall.MaxZ + 1 + z1) / 2, h = AiPlayer.KeepGate / 2;
+        bool InGate(int x, int z) => ((z == z0 || z == z1) && Math.Abs(x - hx) <= h) || ((x == x0 || x == x1) && (Math.Abs(z - hz) <= h || Math.Abs(z - yard) <= h));
+        for (int x = x0; x <= x1; x++)
+        for (int z = z0; z <= z1; z++)
+            if (x == x0 || x == x1 || z == z0 || z == z1)
+                Assert.NotNull(sim.Economy.PlaceFinished(hall.Owner, sim.Content.Building(tier + (InGate(x, z) ? "_gate" : "_wall")), x, z));
+    }
+
+    /// <summary>The wall <see cref="FinishWall"/> put up is on the line Hard marked out, its gates where Hard wants them.</summary>
+    private static void AssertWalled(Simulation sim, AiPlayer ai)
+    {
+        var (x0, z0, x1, z1) = ai.TownWall!.Value;
+        Assert.All(new[] { (x0, z0), (x1, z1), (x0, z1), (x1, z0) }, c => Assert.Equal(BuildingKind.Wall, sim.Buildings.AtColumn(c.Item1, c.Item2)?.Def.Kind));
+        Assert.All(ai.TownGates, g => Assert.Equal(BuildingKind.Gate, sim.Buildings.AtColumn(g.X, g.Z)?.Def.Kind));
+        Assert.Equal(6 * AiPlayer.KeepGate, sim.Buildings.All.Count(b => b.Owner == ai.Player && b.Def.Kind == BuildingKind.Gate));
+    }
+
+    [Fact]
+    public void HardPostsItsArchersOnItsWallByTheGateTowardTheEnemyAndTheyStayUpThereWhenTheEnemyComes()
+    {
+        var (sim, hall) = ATownToWall(0);
+        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        var players = new[] { ai };
+        FinishWall(sim, hall, "wooden");
+        Play(sim, players, () => false, 1);
+        AssertWalled(sim, ai);
+        var (x0, z0, x1, z1) = ai.TownWall!.Value;
+        var u = sim.Units;
+        // Too few to send as a wave. (The spearmen come first: one of them goes off to explore.)
+        var spears = Enumerable.Range(0, 4).Select(k => sim.SpawnUnit(0, "spearman", hall.MaxX + 3 + k % 3, hall.MaxZ + 6 + k / 3)).ToArray();
+        var archers = Enumerable.Range(0, 6).Select(k => sim.SpawnUnit(0, "archer", hall.MaxX + 3 + k % 3, hall.MaxZ + 3 + k / 3)).ToArray();
+        bool OnWall(int id) => sim.Economy.WallUnder(u.IndexOf(id)) != null;
+
+        // The enemy is to the east: the archers go up by a gate in the east side; the spearmen stay on the ground.
+        Assert.True(Play(sim, players, () => archers.All(OnWall), 90 * Tps), $"the archers to take their posts; {archers.Count(OnWall)} of 6 have");
+        Assert.All(archers, id => Assert.Equal(x1, u.X[u.IndexOf(id)].FloorToInt()));
+        Assert.All(archers, id => Assert.Contains(ai.TownGates, g => !g.AlongX && g.X == x1 && Math.Abs(g.Z - u.Z[u.IndexOf(id)].FloorToInt()) <= EconomySystem.PostReach));
+        Assert.DoesNotContain(spears, OnWall);
+        // They are not called back to where the others gather.
+        Play(sim, players, () => false, 60 * Tps);
+        Assert.All(archers, id => Assert.True(OnWall(id)));
+
+        // Enemies come at the wall below them: the spearmen go out to meet them, the archers shoot from where they stand.
+        int az = u.Z[u.IndexOf(archers[0])].FloorToInt();
+        var raiders = Enumerable.Range(0, 4).Select(k => sim.SpawnUnit(1, "spearman", x1 + 8, az - 2 + k)).ToArray();
+        Assert.True(Play(sim, players, () => raiders.All(id => !u.Exists(id)), 120 * Tps), "the raiders to be beaten");
+        Assert.Contains(ai.Journal, j => j.Text.StartsWith("defends its town"));
+        Assert.All(archers.Where(u.Exists), id => Assert.True(OnWall(id), "an archer came down to fight"));
+        Assert.True(archers.Count(u.Exists) >= 5);
     }
 
     [Fact]
@@ -675,9 +786,9 @@ public class HardAiTests
     [Fact]
     public void WhileOnlyItsWallWantsStoneHardKeepsAFewWorkersAtItsQuarry()
     {
-        // Thirty-six workers, every tech, a barracks and no stone. A town with no wall to build keeps five
-        // workers on stone; one that wants the stone only for its wall keeps three, and the wall goes up as
-        // the stone comes in.
+        // Thirty-six workers, every tech, a barracks and no stone. A town with no wall keeps five workers
+        // on stone; one that wants the stone only to turn its wooden wall to stone keeps three, and the wall
+        // is upgraded as the stone comes in.
         foreach (int player in new[] { 0, 1 })
         {
             var (sim, hall) = ATownToWall(player);
@@ -686,6 +797,7 @@ public class HardAiTests
             Array.Clear(hall.Stock);
             hall.Stock[(int)Good.Food] = 300;
             var ai = new AiPlayer(player, 1, AiLevel.Hard);
+            if (player == 0) FinishWall(sim, hall, "wooden");
             int most = 0;
             Play(sim, new[] { ai }, () =>
             {
@@ -693,6 +805,7 @@ public class HardAiTests
                 return false;
             }, 5 * AiPlayer.AssignTicks);
             Assert.Equal(player == 0 ? AiPlayer.KeepMasons : AiPlayer.MostMasons, most);
+            if (player == 0) AssertWalled(sim, ai);
         }
     }
 

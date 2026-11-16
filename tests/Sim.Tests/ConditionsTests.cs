@@ -261,7 +261,7 @@ public class ConditionsTests
         Assert.Equal(9, fire.Light);
         Assert.Single(fire.Blocks);
         Assert.True(db.Building("house").Light > 0);
-        Assert.Equal(0, db.Building("wall").Light);
+        Assert.Equal(0, db.Building("barrier").Light);
     }
 
     /// <summary>Archers at night, out of the light: some shots miss. With day and night off, none do.</summary>

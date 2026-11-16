@@ -172,7 +172,10 @@ public sealed partial class AiPlayer
                 _joining.Clear();
                 EndWave();
             }
-            Defend(sim, hall, home, tx, tz, issue);
+            // Archers on its wall near the enemies stay up there and shoot; the rest go to meet them.
+            var afoot = home.FindAll(id => !(u.IndexOf(id) is >= 0 and var p && Posted(sim, p)
+                && Dist2(u.X[p].FloorToInt(), u.Z[p].FloorToInt(), tx, tz) <= (long)KeepPostHold * KeepPostHold));
+            Defend(sim, hall, afoot, tx, tz, issue);
             Micro(sim, home, issue);
             if (_wave.Count == 0) return;
         }
@@ -255,7 +258,11 @@ public sealed partial class AiPlayer
                 }
             }
         }
-        if (sim.Tick % (5 * ArmyTicks) < ArmyTicks) RallyHome(sim, hall, enemyHall, home, issue);
+        if (sim.Tick % (5 * ArmyTicks) < ArmyTicks)
+        {
+            PostGuard(sim, home, goal ?? (sim.World.SizeX / 2, sim.World.SizeZ / 2), issue);
+            RallyHome(sim, hall, enemyHall, home, issue);
+        }
     }
 
     /// <summary>
