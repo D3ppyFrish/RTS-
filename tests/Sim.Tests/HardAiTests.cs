@@ -434,6 +434,36 @@ public class HardAiTests
     }
 
     [Fact]
+    public void HardSendsWorkersATreeHasNoRoomForOnToTheNextTrees()
+    {
+        // A lone tree 40 columns east of its town hall and a grove 70 columns east, with nothing to build or
+        // train with. The lone tree has work for some of its six workers; the rest come back with nothing to
+        // do. Hard does not send those at that tree again while it stands: they go on to the grove.
+        var sim = WithStarts(160, (30, 80));
+        TestWorlds.Tree(sim.World, 70, 80, 4, Ground);
+        for (int k = 0; k < 8; k++) TestWorlds.Tree(sim.World, 100 + 3 * (k % 4), 77 + 6 * (k / 4), 4, Ground);
+        var hall = sim.Economy.TownHall(0)!;
+        Array.Clear(hall.Stock);
+        var workers = new List<int>();
+        for (int k = 0; k < 6; k++) workers.Add(sim.SpawnUnit(0, "worker", hall.X + k, hall.MaxZ + 2));
+        var players = new[] { new AiPlayer(0, 1, AiLevel.Hard) };
+
+        int Cutting(Func<int, bool> where) => workers.Count(id =>
+        {
+            int i = sim.Units.IndexOf(id);
+            return sim.Units.Job[i] == UnitJob.Gather && sim.Units.JobBlock[i] == BlockType.Wood && where(sim.Units.JobX[i]);
+        });
+        int Idle() => workers.Count(id => sim.Units.Job[sim.Units.IndexOf(id)] == UnitJob.None);
+        Assert.True(Play(sim, players, () => Idle() > 0 && Cutting(x => x == 70) > 0, AiPlayer.AssignTicks),
+            "the lone tree to have work for some of them and none for the rest");
+        int left = Idle();
+        Assert.True(Play(sim, players, () => Cutting(x => x >= 100) == left, AiPlayer.AssignTicks + 2 * Tps),
+            $"the {left} it had no work for to be sent on to the grove; {Cutting(x => x >= 100)} are");
+        Assert.Equal(workers.Count - left, Cutting(x => x == 70)); // the others are still at the lone tree,
+        Assert.True(BlockInfo.IsTrunk(sim.World.Get(70, Ground + 1, 80))); // which still stands
+    }
+
+    [Fact]
     public void AHardMatchWithFogReplaysTheSame()
     {
         var result = AiMatch.Play(5, 256, 64, 256, 6 * 60 * Tps, levels: new[] { AiLevel.Hard }, fog: true);

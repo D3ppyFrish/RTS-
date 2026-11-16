@@ -467,7 +467,9 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   its workers itself. They are automatic, but on its own priority lists (building, then food or wood,
   and nothing else, so none wanders off to dig), and every 8 seconds it moves up to two between the
   farms and the trees to keep the share it wants on the farms (45%, more as wood piles up, less as food
-  does, between 25% and 70%), and sends idle ones to trees. It trains workers at every town hall it has
+  does, between 25% and 70%), and sends idle ones to the nearest trees it knows of. A tree with few
+  others round it has work for only a few: those that come back with nothing to do are sent on to the
+  next nearest trees, not at the same ones again. It trains workers at every town hall it has
   (12 at first, 3 more each minute, up to 48). It pays for things in order of need and saves up for the
   first it cannot pay for: houses before it is out of room; soldiers while its army is short (see
   below), unless its town is too small to pay for one (fewer workers than 12 and one more for each
