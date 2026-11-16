@@ -382,7 +382,9 @@ public sealed partial class AiPlayer
     /// wood first otherwise, and moves a couple of workers over at a time when the split is off (farmers to
     /// the trees, wood cutters to farms with room). While it is saving up stone it keeps a few workers on
     /// stone, and lets them go when there is plenty. Workers with nothing to do go to the nearest trees it
-    /// knows of.
+    /// knows of. A tree is one worker's work, so a tree with few others round it leaves some of them
+    /// standing: when any it sent are idle again the next time it looks, those trees are taken, and it sends
+    /// the idle on to the next nearest (the cutters there stay).
     /// </summary>
     private void Assign(Simulation sim, Building hall, Census c, Action<Command> issue)
     {
@@ -404,6 +406,17 @@ public sealed partial class AiPlayer
             else if (u.Job[i] == UnitJob.Farm) farmers.Add(u.Id[i]);
             else if (u.Job[i] == UnitJob.Gather && u.JobBlock[i] == BlockType.Wood) cutters.Add(u.Id[i]);
         }
+        // The trees it last sent the idle to had no room for some of them: not there again.
+        bool left = false;
+        foreach (int id in _woodSent) left |= idle.Contains(id);
+        _woodSent.Clear();
+        if (left && _forest is var (bx, _, bz))
+        {
+            if (_badForests.Count >= 16) _badForests.RemoveAt(0);
+            _badForests.Add((bx, bz));
+            _forest = null;
+        }
+
         int want = Math.Min(c.ActiveFarmSlots, Math.Max(2, (c.Workers - _masons.Count) * FarmShare(sim) / 100));
         ulong list = farming < want ? FoodFirst : WoodFirst;
         if (list != _defaultList)
@@ -442,7 +455,10 @@ public sealed partial class AiPlayer
 
         // Workers with nothing to do (and farmers moved to wood): to the nearest trees it knows of.
         if (idle.Count > 0 && Forest(sim, hall, out int x, out int y, out int z))
+        {
             issue(new GatherCommand(Player, idle.ToArray(), x, y, z));
+            _woodSent.AddRange(idle);
+        }
     }
 
     /// <summary>
