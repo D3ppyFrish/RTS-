@@ -14,26 +14,33 @@ public enum AiLevel : byte
     /// </summary>
     Classic,
     /// <summary>
-    /// Plays by the fog of war: it scouts, remembers what it has seen, trains counters to the soldiers it has
-    /// seen, sizes its waves to the enemy army it knows of, marches in formation (ranged troops behind),
-    /// pulls wounded soldiers home to heal, falls back from a fight it is losing, and its sappers go for
-    /// buildings.
+    /// Plays only by what it has seen: it scouts, remembers what it has seen, trains counters to the
+    /// soldiers it has seen, sizes its waves to the enemy army it knows of, marches in formation (ranged
+    /// troops behind), pulls wounded soldiers home to heal, falls back from a fight it is losing, and its
+    /// sappers go for buildings.
+    /// </summary>
+    Easy,
+    /// <summary>
+    /// As <see cref="Easy"/>, and also: focus fire and counter-targeting in fights, more workers, a third
+    /// barracks when rich, a second town hall on new ground, and a stone wall with gates round its town hall.
+    /// This was the best level before <see cref="Hard"/> (issue #2), kept as it was to measure Hard against.
     /// </summary>
     Normal,
     /// <summary>
-    /// As <see cref="Normal"/>, and also: focus fire and counter-targeting in fights, more workers, a third
-    /// barracks when rich, a second town hall on new ground, and a stone wall with gates round its town hall.
+    /// The best it can play, still only by what it has seen and with only the goods it gathers (see
+    /// <c>AiPlayer.Hard.cs</c>): an economy that keeps growing, an army sized and mixed against the one it
+    /// has seen, fights it picks, a quarry and storehouses by its work, and a town hall on new ground.
     /// </summary>
     Hard,
 }
 
-// The smart levels (Normal and Hard; issue #47). The economy is the classic one with a few additions
+// The smart levels (Easy and up; issue #47). The economy is the classic one with a few additions
 // (SmartEconomy); the army is run by SmartArmy instead of Army.
 public sealed partial class AiPlayer
 {
-    /// <summary>Most workers at <see cref="AiLevel.Hard"/>.</summary>
-    public const int HardMostWorkers = 36;
-    /// <summary>Second barracks at the smart levels from this tick; a third (Hard, when rich) from this one.</summary>
+    /// <summary>Most workers at <see cref="AiLevel.Normal"/>.</summary>
+    public const int SkilledMostWorkers = 36;
+    /// <summary>Second barracks at the smart levels from this tick; a third (Normal, when rich) from this one.</summary>
     public const int SmartSecondBarracksTicks = 8 * 60 * Tps, ThirdBarracksTicks = 15 * 60 * Tps;
     /// <summary>Soldiers seen are remembered this long (ticks) after they were last seen.</summary>
     public const int SpotMemoryTicks = 3 * 60 * Tps;
@@ -44,8 +51,10 @@ public sealed partial class AiPlayer
     /// <summary>Only soldiers at least this fast (blocks a second) scout; a scout below this share (percent) of its hit points comes home.</summary>
     public static readonly Fix64 ScoutSpeed = Fix64.FromInt(6);
     public const int ScoutHurtPercent = 70;
+    /// <summary>Hard's scout comes home below this share (percent) of its hit points: a rider is worth more than a longer look.</summary>
+    public const int HardScoutHurtPercent = 85;
     /// <summary>Scouting goals off the start areas are on a grid this many columns apart.</summary>
-    public const int ScoutGrid = 48;
+    public const int ScoutGrid = 16;
     /// <summary>A soldier of a wave below this share (percent) of its hit points goes home to heal...</summary>
     public const int WoundedPercent = 35;
     /// <summary>...and stays home until it is back to this share (percent).</summary>
@@ -65,9 +74,9 @@ public sealed partial class AiPlayer
     /// not fall back: turning away from a fight it is in would only get it cut down from behind.
     /// </summary>
     public const int EngagedRadius = 8;
-    /// <summary>Hard: a second town hall from this tick on.</summary>
+    /// <summary>Normal: a second town hall from this tick on.</summary>
     public const int ExpandTicks = 10 * 60 * Tps;
-    /// <summary>Hard: a wall round the town hall from this tick on, this many columns out from its walls.</summary>
+    /// <summary>Normal: a wall round the town hall from this tick on, this many columns out from its walls.</summary>
     public const int WallTicks = 9 * 60 * Tps, WallGap = 4;
     /// <summary>
     /// The smart levels send a party of this many soldiers to break the totem of the nearest city-state town
@@ -80,18 +89,30 @@ public sealed partial class AiPlayer
     public IReadOnlyList<int> TotemPartyIds => _totemParty;
 
     // What it knows of other players' buildings (by id): seen, and not seen gone since.
-    private readonly SortedDictionary<int, Known> _known = new();
+    private readonly SortedDictionary<int, Foe> _known = new();
     // Other players' soldiers it has seen (by id), where and when.
-    private readonly SortedDictionary<int, Spot> _spotted = new();
+    private readonly SortedDictionary<int, Sighting> _spotted = new();
+    // When it last looked (see Look).
+    private long _looked = long.MinValue;
+    // Where the starting soldiers look for a lair they have not seen (see FindLair).
+    private (int X, int Z) _lairSearch;
     private readonly List<int> _forget = new();
     // The scout (unit id, 0 if none), where it is going, since when, where it has been, and when it may go again.
     private int _scout;
     private (int X, int Z)? _scoutGoal;
+    // True while the scout is looking for their town (its goal is done once seen), false on a look at a town it knows of.
+    private bool _scoutSearch;
     private long _scoutSent;
     private int _scoutStops, _scoutLost;
     private long _scoutAt;
-    // A wave sent to where it guesses an enemy town hall is (a start area it has not seen), before it knows.
+    // Where a wave with nothing it knows of to go for is looking for the enemy (see Seeking), and since when
+    // it has been looking, and on its way to this place.
     private (int X, int Z)? _waveGuess;
+    private long _seekStart, _seekSent;
+    // How many times most of that wave has been found standing about short of the place (see LookFrom).
+    private int _seekStops;
+    // Where it last saw an enemy building: the search starts from there.
+    private (int X, int Z)? _lastFoe;
     private readonly List<(int X, int Z)> _scouted = new();
     // When it last saw an enemy town hall.
     private long _hallSeen = long.MinValue;
@@ -102,16 +123,14 @@ public sealed partial class AiPlayer
     private long _marchStart;
     // Sappers to send at a building (see StepWave).
     private List<int>? _sappers;
-    // Hard: the wall round the town hall has been laid out.
+    // Normal: the wall round the town hall has been laid out.
     private bool _walled;
     // The party sent to break a city-state's totem (unit ids), the town, when it set out, and when the next may.
     private readonly List<int> _totemParty = new();
     private int _totemTown;
     private long _totemSent, _totemAt = TotemTicks;
 
-    private readonly record struct Known(int Owner, BuildingKind Kind, int X, int Z);
-
-    private readonly record struct Spot(int Owner, UnitRole Role, int X, int Z, long Tick, long Power);
+    private readonly record struct Sighting(int Owner, UnitRole Role, int X, int Z, long Tick, long Power);
 
     /// <summary>The unit scouting now (0 if none).</summary>
     public int Scout => _scoutGoal != null ? _scout : 0;
@@ -132,6 +151,9 @@ public sealed partial class AiPlayer
 
     /// <summary>Enemy soldiers it remembers seeing, by id.</summary>
     public IEnumerable<int> Spotted => _spotted.Keys;
+
+    /// <summary>Other players' buildings it knows of, by id: seen, and not seen gone since.</summary>
+    public IEnumerable<int> KnownBuildings => _known.Keys;
 
     private int SecondBarracksAt => Smart ? SmartSecondBarracksTicks : SecondBarracksTicks;
 
@@ -185,11 +207,16 @@ public sealed partial class AiPlayer
 
     // --- What it sees ------------------------------------------------------------------------------
 
-    /// <summary>Updates what it knows of other players' buildings and soldiers from what it sees now.</summary>
+    /// <summary>
+    /// Updates what it knows of other players' buildings and soldiers from what it sees now. A building is
+    /// remembered as it last saw it until it sees the place without it; a soldier where it last saw it, for
+    /// <see cref="SpotMemoryTicks"/> or until it sees it fall. Nothing out of its sight changes what it knows.
+    /// </summary>
     private void Look(Simulation sim)
     {
         var vision = sim.Vision;
-        long tick = sim.Tick;
+        long tick = sim.Tick, before = _looked;
+        _looked = tick;
         bool inMatch = sim.Match.Players.Count > 0;
         foreach (var b in sim.Buildings.All)
         {
@@ -197,7 +224,10 @@ public sealed partial class AiPlayer
             var (mx, mz) = Middle(b);
             if (!vision.Sees(Player, mx, mz) && !vision.Sees(Player, b.X, b.Z) && !vision.Sees(Player, b.MaxX, b.Z)
                 && !vision.Sees(Player, b.X, b.MaxZ) && !vision.Sees(Player, b.MaxX, b.MaxZ)) continue;
-            _known[b.Id] = new Known(b.Owner, b.Def.Kind, mx, mz);
+            if (!_known.ContainsKey(b.Id))
+                Note(sim, b.Def.Kind == BuildingKind.TownHall ? $"finds an enemy town hall at {mx},{mz}" : $"sees an enemy {b.Def.Name} at {mx},{mz}");
+            _known[b.Id] = AsFoe(sim, b);
+            _lastFoe = (mx, mz);
             if (b.Def.Kind == BuildingKind.TownHall) _hallSeen = tick;
         }
         _forget.Clear();
@@ -217,44 +247,81 @@ public sealed partial class AiPlayer
             var def = sim.Content.Units[u.Def[i]];
             if (!def.CanAttack || def.Role is UnitRole.Worker or UnitRole.Trader) continue;
             if (!vision.SeesUnit(Player, i)) continue;
-            _spotted[u.Id[i]] = new Spot(owner, def.Role, u.X[i].FloorToInt(), u.Z[i].FloorToInt(), tick, Power(def, u.Hp[i]));
+            _spotted[u.Id[i]] = new Sighting(owner, def.Role, u.X[i].FloorToInt(), u.Z[i].FloorToInt(), tick, Power(def, u.Hp[i]));
         }
         _forget.Clear();
         foreach (var (id, s) in _spotted)
         {
-            // Forgotten after a while, or at once when it is gone from where it was seen dying.
-            if (tick - s.Tick > SpotMemoryTicks || (u.IndexOf(id) < 0 && vision.Sees(Player, s.X, s.Z))) _forget.Add(id);
+            // Forgotten after a while, or at once when it saw it fall: in sight at the last look, gone now.
+            if (tick - s.Tick > SpotMemoryTicks || (s.Tick == before && u.IndexOf(id) < 0)) _forget.Add(id);
         }
         foreach (int id in _forget) _spotted.Remove(id);
     }
 
-    /// <summary>The nearest enemy town hall it knows of, of a player still in the match, or null.</summary>
-    private Building? KnownHall(Simulation sim, int x, int z)
+    /// <summary>The nearest enemy town hall it knows of (finished when it last saw it), or null.</summary>
+    private Foe? KnownHall(int x, int z)
     {
-        Building? best = null;
+        Foe? best = null;
         long bestD = long.MaxValue;
-        foreach (var (id, k) in _known)
+        foreach (var k in _known.Values)
         {
-            if (k.Kind != BuildingKind.TownHall) continue;
-            if (sim.Buildings.Get(id) is not { } b || b.Owner != k.Owner || !b.Active) continue;
+            if (k.Kind != BuildingKind.TownHall || !k.Active) continue;
             long d = Dist2(k.X, k.Z, x, z);
-            if (d < bestD) (bestD, best) = (d, b);
+            if (d < bestD) (bestD, best) = (d, k);
         }
         return best;
     }
 
     /// <summary>The nearest enemy building it knows of, or null.</summary>
-    private Building? KnownBuilding(Simulation sim, int x, int z)
+    private Foe? KnownBuilding(int x, int z)
     {
-        Building? best = null;
+        Foe? best = null;
         long bestD = long.MaxValue;
-        foreach (var (id, k) in _known)
+        foreach (var k in _known.Values)
         {
-            if (sim.Buildings.Get(id) is not { } b || b.Owner != k.Owner) continue;
             long d = Dist2(k.X, k.Z, x, z);
-            if (d < bestD) (bestD, best) = (d, b);
+            if (d < bestD) (bestD, best) = (d, k);
         }
         return best;
+    }
+
+    /// <summary>True if it has seen the lair's den (the column it is on).</summary>
+    private bool LairKnown(Simulation sim, Lair lair) => sim.Vision.At(Player, lair.X, lair.Z) != Sight.Unseen;
+
+    /// <summary>The wave is the starting soldiers, out looking for a lair they have not seen yet (see <see cref="FindLair"/>).</summary>
+    private const int LairSearch = -1;
+
+    /// <summary>A search for a lair is given up after this many ticks.</summary>
+    public const int LairSearchTicks = 75 * Tps;
+
+    /// <summary>
+    /// The starting soldiers looking for a lair: once they see one they go for it (true: the wave has a lair
+    /// to clear); if they get where they were looking, or run out of time, without seeing one they come home.
+    /// </summary>
+    private bool FindLair(Simulation sim, Building hall, Action<Command> issue)
+    {
+        var (hx, hz) = Middle(hall);
+        if (NearestLair(sim, hx, hz) is { } lair)
+        {
+            _waveLair = lair.Id;
+            issue(new AttackMoveCommand(Player, _wave.ToArray(), lair.X, lair.Z));
+            return true;
+        }
+        var (cx, cz) = Centroid(sim, _wave);
+        var (gx, gz) = _lairSearch;
+        if (Dist2(cx, cz, gx, gz) > 36 && sim.Tick - _waveSent <= LairSearchTicks)
+        {
+            if (sim.Tick % (10 * ArmyTicks) < ArmyTicks)
+            {
+                var idle = Unordered(sim, _wave, gx, gz);
+                if (idle.Count > 0) issue(new AttackMoveCommand(Player, idle.ToArray(), gx, gz));
+            }
+            return false;
+        }
+        var (rx, rz) = RallyAt(sim, hall, null);
+        issue(new MoveCommand(Player, _wave.ToArray(), rx, rz));
+        EndWave();
+        return false;
     }
 
     /// <summary>The worth (see <see cref="Power"/>) of the soldiers of a player (-1: of everyone else) it remembers seeing.</summary>
@@ -266,20 +333,65 @@ public sealed partial class AiPlayer
         return sum;
     }
 
+    /// <summary>Guesses at where an enemy town hall stands are this far (columns) from its own town hall and from each other.</summary>
+    public const int GuessApart = 64;
+
     /// <summary>
-    /// Where it guesses an enemy town hall is while it knows of none: just short of the nearest start area of
-    /// another player still in the match that it has not seen. Null if there is none.
+    /// Where an enemy town hall may stand, going only by the shape of the map: players start far apart, so
+    /// the places across the map from its own town hall, through the middle first, then straight across
+    /// each way. (It is not told where anyone starts.)
     /// </summary>
-    private (int X, int Z)? GuessHall(Simulation sim, int hx, int hz)
+    private List<(int X, int Z)> HallGuesses(Simulation sim, int hx, int hz)
     {
+        var w = sim.World;
+        int mx = w.SizeX - 1 - hx, mz = w.SizeZ - 1 - hz;
+        var list = new List<(int X, int Z)>(3);
+        foreach (var g in new[] { (mx, mz), (mx, hz), (hx, mz) })
+        {
+            bool apart = Dist2(g.Item1, g.Item2, hx, hz) >= (long)GuessApart * GuessApart;
+            foreach (var o in list) apart &= Dist2(g.Item1, g.Item2, o.X, o.Z) >= (long)GuessApart * GuessApart;
+            if (apart) list.Add(g);
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// A place it looks for the enemy at may be one nobody can walk to (a move order to a column with a
+    /// building on it ends on its roof, which there is no way up to), so its soldiers are sent to a point
+    /// <see cref="LookShort"/> columns short of it, from where they see it, and each time they stop without
+    /// getting there, <see cref="LookBack"/> columns further back.
+    /// </summary>
+    public const int LookShort = 5, LookBack = 4;
+
+    /// <summary>
+    /// Where soldiers at (x, z) are sent to look at the place (gx, gz): short of it (see <see cref="LookShort"/>)
+    /// if it is enough to see it, and further back for each time they have stopped on the way.
+    /// </summary>
+    private static (int X, int Z) LookFrom(Simulation sim, int gx, int gz, int x, int z, bool seeing = true, int stops = 0) =>
+        Toward(gx, gz, x, z, (seeing ? LookShort : 0) + LookBack * stops, sim.World);
+
+    /// <summary>
+    /// Where to look for the enemy while it knows of none of their buildings, coming from (x, z): the first
+    /// of its guesses at where an enemy town hall stands (see <see cref="HallGuesses"/>) that it has not
+    /// seen or given up on; then, a start area being wider than a soldier sees, the ground round where it
+    /// last saw an enemy building (or round its first guess): the point of a <see cref="ScoutGrid"/> grid
+    /// it has never seen that is nearest that and nearest (x, z). Null if it has seen the whole map.
+    /// </summary>
+    private (int X, int Z)? SearchGoal(Simulation sim, int hx, int hz, int x, int z)
+    {
+        var w = sim.World;
+        var guesses = HallGuesses(sim, hx, hz);
+        foreach (var g in guesses)
+            if (!_scouted.Contains(g) && sim.Vision.At(Player, g.X, g.Z) == Sight.Unseen) return g;
+        var near = _lastFoe ?? (guesses.Count > 0 ? guesses[0] : (hx, hz));
         (int X, int Z)? best = null;
         long bestD = long.MaxValue;
-        foreach (var s in sim.Map.Starts)
+        for (int gz = ScoutGrid / 2; gz < w.SizeZ; gz += ScoutGrid)
+        for (int gx = ScoutGrid / 2; gx < w.SizeX; gx += ScoutGrid)
         {
-            if (s.Player == Player || (sim.Match.Players.Count > 0 && !sim.Match.InPlay(s.Player))) continue;
-            if (sim.Vision.At(Player, s.X, s.Z) != Sight.Unseen) continue;
-            long d = Dist2(hx, hz, s.X, s.Z);
-            if (d < bestD) (bestD, best) = (d, Toward(s.X, s.Z, hx, hz, 10, sim.World));
+            if (_scouted.Contains((gx, gz)) || sim.Vision.At(Player, gx, gz) != Sight.Unseen) continue;
+            long d = 2 * Dist2(near.X, near.Z, gx, gz) + Dist2(x, z, gx, gz);
+            if (d < bestD) (bestD, best) = (d, (gx, gz));
         }
         return best;
     }
@@ -304,7 +416,8 @@ public sealed partial class AiPlayer
     /// <see cref="ScoutSpeed"/> fast) scouts the other start areas, nearest first, and once they have all been
     /// seen, ground it has never seen. With the town hall known, it is looked at again every
     /// <see cref="RescoutTicks"/> while no wave is out, to see the army there. A scout that gets hurt comes
-    /// home; one lost puts off the next. The scout is taken out of <paramref name="home"/>.
+    /// home; one lost puts off the next. The scout is taken out of <paramref name="home"/>. (Hard scouts
+    /// when it means to attack, and while a wave of its own is looking for the enemy: see below.)
     /// </summary>
     private void ScoutStep(Simulation sim, Building hall, List<int> home, Action<Command> issue)
     {
@@ -312,63 +425,101 @@ public sealed partial class AiPlayer
         long tick = sim.Tick;
         if (_scout != 0 && !u.Exists(_scout))
         {
+            Note(sim, "loses its scout");
+            _lookDone = tick;
             _scout = 0;
             _scoutGoal = null;
             _scoutLost++;
-            _scoutAt = tick + _scoutLost * RescoutTicks / 2;
+            _scoutAt = tick + ScoutWait;
+        }
+        if (_scoutGoal != null && ShutIn(sim, u.IndexOf(_scout)))
+        {
+            // Shut in where it stands (see ShutIn): it is no scout, and another may go.
+            _scout = 0;
+            _scoutGoal = null;
         }
         if (_scoutGoal is var (gx, gz))
         {
             int i = u.IndexOf(_scout);
             home.Remove(_scout);
-            bool there = Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), gx, gz) <= 16;
-            bool hurt = Hurt(sim, i, ScoutHurtPercent);
+            int ux = u.X[i].FloorToInt(), uz = u.Z[i].FloorToInt();
+            // Looking for their town, a place is done once it has been seen (or the town found); looking at it again, once the scout is there.
+            bool there = Dist2(ux, uz, gx, gz) <= 16 || (_scoutSearch && (KnowsEnemyHall || sim.Vision.At(Player, gx, gz) != Sight.Unseen));
+            bool hurt = Hurt(sim, i, Hard ? HardScoutHurtPercent : ScoutHurtPercent);
             // Given up when it takes too long, or the scout keeps stopping short (there is no way there).
             if (u.Order[i] == UnitOrder.Idle && u.Rout[i] == 0) _scoutStops++;
             if (!there && !hurt && tick - _scoutSent <= ScoutGiveUpTicks && _scoutStops <= 3)
             {
-                if (u.Order[i] == UnitOrder.Idle && u.Rout[i] == 0) issue(new MoveCommand(Player, new[] { _scout }, gx, gz));
+                if (u.Order[i] == UnitOrder.Idle && u.Rout[i] == 0)
+                {
+                    var (mx, mz) = LookFrom(sim, gx, gz, ux, uz, _scoutSearch, _scoutStops);
+                    issue(new MoveCommand(Player, new[] { _scout }, mx, mz));
+                }
                 return;
             }
+            if (!there && !hurt) Note(sim, $"its scout cannot get to {gx},{gz} and gives the place up");
             if (!hurt) _scouted.Add((gx, gz));
+            if (hurt || !_scoutSearch) _lookDone = tick; // a look at a town it knows of, or chased off on the way
             _scoutGoal = null;
             if (hurt)
             {
+                Note(sim, "its scout comes home hurt");
                 SendHome(sim, hall, _scout, issue);
                 if (!_mending.Contains(_scout)) _mending.Add(_scout);
                 _scout = 0;
                 _scoutLost++;
-                _scoutAt = tick + _scoutLost * RescoutTicks / 2;
+                _scoutAt = tick + ScoutWait;
                 return;
             }
         }
 
         bool hallKnown = KnowsEnemyHall;
-        bool look = tick >= _scoutAt && (!hallKnown || (sim.Fog && _wave.Count == 0));
+        // Hard looks only when it is thinking of attacking (see HardArmy): every look risks a rider, and its
+        // guess at where their town is will do until then. And while a wave of its own is looking for the
+        // enemy (see Seeking), a rider looks too, one of the wave's if it has one: it covers the ground
+        // several times as fast as the wave does.
+        bool hunting = Hard && sim.Fog && !hallKnown && _wave.Count > 0 && _waveLair == 0 && _waveGuess != null;
+        bool look = tick >= _scoutAt && (Hard ? sim.Fog && (_wave.Count == 0 ? _wantLook : hunting) : !hallKnown || (sim.Fog && _wave.Count == 0));
         var goal = look ? ScoutGoal(sim, hall, hallKnown) : null;
+        if (goal != null && _scout == 0 && hunting) _scout = PickScout(sim, _wave);
         if (goal != null && (_scout != 0 || (_scout = PickScout(sim, home)) != 0))
         {
             home.Remove(_scout);
+            _wave.Remove(_scout);
             _scoutGoal = goal;
+            _scoutSearch = !hallKnown;
             _scoutSent = tick;
             _scoutStops = 0;
             if (hallKnown) _scoutAt = tick + RescoutTicks;
-            issue(new MoveCommand(Player, new[] { _scout }, goal.Value.X, goal.Value.Z));
+            Note(sim, hallKnown ? "sends a scout for another look at their town" : $"sends a scout to look at {goal.Value.X},{goal.Value.Z}");
+            int at = u.IndexOf(_scout);
+            var (mx, mz) = LookFrom(sim, goal.Value.X, goal.Value.Z, u.X[at].FloorToInt(), u.Z[at].FloorToInt(), !hallKnown, 0);
+            issue(new MoveCommand(Player, new[] { _scout }, mx, mz));
             return;
         }
+        // Hard waits for a look before a wave sets out: with nobody fast enough to send, or nowhere to look,
+        // the wave goes without one.
+        if (look && _scout == 0) _lookDone = tick;
         if (_scout != 0)
         {
-            // Done: back home, and a soldier like the others again.
-            SendHome(sim, hall, _scout, issue);
+            // Done: back home, and a soldier like the others again; or, with a wave of Hard's out, after the wave.
+            if (Hard && _wave.Count > 0 && _waveLair == 0 && !_joining.Contains(_scout)) _joining.Add(_scout);
+            else SendHome(sim, hall, _scout, issue);
             _scout = 0;
         }
         if (hallKnown) _scouted.Clear();
     }
 
+    /// <summary>
+    /// How long (ticks) until the next scout after one was lost or came home hurt: longer each time (up to
+    /// the fourth), but never long while it does not know where the enemy's town hall is.
+    /// </summary>
+    private long ScoutWait => KnowsEnemyHall ? Math.Min(_scoutLost, Hard ? 2 : 4) * RescoutTicks / 2 : Math.Min(_scoutLost, 4) * 30L * Tps;
+
     private void SendHome(Simulation sim, Building hall, int id, Action<Command> issue)
     {
         if (!sim.Units.Exists(id)) return;
-        var (rx, rz) = Rally(sim, hall, EnemyHall(sim, Middle(hall).X, Middle(hall).Z));
+        var (rx, rz) = RallyAt(sim, hall, Spot(EnemyHall(sim, Middle(hall).X, Middle(hall).Z)));
         issue(new MoveCommand(Player, new[] { id }, rx, rz));
     }
 
@@ -381,7 +532,7 @@ public sealed partial class AiPlayer
         foreach (int id in home)
         {
             int i = u.IndexOf(id);
-            if (i < 0 || _mending.Contains(id) || Hurt(sim, i, HealedPercent)) continue;
+            if (i < 0 || _mending.Contains(id) || Hurt(sim, i, HealedPercent) || ShutIn(sim, i)) continue;
             var speed = sim.Content.Units[u.Def[i]].Speed;
             if (speed < ScoutSpeed) continue;
             if (best == 0 || speed > bestSpeed) (best, bestSpeed) = (id, speed);
@@ -389,41 +540,25 @@ public sealed partial class AiPlayer
         return best;
     }
 
+    /// <summary>Looking again at a known town hall, the scout stops this far (columns) short of it.</summary>
+    public const int ScoutStandOff = 14;
+
     /// <summary>
     /// Where the scout goes next. Looking again at a known town hall: a point short of it on the way from
-    /// home. Otherwise the nearest other start area it has not been to, then the nearest point of a
-    /// <see cref="ScoutGrid"/> grid it has never seen. Null if there is nowhere left to look.
+    /// home. Otherwise where <see cref="SearchGoal"/> says to look, from where the scout stands. Null if
+    /// there is nowhere left to look.
     /// </summary>
     private (int X, int Z)? ScoutGoal(Simulation sim, Building hall, bool hallKnown)
     {
         var (hx, hz) = Middle(hall);
-        var w = sim.World;
         if (hallKnown)
         {
-            if (KnownHall(sim, hx, hz) is not { } enemy) return null;
-            var (ex, ez) = Middle(enemy);
-            return Toward(ex, ez, hx, hz, enemy.Def.Sight + 4, w);
+            if (KnownHall(hx, hz) is not { } enemy) return null;
+            return Toward(enemy.X, enemy.Z, hx, hz, ScoutStandOff, sim.World);
         }
-        (int X, int Z)? best = null;
-        long bestD = long.MaxValue;
-        foreach (var s in sim.Map.Starts)
-        {
-            if (s.Player == Player) continue;
-            // Short of the middle, where a town hall would stand.
-            var spot = Toward(s.X, s.Z, hx, hz, 6, w); // by where a town hall would stand
-            if (_scouted.Contains(spot) || (sim.Fog && sim.Vision.Sees(Player, s.X, s.Z))) continue;
-            long d = Dist2(hx, hz, spot.X, spot.Z);
-            if (d < bestD) (bestD, best) = (d, spot);
-        }
-        if (best != null || GuessHall(sim, hx, hz) != null) return best;
-        for (int z = ScoutGrid / 2; z < w.SizeZ; z += ScoutGrid)
-        for (int x = ScoutGrid / 2; x < w.SizeX; x += ScoutGrid)
-        {
-            if (_scouted.Contains((x, z)) || sim.Vision.At(Player, x, z) != Sight.Unseen) continue;
-            long d = Dist2(hx, hz, x, z);
-            if (d < bestD) (bestD, best) = (d, (x, z));
-        }
-        return best;
+        int at = _scout != 0 ? sim.Units.IndexOf(_scout) : -1;
+        var (sx, sz) = at >= 0 ? (sim.Units.X[at].FloorToInt(), sim.Units.Z[at].FloorToInt()) : (hx, hz);
+        return SearchGoal(sim, hx, hz, sx, sz);
     }
 
     /// <summary>The point <paramref name="dist"/> columns from (x, z) toward (tx, tz), kept on the map.</summary>
@@ -456,7 +591,7 @@ public sealed partial class AiPlayer
         if (_waveLair == 0) ScoutStep(sim, hall, home, issue);
         else home.Remove(_scout);
 
-        // Defence: as the classic player, with the fighting done well at Hard.
+        // Defence: as the classic player, with the fighting done well from Normal up.
         int threat = NearestEnemy(sim, hx, hz, DefendRadius, soldiersOnly: false);
         if (threat >= 0)
         {
@@ -468,7 +603,7 @@ public sealed partial class AiPlayer
             }
             var free = Unordered(sim, home, tx, tz);
             if (free.Count > 0) issue(new AttackMoveCommand(Player, free.ToArray(), tx, tz));
-            if (Level == AiLevel.Hard) Micro(sim, home, issue);
+            if (Skilled) Micro(sim, home, issue);
             return;
         }
 
@@ -484,15 +619,15 @@ public sealed partial class AiPlayer
                 }
                 if (Outmatched(sim))
                 {
-                    var (rx, rz) = Rally(sim, hall, EnemyHall(sim, hx, hz));
+                    var (rx, rz) = RallyAt(sim, hall, Spot(EnemyHall(sim, hx, hz)));
                     issue(new MoveCommand(Player, _wave.ToArray(), rx, rz));
                     foreach (int id in _wave)
                         if (Hurt(sim, u.IndexOf(id), HealedPercent) && !_mending.Contains(id)) _mending.Add(id);
                     EndWave();
                     return;
                 }
-                if (Level == AiLevel.Hard) Micro(sim, _wave, issue);
-                if (Marching(sim) || Guessing(sim, hall, issue)) return;
+                if (Skilled) Micro(sim, _wave, issue);
+                if (Marching(sim) || Seeking(sim, hall, issue)) return;
             }
             StepWave(sim, hall, issue);
             return;
@@ -505,7 +640,7 @@ public sealed partial class AiPlayer
         if (sim.Tick >= LateTicks) size = Math.Max(FirstWave / 2, size / 2);
         int guard = Math.Max(LeastGuard, home.Count * GuardPercent / 100);
         int ready = home.Count - guard;
-        var goal = enemyHall != null ? Approach(sim, enemyHall) : GuessHall(sim, hx, hz);
+        var goal = enemyHall is { } eh ? (eh.AX, eh.AZ) : SearchGoal(sim, hx, hz, hx, hz);
         if (goal is var (ex, ez) && sim.Tick >= SmartFirstWaveTicks && ready > 0)
         {
             home.Sort((a, b) =>
@@ -529,7 +664,8 @@ public sealed partial class AiPlayer
     /// <summary>
     /// The totem party: it attack-moves into the town to fight the guards, and once none stand its idle
     /// soldiers attack the totem; it ends when the town is ours, when it is wiped out, or after <see cref="TotemRetryTicks"/>. With
-    /// none out, no wave out and enough soldiers home, a new one sets out for the nearest town we do not hold.
+    /// none out, no wave out and enough soldiers home, a new one sets out for the nearest town it has seen
+    /// that we do not hold.
     /// </summary>
     private void TotemStep(Simulation sim, List<int> home, Action<Command> issue)
     {
@@ -560,6 +696,7 @@ public sealed partial class AiPlayer
         foreach (var town in cities.Towns)
         {
             if (town.Holder == Player || cities.Totem(town) == null) continue;
+            if (sim.Vision.At(Player, town.X, town.Z) == Sight.Unseen) continue; // only a town it has seen
             long d = Dist2(hx, hz, town.X, town.Z);
             if (d < bestD) (bestD, best) = (d, town);
         }
@@ -584,7 +721,7 @@ public sealed partial class AiPlayer
         foreach (int id in town.Guards)
         {
             int i = sim.Units.IndexOf(id);
-            if (i >= 0 && sim.Units.Owner[i] != Player) return true;
+            if (i >= 0 && sim.Units.Owner[i] != Player && sim.Vision.SeesUnit(Player, i)) return true;
         }
         return false;
     }
@@ -613,6 +750,8 @@ public sealed partial class AiPlayer
         _wave.AddRange(wave);
         _waveBuilding = building;
         _waveGuess = building == 0 ? goal : null;
+        _seekStart = _seekSent = sim.Tick;
+        _seekStops = 0;
         _waveLair = 0;
         _waveSize = _wave.Count;
         _waveSent = sim.Tick;
@@ -625,6 +764,7 @@ public sealed partial class AiPlayer
         long len = IntMath.ISqrt(dx * dx + dz * dz);
         if (len <= StageDistance + 8)
         {
+            if (building == 0) (ex, ez) = LookFrom(sim, ex, ez, cx, cz);
             issue(new AttackMoveCommand(Player, _wave.ToArray(), ex, ez));
             return;
         }
@@ -655,50 +795,86 @@ public sealed partial class AiPlayer
         return true;
     }
 
+    /// <summary>A wave looking for the enemy gives a place up after this long (ticks) on its way there, and comes home after this long looking.</summary>
+    public const int SeekGiveUpTicks = 90 * Tps, SeekTicks = 8 * 60 * Tps;
+
     /// <summary>
-    /// A wave sent where it guesses the enemy town hall is: once it knows where a town hall is, it goes for it
-    /// (the classic wave from there); if the guess was wrong it tries the next start area, or comes home.
-    /// False once it has a building to go for.
+    /// A wave with no building it knows of to go for looks for the enemy: it walks to where
+    /// <see cref="SearchGoal"/> says to look, and from each place it has seen to the next, until it sees an
+    /// enemy building (then the classic wave takes over from there) or has looked for
+    /// <see cref="SeekTicks"/> (then it comes home). False once it has a building to go for.
     /// </summary>
-    private bool Guessing(Simulation sim, Building hall, Action<Command> issue)
+    private bool Seeking(Simulation sim, Building hall, Action<Command> issue)
     {
         if (_waveGuess is not var (gx, gz)) return false;
         var (cx, cz) = Centroid(sim, _wave);
-        if (KnownHall(sim, cx, cz) is { } found)
+        if (NextTarget(sim, cx, cz) is { } found)
         {
             _waveBuilding = found.Id;
             _waveGuess = null;
             _waveBest = int.MaxValue;
             return false;
         }
-        var (hx, hz) = Middle(hall);
-        var guess = GuessHall(sim, hx, hz);
-        if (guess != _waveGuess)
+        long tick = sim.Tick;
+        bool seen = sim.Vision.At(Player, gx, gz) != Sight.Unseen;
+        if (seen || tick - _seekSent > SeekGiveUpTicks)
         {
-            _waveGuess = guess;
-            if (guess is not var (nx, nz))
+            if (!seen) _scouted.Add((gx, gz)); // it cannot get there
+            var (hx, hz) = Middle(hall);
+            var next = tick - _seekStart <= SeekTicks ? SearchGoal(sim, hx, hz, cx, cz) : null;
+            if (next is not var (nx, nz))
             {
-                var (rx, rz) = Rally(sim, hall, null);
+                Note(sim, "its wave has looked for the enemy long enough and comes home");
+                var (rx, rz) = RallyAt(sim, hall, null);
                 issue(new MoveCommand(Player, _wave.ToArray(), rx, rz));
                 EndWave();
                 return true;
             }
-            issue(new AttackMoveCommand(Player, _wave.ToArray(), nx, nz));
+            _waveGuess = next;
+            _seekSent = tick;
+            _seekStops = 0;
+            var (lx, lz) = LookFrom(sim, nx, nz, cx, cz);
+            issue(new AttackMoveCommand(Player, _wave.ToArray(), lx, lz));
             return true;
         }
-        if (sim.Tick % (5 * ArmyTicks) < ArmyTicks)
+        if (tick % (5 * ArmyTicks) < ArmyTicks)
         {
-            var again = Unordered(sim, _wave, gx, gz);
-            if (again.Count > 0) issue(new AttackMoveCommand(Player, again.ToArray(), gx, gz));
+            // Most of the wave standing about short of the place: there may be no way to where it was sent.
+            var idle = Unordered(sim, _wave, cx, cz);
+            idle.RemoveAll(id => sim.Units.Order[sim.Units.IndexOf(id)] != UnitOrder.Idle);
+            if (2 * idle.Count > _wave.Count) _seekStops = Math.Min(_seekStops + 1, 3);
+            var (lx, lz) = LookFrom(sim, gx, gz, cx, cz, true, _seekStops);
+            var again = Unordered(sim, _wave, lx, lz);
+            if (again.Count > 0) issue(new AttackMoveCommand(Player, again.ToArray(), lx, lz));
         }
         return true;
     }
 
+    /// <summary>
+    /// A wave whose last target is gone, with no other enemy building it knows of, starts looking for the
+    /// rest (see <see cref="Seeking"/>) where there is fog of war; false if there is nowhere to look.
+    /// </summary>
+    private bool Seek(Simulation sim, Building hall, Action<Command> issue)
+    {
+        if (!Smart || !sim.Fog) return false;
+        var (hx, hz) = Middle(hall);
+        var (cx, cz) = Centroid(sim, _wave);
+        if (SearchGoal(sim, hx, hz, cx, cz) is not var (gx, gz)) return false;
+        _waveGuess = (gx, gz);
+        _waveBuilding = 0;
+        _seekStart = _seekSent = sim.Tick;
+        Note(sim, "has razed every enemy building it knew of; its wave looks for the rest");
+        _seekStops = 0;
+        var (lx, lz) = LookFrom(sim, gx, gz, cx, cz);
+        issue(new AttackMoveCommand(Player, _wave.ToArray(), lx, lz));
+        return true;
+    }
+
     /// <summary>Soldiers at home not at the rally point go there (as the classic player); the mending go by the town hall.</summary>
-    private void RallyHome(Simulation sim, Building hall, Building? enemyHall, List<int> home, Action<Command> issue)
+    private void RallyHome(Simulation sim, Building hall, Foe? enemyHall, List<int> home, Action<Command> issue)
     {
         var u = sim.Units;
-        var rally = Rally(sim, hall, enemyHall);
+        var rally = RallyAt(sim, hall, Spot(enemyHall));
         if (_rally != rally || _rallied.Count > 4 * home.Count + 16)
         {
             _rally = rally;
@@ -783,7 +959,7 @@ public sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// Hard: the fighting. Ranged troops and casters shoot the enemy soldier in reach they are strong against,
+    /// From Normal up: the fighting. Ranged troops and casters shoot the enemy soldier in reach they are strong against,
     /// else the one with the fewest hit points, so they bring enemies down one at a time; melee troops that
     /// are not on an enemy they are strong against go for one nearby that they are (riders for archers and
     /// mages, spearmen for riders).
@@ -849,33 +1025,40 @@ public sealed partial class AiPlayer
     /// <summary>
     /// Keeps each barracks training, picked at random by weight: the classic weights, plus a lot for roles
     /// strong against the enemy soldiers it has seen and less for roles they are strong against. Sappers
-    /// (a few for each wave) and siege (two) are trained only up to a number.
+    /// (a few for each wave) and siege (two) are trained only up to a number. With
+    /// <paramref name="anyAffordable"/> it picks among the units it can pay for now, not among all of them.
+    /// True if it queued anything.
     /// </summary>
-    private void SmartTrain(Simulation sim, Action<Command> issue)
+    private bool SmartTrain(Simulation sim, Action<Command> issue, bool anyAffordable = false)
     {
-        Keep(sim);
+        if (!Hard) Keep(sim); // Hard's economy has worked out what to keep in hand
         var (seen, mine) = TrainCounts(sim);
+        bool trained = false;
         foreach (var b in sim.Buildings.All)
         {
             if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2) continue;
             long total = 0;
             foreach (string id in b.Def.Trains)
-                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d)) total += Weight(sim, d.Role, seen, mine);
+                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && (!anyAffordable || Affordable(sim, d.Cost)))
+                    total += Weight(sim, d, seen, mine);
             if (total == 0) continue;
             long roll = _rng.Range(0, (int)Math.Min(total, int.MaxValue));
             foreach (string id in b.Def.Trains)
             {
-                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d)) continue;
-                roll -= Weight(sim, d.Role, seen, mine);
+                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d) || (anyAffordable && !Affordable(sim, d.Cost))) continue;
+                roll -= Weight(sim, d, seen, mine);
                 if (roll >= 0) continue;
                 if (Affordable(sim, d.Cost))
                 {
                     issue(new TrainCommand(Player, b.Id, d.Id));
                     mine[(int)d.Role]++;
+                    if (Hard) Spend(d.Cost);
+                    trained = true;
                 }
                 break;
             }
         }
+        return trained;
     }
 
     /// <summary>
@@ -885,7 +1068,7 @@ public sealed partial class AiPlayer
     public long TrainWeight(Simulation sim, UnitDef def)
     {
         var (seen, mine) = TrainCounts(sim);
-        return Weight(sim, def.Role, seen, mine);
+        return Weight(sim, def, seen, mine);
     }
 
     /// <summary>Enemy soldiers it remembers, and its own units (with those queued at barracks), by role.</summary>
@@ -904,6 +1087,32 @@ public sealed partial class AiPlayer
             foreach (int q in b.Queue) mine[(int)sim.Content.Units[q].Role]++;
         }
         return (seen, mine);
+    }
+
+    /// <summary>Hard weighs a unit's worth in a fight for its price against a spearman's, between these shares (percent).</summary>
+    public const int LeastWorthPercent = 50, MostWorthPercent = 200;
+
+    /// <summary>
+    /// The weight of a unit type: its role's (see below), and at Hard times what it is worth in a fight
+    /// (see <see cref="Power"/>) for its price, measured against the cheapest unit of the line: it gets the
+    /// most army out of what it gathers.
+    /// </summary>
+    private long Weight(Simulation sim, UnitDef def, int[] seen, int[] mine)
+    {
+        long w = Weight(sim, def.Role, seen, mine);
+        if (!Hard || w == 0 || def.Role is UnitRole.Sapper or UnitRole.Siege) return w;
+        var line = CheapSoldier(sim);
+        if (line == null) return w;
+        long worth = Power(def, def.MaxHp) * Price(line) * 100 / Math.Max(1, Power(line, line.MaxHp) * Price(def));
+        return Math.Max(1, w * Math.Clamp(worth, LeastWorthPercent, MostWorthPercent) / 100);
+    }
+
+    /// <summary>What a unit costs, all goods together (stone double: it is dug, not gathered).</summary>
+    private static int Price(UnitDef def)
+    {
+        int cost = 0;
+        foreach (var g in def.Cost) cost += g.Good == Good.Stone ? 2 * g.Amount : g.Amount;
+        return Math.Max(1, cost);
     }
 
     private long Weight(Simulation sim, UnitRole r, int[] seen, int[] mine)
@@ -925,10 +1134,10 @@ public sealed partial class AiPlayer
 
     // --- Economy -----------------------------------------------------------------------------------
 
-    /// <summary>Hard: a second town hall on new ground, and a wall round the first.</summary>
+    /// <summary>Normal: a second town hall on new ground, and a wall round the first.</summary>
     private void SmartEconomy(Simulation sim, Building hall, Action<Command> issue)
     {
-        if (Level != AiLevel.Hard) return;
+        if (!Skilled) return;
         long tick = sim.Tick;
         if (tick >= ExpandTicks) Expand(sim, hall, issue);
         if (!_walled && tick >= WallTicks) Wall(sim, hall, issue);
@@ -953,7 +1162,7 @@ public sealed partial class AiPlayer
         else if (_forest is var (tx, _, tz)) at = (tx, tz);
         else return;
         if (Dist2(hx, hz, at.X, at.Z) < 30L * 30) return;
-        if (EnemyHall(sim, hx, hz) is { } enemy && Dist2(Middle(enemy).X, Middle(enemy).Z, at.X, at.Z) <= Dist2(hx, hz, at.X, at.Z)) return;
+        if (EnemyHall(sim, hx, hz) is { } enemy && Dist2(enemy.X, enemy.Z, at.X, at.Z) <= Dist2(hx, hz, at.X, at.Z)) return;
         PlaceNear(sim, def, at, 16, issue);
     }
 

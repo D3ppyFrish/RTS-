@@ -156,8 +156,14 @@ public sealed partial class AiPlayer
     /// <summary>How well it plays (see <see cref="AiLevel"/>).</summary>
     public AiLevel Level { get; }
 
-    /// <summary>True from <see cref="AiLevel.Normal"/> up: it plays by the fog of war, scouts, counters and pulls back its wounded.</summary>
+    /// <summary>True from <see cref="AiLevel.Easy"/> up: it plays by the fog of war, scouts, counters and pulls back its wounded.</summary>
     private bool Smart => Level != AiLevel.Classic;
+
+    /// <summary>True from <see cref="AiLevel.Normal"/> up: it also focuses its fire, builds more, walls its town hall and settles new ground.</summary>
+    private bool Skilled => Level >= AiLevel.Normal;
+
+    /// <summary>True at <see cref="AiLevel.Hard"/>, which runs its own economy and army (see <c>AiPlayer.Hard.cs</c>).</summary>
+    private bool Hard => Level == AiLevel.Hard;
 
     /// <summary>The player it plays.</summary>
     public int Player { get; }
@@ -167,6 +173,9 @@ public sealed partial class AiPlayer
 
     /// <summary>The soldiers out on a wave (or the opening lair raid) now, by id.</summary>
     public IReadOnlyList<int> Wave => _wave;
+
+    /// <summary>What its army is doing, in a word or two (for match traces; see the match runner's --trace).</summary>
+    public string Doing { get; private set; } = "";
 
     /// <summary>The building the wave out is after (0 if none).</summary>
     public int WaveTarget => _waveBuilding;
@@ -192,7 +201,8 @@ public sealed partial class AiPlayer
         if ((tick + Player * 7) % EconomyTicks == 0) Economy(sim, hall, issue);
         if ((tick + Player * 3) % ArmyTicks == 0)
         {
-            if (Smart) SmartArmy(sim, hall, issue);
+            if (Hard) HardArmy(sim, hall, issue);
+            else if (Smart) SmartArmy(sim, hall, issue);
             else Army(sim, hall, issue);
         }
     }
@@ -202,7 +212,7 @@ public sealed partial class AiPlayer
     /// <summary>Every worker automatic, the units' forms chosen, and the starting soldiers off to clear the nearest lair.</summary>
     private void Start(Simulation sim, Action<Command> issue)
     {
-        issue(new AutomateAllCommand(Player, true));
+        if (!Hard) issue(new AutomateAllCommand(Player, true)); // Hard: see AutomateNew
         foreach (var def in sim.Content.Units)
         {
             if (def.Forms.Count == 0 || !sim.Economy.Unlocked(Player, def)) continue;
@@ -210,23 +220,58 @@ public sealed partial class AiPlayer
         }
         var hall = sim.Economy.TownHall(Player)!;
         var (hx, hz) = Middle(hall);
+        var nearest = NearestLair(sim, hx, hz);
+        var soldiers = Soldiers(sim);
+        if (Hard)
+        {
+            _startPower = PowerOf(sim, soldiers);
+            KeepExplorer(sim, soldiers);
+        }
+        if (soldiers.Count == 0 || (nearest == null && (!Smart || sim.Monsters.Lairs.Count == 0))) return;
+        _wave.AddRange(soldiers);
+        _waveBuilding = 0;
+        _waveSize = soldiers.Count;
+        _waveSent = sim.Tick;
+        if (nearest != null)
+        {
+            _waveLair = nearest.Id;
+            issue(new AttackMoveCommand(Player, soldiers.ToArray(), nearest.X, nearest.Z));
+            return;
+        }
+        // The smart levels have not seen a lair yet. In a match with lairs there is one on the way from every
+        // start to the middle of the map (a rule of the game, not something seen), so the soldiers look that way.
+        _waveLair = LairSearch;
+        var w = sim.World;
+        _lairSearch = Toward(hx, hz, w.SizeX / 2, w.SizeZ / 2, MonsterSystem.LairDistance, w);
+        issue(new AttackMoveCommand(Player, soldiers.ToArray(), _lairSearch.X, _lairSearch.Z));
+    }
+
+    /// <summary>Hard: its fastest soldier stays out of the opening raid, to explore round its town.</summary>
+    private void KeepExplorer(Simulation sim, List<int> soldiers)
+    {
+        if (soldiers.Count <= 2) return;
+        var u = sim.Units;
+        int best = -1;
+        for (int j = 0; j < soldiers.Count; j++)
+        {
+            var speed = sim.Content.Units[u.Def[u.IndexOf(soldiers[j])]].Speed;
+            if (speed >= ScoutSpeed && (best < 0 || speed > sim.Content.Units[u.Def[u.IndexOf(soldiers[best])]].Speed)) best = j;
+        }
+        if (best >= 0) soldiers.RemoveAt(best);
+    }
+
+    /// <summary>The nearest lair with monsters still about within <see cref="LairReach"/> of (x, z) (for the smart levels, one they have seen), or null.</summary>
+    private Lair? NearestLair(Simulation sim, int x, int z)
+    {
         Lair? nearest = null;
         long best = (long)LairReach * LairReach + 1;
         foreach (var lair in sim.Monsters.Lairs)
         {
-            if (lair.Cleared) continue;
-            long d = Dist2(hx, hz, lair.X, lair.Z);
+            if (lair.Cleared || (Smart && !LairKnown(sim, lair))) continue;
+            long d = Dist2(x, z, lair.X, lair.Z);
             if (d < best) (best, nearest) = (d, lair);
         }
-        if (nearest == null) return;
-        var soldiers = Soldiers(sim);
-        if (soldiers.Count == 0) return;
-        _wave.AddRange(soldiers);
-        _waveLair = nearest.Id;
-        _waveBuilding = 0;
-        _waveSize = soldiers.Count;
-        _waveSent = sim.Tick;
-        issue(new AttackMoveCommand(Player, soldiers.ToArray(), nearest.X, nearest.Z));
+        return nearest;
     }
 
     /// <summary>
@@ -251,6 +296,11 @@ public sealed partial class AiPlayer
 
     private void Economy(Simulation sim, Building hall, Action<Command> issue)
     {
+        if (Hard)
+        {
+            HardEconomy(sim, hall, issue);
+            return;
+        }
         var econ = sim.Economy;
         int minutes = (int)(sim.Tick / (60 * Tps));
         Keep(sim);
@@ -302,7 +352,7 @@ public sealed partial class AiPlayer
         var u = sim.Units;
         for (int i = 0; i < u.Count; i++)
             if (u.Owner[i] == Player && sim.Content.Units[u.Def[i]].Role == UnitRole.Worker) workers++;
-        int wanted = Math.Min(Level == AiLevel.Hard ? HardMostWorkers : MostWorkers, FirstWorkers + WorkersPerMinute * minutes);
+        int wanted = Math.Min(Skilled ? SkilledMostWorkers : MostWorkers, FirstWorkers + WorkersPerMinute * minutes);
         var worker = FirstTrained(sim, hall, UnitRole.Worker);
         if (worker != null && hall.Queue.Count == 0 && workers < wanted && Affordable(sim, worker.Cost))
             issue(new TrainCommand(Player, hall.Id, worker.Id));
@@ -310,7 +360,7 @@ public sealed partial class AiPlayer
         // Barracks: one once there are enough workers, a second later on.
         var barracksDef = FirstBuilding(sim, BuildingKind.Barracks);
         if (barracksDef != null && !site && ((barracks == 0 && workers >= BarracksWorkers) || (barracks == 1 && sim.Tick >= SecondBarracksAt)
-                || (Level == AiLevel.Hard && barracks == 2 && sim.Tick >= ThirdBarracksTicks && Rich(sim, barracksDef.Cost)))
+                || (Skilled && barracks == 2 && sim.Tick >= ThirdBarracksTicks && Rich(sim, barracksDef.Cost)))
             && Affordable(sim, barracksDef.Cost))
             PlaceNear(sim, barracksDef, Middle(hall), Automation.AutomationSystem.PlanRadius, issue);
 
@@ -383,7 +433,8 @@ public sealed partial class AiPlayer
     /// A tree to send wood cutters to: the one it sent them to last while it stands (they find the trees
     /// around it on their own), or else the base of the trunk nearest the town hall, out to
     /// <see cref="WoodReach"/> columns, that a worker can stand by, that is nearer this town hall than any
-    /// enemy's and that is not by a monster lair. False if there is none.
+    /// enemy's and that is not by a monster lair. The smart levels only know of trees on ground they have
+    /// seen. False if there is none.
     /// </summary>
     private bool Forest(Simulation sim, Building hall, out int x, out int y, out int z)
     {
@@ -396,6 +447,7 @@ public sealed partial class AiPlayer
         _forest = null;
         var (hx, hz) = Middle(hall);
         var enemy = EnemyHall(sim, hx, hz);
+        var vision = sim.Vision;
         long bestD = long.MaxValue;
         (x, y, z) = (-1, -1, -1);
         for (int r = 0; r <= WoodReach && bestD == long.MaxValue; r++)
@@ -410,8 +462,10 @@ public sealed partial class AiPlayer
                     int cx = hx + dx;
                     if (cx < 0 || cx >= w.SizeX) continue;
                     long d = (long)dx * dx + (long)dz * dz;
-                    if (d >= bestD || !TrunkBase(w, cx, cz, out int ty)) continue;
-                    if (enemy != null && Dist2(cx, cz, Middle(enemy).X, Middle(enemy).Z) <= d) continue;
+                    if (d >= bestD) continue;
+                    if (Smart && vision.At(Player, cx, cz) == Sight.Unseen) continue; // only trees it has seen
+                    if (!TrunkBase(w, cx, cz, out int ty)) continue;
+                    if (enemy is { } e && Dist2(cx, cz, e.X, e.Z) <= d) continue;
                     if (NearLair(sim, cx, cz) || NearBadForest(cx, cz)) continue;
                     var (baseY, topY) = Harvest.Span(w, cx, ty, cz);
                     if (!Harvest.WorkSpot(w, cx, baseY, topY, cz, hx, hall.Y, hz, out _, out _, out _)) continue;
@@ -434,11 +488,11 @@ public sealed partial class AiPlayer
         return false;
     }
 
-    /// <summary>True if column (x, z) is near a lair whose monsters are still about.</summary>
-    private static bool NearLair(Simulation sim, int x, int z)
+    /// <summary>True if column (x, z) is near a lair whose monsters are still about (for the smart levels, one they have seen).</summary>
+    private bool NearLair(Simulation sim, int x, int z)
     {
         foreach (var lair in sim.Monsters.Lairs)
-            if (!lair.Cleared && Dist2(x, z, lair.X, lair.Z) <= (long)LairKeepOff * LairKeepOff) return true;
+            if (!lair.Cleared && Dist2(x, z, lair.X, lair.Z) <= (long)LairKeepOff * LairKeepOff && (!Smart || LairKnown(sim, lair))) return true;
         return false;
     }
 
@@ -546,8 +600,17 @@ public sealed partial class AiPlayer
             issue(new BuildCommand(Player, Array.Empty<int>(), def.Id, x, z));
     }
 
-    /// <summary>Food to keep in hand: a minute's upkeep for everyone, and some.</summary>
-    private int FoodReserve(Simulation sim) => sim.Economy.Upkeep(Player) + 20;
+    /// <summary>Food to keep in hand: a minute's upkeep for everyone, and some (Hard: what the next payment takes, saved up over the minute).</summary>
+    private int FoodReserve(Simulation sim)
+    {
+        int upkeep = sim.Economy.Upkeep(Player);
+        if (!Hard) return upkeep + 20;
+        // Hard: upkeep is paid once a minute, so it puts the food by over the minute rather than keeping a
+        // whole minute's worth idle all the time. All of it has to be there on the tick it is paid: a
+        // player who cannot pay starves, and trains nothing, until the next payment.
+        long phase = (sim.Tick + EconomySystem.UpkeepInterval - 1) % EconomySystem.UpkeepInterval + 1;
+        return (int)((upkeep + 6) * phase / EconomySystem.UpkeepInterval) + 10;
+    }
 
     /// <summary>
     /// Works out what to keep in hand when spending: <see cref="FoodReserve"/> food, and while food is
@@ -645,11 +708,11 @@ public sealed partial class AiPlayer
         if (sim.Tick >= LateTicks) size = Math.Max(FirstWave / 2, size / 2);
         int guard = Math.Max(LeastGuard, home.Count * GuardPercent / 100);
         int ready = home.Count - guard;
-        if (enemyHall != null && sim.Tick >= FirstWaveTicks
-            && (ready >= size || (ready >= LeastWave && ready > 2 * Soldiers(sim, enemyHall.Owner).Count)))
+        if (enemyHall is { } foe && sim.Tick >= FirstWaveTicks
+            && (ready >= size || (ready >= LeastWave && ready > 2 * Soldiers(sim, foe.Owner).Count)))
         {
             // The wave: all but the guard, the nearest to the enemy first.
-            var (ex, ez) = Approach(sim, enemyHall);
+            var (ex, ez) = (foe.AX, foe.AZ);
             home.Sort((a, b) =>
             {
                 int ia = u.IndexOf(a), ib = u.IndexOf(b);
@@ -657,7 +720,7 @@ public sealed partial class AiPlayer
                 return c != 0 ? c : a.CompareTo(b);
             });
             _wave.AddRange(home.GetRange(0, home.Count - guard));
-            _waveBuilding = enemyHall.Id;
+            _waveBuilding = foe.Id;
             _waveLair = 0;
             _waveSize = _wave.Count;
             _waveSent = sim.Tick;
@@ -670,7 +733,7 @@ public sealed partial class AiPlayer
         {
             // Soldiers standing away from the rally point go there; one that did not get there is sent
             // again only after a while (the way may be blocked).
-            var rally = Rally(sim, hall, enemyHall);
+            var rally = Rally(sim, hall, Spot(enemyHall));
             if (_rally != rally || _rallied.Count > 4 * home.Count + 16)
             {
                 _rally = rally;
@@ -690,6 +753,9 @@ public sealed partial class AiPlayer
         }
     }
 
+    /// <summary>Where an enemy building stands (its middle), or null.</summary>
+    private static (int X, int Z)? Spot(Foe? foe) => foe is { } f ? (f.X, f.Z) : null;
+
     /// <summary>A soldier sent to the rally point that is still away from it is sent again after this many ticks.</summary>
     private const int RallyAgainTicks = 60 * Tps;
 
@@ -702,6 +768,7 @@ public sealed partial class AiPlayer
     {
         var u = sim.Units;
         var (hx, hz) = Middle(hall);
+        if (_waveLair == LairSearch && !FindLair(sim, hall, issue)) return;
         if (_waveLair != 0)
         {
             var lair = sim.Monsters.GetLair(_waveLair);
@@ -715,26 +782,27 @@ public sealed partial class AiPlayer
         }
         if (_wave.Count * 100 < _waveSize * RetreatPercent)
         {
-            var (rx, rz) = Rally(sim, hall, EnemyHall(sim, hx, hz));
+            var (rx, rz) = RallyAt(sim, hall, Spot(EnemyHall(sim, hx, hz)));
             issue(new MoveCommand(Player, _wave.ToArray(), rx, rz));
             EndWave();
             return;
         }
-        var target = sim.Buildings.Get(_waveBuilding);
+        // The building the wave is after, as far as it knows: the smart levels go by what they remember, so
+        // one that came down out of their sight is still gone for until they see the place again.
         var (cx, cz) = Centroid(sim, _wave);
-        if (target == null || target.Owner == Player)
+        if (Target(sim, _waveBuilding) is not { } foe)
         {
-            target = NextTarget(sim, cx, cz);
-            if (target == null)
+            if (NextTarget(sim, cx, cz) is not { } next)
             {
-                EndWave();
+                if (!Seek(sim, hall, issue)) EndWave();
                 return;
             }
-            _waveBuilding = target.Id;
+            foe = next;
+            _waveBuilding = foe.Id;
             _waveBest = int.MaxValue;
             _siegeDefenders = int.MaxValue;
         }
-        var (tx, tz) = Approach(sim, target);
+        var (tx, tz) = (foe.AX, foe.AZ);
         int far = (int)IntMath.ISqrt(Dist2(cx, cz, tx, tz));
         if (far > SiegeRadius)
         {
@@ -768,6 +836,13 @@ public sealed partial class AiPlayer
         // defender nearest the target, which may stand back out of sight of the door (issue #37). Defenders
         // that hold the wave up for SiegeStallTicks without one of them falling (out of reach, say) stop
         // holding it back.
+        if (sim.Buildings.Get(foe.Id) is not { } target)
+        {
+            // Gone, though it has not seen that yet: a closer look.
+            var look = Unordered(sim, _wave, foe.X, foe.Z);
+            if (look.Count > 0) issue(new AttackMoveCommand(Player, look.ToArray(), foe.X, foe.Z));
+            return;
+        }
         int defender = NearestEnemy(sim, tx, tz, SiegeRadius + 4, soldiersOnly: true, out int defenders);
         if (defenders < _siegeDefenders) _siegeSince = sim.Tick; // just arrived, or one fell
         _siegeDefenders = defenders;
@@ -871,6 +946,22 @@ public sealed partial class AiPlayer
         return list;
     }
 
+    /// <summary>
+    /// True if unit i stands where there is no step to take in any direction: a hole one column wide. Ground
+    /// levelled for buildings on a slope can leave one between them, and a soldier standing there when they
+    /// went up is shut in for good.
+    /// </summary>
+    private static bool ShutIn(Simulation sim, int i)
+    {
+        var g = sim.Walkable;
+        var u = sim.Units;
+        int node = g.Node(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), u.Y[i]);
+        if (node < 0) return false;
+        for (int d = 0; d < WalkGraph.Dirs.Length; d++)
+            if (g.Step(node, d) >= 0) return false;
+        return true;
+    }
+
     /// <summary>The units that are not fighting or running: no attack order or target, and not routing.</summary>
     private static List<int> NotFighting(Simulation sim, List<int> ids)
     {
@@ -950,10 +1041,31 @@ public sealed partial class AiPlayer
         return false;
     }
 
-    /// <summary>The nearest town hall of a player still in the match (any other player in a sandbox), or null.</summary>
-    private Building? EnemyHall(Simulation sim, int x, int z)
+    /// <summary>
+    /// An enemy building as the player knows it: where it stands (its middle), where to walk to get at it,
+    /// and whether it is finished. The classic player reads these off the game; the smart levels remember
+    /// them from when they last saw it (see <see cref="Look"/>).
+    /// </summary>
+    private readonly record struct Foe(int Id, int Owner, BuildingKind Kind, int X, int Z, int AX, int AZ, bool Active);
+
+    private static Foe AsFoe(Simulation sim, Building b)
     {
-        if (Smart) return KnownHall(sim, x, z);
+        var (mx, mz) = Middle(b);
+        var (ax, az) = Approach(sim, b);
+        return new Foe(b.Id, b.Owner, b.Def.Kind, mx, mz, ax, az, b.Active);
+    }
+
+    /// <summary>The enemy building with this id as the player knows it, or null if there is none (any more).</summary>
+    private Foe? Target(Simulation sim, int id)
+    {
+        if (Smart) return _known.TryGetValue(id, out var k) ? k : null;
+        return sim.Buildings.Get(id) is { } b && b.Owner != Player ? AsFoe(sim, b) : null;
+    }
+
+    /// <summary>The nearest town hall of a player still in the match (any other player in a sandbox), or null.</summary>
+    private Foe? EnemyHall(Simulation sim, int x, int z)
+    {
+        if (Smart) return KnownHall(x, z);
         Building? best = null;
         long bestD = long.MaxValue;
         foreach (var b in sim.Buildings.All)
@@ -964,14 +1076,14 @@ public sealed partial class AiPlayer
             long d = Dist2(bx, bz, x, z);
             if (d < bestD) (bestD, best) = (d, b);
         }
-        return best;
+        return best != null ? AsFoe(sim, best) : null;
     }
 
     /// <summary>What a wave goes for next: the nearest enemy town hall, or failing that the nearest enemy building.</summary>
-    private Building? NextTarget(Simulation sim, int x, int z)
+    private Foe? NextTarget(Simulation sim, int x, int z)
     {
         if (EnemyHall(sim, x, z) is { } hall) return hall;
-        if (Smart) return KnownBuilding(sim, x, z);
+        if (Smart) return KnownBuilding(x, z);
         Building? best = null;
         long bestD = long.MaxValue;
         foreach (var b in sim.Buildings.All)
@@ -981,20 +1093,19 @@ public sealed partial class AiPlayer
             long d = Dist2(bx, bz, x, z);
             if (d < bestD) (bestD, best) = (d, b);
         }
-        return best;
+        return best != null ? AsFoe(sim, best) : null;
     }
 
     /// <summary>
     /// Where soldiers at home gather: <see cref="RallyDistance"/> columns from the town hall toward the enemy,
     /// or the nearest column to that with dry, open ground and no building on it.
     /// </summary>
-    private static (int X, int Z) Rally(Simulation sim, Building hall, Building? enemy)
+    private static (int X, int Z) Rally(Simulation sim, Building hall, (int X, int Z)? enemy)
     {
         var (hx, hz) = Middle(hall);
         int x = hx, z = hall.MaxZ + RallyDistance / 2;
-        if (enemy != null)
+        if (enemy is var (ex, ez))
         {
-            var (ex, ez) = Middle(enemy);
             long dx = ex - hx, dz = ez - hz;
             long len = Math.Max(1, IntMath.ISqrt(dx * dx + dz * dz));
             (x, z) = (hx + (int)(dx * RallyDistance / len), hz + (int)(dz * RallyDistance / len));

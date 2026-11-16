@@ -13,7 +13,7 @@ namespace Rts.Game;
 /// is fog of war (see <see cref="FogOfWar"/>) and whether there are day, night and weather (see
 /// <see cref="Rts.Sim.Conditions"/>), and whether it is a test mode match (see <see cref="TestPanel"/>).
 /// </summary>
-public sealed record MatchSetup(ulong Seed, int Player, bool Computer, bool Fog, AiLevel Level = AiLevel.Hard, bool DayNight = false,
+public sealed record MatchSetup(ulong Seed, int Player, bool Computer, bool Fog, AiLevel Level = AiLevel.Normal, bool DayNight = false,
     bool TestMode = false);
 
 /// <summary>
@@ -48,8 +48,9 @@ public partial class StartScreen : CanvasLayer
     /// <summary>The computer player's levels on the start screen, in the order shown.</summary>
     private static readonly (AiLevel Level, string Name, string Tip)[] Levels =
     {
-        (AiLevel.Normal, "Normal", "Scouts, plays by the fog of war, trains counters to what it sees and pulls its wounded back to heal."),
-        (AiLevel.Hard, "Hard", "As Normal, and focuses its fire, builds more, walls its town hall and settles new ground."),
+        (AiLevel.Easy, "Easy", "Scouts, plays by the fog of war, trains counters to what it sees and pulls its wounded back to heal."),
+        (AiLevel.Normal, "Normal", "As Easy, and focuses its fire, builds more, walls its town hall and settles new ground."),
+        (AiLevel.Hard, "Hard", "The best it can play with no more than you have: it knows only what it has seen and spends only what it gathers. A big town, an army kept ahead of yours, and it attacks when it is clearly the stronger."),
         (AiLevel.Classic, "Classic", "The first computer player: it sees through the fog of war and fights simply."),
     };
     private Label _loading = null!;
@@ -236,7 +237,7 @@ public partial class StartScreen : CanvasLayer
         $"player={_player} seed={(_seed.Text.Length > 0 ? _seed.Text : "random")} computer={(_computer.ButtonPressed ? 1 : 0)} " +
         $"level={SelectedLevel.ToString().ToLowerInvariant()} fog={(_fog.ButtonPressed ? 1 : 0)} test={(_test.ButtonPressed ? 1 : 0)}";
 
-    private AiLevel SelectedLevel => _level.Selected >= 0 ? Levels[_level.Selected].Level : AiLevel.Hard;
+    private AiLevel SelectedLevel => _level.Selected >= 0 ? Levels[_level.Selected].Level : AiLevel.Normal;
 
     /// <summary>A seed for a new match: short enough to read out and type in.</summary>
     public static ulong RandomSeed() => (ulong)Random.Shared.Next(1, 100000);

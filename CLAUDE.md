@@ -32,7 +32,7 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 | Monsters and taming (Orcs) | `Units/MonsterSystem.cs` | `MonsterTests.cs` | `ui-monsters-screenshots.sh` |
 | Dusk tree (warden, healing, staff, razing) | `Units/DuskTreeSystem.cs`; tree shape: `World/RegionGenerator.cs` (`GrowDuskTree`) | `DuskTreeTests.cs` | `ui-dusktree-screenshots.sh` |
 | City-states | `Economy/CityStateSystem.cs`, `Content/CityStateDef.cs` | `CityStateTests.cs` | `ui-citystate-screenshots.sh` |
-| Computer players (AI) | `AI/AiPlayer.cs` (Classic), `AI/AiPlayer.Smart.cs` (Normal, Hard), `AI/AiMatch.cs` | `AiTests.cs` | none; `ai-matches.sh` and `ai-versus.sh` play headless AI matches |
+| Computer players (AI) | `AI/AiPlayer.cs` (Classic), `AI/AiPlayer.Smart.cs` (Easy, Normal; fog, scouting), `AI/AiPlayer.Hard.cs` (Hard's town), `AI/AiPlayer.HardArmy.cs` (Hard's army), `AI/AiMatch.cs` | `AiTests.cs`, `HardAiTests.cs` | none; `ai-matches.sh` and `ai-versus.sh` play headless AI matches (`--story`, `--trace` in the match runner say what they did) |
 | Winning, match end, replays | `MatchSystem.cs`, `Replay/CommandLog.cs`, `Replay/MatchReplay.cs`; game: `StartScreen.cs`, `MatchEndPanel.cs`, `Replays.cs` | `MatchTests.cs`, `ReplayTests.cs` | `ui-match-screenshots.sh` |
 | Fog of war | `VisionSystem.cs`, `WorldMemory.cs`; game: `FogOfWar.cs` | `VisionTests.cs` | `ui-fog-screenshots.sh` |
 | Digging (dig areas, tunnels) | `Economy/EconomySystem.Dig.cs`, `Economy/DigArea.cs`, `Units/CombatSystem.Tunnels.cs` | `DigTests.cs` | `ui-dig-screenshots.sh` |

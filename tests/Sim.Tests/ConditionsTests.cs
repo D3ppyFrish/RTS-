@@ -343,7 +343,7 @@ public class ConditionsTests
     public void AComputerMatchThroughTheNightReplaysTheSame()
     {
         var result = AI.AiMatch.Play(3, 256, 64, 256, 4 * 60 * Simulation.TicksPerSecond,
-            levels: new[] { AI.AiLevel.Hard, AI.AiLevel.Normal }, fog: true, dayNight: true, dayStart: 19 * 60);
+            levels: new[] { AI.AiLevel.Normal, AI.AiLevel.Easy }, fog: true, dayNight: true, dayStart: 19 * 60);
         Assert.True(result.Log.DayNight);
         var text = CommandLog.Parse(result.Log.ToString());
         var first = MatchReplay.Run(text, 600, out var sim1);

@@ -26,8 +26,10 @@ public static class AiMatch
     /// </param>
     /// <param name="fog">Play with fog of war (see <see cref="Simulation.Fog"/>).</param>
     /// <param name="dayNight">Play with day, night and weather (see <see cref="Simulation.DayNight"/>), from <paramref name="dayStart"/>.</param>
+    /// <param name="watch">Called before every tick with the match as it stands and the computer players, to report on it (it must change nothing).</param>
     public static AiMatchResult Play(ulong seed, int sizeX, int sizeY, int sizeZ, long maxTicks, ContentDb? content = null,
-        IReadOnlyList<AiLevel>? levels = null, bool fog = false, bool dayNight = false, int dayStart = Conditions.StartMinute)
+        IReadOnlyList<AiLevel>? levels = null, bool fog = false, bool dayNight = false, int dayStart = Conditions.StartMinute,
+        Action<Simulation, IReadOnlyList<AiPlayer>>? watch = null)
     {
         content ??= ContentDb.Default;
         var log = CommandLog.UsualStart(seed, sizeX, sizeY, sizeZ, content, fog, dayNight, dayStart);
@@ -42,6 +44,7 @@ public static class AiMatch
         void Issue(Command c) => sim.Schedule(sim.Tick, c);
         while (sim.Tick < maxTicks && !sim.Match.Over)
         {
+            watch?.Invoke(sim, players);
             foreach (var ai in players) ai.Think(sim, Issue);
             sim.Step();
         }

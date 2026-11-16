@@ -69,7 +69,7 @@ behind yours, since the start has more people than room. `--units=N` instead spa
 around the camera focus (all on one side, so they walk rather than fight), and `--battle=N` sets two
 armies of N soldiers each facing each other at the camera focus, with an enemy house nearby.
 `--player=1` plays the Orcs at the east start instead of the Settlers at the west one, `--ai` has
-the computer play the other players (see [Winning and computer players](docs/rules.md#winning-and-computer-players)), at `--ai-level=normal`, `hard` (the default) or `classic`, and `--fog` turns fog of war on
+the computer play the other players (see [Winning and computer players](docs/rules.md#winning-and-computer-players)), at `--ai-level=easy`, `normal` (the default), `hard` or `classic`, and `--fog` turns fog of war on
 (see [Fog of war](docs/rules.md#fog-of-war)). `--daynight` plays with day, night and weather, and
 `--time-of-day=H` does too, starting at hour H (8 morning, 13 noon, 19.3 dusk, 0 midnight);
 `--weather=W` makes the first day's weather W (clear, cloudy, rain, storm or fog), `--lights=N` puts N

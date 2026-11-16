@@ -620,9 +620,10 @@ public sealed class AutomationSystem
     /// The corner of the building's footprint nearest to having its middle on column (cx, cz), ring by ring
     /// out to <paramref name="radius"/> columns, where the player can put it now (see
     /// <see cref="EconomySystem.CanPlace"/>) without it standing in front of a door or having its own door
-    /// blocked. False if there is no such spot. Computer players place their buildings with this too.
+    /// blocked. False if there is no such spot. Computer players place their buildings with this too, and
+    /// can rule spots out with <paramref name="allowed"/> (given the footprint's corner).
     /// </summary>
-    public bool FindRoom(int p, BuildingDef def, int cx, int cz, int radius, out int bx, out int bz)
+    public bool FindRoom(int p, BuildingDef def, int cx, int cz, int radius, out int bx, out int bz, Func<int, int, bool>? allowed = null)
     {
         bx = bz = -1;
         for (int r = 1; r <= radius; r++)
@@ -636,6 +637,7 @@ public sealed class AutomationSystem
                     long d = (long)dx * dx + (long)dz * dz;
                     if (d >= best) continue;
                     int x = cx + dx - def.SizeX / 2, z = cz + dz - def.SizeZ / 2;
+                    if (allowed != null && !allowed(x, z)) continue;
                     if (Economy.CanPlace(p, def, x, z, out _) != PlaceResult.Ok || BlocksDoor(def, x, z)) continue;
                     best = d;
                     (bx, bz) = (x, z);
