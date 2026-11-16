@@ -61,7 +61,7 @@ namespace Rts.Game;
 ///   --xp=N                your units start with N experience (150 is enough for Settlers to evolve)
 ///   --player=N            play as player N: 0 (the default) is the Settlers at start0, 1 the Orcs at start1
 ///   --ai                  the other players in the match are computer players (see AiPlayer)
-///   --ai-level=L          how well they play: normal, hard (the default) or classic (see AiLevel)
+///   --ai-level=L          how well they play: easy, normal (the default), hard or classic (see AiLevel)
 ///   --daynight[=off]      day, night and weather (see Rts.Sim.Conditions): night, bad weather and mist shorten
 ///                         sight and make ranged shots miss. A match started from the command line has them only
 ///                         with --daynight or --time-of-day; on the start screen they are ticked unless --daynight=off
@@ -172,7 +172,7 @@ public partial class Main : Node3D
         ulong? seed = _args.TryGetValue("seed", out var s) && ulong.TryParse(s, out var v) ? v : null;
         int player = _args.TryGetValue("player", out var ps) && int.TryParse(ps, out var p) && p >= 0 && p < Simulation.WildPlayer ? p : 0;
         bool? fog = _args.TryGetValue("fog", out var fs) ? fs is not ("off" or "0" or "false") : null;
-        var level = _args.TryGetValue("ai-level", out var ls) && Enum.TryParse<AiLevel>(ls, ignoreCase: true, out var l) ? l : AiLevel.Hard;
+        var level = _args.TryGetValue("ai-level", out var ls) && Enum.TryParse<AiLevel>(ls, ignoreCase: true, out var l) ? l : AiLevel.Normal;
         bool? dayNight = _args.TryGetValue("daynight", out var ds) ? ds is not ("off" or "0" or "false")
             : _args.ContainsKey("time-of-day") ? true : null;
         bool test = _args.ContainsKey("test-mode");

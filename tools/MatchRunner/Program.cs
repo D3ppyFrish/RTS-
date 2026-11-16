@@ -16,9 +16,13 @@ using Rts.Sim.Replay;
 //                         say); prints who won
 //     --ai                computer players (AiPlayer) play each other from the usual start until one of
 //                         them wins or time runs out; the replays must end with the same winner
-//     --levels=A,B        with --ai: each player's level, in player order (classic, normal or hard;
+//     --levels=A,B        with --ai: each player's level, in player order (classic, easy, normal or hard;
 //                         default classic for all; the last one given goes for the rest)
 //     --fog               with --ai: play with fog of war
+//     --story             with --ai: print what each computer player from Easy up decided, as it decides
+//                         it (its journal; Hard's says the most)
+//     --trace             with --ai: print every minute what each player has (workers, soldiers and their
+//                         worth, goods, buildings, housing) and what its army is doing
 //     --seed=N            seed for a generated match (default 1234)
 //     --world=XxYxZ       world size for a generated match (default 512x64x512)
 //     --minutes=M         generated match length in game minutes (default 10; with --ai, at most this
@@ -43,6 +47,66 @@ foreach (var a in args)
 
 string Opt(string key, string fallback) => opts.TryGetValue(key, out var v) ? v : fallback;
 var ci = CultureInfo.InvariantCulture;
+
+var told = new List<int>();
+// --trace: one line a minute for each player still in the match.
+void Trace(Simulation sim, IReadOnlyList<AiPlayer> players)
+{
+    if (opts.ContainsKey("story"))
+    {
+        // --story: each computer player's journal, as it is written.
+        while (told.Count < players.Count) told.Add(0);
+        for (int k = 0; k < players.Count; k++)
+        {
+            var journal = players[k].Journal;
+            for (; told[k] < journal.Count; told[k]++)
+            {
+                var (tick, text) = journal[told[k]];
+                Console.WriteLine($"{tick / (60 * Simulation.TicksPerSecond),2}:{tick / Simulation.TicksPerSecond % 60:D2} p{players[k].Player} {text}");
+            }
+        }
+    }
+    if (!opts.ContainsKey("trace") || sim.Tick % (60 * Simulation.TicksPerSecond) != 0) return;
+    var u = sim.Units;
+    foreach (var ai in players)
+    {
+        int p = ai.Player;
+        if (!sim.Match.InPlay(p)) continue;
+        int workers = 0, soldiers = 0;
+        long power = 0;
+        var roles = new SortedDictionary<string, int>();
+        var jobs = new SortedDictionary<string, int>();
+        for (int i = 0; i < u.Count; i++)
+        {
+            if (u.Owner[i] != p || u.Subdued[i] || u.Town[i] != 0) continue;
+            var def = sim.Content.Units[u.Def[i]];
+            if (def.Role == Rts.Sim.Units.UnitRole.Worker)
+            {
+                workers++;
+                string job = u.Job[i] switch
+                {
+                    Rts.Sim.Units.UnitJob.Gather => u.JobBlock[i].ToString().ToLowerInvariant(),
+                    Rts.Sim.Units.UnitJob.None => "idle",
+                    var j => j.ToString().ToLowerInvariant(),
+                };
+                jobs[job] = jobs.GetValueOrDefault(job) + 1;
+                continue;
+            }
+            if (!def.CanAttack || def.Role == Rts.Sim.Units.UnitRole.Trader) continue;
+            soldiers++;
+            power += (long)u.Hp[i] * def.Damage * Simulation.TicksPerSecond / Math.Max(1, def.AttackTicks);
+            roles[def.Id] = roles.GetValueOrDefault(def.Id) + 1;
+        }
+        var kinds = new SortedDictionary<string, int>();
+        foreach (var b in sim.Buildings.All)
+            if (b.Owner == p && b.Active) kinds[b.Def.Id] = kinds.GetValueOrDefault(b.Def.Id) + 1;
+        var stock = sim.Economy.Stockpile(p);
+        var g = sim.Economy.Player(p).Gathered;
+        string Join(SortedDictionary<string, int> d) { var l = new List<string>(); foreach (var (k, v) in d) l.Add($"{k}:{v}"); return string.Join(" ", l); }
+        Console.WriteLine(string.Create(ci,
+            $"{sim.Tick / (60 * Simulation.TicksPerSecond),2}m p{p} {ai.Level,-7} workers {workers,2} soldiers {soldiers,2} power {power / 1000,4}k pop {sim.Economy.Population(p)}/{sim.Economy.Housing(p)} food {stock[0]} wood {stock[1]} stone {stock[2]} (got {g[0]} {g[1]} {g[2]}) | wave {ai.Wave.Count} waves {ai.Waves} {ai.Doing} | {Join(jobs)} | {Join(roles)} | {Join(kinds)}"));
+    }
+}
 
 try
 {
@@ -72,9 +136,10 @@ try
         var levels = new List<AiLevel>();
         foreach (var name in Opt("levels", "classic").Split(','))
             levels.Add(Enum.TryParse<AiLevel>(name.Trim(), ignoreCase: true, out var level)
-                ? level : throw new ArgumentException($"--levels: unknown level '{name}' (classic, normal or hard)"));
+                ? level : throw new ArgumentException($"--levels: unknown level '{name}' (classic, easy, normal or hard)"));
         var result = AiMatch.Play(ulong.Parse(Opt("seed", "1234"), ci),
-            int.Parse(size[0], ci), int.Parse(size[1], ci), int.Parse(size[2], ci), ticks, levels: levels, fog: opts.ContainsKey("fog"));
+            int.Parse(size[0], ci), int.Parse(size[1], ci), int.Parse(size[2], ci), ticks, levels: levels, fog: opts.ContainsKey("fog"),
+            watch: opts.ContainsKey("trace") || opts.ContainsKey("story") ? Trace : null);
         log = result.Log;
         aiWinner = result.Winner;
         aiEnd = result.EndTick;

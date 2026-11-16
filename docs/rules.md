@@ -387,7 +387,7 @@ and are won by force. There is one so far, the goblins (`data/citystates.json`).
   per mercenary, for its holder only. The totem is drawn as a carved goblin pole painted in its holder's
   colour (plain while neutral), losing its top as it is knocked down. You hear when you take a town,
   lose one, and when tribute sets out.
-- **Computer players** (Normal and Hard) send a party of 6 soldiers from 6 minutes on, once they have 8
+- **Computer players** (from Easy up) send a party of 6 soldiers from 6 minutes on, once they have 8
   at home and no wave out: it fights the guards, then breaks the totem, and is tried again 3 minutes
   later if it fails. Holding a town, they hire its goblins when they can.
 
@@ -406,10 +406,17 @@ with fewer than two players never ends. Who is out, who won and when are part of
 
 `src/Sim/AI/AiPlayer.cs` is a computer player. It plays only by giving the commands a person could
 give, deciding from the game as it stands, so a match with it records and replays like any other. It
-plays at one of three levels (`AiLevel`): **Classic**, the first computer player, described in the next
-two points and kept as it was to measure the others by; **Normal** and **Hard**, described after them
-(issue #47, `AiPlayer.Smart.cs`). The start screen picks the level (Hard unless changed), and so does
-`--ai-level` in the game and `--levels` in the match runner.
+plays at one of four levels (`AiLevel`): **Classic**, the first computer player, described in the next
+two points and kept as it was to measure the others by; **Easy** and **Normal** (issue #47,
+`AiPlayer.Smart.cs`; before issue #2 they were called Normal and Hard); and **Hard** (issue #2,
+`AiPlayer.Hard.cs` for its town, `AiPlayer.HardArmy.cs` for its army). The start screen picks the level
+(Normal unless changed), and so does `--ai-level` in the game and `--levels` in the match runner.
+
+No level is given anything a player does not get: each starts with the same town and soldiers, pays the
+same prices and upkeep, and has only the goods its own workers bring in. Classic sees through the fog of
+war; from Easy up a computer player knows only what its own units and buildings have seen, at Hard as
+much as at Easy. The two things the fair levels take from the shape of the map rather than from sight are
+ones a player knows too: the enemy starts across the map, and there is a lair on the way to the middle.
 
 - **Economy**: all its workers are automatic (see [Automation](#automation)), so automation keeps them gathering what
   is needed, puts up houses and farms. On top of that it trains workers at the town hall (10 at first,
@@ -429,30 +436,83 @@ two points and kept as it was to measure the others by; **Normal** and **Hard**,
   its soldiers comes home. Enemies within 32 columns of its town hall are met by every soldier at home,
   and by a wave still within 48 columns. The Orcs ride, then recruit, the monsters they beat; the
   Settlers' soldiers evolve into the form with the most damage times hit points.
-- **Normal** plays by the fog of war: it goes only by what it sees and remembers seeing. Enemy buildings
-  are remembered once seen until it sees them gone; enemy soldiers for 3 minutes. While it knows of no
-  enemy town hall, its fastest soldier (a rider, at least 6 blocks a second) scouts the other start
-  areas, coming home when hurt; with fog of war on it looks again every 3 minutes while no wave is out.
-  Its barracks weigh what to train by the soldiers it has seen: much more of the roles strong against
-  them, less of the roles they are strong against, a few sappers for each wave and at most two siege
-  units. Its first wave waits until 5 minutes (meeting the classic player's 3-minute wave at home, by
-  the town hall, wins that fight), and a wave sets out when big enough and not much weaker than the
-  enemy army it knows of, or small when it is twice as strong. A wave marches in formation (melee in
-  front, ranged behind) to a line 24 columns short of its target, then attacks; one that does not know
-  where the enemy town hall is goes for the nearest start area it has not seen. Soldiers of a wave below
-  35% of their hit points go home to the town hall's door to heal, and rejoin at 85%. A wave that sees
-  an enemy army twice its strength before the fight starts falls back. Its sappers go for the target
-  building whatever else is happening. It saves for its barracks before research, builds the second at
-  8 minutes, sends idle workers to trees, and after 6 minutes keeps more wood in hand.
-- **Hard** is Normal, plus: in a fight its archers and mages shoot the enemy in reach they are strong
+- **Easy** plays by the fog of war: it goes only by what it sees and remembers seeing. Enemy buildings
+  are remembered once seen until it sees the place without them; enemy soldiers for 3 minutes, or until
+  it sees them fall. It is not told where anyone starts. It guesses that an enemy town hall stands across
+  the map from its own (through the middle first, then straight across each way), and while it knows of
+  none its fastest soldier (a rider, at least 6 blocks a second) scouts the guesses, and then, a start
+  area being wider than a rider sees, the ground round them on a 16-column grid until it sees an enemy
+  building; it comes home when hurt. A scout, or a wave looking for the enemy, heads for a point 5 columns
+  short of a place it has not seen (where a building stands there is only the roof to stand on, and no way
+  up), is done with the place once it has seen it, and each time it comes to a stop on the way tries from
+  4 columns further back; a scout gives a place up after 4 stops. With fog of war on it looks at the town
+  again every 3 minutes while no wave is out. Its barracks weigh what to train by the soldiers it has seen: much more of the roles
+  strong against them, less of the roles they are strong against, a few sappers for each wave and at
+  most two siege units. Its first wave waits until 5 minutes (meeting the classic player's 3-minute wave
+  at home, by the town hall, wins that fight), and a wave sets out when big enough and not much weaker
+  than the enemy army it knows of, or small when it is twice as strong. A wave marches in formation
+  (melee in front, ranged behind) to a line 24 columns short of its target, then attacks. A wave that
+  knows of no enemy building goes to look for one the way the scout does, and one that has razed every
+  building it knew of looks for the rest, for up to 8 minutes, before it comes home. Soldiers of a wave
+  below 35% of their hit points go home to the town hall's door to heal, and rejoin at 85%. A wave that
+  sees an enemy army twice its strength before the fight starts falls back. Its sappers go for the
+  target building whatever else is happening. It saves for its barracks before research, builds the
+  second at 8 minutes, sends idle workers to trees, and after 6 minutes keeps more wood in hand.
+- **Normal** is Easy, plus: in a fight its archers and mages shoot the enemy in reach they are strong
   against, else the one with the fewest hit points, and riders and spearmen switch onto enemies they
   are strong against; up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
   second town hall where its workers gather far from storage; and after 9 minutes, with the stone, a
   wall round the town hall 4 columns out with two gates three wide.
-- `scripts/ai-versus.sh` plays two levels against each other over 20 seeds with fog of war, on both
-  sides of the map. When it was written, Hard beat Classic in 15 of 20 seeds (3 lost, 2 undecided after
-  40 minutes) and 16 of 20 with the sides swapped; Normal beat Classic in 15; Hard beat Normal slightly
-  more often than it lost.
+- **Hard** knows and has no more than Easy; it plays as well as it can with it. Its **town**: it runs
+  its workers itself. They are automatic, but on its own priority lists (building, then food or wood,
+  and nothing else, so none wanders off to dig), and every 8 seconds it moves up to two between the
+  farms and the trees to keep the share it wants on the farms (45%, more as wood piles up, less as food
+  does, between 25% and 70%), and sends idle ones to trees. It trains workers at every town hall it has
+  (12 at first, 3 more each minute, up to 48). It pays for things in order of need and saves up for the
+  first it cannot pay for: houses before it is out of room; soldiers while its army is short (see
+  below), unless its town is too small to pay for one (fewer workers than 12 and one more for each
+  minute played, up to 48), when workers come first; workers; the first barracks at 8 workers; a storehouse where 3 or more workers gather 14
+  columns or more from storage; research in its own order (farming, tools, crop rotation, horse
+  breeding, roads, carts, archery, masonry, then the rest); farms for its farmers; another barracks (up
+  to 6) when every one is training and goods are still piling up; a second town hall 44 columns out on
+  the side away from the enemy once it has 30 workers and 2 barracks; and soldiers again with whatever
+  is left. Upkeep is paid once a minute, so it puts the next payment's food by over the minute and is
+  never caught short. For stone it marks out a quarry early (a pit 14 by 6 dug 12 deep, 14 to 30
+  columns from the town hall; a smaller or further one if after 2 minutes there is no such ground),
+  builds nothing there, and from 16 workers on keeps two to five of them digging it while stone is
+  short. While enemies are at its buildings, and for 20 seconds after, it saves for nothing but
+  soldiers.
+- Hard's **army**: its starting soldiers clear the lair as the others' do, but its fastest stays to
+  explore round its town (a 28-column grid out to 112 columns), which is how it finds trees, lairs and
+  city-states. Its soldiers at home gather beside the town hall (6 columns out from its south side), not
+  12 columns out toward the enemy: there they heal as at home, and raiders come up against the town and
+  all of them at once. It builds nothing within 8 columns of that ground, and a soldier shut in where it
+  stands (the ground levelled for a house can leave a hole beside it) is left out of everything. It
+  takes the enemy army to be worth what it has seen of it in the last 3 minutes, never less than the
+  army a player starts with, and for 6 minutes after one of its own waves was beaten, what that wave
+  was worth. While its own army is worth less than 120% of that, soldiers come before everything but
+  houses. Its barracks weigh a unit as Easy's do, times what it is worth in a fight for its price. It
+  scouts the enemy town only when it means to attack (every look risks a rider, who comes home at 85%
+  of its hit points): a wave of at least 12, leaving 15% at home, sets out when it is worth 150% of the
+  enemy army and a scout has been for a look at their town in the last 3 minutes, or been chased off
+  trying (with no one fast enough to scout, it goes without). Soldiers trained while the wave is out
+  follow it in groups of 8. While a wave of its own is looking for the enemy (it set out for a guess, or
+  has razed every building it knew of), a rider looks too, one of the wave's if it has one: it covers
+  the ground several times as fast, and goes back to the wave once there is something to go for. A wave in a fight falls back when it is worth less than 60% of the enemies
+  it sees round it, and comes home when it is down to a quarter of its soldiers; either way it counts
+  as beaten. At home, enemies within 26 columns of a town hall of its own or of where its soldiers
+  gather, or 14 of any other building, are met in formation, so its soldiers arrive together: by a town
+  hall, by everyone; by a far building, a few raiders by a party worth three times as much, while a
+  real force (half its own worth or more) is waited for in a line 10 columns out from the town hall,
+  where its new soldiers come out. A wave that is out is called home only for enemies worth more than
+  80% of the soldiers at home, and from more than 48 columns away only when they are by a town hall. It
+  fights with Normal's focus fire, sends totem parties and hires as the others do. It does not wall its
+  town hall or raid yet, and in a long match it runs short of wood once the trees near its town are gone.
+- `scripts/ai-versus.sh` plays two levels against each other over 20 seeds with fog of war, the first
+  level on a different side of the map each seed. With issue #2, Hard beat Normal and Classic in all
+  20; Normal beat Classic in 12 (6 lost, 2 undecided after 40 minutes) and Easy in 9 (11 lost).
+  Before issue #2 Normal (then called Hard) was told where the enemy starts and beat Classic in 15:
+  finding the enemy itself costs it and Easy some of that, and Classic still sees through the fog.
 
 `AiMatch.Play` plays computer players against each other from the usual start (town halls, four of every
 trained unit, the lairs and the city-states), and `--ai` in the match runner does it from the command
@@ -464,7 +524,8 @@ dotnet run -c Release --project tools/MatchRunner -- --ai --seed=3 --record=ai.l
 
 CI runs `scripts/ai-matches.sh`, issue #15's check: on seeds 1 to 5 (512×512 maps) every match must be
 won within 40 game minutes, and replaying its log must give the same hashes and winner. Since issue #47
-the matches are Hard against Classic with fog of war; they are won in 8 to 39 minutes. All the numbers are first guesses for playtesting.
+the matches are Hard against Classic with fog of war; with issue #2's Hard they are won in 20 to 27 minutes.
+All the numbers are first guesses for playtesting.
 
 ## Fog of war
 
@@ -484,7 +545,7 @@ towns can only be picked where you have looked. When the match is over, the fog 
 The start screen has a Fog of war switch, on unless switched off (or started with `--fog=off`). A match
 started from the command line has fog of war only with `--fog`. With day, night and weather, sight is
 shortened in the dark and in bad weather, except into the light (see [Day, night and weather](#day-night-and-weather)). It is recorded in the command log (a
-`fog 1` line), so a replay plays back with it. Computer players at Normal and Hard go by it (see
+`fog 1` line), so a replay plays back with it. Computer players from Easy up go by it (see
 [Winning and computer players](#winning-and-computer-players)); the Classic one sees everything.
 
 ## Day, night and weather

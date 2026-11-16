@@ -9,8 +9,10 @@ Every pull request and every push to `develop` produces a Windows build. Open th
 **Actions** tab, download the `RTS-windows-...` artifact, unzip it and run `RTS.exe`.
 
 It opens on the start screen: pick the Settlers (who start in the west) or the Orcs (in the east), the
-world seed, whether the computer plays the other side and how well (Computer level: Normal, Hard, which
-is the default, or Classic, the first computer player), and whether there is fog of war, then Start match.
+world seed, whether the computer plays the other side and how well (Computer level: Easy, Normal, which
+is the default, Hard, or Classic, the first computer player; hover a level to read how it plays. No level
+is given anything you are not, and only Classic sees through the fog of war), and whether there is fog of
+war, then Start match.
 Each faction has its own look for the menus, panels and buttons: castle stone for the Settlers, rough
 timber for the Orcs. The start screen changes to the look of the faction you pick. Destroy the other side's
 town hall to win; the Surrender button under the right end of the top bar gives up. When the match is

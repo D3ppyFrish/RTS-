@@ -233,7 +233,7 @@ public class AiTests
         for (int k = 0; k < 14; k++) sim.SpawnUnit(0, "spearman", 20 + k % 7, hall.MaxZ + 2 + k / 7);
         // Room for a mercenary however many of the spearmen come back (bleeding decides that, issue #72).
         Assert.NotNull(sim.Economy.PlaceFinished(0, sim.Content.Building("house"), 10, hall.Z));
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Easy);
         var log = new List<Command>();
         Assert.True(PlayLogged(sim, new[] { ai }, log, () => ai.TotemPartyIds.Count > 0, AiPlayer.TotemTicks + 10 * Tps), "a party to set out");
         Assert.Equal(AiPlayer.TotemParty, ai.TotemPartyIds.Count);
@@ -246,7 +246,7 @@ public class AiTests
     [Fact]
     public void ASmartComputerMatchWithFogReplaysTheSame()
     {
-        var result = AiMatch.Play(3, 256, 64, 256, 6 * 60 * Tps, levels: new[] { AiLevel.Hard, AiLevel.Normal }, fog: true);
+        var result = AiMatch.Play(3, 256, 64, 256, 6 * 60 * Tps, levels: new[] { AiLevel.Normal, AiLevel.Easy }, fog: true);
         var log = result.Log;
         Assert.True(log.Fog);
         Assert.Contains(log.Commands, c => c.Command is FormationMoveCommand || c.Command is MoveCommand);
@@ -267,7 +267,7 @@ public class AiTests
         sim.Fog = true;
         int rider = sim.SpawnUnit(0, "rider", 24, 104);
         for (int k = 0; k < 4; k++) sim.SpawnUnit(0, "spearman", 14 + k, 106);
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Easy);
         var players = new[] { ai };
         Play(sim, players, () => false, 2 * Tps);
         Assert.False(ai.KnowsEnemyHall);
@@ -282,7 +282,7 @@ public class AiTests
         // An enemy spearman holds 26 columns behind the town hall, well inside the classic player's defence
         // radius but out of sight of everything player 0 has: the classic player sends its soldiers at it,
         // the smart one does not know it is there.
-        foreach (var level in new[] { AiLevel.Classic, AiLevel.Normal })
+        foreach (var level in new[] { AiLevel.Classic, AiLevel.Easy })
         {
             var sim = WithStarts(160, (40, 80), (140, 80));
             sim.Fog = true;
@@ -307,7 +307,7 @@ public class AiTests
         var sim = WithStarts(128, (30, 64), (110, 64));
         var hall = sim.Economy.TownHall(0)!;
         foreach (var t in new[] { "archery", "horse_breeding", "basic_magic", "sapping" }) sim.Economy.Grant(0, sim.Content.Tech(t));
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Easy);
         var c = sim.Content;
         long W(string unit) => ai.TrainWeight(sim, c.Unit(unit));
         Assert.True(W("spearman") > W("rider") && W("rider") == W("archer"));
@@ -326,7 +326,7 @@ public class AiTests
         var sim = WithStarts(96, (20, 48), (76, 48));
         for (int k = 0; k < 8; k++) sim.SpawnUnit(0, "spearman", 14 + k, 56);
         sim.SpawnUnit(1, "spearman", 70, 56);
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Easy);
         var players = new[] { ai };
         Assert.True(Play(sim, players, () => ai.Waves > 0, AiPlayer.SmartFirstWaveTicks + 30 * Tps), "a wave to set out");
         Assert.False(Play(sim, players, () => ai.Waves > 0 && sim.Tick < AiPlayer.SmartFirstWaveTicks, 0));
@@ -344,7 +344,7 @@ public class AiTests
     }
 
     [Fact]
-    public void AHardComputerFocusesItsArchersOnTheWeakestEnemyInReach()
+    public void FromNormalUpTheComputerFocusesItsArchersOnTheWeakestEnemyInReach()
     {
         // Three enemy spearmen come at the town hall; one is badly hurt. The archers at home all shoot it first.
         var sim = WithStarts(96, (30, 48));
@@ -356,7 +356,7 @@ public class AiTests
         int weak = enemies[2];
         sim.Units.Hp[sim.Units.IndexOf(weak)] = 10;
         var log = new List<Command>();
-        foreach (var level in new[] { AiLevel.Hard })
+        foreach (var level in new[] { AiLevel.Normal })
             PlayLogged(sim, new[] { new AiPlayer(0, 1, level) }, log, () => log.OfType<AttackCommand>().Any(), 5 * Tps);
         var focus = log.OfType<AttackCommand>().First();
         Assert.Equal(weak, focus.Target);
@@ -364,12 +364,12 @@ public class AiTests
     }
 
     [Fact]
-    public void AHardComputerWallsItsTownHallWithGates()
+    public void ANormalComputerWallsItsTownHallWithGates()
     {
         var sim = WithStarts(96, (40, 48));
         var hall = sim.Economy.TownHall(0)!;
         var log = new List<Command>();
-        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal);
         PlayLogged(sim, new[] { ai }, log, () => false, AiPlayer.WallTicks - 5 * Tps);
         Assert.Empty(log.OfType<WallCommand>()); // not before its time
         hall.Stock[(int)Good.Stone] = 1000;
@@ -384,11 +384,11 @@ public class AiTests
         Assert.True(sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.Kind == BuildingKind.Gate) >= 3, "gates " + sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.Kind == BuildingKind.Gate));
         Assert.True(sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsWall) >= 24, "walls " + sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsWall) + " stone " + hall.Stock[(int)Good.Stone]);
 
-        // Normal does not wall.
+        // Easy does not wall.
         var normal = WithStarts(96, (40, 48));
         normal.Economy.TownHall(0)!.Stock[(int)Good.Stone] = 1000;
         var normalLog = new List<Command>();
-        PlayLogged(normal, new[] { new AiPlayer(0, 1, AiLevel.Normal) }, normalLog, () => false, AiPlayer.WallTicks + 10 * Tps);
+        PlayLogged(normal, new[] { new AiPlayer(0, 1, AiLevel.Easy) }, normalLog, () => false, AiPlayer.WallTicks + 10 * Tps);
         Assert.Empty(normalLog.OfType<WallCommand>());
     }
 }
