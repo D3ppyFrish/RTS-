@@ -231,10 +231,12 @@ public static class Harvest
     /// The standing spot a unit at (fromX, fromY, fromZ) should walk to in order to work on levels
     /// [baseY, topY] of column (bx, bz): the nearest one in reach, preferring a neighbouring column to
     /// standing on top of the target. False if there is nowhere to stand. With <paramref name="allowOnTop"/>
-    /// false, only neighbouring columns count.
+    /// false, only neighbouring columns count. With <paramref name="wayOut"/>, only spots a unit can walk out
+    /// of again once the block at <paramref name="baseY"/> is dug away count (see <see cref="LeavesWayOut"/>):
+    /// a worker never drops into a hole it cannot climb out of to get at a block.
     /// </summary>
     public static bool WorkSpot(VoxelWorld w, int bx, int baseY, int topY, int bz, int fromX, int fromY, int fromZ,
-        out int sx, out int sy, out int sz, bool allowOnTop = true)
+        out int sx, out int sy, out int sz, bool allowOnTop = true, bool wayOut = false)
     {
         sx = sy = sz = -1;
         long best = long.MaxValue;
@@ -249,6 +251,7 @@ public static class Harvest
                 long dx = x - fromX, dz = z - fromZ, dy = y - fromY;
                 long score = dx * dx + dz * dz + 2 * dy * dy + (ox == 0 && oz == 0 ? 64 : 0);
                 if (score >= best) continue;
+                if (wayOut && !LeavesWayOut(w, bx, baseY, bz, x, y, z)) continue;
                 best = score;
                 (sx, sy, sz) = (x, y, z);
             }
@@ -343,6 +346,13 @@ public static class Harvest
         }
         return true; // nowhere to stand in the hole
     }
+
+    /// <summary>
+    /// True if a unit standing at (x, y, z) can walk out to open ground now (see <see cref="LeavesWayOut"/>) and
+    /// could not with block (bx, by, bz) dug away. Does not change the world.
+    /// </summary>
+    public static bool ShutsIn(VoxelWorld w, int bx, int by, int bz, int x, int y, int z) =>
+        !Escapes(w, bx, by, bz, x, y, z) && Escapes(w, bx, -1, bz, x, y, z); // level -1: nothing taken away
 
     /// <summary>Walk search from (x, y, z) with block (hx, hy, hz) taken away, out to <see cref="WayOutRadius"/>.</summary>
     private static bool Escapes(VoxelWorld w, int hx, int hy, int hz, int x, int y, int z)

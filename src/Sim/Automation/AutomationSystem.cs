@@ -511,7 +511,8 @@ public sealed partial class AutomationSystem
 
     /// <summary>
     /// True if a worker at (ux, uy, uz) can be sent to gather candidate c: the base of a trunk if it is a
-    /// tree, open to the air, not under a building, not claimed or given up on, and with somewhere to stand.
+    /// tree, open to the air, not under a building, not claimed or given up on, and with somewhere to stand
+    /// (for stone, ore and coal: beside it, somewhere it can walk out of again once the block is dug).
     /// </summary>
     private bool CanSend(Candidate c, int ux, int uy, int uz, long tick)
     {
@@ -521,7 +522,8 @@ public sealed partial class AutomationSystem
         if (!Harvest.Exposed(w, c.X, c.Y, c.Z, block) || Buildings.AtColumn(c.X, c.Z) != null) return false;
         if (Economy.Claimed(c.X, c.Y, c.Z) || Avoided(Harvest.Key(w, c.X, c.Y, c.Z), tick)) return false;
         var (baseY, topY) = Harvest.Span(w, c.X, c.Y, c.Z);
-        return Harvest.WorkSpot(w, c.X, baseY, topY, c.Z, ux, uy, uz, out _, out _, out _);
+        bool quarry = Harvest.Quarried(block);
+        return Harvest.WorkSpot(w, c.X, baseY, topY, c.Z, ux, uy, uz, out _, out _, out _, allowOnTop: !quarry, wayOut: quarry);
     }
 
     /// <summary>

@@ -72,7 +72,9 @@ public sealed class UnitMovement
         for (int i = 0; i < u.Count; i++)
         {
             Fix64 vx = _pushX[i], vz = _pushZ[i];
-            _waypoint[i] = -1;
+            // A unit with no order is only ever nudged (by the crowd, or sliding on ice): that never drops it
+            // more than a level, so a worker beside a hole is not shoved down into it.
+            _waypoint[i] = u.Order[i] == UnitOrder.Idle ? NoDrop : -1;
             _keepingPlace[i] = false;
             if (u.Loose[i] > 0) u.Loose[i]--;
             if (u.Order[i] != UnitOrder.Idle) Steer(u, i, ref vx, ref vz);
@@ -161,7 +163,7 @@ public sealed class UnitMovement
                 // a new way, so then wait for its update.
                 if (pathDist == FlowField.Unreachable || (field.Complete && !field.Dirty))
                 {
-                    if (!ClimbDown(u, i)) EndOrder(u, i);
+                    GiveUp(u, i);
                     return;
                 }
                 field.WantsMore = true;
@@ -302,7 +304,7 @@ public sealed class UnitMovement
                 {
                     if (pathDist == FlowField.Unreachable || (field.Complete && !field.Dirty))
                     {
-                        if (!ClimbDown(u, i)) EndOrder(u, i);
+                        GiveUp(u, i);
                         return;
                     }
                     field.WantsMore = true;
@@ -352,20 +354,132 @@ public sealed class UnitMovement
 
     /// <summary>
     /// A unit on top of a wall, gate or tower, with an order and no way on from up there (it is too high to
-    /// step off), climbs down: it is set on the ground at the foot of the wall (see
+    /// step off), climbs down (and off any other building's roof, see <see cref="OffRoof"/>): it is set on the ground at the foot of the wall (see
     /// <see cref="Economy.EconomySystem.Foot"/>), on the side nearest to where it is going, and walks on from
     /// there. False if it stands on no wall, or the wall has no ground at its foot.
     /// </summary>
     private bool ClimbDown(UnitStore u, int i)
     {
-        if (_sim.Economy.WallUnder(i) is not { } wall) return false;
-        if (!_sim.Economy.Foot(wall, u.X[i].FloorToInt(), u.Z[i].FloorToInt(), u.OrderX[i], u.OrderZ[i], out int x, out int z, out int y))
-            return false;
+        int x, z, y;
+        if (_sim.Economy.WallUnder(i) is { } wall)
+        {
+            if (!_sim.Economy.Foot(wall, u.X[i].FloorToInt(), u.Z[i].FloorToInt(), u.OrderX[i], u.OrderZ[i], out x, out z, out y))
+                return false;
+        }
+        else if (!OffRoof(u, i, out x, out z, out y)) return false;
         u.X[i] = Fix64.FromInt(x) + Fix64.Half;
         u.Z[i] = Fix64.FromInt(z) + Fix64.Half;
         u.Y[i] = y;
         u.Blocked[i] = 0;
         return true;
+    }
+
+    /// <summary>
+    /// There is no way from where unit i stands to where it is going. Up on a wall it climbs down; in a pit or
+    /// hole it cannot walk out of, a worker or sapper digs its way out (see <see cref="CombatSystem.DigOut"/>);
+    /// otherwise it stops.
+    /// </summary>
+    private void GiveUp(UnitStore u, int i)
+    {
+        if (ClimbDown(u, i)) return;
+        var field = _sim.Paths.Get(u.Field[i]);
+        bool chase = u.Order[i] == UnitOrder.Chase;
+        var combat = u.Combat[i];
+        int patrol = u.PatrolState[i];
+        EndOrder(u, i);
+        if (_sim.Combat.DigOut(i) || chase || field == null || field.Fallback) return;
+        // Somewhere it cannot get to (a cliff top, across deep water, up a tree): it goes as near as it can.
+        if (field.FallbackNode < 0) field.FallbackNode = NearestReachable(u, i, field.GoalX, field.GoalY, field.GoalZ);
+        int n = field.FallbackNode;
+        if (n < 0) return;
+        var g = _sim.Walkable;
+        int x = g.ColumnX(n), z = g.ColumnZ(n);
+        Fix64 dx = Fix64.FromInt(x) + Fix64.Half - u.X[i], dz = Fix64.FromInt(z) + Fix64.Half - u.Z[i];
+        if (Fix64.Sqrt(dx * dx + dz * dz) <= u.ArriveRadius[i] + Fix64.One) return; // already about as near as it gets
+        var near = _sim.Paths.Request(x, z, g.Level(n), u.Owner[i]);
+        near.Fallback = true;
+        u.Order[i] = UnitOrder.Move;
+        u.OrderX[i] = x;
+        u.OrderZ[i] = z;
+        u.Field[i] = near.Id;
+        u.Blocked[i] = 0;
+        // An attack-move or patrol carries on, to the new goal.
+        u.Combat[i] = combat;
+        u.PatrolState[i] = patrol;
+    }
+
+    /// <summary>Most nodes searched for the nearest reachable place to a goal a unit cannot get to.</summary>
+    public const int NearestSearchLimit = 40_000;
+    private int[] _seen = Array.Empty<int>();
+    private int _seenStamp;
+    private readonly System.Collections.Generic.Queue<int> _open = new();
+
+    /// <summary>
+    /// The node unit i can walk to that is nearest to the goal (across first, then in height; ties to the
+    /// lowest node number), searching at most <see cref="NearestSearchLimit"/> nodes; -1 if it stands nowhere.
+    /// </summary>
+    private int NearestReachable(UnitStore u, int i, int gx, int gy, int gz)
+    {
+        var g = _sim.Walkable;
+        int start = g.Node(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), u.Y[i]);
+        if (start < 0) return -1;
+        if (_seen.Length < g.NodeCount) _seen = new int[g.NodeCount];
+        _seenStamp++;
+        _open.Clear();
+        _open.Enqueue(start);
+        _seen[start] = _seenStamp;
+        int best = -1, visited = 0;
+        long bestScore = long.MaxValue;
+        while (_open.Count > 0 && visited < NearestSearchLimit)
+        {
+            int a = _open.Dequeue();
+            visited++;
+            long dx = g.ColumnX(a) - gx, dz = g.ColumnZ(a) - gz, dy = g.Level(a) - gy;
+            long score = (dx * dx + dz * dz) * 1024 + Math.Abs(dy);
+            if (score < bestScore || (score == bestScore && a < best))
+            {
+                bestScore = score;
+                best = a;
+            }
+            for (int d = 0; d < 8; d++)
+            {
+                int b = g.Step(a, d);
+                if (b < 0 || _seen[b] == _seenStamp) continue;
+                _seen[b] = _seenStamp;
+                _open.Enqueue(b);
+            }
+        }
+        return best;
+    }
+
+    /// <summary>Nodes found by the last pocket check (see <see cref="OffRoof"/>).</summary>
+    private readonly System.Collections.Generic.HashSet<int> _reach = new();
+
+    /// <summary>
+    /// A unit stuck on the roof of some other building (a house, a hall: it got shoved up there, or was there
+    /// when it was built) climbs down too: to the ground beside the building nearest to where it is going,
+    /// somewhere it can walk on from. False if it is not on a building, or there is no such ground.
+    /// </summary>
+    private bool OffRoof(UnitStore u, int i, out int sx, out int sz, out int sy)
+    {
+        sx = sz = sy = -1;
+        int ux = u.X[i].FloorToInt(), uz = u.Z[i].FloorToInt();
+        if (_sim.Buildings.At(ux, u.Y[i] - 1, uz) is not { } b) return false;
+        var g = _sim.Walkable;
+        long best = long.MaxValue;
+        for (int cz = b.Z - 1; cz <= b.MaxZ + 1; cz++)
+        for (int cx = b.X - 1; cx <= b.MaxX + 1; cx++)
+        {
+            if (b.Covers(cx, cz)) continue;
+            long dx = cx - u.OrderX[i], dz = cz - u.OrderZ[i], score = dx * dx + dz * dz;
+            if (score >= best) continue;
+            int y = Walk.NearestStandLevel(_sim.World, cx, cz, b.Y, 2);
+            int n = y < 0 ? -1 : g.Node(cx, cz, y);
+            if (n < 0 || !g.ReachesMoreThan(n, PathService.PocketLimit, _reach)) continue;
+            best = score;
+            (sx, sz, sy) = (cx, cz, y);
+        }
+        return best != long.MaxValue;
     }
 
     private static void EndOrder(UnitStore u, int i)

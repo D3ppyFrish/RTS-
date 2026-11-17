@@ -99,11 +99,11 @@ public class PathTests
         var sim = TestWorlds.Sim(w);
         var ids = SpawnGroup(sim, 10, 10, 20);
 
-        // No way through yet: the units see there is no path and stay put.
+        // No way through yet: the units see there is no path and go as near as they can, to the foot of the ridge.
         sim.Schedule(0, new MoveCommand(0, ids, 50, 20));
         var (giveUp, _, _) = RunUntilIdle(sim, ids, 600);
-        Assert.True(giveUp < 10, $"took {giveUp} ticks to give up");
-        foreach (int id in ids) Assert.True(sim.Units.X[sim.Units.IndexOf(id)].FloorToInt() < 28);
+        Assert.True(giveUp < 600, "the units never stopped");
+        foreach (int id in ids) Assert.InRange(sim.Units.X[sim.Units.IndexOf(id)].FloorToInt(), 22, 27);
 
         // Dig a tunnel two blocks high at z = 40 (off the straight line) and order again in the same tick.
         for (int x = 28; x <= 34; x++)
@@ -160,16 +160,25 @@ public class PathTests
     }
 
     [Fact]
-    public void UnitsWithNoWayThereGiveUpQuickly()
+    public void UnitsWithNoWayThereGoAsNearAsTheyCan()
     {
         var w = TestWorlds.Flat();
         TestWorlds.Box(w, 30, Feet, 0, 31, Feet + 2, 63, BlockType.Stone); // wall across the whole map
         var sim = TestWorlds.Sim(w);
         var ids = SpawnGroup(sim, 5, 10, 20);
         sim.Schedule(0, new MoveCommand(0, ids, 50, 20));
+        // The field covers everything reachable from the goal, so the units know at once there is no way, and
+        // head for the nearest place they can get to instead: the foot of the wall, in line with the goal.
+        int i = sim.Units.IndexOf(ids[0]);
+        for (int t = 0; t < 10; t++) sim.Step();
+        Assert.Equal(UnitOrder.Move, sim.Units.Order[i]);
+        Assert.Equal((29, 20), (sim.Units.OrderX[i], sim.Units.OrderZ[i]));
         var (ticks, _, _) = RunUntilIdle(sim, ids, 600);
-        // The field covers everything reachable from the goal, so the units know at once there is no way.
-        Assert.True(ticks < 10, $"took {ticks} ticks to give up");
+        Assert.True(ticks < 600, "the units never stopped");
+        AssertAllNear(sim, ids, 29, 20, 3);
+        // Once there they stop: they do not look again for somewhere nearer still.
+        sim.Run(100);
+        foreach (int id in ids) Assert.Equal(UnitOrder.Idle, sim.Units.Order[sim.Units.IndexOf(id)]);
     }
 
     [Fact]

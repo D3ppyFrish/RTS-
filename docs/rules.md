@@ -22,7 +22,11 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   up to 5 goods to the nearest storage, then come back for more of the same nearby; a group spreads
   over a resource instead of crowding one block. A worker that cannot get to its block tries the next
   one nearby, and gives the job up after three in a row (stone at the bottom of a pit too deep to climb
-  down into, say).
+  down into, say). Stone, iron ore and coal are only worked from a spot beside the block the worker can
+  walk out of again once it is dug: never from on top of it, nor from down in a hole it could not climb
+  out of. As the block is taken it checks again, since others may have dug nearby meanwhile: a block
+  whose digging would leave it, or anyone standing close by, in a hole with no way out is left, and
+  the worker moves on (#37).
 - **Buildings** (`BuildCommand`, from `data/buildings.json`): town hall, storehouse, house, farm, barracks
   and smelter. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
   A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column
@@ -48,6 +52,23 @@ unit of it carried by a worker or held in a building. A player's stock is what t
 - **Raids** (`CaptureCommand`, `BurnCommand`): units at an enemy storehouse capture it with its goods
   in 10 seconds or burn it and its goods in 5, unless one of the owner's units is within 8 blocks (and
   a soldier among them will fight the raiders).
+
+## Moving
+
+`src/Sim/Units/UnitMovement.cs` moves units along flow fields (`FlowField.cs`) over the walk graph
+(`WalkGraph.cs`): a unit steps up one block and drops up to three, and wades water one block deep.
+
+- **No way there** (#37): a unit sent somewhere it cannot walk to (a cliff top, across deep water, up a
+  tree's crown, onto a roof) walks to the nearest place it can get to instead (nearest across, then in
+  height), and stops there.
+- **Climbing down**: a unit on top of a wall, gate or tower, or on the roof of any other building, sent
+  somewhere it cannot walk to from up there, climbs down on the side nearest to where it is going.
+- **Digging out** (#37): a worker or sapper sent somewhere from a pit, hole or cave it cannot walk out of
+  (64 places to stand or fewer) digs a stair out instead (as a sapper tunnels, at its own digging pace),
+  to the nearest ground outside, and stops once it can walk on. An automatic worker then takes up work
+  again. Other units stay in the pit.
+- **Crowds**: units push each other apart, but a unit with no order is never pushed off a drop of more
+  than a level, so a crowd does not shove an idle worker into the hole beside it.
 
 ## Combat
 

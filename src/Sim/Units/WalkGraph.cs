@@ -151,6 +151,32 @@ public sealed class WalkGraph
     /// <summary>Path cost of stepping in direction d onto <paramref name="to"/>: wading counts double, roads half.</summary>
     public int Cost(int d, int to) => StepCost[_ground[to]][d];
 
+    /// <summary>
+    /// True if more than <paramref name="limit"/> nodes can be walked to from <paramref name="start"/>: it is
+    /// not in a pocket (a pit, a ledge) that small. The nodes found go in <paramref name="found"/> if given
+    /// (all of them, when it returns false).
+    /// </summary>
+    public bool ReachesMoreThan(int start, int limit, HashSet<int>? found = null)
+    {
+        found ??= new HashSet<int>();
+        found.Clear();
+        found.Add(start);
+        var open = new Queue<int>();
+        open.Enqueue(start);
+        while (open.Count > 0)
+        {
+            int a = open.Dequeue();
+            for (int d = 0; d < 8; d++)
+            {
+                int b = Step(a, d);
+                if (b < 0 || !found.Add(b)) continue;
+                if (found.Count > limit) return true;
+                open.Enqueue(b);
+            }
+        }
+        return false;
+    }
+
     /// <summary>Applies the block changes since the last call. Cheap when nothing changed.</summary>
     public void Update()
     {

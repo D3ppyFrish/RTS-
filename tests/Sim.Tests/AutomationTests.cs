@@ -438,31 +438,52 @@ public class AutomationTests
         Automate(sim, w);
         static bool InPit(int x, int z) => x is >= 30 and <= 33 && z is >= 30 and <= 33;
         RunUntil(sim, () => sim.World.Get(50, 11, 50) == BlockType.Air, 60 * Tps, "the outcrop to be dug");
-        // It tried the pit once, found it could not get in and kept away from the rest of it, for as long
-        // as automation avoids a place it failed at.
-        Assert.Equal(1, GatherJobs(sim, InPit));
-        long tried = sim.Automation.Record!.First(r => r.Command is GatherCommand g && InPit(g.X, g.Z)).Tick;
-        sim.Run((int)(tried + AutomationSystem.AvoidTicks - sim.Tick));
-        Assert.Equal(1, GatherJobs(sim, InPit));
+        // The pit's stone can only be worked from down in the pit, which it could not climb out of again, so
+        // it is never sent there.
+        Assert.Equal(0, GatherJobs(sim, InPit));
+        sim.Run(AutomationSystem.AvoidTicks);
+        Assert.Equal(0, GatherJobs(sim, InPit));
     }
 
     [Fact]
-    public void AWorkerStuckInAPitTriesLessAndLessOften()
+    public void AWorkerCutOffFromItsWorkTriesLessAndLessOften()
     {
-        // The worker is at the bottom of the pit, with soil around and under it, and stone out of its
-        // reach in six places, far enough apart that giving up on one says nothing about the others.
-        var sim = PitWorld(soilFrom: 1);
+        // The worker is on an island in a moat too deep to wade, with its storehouse, and stone out of its
+        // reach beyond the water in six places, far enough apart that giving up on one says nothing about
+        // the others. (The island is too big to count as a pit it could dig its way out of.)
+        const int ground = 10;
+        var sim = TestWorlds.Sim(TestWorlds.Flat(64, 24, 64, ground));
+        TestWorlds.Box(sim.World, 16, 7, 16, 47, ground, 47, BlockType.Water);
+        TestWorlds.Box(sim.World, 24, 1, 24, 39, ground - 1, 39, BlockType.Soil);
+        TestWorlds.Box(sim.World, 24, ground, 24, 39, ground, 39, BlockType.Grass);
         foreach (var (x, z) in new[] { (5, 5), (5, 58), (58, 5), (58, 58), (31, 5), (31, 58) })
             sim.World.Set(x, 11, z, BlockType.Stone);
-        Place(sim, 0, "storehouse", 10, 31);
+        Place(sim, 0, "storehouse", 26, 26);
         int w = Worker(sim, 0, 31, 31);
-        Assert.True(sim.Units.Y[Index(sim, w)] < 10, "it starts in the pit");
         sim.Automation.Record = new();
         Automate(sim, w);
         sim.Run(2 * 60 * Tps);
         // Two quick tries, then a longer wait after each failure (10, 20, 40 seconds...), not a new job
         // every few seconds.
         Assert.InRange(GatherJobs(sim, (_, _) => true), 2, 5);
+    }
+
+    [Fact]
+    public void AWorkerStuckInAPitDigsItsWayOutAndGetsToWork()
+    {
+        // The worker is at the bottom of a pit six blocks deep, with soil around and under it, and stone
+        // out of its reach up on the ground: it digs steps up out of the pit, then goes to the stone.
+        var sim = PitWorld(soilFrom: 1);
+        foreach (var (x, z) in new[] { (5, 5), (5, 58), (58, 5), (58, 58), (31, 5), (31, 58) })
+            sim.World.Set(x, 11, z, BlockType.Stone);
+        Place(sim, 0, "storehouse", 10, 31);
+        int w = Worker(sim, 0, 31, 31);
+        Assert.True(sim.Units.Y[Index(sim, w)] < 10, "it starts in the pit");
+        Automate(sim, w);
+        RunUntil(sim, () => sim.Units.Job[Index(sim, w)] == UnitJob.Tunnel, 30 * Tps, "the worker to start digging out");
+        RunUntil(sim, () => sim.Units.Y[Index(sim, w)] > 10, 3 * 60 * Tps, "the worker to get out of the pit");
+        RunUntil(sim, () => sim.Units.CarryAmount[Index(sim, w)] > 0 || sim.Economy.Player(0).Gathered[(int)Good.Stone] > 0,
+            2 * 60 * Tps, "the worker to gather stone");
     }
 
     // --- Repeat ------------------------------------------------------------------------------------
@@ -686,7 +707,7 @@ public class AutomationTests
     [Fact]
     public void ScriptedMatchesUseAutomation()
     {
-        var log = ScriptedMatch.Generate(3, 256, 64, 256, ticks: 3000, startUnits: 12); // a seed whose 3000 ticks pick every kind of setting
+        var log = ScriptedMatch.Generate(2, 256, 64, 256, ticks: 3000, startUnits: 12); // a seed whose 3000 ticks pick every kind of setting
         Assert.Contains(log.Commands, c => c.Command is AutomateCommand);
         Assert.Contains(log.Commands, c => c.Command is AutomateAllCommand);
         Assert.Contains(log.Commands, c => c.Command is RepeatCommand);

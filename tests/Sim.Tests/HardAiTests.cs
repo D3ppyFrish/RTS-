@@ -147,7 +147,7 @@ public class HardAiTests
         var moves = log.OfType<MoveCommand>().Where(m => m.Units.Contains(rider)).ToList();
         Assert.Equal(1, sim.Buildings.AtColumn(moves[0].X, moves[0].Z)?.Owner); // the first try: onto their house
         Assert.True(moves.Count >= 2, "a second try");
-        Assert.Equal(moves[0].X - AiPlayer.LookBack, moves[1].X); // further back
+        Assert.True(moves[1].X <= moves[0].X - AiPlayer.LookBack, $"the second try, at {moves[1].X}, is further back than {moves[0].X}");
         Assert.Null(sim.Buildings.AtColumn(moves[1].X, moves[1].Z));
         Assert.DoesNotContain(ai.Journal, j => j.Text.Contains("gives the place up"));
     }

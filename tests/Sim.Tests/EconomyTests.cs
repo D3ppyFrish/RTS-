@@ -278,13 +278,14 @@ public class EconomyTests
         var sim = TestWorlds.Sim(TestWorlds.Flat(64, 24, 64, ground));
         TestWorlds.Box(sim.World, 30, 5, 30, 33, ground, 33, BlockType.Air);
         int w = Worker(sim, 0, 20, 31);
+        // The only places to stand at it are down in the pit, which it could not climb out of again: it does
+        // not go, and gives the job up at once.
         sim.Schedule(0, new GatherCommand(0, new[] { w }, 30, 4, 31));
-        sim.Step();
+        sim.Run(5);
         int i = Index(sim, w);
-        Assert.Equal(UnitJob.Gather, sim.Units.Job[i]);
-        RunUntil(sim, () => sim.Units.Job[Index(sim, w)] == UnitJob.None, 120 * Tps, "the worker to give up");
+        Assert.Equal(UnitJob.None, sim.Units.Job[i]);
+        sim.Run(60 * Tps);
         i = Index(sim, w);
-        Assert.Equal(0, sim.Units.JobMisses[i]);
         Assert.Equal(0, sim.Units.CarryAmount[i]);
         Assert.True(sim.Units.Y[i] > ground, "it stayed on top");
         Assert.Equal(16, CountBlocks(sim.World, BlockType.Stone, 30, 4, 30, 33, 4, 33)); // the pit floor is untouched

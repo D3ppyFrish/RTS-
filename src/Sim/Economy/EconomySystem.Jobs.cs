@@ -69,6 +69,11 @@ public sealed partial class EconomySystem
         }
         var (baseY, topY) = Harvest.Span(World, x, y, z);
         bool there = Harvest.InReach(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt(), x, baseY, topY, z);
+        // Stone, ore and coal are only dug from where the worker can still walk out once the block is gone: in
+        // reach on top of it, or down in a hole beside it, it walks on to a spot that leaves it a way out.
+        if (there && u.Phase[i] == JobPhase.ToWork && Harvest.Quarried(kind)
+            && !Harvest.LeavesWayOut(World, x, baseY, z, u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()))
+            there = false;
 
         if (u.Phase[i] == JobPhase.ToWork)
         {
@@ -79,11 +84,13 @@ public sealed partial class EconomySystem
                     SetPhase(i, JobPhase.Working);
                     return;
                 case Travel.NeedSpot:
-                    // Prefer standing beside a quarried block over standing on it (and dropping into the hole).
+                    // Prefer standing beside a quarried block over standing on it (and dropping into the hole). A
+                    // quarried block is only worked from a spot the worker can walk out of again afterwards.
+                    bool quarry = Harvest.Quarried(kind);
                     if (Harvest.WorkSpot(World, x, baseY, topY, z, u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt(),
-                            out int sx, out int sy, out int sz, allowOnTop: !Harvest.Quarried(kind))
-                        || Harvest.WorkSpot(World, x, baseY, topY, z, u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt(),
-                            out sx, out sy, out sz))
+                            out int sx, out int sy, out int sz, allowOnTop: !quarry, wayOut: quarry)
+                        || (!quarry && Harvest.WorkSpot(World, x, baseY, topY, z, u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt(),
+                            out sx, out sy, out sz)))
                     {
                         _sim.SendUnit(i, sx, sz, sy);
                         return;
@@ -113,12 +120,44 @@ public sealed partial class EconomySystem
             _sim.Physics.FellTree(x, baseY, topY, z, u.X[i].FloorToInt(), u.Z[i].FloorToInt());
             return;
         }
+        if (Harvest.Quarried(kind) && ShutsIn(i, x, y, z))
+        {
+            // The ground changed while it worked (others dug nearby): taking this block now would leave it, or
+            // somebody else close by, in a hole with no way out. It leaves the block and moves on.
+            if (NextTarget(i)) SetPhase(i, JobPhase.ToWork);
+            else if (u.CarryAmount[i] > 0) GoToStorage(i);
+            else EndJob(i);
+            return;
+        }
         World.Set(x, y, z, BlockType.Air);
         if (Harvest.Yields(block, out var good)) AddCarry(i, good, Harvest.Amount(block));
         if (!Harvest.Repeats(kind)) EndJob(i);
         else if (u.CarryAmount[i] >= Capacity(u.Owner[i]) || Harvest.Bulk(block) || !NextTarget(i)) GoToStorage(i);
         else SetPhase(i, JobPhase.ToWork);
     }
+
+    /// <summary>
+    /// True if digging block (x, y, z) now would shut someone in: the worker at it (see
+    /// <see cref="Harvest.LeavesWayOut"/>), or any other unit standing close by that can walk out to open ground
+    /// now and could not with the block gone. Checked as the block is taken, since workers digging side by side
+    /// each see the quarry as it was when they picked their blocks.
+    /// </summary>
+    private bool ShutsIn(int i, int x, int y, int z)
+    {
+        var u = U;
+        if (!Harvest.LeavesWayOut(World, x, y, z, u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt())) return true;
+        for (int j = 0; j < u.Count; j++)
+        {
+            if (j == i) continue;
+            int jx = u.X[j].FloorToInt(), jz = u.Z[j].FloorToInt();
+            if (Math.Max(Math.Abs(jx - x), Math.Abs(jz - z)) > ShutInReach || Math.Abs(u.Y[j] - y) > ShutInReach) continue;
+            if (Harvest.ShutsIn(World, x, y, z, jx, u.Y[j], jz)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>How near (columns, and levels) to a dug block a unit must stand for <see cref="ShutsIn"/> to look out for it.</summary>
+    public const int ShutInReach = 4;
 
     /// <summary>Moves the gatherer on to the nearest unclaimed block of its kind near the last one. False if none.</summary>
     private bool NextTarget(int i)
