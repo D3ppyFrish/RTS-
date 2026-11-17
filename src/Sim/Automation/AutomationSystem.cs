@@ -40,8 +40,13 @@ public sealed partial class AutomationSystem
 {
     private const int Tps = Simulation.TicksPerSecond;
 
-    /// <summary>How far (columns) an automatic worker looks for something to gather.</summary>
+    /// <summary>How far (columns) an automatic worker looks for the good it needs most.</summary>
     public const int SearchRadius = 40;
+    /// <summary>
+    /// How far (columns) it looks when there is nothing to gather within <see cref="SearchRadius"/>: once
+    /// the ground near town is cleared it walks further out rather than standing idle.
+    /// </summary>
+    public const int FarSearchRadius = 128;
     /// <summary>How many levels above and below its feet it looks.</summary>
     public const int SearchHeight = 12;
     /// <summary>Ticks a worker that found nothing to gather waits before it looks again.</summary>
@@ -419,6 +424,8 @@ public sealed partial class AutomationSystem
     /// coal 1, those two only with a smelter) over its gatherers plus one; four times that for food when
     /// the player has less than two minutes' worth or is starving, and a sixteenth for a good they have
     /// <see cref="Plenty"/> of. The search goes out ring by ring and stops once the most needed good is found.
+    /// If there is nothing to gather within <see cref="SearchRadius"/> it goes on out to
+    /// <see cref="FarSearchRadius"/>, and takes the first ring with anything in it.
     /// </summary>
     private bool FindGather(int i, Stats s, int only, out int fx, out int fy, out int fz)
     {
@@ -451,7 +458,8 @@ public sealed partial class AutomationSystem
         var w = World;
         long tick = _sim.Tick;
         _misses.TryGetValue(u.Id[i], out var misses);
-        for (int r = 0; r <= SearchRadius && !have[top] && wanted > 0; r++)
+        bool any = false;
+        for (int r = 0; r <= FarSearchRadius && !have[top] && wanted > 0 && !(any && r > SearchRadius); r++)
         {
             _ring.Clear();
             for (int dz = -r; dz <= r; dz++)
@@ -479,6 +487,7 @@ public sealed partial class AutomationSystem
                 if (have[c.Kind] || KeptAway(misses, c.X, c.Z, tick) || !CanSend(c, ux, uy, uz, tick)) continue;
                 have[c.Kind] = true;
                 (hx[c.Kind], hy[c.Kind], hz[c.Kind]) = (c.X, c.Y, c.Z);
+                any = true;
                 wanted--;
             }
         }

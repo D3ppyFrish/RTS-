@@ -284,7 +284,8 @@ its commands played back ends the same. An order of the player's always comes fi
   automatic worker with nothing to do takes the nearest job it is needed for, in this order: take what
   it carries to storage; build a site that can use another builder (one, plus one for every 30 seconds
   of building); work a farm with a free place; keep a smelter going while there is something to smelt;
-  otherwise gather within 40 columns what is needed most. Food and wood are wanted 3 parts each and
+  otherwise gather within 40 columns what is needed most, or, once nothing is left to gather that close,
+  the nearest of anything within 128 columns. Food and wood are wanted 3 parts each and
   stone 2 (iron ore and coal 1 each once you have a smelter), spread over the workers already on each;
   food counts four times as much while you are hungry or have less than two minutes' food, and a good
   you have 500 of hardly at all. A worker the player orders to move, stop or fight waits for orders
@@ -299,7 +300,7 @@ its commands played back ends the same. An order of the player's always comes fi
   (the rule above), or gather one good (food, wood, stone, iron ore or coal; iron ore and coal then even
   without a smelter). An idle automatic worker still takes what it carries to storage first, then goes
   down its list and takes the first kind of work there is some of (the nearest site, farm or smelter, or
-  within 40 columns for gathering); work left off the list it never takes on its own. A worker without a
+  within 40 columns for gathering, or 128 once nothing is closer); work left off the list it never takes on its own. A worker without a
   list of its own follows its player's default list, and so do the workers they train; the default starts
   as build, farm, smelt, supply, gather what's needed (supply only finds work once a storehouse has supply rules). A new list
   counts from the worker's next job. Lists are part of the game state.
