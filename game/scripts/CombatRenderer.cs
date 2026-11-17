@@ -96,6 +96,14 @@ public partial class CombatRenderer : Node3D
         _ready = Make(SelectionRenderer.Ring(0.47f, 0.55f, 32)); // outside the selection ring, so both show
     }
 
+    /// <summary>The height (metres) of the ground a ring <paramref name="radius"/> metres across lies on under unit <paramref name="i"/> at (x, z) (blocks).</summary>
+    private float RingY(int i, float x, float z, float alpha, float radius)
+    {
+        var u = _sim.Units;
+        float bs = ChunkMesher.BlockSize;
+        return (Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + ChunkRenderer.GroundDrop(x, u.Y[i], z, radius / bs)) * bs;
+    }
+
     /// <summary>Rebuilds everything for this frame; <paramref name="alpha"/> is how far we are between ticks.</summary>
     public void UpdateFrame(float alpha, IReadOnlyList<int> selected)
     {
@@ -116,10 +124,11 @@ public partial class CombatRenderer : Node3D
             float x = Mathf.Lerp(u.PrevX[i].ToFloat(), u.X[i].ToFloat(), alpha);
             float z = Mathf.Lerp(u.PrevZ[i].ToFloat(), u.Z[i].ToFloat(), alpha);
             float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + ChunkRenderer.GroundDrop(x, u.Y[i], z);
+            // A ring lies on the highest ground it reaches over, so a lowered step's whole neighbour does not hide it.
             if (u.Rout[i] > 0)
-                _rings.Add(Vector3.Right, Vector3.Up, Vector3.Back, new Vector3(x * bs, y * bs + 0.04f, z * bs), Routing);
+                _rings.Add(Vector3.Right, Vector3.Up, Vector3.Back, new Vector3(x * bs, RingY(i, x, z, alpha, 0.42f) + 0.04f, z * bs), Routing);
             if (u.Owner[i] == PlayerControl.LocalPlayer && (u.Subdued[i] || (evolves && evolution.CanEvolve(i))))
-                _ready.Add(Vector3.Right, Vector3.Up, Vector3.Back, new Vector3(x * bs, y * bs + 0.05f, z * bs), Evolvable);
+                _ready.Add(Vector3.Right, Vector3.Up, Vector3.Back, new Vector3(x * bs, RingY(i, x, z, alpha, 0.55f) + 0.05f, z * bs), Evolvable);
             int max = _sim.MaxHpOf(i);
             if (u.Hp[i] >= max && !_selected.Contains(u.Id[i])) continue;
             Bar(new Vector3(x, y + 2.5f, z) * bs, 1.2f * bs, 0.18f * bs, (float)u.Hp[i] / Math.Max(1, max), right, up, back);

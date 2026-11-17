@@ -159,6 +159,15 @@ public static class ChunkMesher
         return new ChunkMeshData { Opaque = ToArrays(opaque, fine, 1f, BlockSize), Water = ToArrays(water, null, 0.7f, BlockSize) };
     }
 
+    /// <summary>The mark (see <see cref="FineMark"/>) a whole block of this kind is drawn with.</summary>
+    public static float MarkOf(BlockType block) => block switch
+    {
+        BlockType.Crystal => GlowMark,
+        BlockType.Lava => LavaMark,
+        _ when BlockInfo.IsLeaves(block) && block != BlockType.MushroomCap => LeafMark,
+        _ => 1f,
+    };
+
     /// <summary>The mark (see <see cref="FineMark"/>) a fine voxel of this colour is drawn with.</summary>
     public static float FineMarkOf(byte colour) =>
         StructurePalette.IsGlow(colour) ? GlowMark : StructurePalette.IsLeaf(colour) ? FineLeafMark
@@ -194,13 +203,7 @@ public static class ChunkMesher
         {
             var quad = quads[q];
             var c = (horizon ? HorizonColor(quad.Block, quad.Face) : ColorOf(quad.Block)) * Shade[quad.Face];
-            c.A = alpha < 1 ? alpha : quad.Block switch
-            {
-                BlockType.Crystal => GlowMark,
-                BlockType.Lava => LavaMark,
-                _ when BlockInfo.IsLeaves(quad.Block) && quad.Block != BlockType.MushroomCap => LeafMark,
-                _ => alpha,
-            };
+            c.A = alpha < 1 ? alpha : MarkOf(quad.Block);
             for (int k = 0; k < 4; k++)
             {
                 var (x, y, z) = quad.Corner(k);
