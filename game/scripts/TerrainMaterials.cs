@@ -78,6 +78,14 @@ vec3 block_look(vec3 c, float mark) {
     float edge = (1.0 - smoothstep(0.0, max(0.06, px), min(e.x, e.y))) * (1.0 - smoothstep(0.05, 0.15, px));
     return c * (1.0 - 0.22 * edge);
 }
+// Where a fragment is lit from: the middle of the fine voxel (an eighth of a block) it lies on, lifted just
+// off the face. Shadows and lamplight then fall voxel by voxel, in steps, as in the rest of the voxel look.
+vec3 voxel_light_vertex(mat4 view) {
+    float fine = block_size / 8.0;
+    vec3 cell = (floor(v_world / fine - v_world_normal * 0.01) + 0.5) * fine;
+    vec3 n = normalize(v_world_normal);
+    return (view * vec4(cell + n * fine * 0.5, 1.0)).xyz;
+}
 vec3 block_glow(vec3 c, float mark) {
     if (mark <= 0.5 || mark >= 0.75) return vec3(0.0);
     // Lava: slow bright veins that flow across a darker crust.
@@ -109,6 +117,7 @@ void vertex() {
 }
 void fragment() {
     vec2 fog = fog_at(v_fog_xz);
+    LIGHT_VERTEX = voxel_light_vertex(VIEW_MATRIX);
     float wet_top = wet * smoothstep(0.5, 0.9, v_world_normal.y);
     ALBEDO = fogged(block_look(COLOR.rgb, COLOR.a), fog) * (1.0 - 0.3 * wet_top);
     SPECULAR = (0.3 + 0.3 * wet_top) * fog.x;
@@ -140,6 +149,7 @@ void fragment() {
     if (v_world_y > slice_y + 0.002 || (v_world_y > slice_y - 0.002 && v_normal_y < -0.5)) discard;
     if (FRONT_FACING) {
         vec2 fog = fog_at(v_fog_xz);
+        LIGHT_VERTEX = voxel_light_vertex(VIEW_MATRIX);
         ALBEDO = fogged(block_look(COLOR.rgb, COLOR.a), fog);
         SPECULAR = 0.3 * fog.x;
         ROUGHNESS = 0.9;

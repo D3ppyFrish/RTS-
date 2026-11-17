@@ -177,7 +177,7 @@ public partial class WorldLighting : Node3D
         // Rain and fog close the distance in.
         _env.FogDensity = 0.0011f + 0.004f * Look.Mist + 0.0025f * Look.Rain;
         // Colours fade by moonlight, as they do to the eye at night.
-        _env.AdjustmentSaturation = Mathf.Lerp(1f, 0.45f, light.Lanterns) * (1f - 0.3f * Look.Cloud);
+        _env.AdjustmentSaturation = Mathf.Lerp(1f, 0.6f, light.Lanterns) * (1f - 0.3f * Look.Cloud);
         _env.FogSunScatter = DayCycle.IsNight(Hour) ? 0f : 0.15f;
         // The sky only shows at a low camera; changing it re-renders it, so it follows in small steps.
         float skyKey = Hour + Look.Cloud * 100f + Look.Mist * 1000f;
