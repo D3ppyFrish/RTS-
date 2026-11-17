@@ -54,6 +54,10 @@ vec3 sway(vec3 world, float time) {
                 cos(time * (1.1 + wind) + world.z * 0.4 + world.x * 0.2) * 0.6) * amp * gust;
 }
 varying vec3 v_world_normal;
+// The size of the blocks a surface is made of, in whole blocks: a half for the half-size blocks of nearby
+// ground (ChunkLod.Fine, marked in the mesh's UV), else 1. Fine voxels are an eighth of a whole block either way.
+varying float v_scale;
+float scale_of(vec2 uv) { return uv.x > 0.5 ? 0.5 : 1.0; }
 vec3 linear_of(vec3 c) { return mix(c, c * (c * (c * 0.305306011 + 0.682171111) + 0.012522878), 0.85); }
 float block_hash(vec3 p) {
     p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
@@ -64,18 +68,20 @@ vec3 block_look(vec3 c, float mark) {
     c = linear_of(c);
     if (mark > 0.5 && mark < 0.6) return c * 0.3; // lava: dark under its glow
     if (mark > 0.6 && mark < 0.66) return c; // crystal
-    vec3 inside = v_world / block_size - v_world_normal * 0.02;
+    float voxels = 8.0 * v_scale;
+    vec3 inside = v_world / (block_size * v_scale) - v_world_normal * 0.02;
     // Each fine voxel (an eighth of a block) a slightly different shade: the grain of the voxel style.
     // It fades out far away, where it would shimmer.
     float px = max(fwidth(inside.x), max(fwidth(inside.y), fwidth(inside.z)));
-    float grain = (block_hash(floor(inside * 8.0) + 0.5) - 0.5) * (1.0 - smoothstep(0.04, 0.12, px));
+    float grain = (block_hash(floor(inside * voxels) + 0.5) - 0.5) * (1.0 - smoothstep(0.04, 0.12, px * voxels / 8.0));
     if (mark < 0.95 && (!is_leaf(mark) || mark < 0.34)) return c * (1.0 + 0.2 * grain); // fine voxels have no block grid
     c *= (0.9 + 0.17 * block_hash(floor(inside))) * (1.0 + 0.22 * grain);
     vec3 f = fract(inside);
     vec3 a = abs(v_world_normal);
     vec2 uv = a.y > 0.5 ? f.xz : a.x > 0.5 ? f.yz : f.xy;
     vec2 e = min(uv, 1.0 - uv);
-    float edge = (1.0 - smoothstep(0.0, max(0.06, px), min(e.x, e.y))) * (1.0 - smoothstep(0.05, 0.15, px));
+    float line = 0.48 / voxels; // as wide on a half-size block as on a whole one
+    float edge = (1.0 - smoothstep(0.0, max(line, px), min(e.x, e.y))) * (1.0 - smoothstep(0.05, 0.15, px));
     return c * (1.0 - 0.22 * edge);
 }
 // Where a fragment is lit from: the middle of the fine voxel (an eighth of a block) it lies on, lifted just
@@ -113,6 +119,7 @@ void vertex() {
     v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
     v_world_normal = (MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz;
     v_fog_xz = v_world.xz;
+    v_scale = scale_of(UV);
     if (is_leaf(COLOR.a)) VERTEX += sway(v_world, TIME);
 }
 void fragment() {
@@ -143,6 +150,7 @@ void vertex() {
     v_world_y = v_world.y;
     v_normal_y = v_world_normal.y;
     v_fog_xz = v_world.xz;
+    v_scale = scale_of(UV);
     if (is_leaf(COLOR.a)) VERTEX += sway(v_world, TIME);
 }
 void fragment() {

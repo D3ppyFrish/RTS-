@@ -76,6 +76,80 @@ public static class StructureMesher
         finally { _ao = false; }
     }
 
+    /// <summary>How many fine voxels a side the voxels of the chunk being built are drawn as (see <see cref="Build(ReadOnlySpan{BlockType}, int, int, int, List{FineQuad}, bool, int)"/>).</summary>
+    [ThreadStatic] private static int _step;
+    [ThreadStatic] private static byte[]? _small;
+
+    /// <summary>
+    /// As <see cref="Build(ReadOnlySpan{BlockType}, int, int, int, List{FineQuad}, bool)"/>, drawn more simply
+    /// for far away: with <paramref name="step"/> 2 or 4 the fine voxels are merged into voxels that many a
+    /// side before they are meshed (a block is then 4 or 2 voxels a side instead of 8), each as solid as most
+    /// of what it stands for and its commonest colour. The quads are still in fine voxels.
+    /// </summary>
+    public static void Build(ReadOnlySpan<BlockType> padded, int chunkX, int chunkY, int chunkZ, List<FineQuad> output, bool ao, int step)
+    {
+        if (step != 1 && step != 2 && step != 4) throw new ArgumentOutOfRangeException(nameof(step));
+        _step = step;
+        try { Build(padded, chunkX, chunkY, chunkZ, output, ao); }
+        finally { _step = 1; }
+    }
+
+    /// <summary>
+    /// Merges a grid of fine voxels with a border one voxel thick (as <see cref="MeshBox"/> fills it) into
+    /// voxels <paramref name="step"/> a side, with the border still one voxel thick. A merged voxel is drawn
+    /// if at least <see cref="KeepSixteenths"/> sixteenths of it are, in the commonest colour there; the border
+    /// hides faces only where all of it does, so nothing drawn simply is left open against its neighbour.
+    /// </summary>
+    public static void Shrink(ReadOnlySpan<byte> grid, int nx, int ny, int nz, Span<byte> small, int step)
+    {
+        int mx = (nx - 2) / step + 2, my = (ny - 2) / step + 2, mz = (nz - 2) / step + 2;
+        Span<byte> counts = stackalloc byte[StructurePalette.Count];
+        int need = (step * step * step * KeepSixteenths + 15) / 16;
+        for (int j = 0; j < my; j++)
+        for (int k = 0; k < mz; k++)
+        for (int i = 0; i < mx; i++)
+        {
+            int xa = i == 0 ? 0 : 1 + (i - 1) * step, xb = i == 0 ? 1 : i == mx - 1 ? nx : xa + step;
+            int ya = j == 0 ? 0 : 1 + (j - 1) * step, yb = j == 0 ? 1 : j == my - 1 ? ny : ya + step;
+            int za = k == 0 ? 0 : 1 + (k - 1) * step, zb = k == 0 ? 1 : k == mz - 1 ? nz : za + step;
+            bool border = i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz - 1;
+            byte result;
+            if (border)
+            {
+                result = StructurePalette.Occluder;
+                for (int y = ya; y < yb && result != StructurePalette.Empty; y++)
+                for (int z = za; z < zb && result != StructurePalette.Empty; z++)
+                for (int x = xa; x < xb; x++)
+                    if (grid[(y * nz + z) * nx + x] == StructurePalette.Empty) { result = StructurePalette.Empty; break; }
+            }
+            else
+            {
+                counts.Clear();
+                int solid = 0;
+                for (int y = ya; y < yb; y++)
+                for (int z = za; z < zb; z++)
+                for (int x = xa; x < xb; x++)
+                {
+                    byte c = grid[(y * nz + z) * nx + x];
+                    if (c == StructurePalette.Empty || c >= StructurePalette.Count) continue;
+                    counts[c]++;
+                    solid++;
+                }
+                result = StructurePalette.Empty;
+                if (solid >= need)
+                {
+                    int best = 0;
+                    for (int c = 1; c < counts.Length; c++)
+                        if (counts[c] > best) { best = counts[c]; result = (byte)c; }
+                }
+            }
+            small[(j * mz + k) * mx + i] = result;
+        }
+    }
+
+    /// <summary>How much of a merged voxel must be drawn for it to be (see <see cref="Shrink"/>), in sixteenths.</summary>
+    public const int KeepSixteenths = 4;
+
     /// <summary>Smallest region (blocks on a side) <see cref="Region"/> splits a chunk into.</summary>
     private const int MinRegion = 4;
 
@@ -164,7 +238,24 @@ public static class StructureMesher
             }
         }
 
-        Mesh(grid.AsSpan(0, volume), nx, ny, nz, x0 * F - 1, y0 * F - 1, z0 * F - 1, output, _ao);
+        int step = _step;
+        if (step <= 1)
+        {
+            Mesh(grid.AsSpan(0, volume), nx, ny, nz, x0 * F - 1, y0 * F - 1, z0 * F - 1, output, _ao);
+            return;
+        }
+        // Drawn simply: merged voxels, meshed the same way, and the quads put back in fine voxels.
+        int mx = (nx - 2) / step + 2, my = (ny - 2) / step + 2, mz = (nz - 2) / step + 2;
+        var small = _small;
+        if (small == null || small.Length < mx * my * mz) small = _small = new byte[Math.Max(mx * my * mz, 34 * 34 * 34)];
+        Shrink(grid.AsSpan(0, volume), nx, ny, nz, small, step);
+        int first = output.Count;
+        Mesh(small.AsSpan(0, mx * my * mz), mx, my, mz, x0 * F / step - 1, y0 * F / step - 1, z0 * F / step - 1, output, _ao);
+        for (int q = first; q < output.Count; q++)
+        {
+            var quad = output[q];
+            output[q] = quad with { X = quad.X * step, Y = quad.Y * step, Z = quad.Z * step, W = quad.W * step, H = quad.H * step };
+        }
     }
 
     /// <summary>The fine voxels of detailed block (bx, by, bz) of the chunk being built, worked out the first time asked.</summary>

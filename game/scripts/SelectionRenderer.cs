@@ -294,7 +294,7 @@ void fragment() {
         float bs = ChunkMesher.BlockSize;
         float x = Mathf.Lerp(u.PrevX[i].ToFloat(), u.X[i].ToFloat(), alpha);
         float z = Mathf.Lerp(u.PrevZ[i].ToFloat(), u.Z[i].ToFloat(), alpha);
-        float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + UnitRenderer.DeckOffset(_sim, i);
+        float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + UnitRenderer.DeckOffset(_sim, i) + ChunkRenderer.GroundDrop(x, u.Y[i], z);
         int o = count * FloatsPerInstance;
         var b = _buffer;
         b[o + 0] = 1; b[o + 1] = 0; b[o + 2] = 0; b[o + 3] = x * bs;

@@ -35,6 +35,13 @@ namespace Rts.Game;
 ///   --benchmark[=SECONDS] dig 100 blocks per second while slowly orbiting, log frame times and quit
 ///   --benchmark-out=PATH  file the benchmark result line is appended to (default user://benchmark.txt)
 ///   --world=NxHxN         world size in blocks (default 512x64x512)
+///   --terrain=fine        a prototype of half-size world blocks: the ground near the camera is drawn in
+///                         blocks half the size (0.25 m), its steps split in two (see Rts.Sim.World.FineTerrain);
+///                         the rules still run on whole blocks
+///   --lod=off             draw every chunk as finely as the nearest (see ChunkRenderer): otherwise far trees
+///                         and buildings are drawn in bigger voxels, and the horizon in plain blocks
+///   --lod-reach=A,B,C     how far from the camera (metres) half-size ground, full detail and bigger voxels
+///                         reach (default 90,100,250)
 ///   --map=PATH            load a saved map (RegionMap format) instead of generating one
 ///   --data=DIR            load the game data (factions.json, techs.json, buildings.json, units.json, roles.json,
 ///                         citystates.json) from DIR instead of the files built into the game; problems are
@@ -309,7 +316,16 @@ public partial class Main : Node3D
         // What is drawn is the world as you know it: with fog of war, the land as the match was set up, and
         // after that what you have seen of it.
         _fog = new FogOfWar(_sim, PlayerControl.LocalPlayer);
-        _chunks.Init(_fog.World, _terrain.Opaque, _terrain.Water);
+        ChunkRenderer.UseFineTerrain = _args.TryGetValue("terrain", out var terrainArg) && terrainArg == "fine";
+        ChunkRenderer.Lod = !(_args.TryGetValue("lod", out var lodArg) && lodArg == "off");
+        if (_args.TryGetValue("lod-reach", out var reachArg))
+        {
+            var reach = reachArg.Split(',');
+            for (int i = 0; i < reach.Length && i < ChunkRenderer.Reach.Length; i++)
+                if (float.TryParse(reach[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var metres))
+                    ChunkRenderer.Reach[i] = metres;
+        }
+        _chunks.Init(_fog.World, _terrain, () => _rig.Camera.GlobalPosition);
         _terrain.SetFog(_fog.Texture, new Vector2(WorldX, WorldZ) * ChunkMesher.BlockSize);
         if (setup.Computer)
             foreach (int p in _sim.Match.Players)
@@ -394,7 +410,7 @@ public partial class Main : Node3D
 
         double meshMs = _chunks.LoadAll();
         GD.Print($"Loaded {WorldX}x{WorldY}x{WorldZ} world: generate {generateMs:F0} ms, mesh {meshMs:F0} ms, " +
-                 $"total {loadTimer.Elapsed.TotalMilliseconds:F0} ms, {_chunks.ChunkNodeCount} chunk meshes");
+                 $"total {loadTimer.Elapsed.TotalMilliseconds:F0} ms, {_chunks.ChunkNodeCount} chunk meshes; {_chunks.Describe()}");
 
         if (_args.TryGetValue("benchmark", out var bench))
         {
@@ -403,7 +419,7 @@ public partial class Main : Node3D
             DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
             _benchmark = new Benchmark(seconds, setup.Seed, loadTimer.Elapsed.TotalMilliseconds,
                 _args.TryGetValue("benchmark-out", out var outPath) ? outPath : "user://benchmark.txt");
-            _benchmark.Extra = () => $"detail={(Detail.DetailedUnits.Enabled ? "on" : "off")} detailed_units={_unitRenderer.DetailedCount} unit_draw_ms={_unitRenderer.AverageUpdateMs:F2} detail_place_upload_ms={_unitRenderer.DetailSplit} " +
+            _benchmark.Extra = () => $"{_chunks.Describe()} detail={(Detail.DetailedUnits.Enabled ? "on" : "off")} detailed_units={_unitRenderer.DetailedCount} unit_draw_ms={_unitRenderer.AverageUpdateMs:F2} detail_place_upload_ms={_unitRenderer.DetailSplit} " +
                 $"keeps={_args.GetValueOrDefault("keeps", "0")} keep_tris={Detail.DetailedKeep.Triangles}/{Detail.DetailedKeep.FarTriangles} keep_lod={(Detail.DetailedKeep.Lod ? "on" : "off")} " +
                 $"unit_build_ms={Detail.DetailedUnits.BuildMs:F0} unit_tris={string.Join(",", Detail.DetailedUnits.Triangles.Select(t => $"{t.Key}:{t.Value}"))}";
         }

@@ -219,7 +219,38 @@ change with `--benchmark-out=PATH`). On a Windows build run `RTS.exe -- --benchm
 Add `--units=1000` to also spawn 1,000 of your units around the camera; every 8 seconds they are all
 sent to one new point near the camera, so they keep walking around the holes being dug
 (`RTS.exe -- --benchmark --units=1000`).
-The cloud dev container only has a software renderer, so its FPS numbers are not representative.
+The cloud dev container only has a software renderer, so its FPS numbers are not representative
+(`clock_avg_ms` is the time a frame really took there; the engine's own figure is rounded to whole screen
+refreshes). The line also says how the world was drawn: `lod_chunks` and `lod_tris` are the chunks and
+triangles at each level of detail (half-size ground / full detail / bigger voxels / plain blocks),
+`mesh_mb` the vertex data on screen and `fine_world_mb` the half-size blocks' storage.
+
+### Levels of detail and the half-size blocks prototype
+
+`ChunkRenderer` draws each chunk as finely as its distance from the camera calls for (`ChunkLod`), and
+re-meshes a chunk on a worker thread when the camera crosses a line (with a little slack, so nothing
+flickers on it):
+
+- **Full detail** up to 100 m: as before.
+- **Bigger voxels** from 100 m: trees, buildings and rubble in voxels four times the size, two to a block
+  (`StructureMesher.Shrink`): the same shapes for well under half the triangles. Trees and buildings are
+  seven eighths of the world's triangles; the ground is the other eighth.
+- **Plain blocks** from 250 m: everything as whole blocks with no shading in the corners, a seventh of
+  the triangles. Crowns get the colour their leaves have on average (`ChunkMesher.HorizonColor`).
+
+`--lod=off` draws everything at full detail; `--lod-reach=A,B,C` sets the three distances.
+
+`--terrain=fine` is a prototype of **half-size world blocks** (0.25 m): within 90 m of the camera the
+ground is drawn in blocks half the size, with every step of open natural ground split in two
+(`Rts.Sim.World.FineTerrain`): the top half of a ground block goes wherever the ground is nearer to lower
+ground than to higher ground, so a hillside climbs in quarter-metre steps and the edge of a plateau gets
+a shoulder. The rules still run on whole blocks: units, buildings, digging and pathfinding are unchanged,
+and what stands on a lowered step is drawn a quarter of a metre lower. The finer world is a second
+`VoxelWorld` of 1024x128x1024 blocks made at load (53 MB against 8 MB) and kept in step with the whole blocks as
+they change; trees and buildings are drawn from the whole blocks as before. Known gaps: blood, plans and
+marks laid on the ground (all but the rings under units) float a quarter of a metre over a lowered step,
+falling ground is drawn in whole blocks, and the ground steps up a quarter of a metre where half-size
+blocks give way to whole ones (90 m off).
 
 ### Detail prototype
 
