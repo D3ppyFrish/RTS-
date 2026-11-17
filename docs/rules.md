@@ -749,7 +749,10 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
   room to stand above it, and not where a building or a city-state's town is. The middle of the line must be
   within 12 blocks of the mage, which otherwise walks there, or to the nearest dry ground beside it, first.
   A line that spans nothing (its ends not ground, or no water between) freezes nothing and costs nothing.
-- **Ice**: anyone walks on it; nobody digs it, and earth does not rise on it. It holds 30 seconds, shows dark
+- **Ice**: anyone walks on it, but it is slippery: a unit on ice keeps seven eighths of last tick's slide
+  and puts only an eighth of its step where it wants to go, so it takes about a second to get up to speed,
+  swings wide on a turn, and slides on a block or two after it stops (bumping into something stops it that
+  way). Nobody digs it, and earth does not rise on it. It holds 30 seconds, shows dark
   cracks in its last 5, then melts, back into water where it was water and into air above that. A unit still
   on it falls to whatever is under it: into shallow water it wades on, but with only deep water under it, it
   drowns (as if crushed: nobody gets the kill).

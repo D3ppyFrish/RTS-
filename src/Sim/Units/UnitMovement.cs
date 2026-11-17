@@ -76,9 +76,25 @@ public sealed class UnitMovement
             _keepingPlace[i] = false;
             if (u.Loose[i] > 0) u.Loose[i]--;
             if (u.Order[i] != UnitOrder.Idle) Steer(u, i, ref vx, ref vz);
+            bool icy = OnIce(w, u, i);
+            if (icy)
+            {
+                // Slippery: most of last tick's slide carries on, and only a little of where it wants to go.
+                vx = u.SlideX[i] * IceKeep + vx * (Fix64.One - IceKeep);
+                vz = u.SlideZ[i] * IceKeep + vz * (Fix64.One - IceKeep);
+                if (Fix64.Abs(vx) + Fix64.Abs(vz) < SlideStop) vx = vz = Fix64.Zero;
+            }
+            u.SlideX[i] = u.SlideZ[i] = Fix64.Zero;
             if (vx == Fix64.Zero && vz == Fix64.Zero) continue;
             int wp = _waypoint[i];
+            Fix64 fromX = u.X[i], fromZ = u.Z[i];
             bool moved = TryMove(w, u, i, vx, vz, wp) || TryMove(w, u, i, vx, Fix64.Zero, wp) || TryMove(w, u, i, Fix64.Zero, vz, wp);
+            if (icy && moved)
+            {
+                // What it slid keeps going next tick (bumping into something stops that way).
+                u.SlideX[i] = u.X[i] - fromX;
+                u.SlideZ[i] = u.Z[i] - fromZ;
+            }
             if (u.Order[i] != UnitOrder.Idle)
             {
                 u.Blocked[i] = moved ? 0 : u.Blocked[i] + 1;
@@ -194,6 +210,19 @@ public sealed class UnitMovement
         vx += dx * step / dist;
         vz += dz * step / dist;
     }
+
+    /// <summary>
+    /// The share of last tick's slide a unit on ice keeps (see <see cref="BlockType.Ice"/>): the rest of its
+    /// step is where it wants to go. So it takes about a second to reach full speed, swings wide on a turn,
+    /// and slides on about a block and a half after it stops.
+    /// </summary>
+    public static readonly Fix64 IceKeep = Fix64.FromRatio(7, 8);
+    /// <summary>A slide slower than this (blocks per tick, |x| + |z|) stops.</summary>
+    public static readonly Fix64 SlideStop = Fix64.FromRatio(1, 64);
+
+    /// <summary>Unit i stands on ice.</summary>
+    public static bool OnIce(VoxelWorld w, UnitStore u, int i) =>
+        u.Y[i] >= 1 && w.Get(u.X[i].FloorToInt(), u.Y[i] - 1, u.Z[i].FloorToInt()) == BlockType.Ice;
 
     /// <summary>A formation unit this close (blocks) to its place walks straight to it.</summary>
     public static readonly Fix64 FormationClose = Fix64.FromRatio(5, 2);
