@@ -172,7 +172,7 @@ void fragment() {
             int o = k * FloatsPerInstance;
             var r = _roadBuffer;
             r[o + 0] = 1; r[o + 1] = 0; r[o + 2] = 0; r[o + 3] = (x + 0.5f) * bs;
-            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = y * bs + 0.03f;
+            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = (y + ChunkRenderer.GroundDrop(x + 0.5f, y, z + 0.5f)) * bs + 0.03f;
             r[o + 8] = 0; r[o + 9] = 0; r[o + 10] = 1; r[o + 11] = (z + 0.5f) * bs;
             r[o + 12] = color.R; r[o + 13] = color.G; r[o + 14] = color.B; r[o + 15] = 1;
         }
@@ -200,7 +200,7 @@ void fragment() {
             int o = k * FloatsPerInstance;
             var r = _spotBuffer;
             r[o + 0] = 1; r[o + 1] = 0; r[o + 2] = 0; r[o + 3] = p.X * bs;
-            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = p.Y * bs + 0.04f;
+            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = (p.Y + ChunkRenderer.GroundDrop(p.X, Mathf.RoundToInt(p.Y), p.Z)) * bs + 0.04f;
             r[o + 8] = 0; r[o + 9] = 0; r[o + 10] = 1; r[o + 11] = p.Z * bs;
             r[o + 12] = FormationSpot.R; r[o + 13] = FormationSpot.G; r[o + 14] = FormationSpot.B; r[o + 15] = 1;
         }
@@ -242,7 +242,7 @@ void fragment() {
             int o = k * FloatsPerInstance;
             var r = _digBuffer;
             r[o + 0] = 1; r[o + 1] = 0; r[o + 2] = 0; r[o + 3] = (x + 0.5f) * bs;
-            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = y * bs + 0.03f;
+            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = (y + ChunkRenderer.GroundDrop(x + 0.5f, y, z + 0.5f)) * bs + 0.03f;
             r[o + 8] = 0; r[o + 9] = 0; r[o + 10] = 1; r[o + 11] = (z + 0.5f) * bs;
             r[o + 12] = color.R; r[o + 13] = color.G; r[o + 14] = color.B; r[o + 15] = 1;
         }

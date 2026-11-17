@@ -218,16 +218,55 @@ void fragment() {
 }
 ";
 
+    // A falling piece (FallingRenderer): blocks with the look they had standing. The piece's mesh is in the
+    // world's coordinates where it broke off, so in its own space every block has the shade, grain and grid
+    // it had, and they move and tip with it. Lit where it is now; no fog (a piece out of sight is not drawn)
+    // and no slice (it is in the air). Both sides of a face are drawn: a broken piece is open in places.
+    private const string PieceCode = @"
+shader_type spatial;
+render_mode cull_disabled;
+" + LookCode + @"
+void vertex() {
+    v_world = VERTEX;
+    v_world_normal = NORMAL;
+    v_scale = scale_of(UV);
+}
+void fragment() {
+    ALBEDO = block_look(COLOR.rgb, COLOR.a);
+    SPECULAR = 0.3;
+    ROUGHNESS = 0.9;
+    EMISSION = block_glow(COLOR.rgb, COLOR.a);
+}
+";
+
+    // A chunk that has come off a falling piece (a particle): its colour, lit as the ground is, and a little
+    // darker, as the ground's sides are (ChunkMesher.Shade), so it does not stand out from what it came off.
+    private const string ChunkCode = @"
+shader_type spatial;
+vec3 linear_of(vec3 c) { return mix(c, c * (c * (c * 0.305306011 + 0.682171111) + 0.012522878), 0.85); }
+void fragment() {
+    ALBEDO = linear_of(COLOR.rgb * 0.9);
+    SPECULAR = 0.3;
+    ROUGHNESS = 0.9;
+}
+";
+
     private readonly Shader _opaqueShader = new() { Code = OpaqueCode };
     private readonly Shader _slicedShader = new() { Code = OpaqueSlicedCode };
 
     public ShaderMaterial Opaque { get; }
     public ShaderMaterial Water { get; }
+    /// <summary>For the ground of a falling piece: the look of <see cref="Opaque"/>, carried along with the piece.</summary>
+    public ShaderMaterial Piece { get; }
+    /// <summary>For the chunks that come off a falling piece.</summary>
+    public ShaderMaterial Chunk { get; }
 
     public TerrainMaterials()
     {
         Opaque = new ShaderMaterial { Shader = _opaqueShader };
         Water = new ShaderMaterial { Shader = new Shader { Code = WaterCode } };
+        Piece = new ShaderMaterial { Shader = new Shader { Code = PieceCode } };
+        Chunk = new ShaderMaterial { Shader = new Shader { Code = ChunkCode } };
     }
 
     /// <summary>Cuts away everything above world height <paramref name="sliceY"/> (metres), or nothing if null.</summary>
@@ -246,6 +285,7 @@ void fragment() {
         if (Mathf.IsEqualApprox(glow, _night)) return;
         _night = glow;
         Opaque.SetShaderParameter("night_glow", glow);
+        Piece.SetShaderParameter("night_glow", glow);
     }
 
     private float _night = -1f;

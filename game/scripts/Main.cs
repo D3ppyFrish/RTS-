@@ -35,9 +35,9 @@ namespace Rts.Game;
 ///   --benchmark[=SECONDS] dig 100 blocks per second while slowly orbiting, log frame times and quit
 ///   --benchmark-out=PATH  file the benchmark result line is appended to (default user://benchmark.txt)
 ///   --world=NxHxN         world size in blocks (default 512x64x512)
-///   --terrain=fine        a prototype of half-size world blocks: the ground near the camera is drawn in
-///                         blocks half the size (0.25 m), its steps split in two (see Rts.Sim.World.FineTerrain);
-///                         the rules still run on whole blocks
+///   --terrain=blocks      draw the ground in whole blocks (0.5 m) everywhere. Otherwise the ground near the
+///                         camera is drawn in blocks half the size (0.25 m), its steps split in two (see
+///                         Rts.Sim.World.FineTerrain); the rules always run on whole blocks
 ///   --lod=off             draw every chunk as finely as the nearest (see ChunkRenderer): otherwise far trees
 ///                         and buildings are drawn in bigger voxels, and the horizon in plain blocks
 ///   --lod-reach=A,B,C     how far from the camera (metres) half-size ground, full detail and bigger voxels
@@ -316,7 +316,7 @@ public partial class Main : Node3D
         // What is drawn is the world as you know it: with fog of war, the land as the match was set up, and
         // after that what you have seen of it.
         _fog = new FogOfWar(_sim, PlayerControl.LocalPlayer);
-        ChunkRenderer.UseFineTerrain = _args.TryGetValue("terrain", out var terrainArg) && terrainArg == "fine";
+        ChunkRenderer.UseFineTerrain = !(_args.TryGetValue("terrain", out var terrainArg) && terrainArg == "blocks");
         ChunkRenderer.Lod = !(_args.TryGetValue("lod", out var lodArg) && lodArg == "off");
         if (_args.TryGetValue("lod-reach", out var reachArg))
         {
@@ -381,7 +381,7 @@ public partial class Main : Node3D
         _unitIcons.Init(_sim, _rig, _fog);
         _fallingRenderer = new FallingRenderer();
         _match.AddChild(_fallingRenderer);
-        _fallingRenderer.Init(_sim, _fog, _terrain.Opaque);
+        _fallingRenderer.Init(_sim, _fog, _terrain);
 
         _slice = new HeightSlice(WorldY);
         _slice.Changed += ApplySlice;
@@ -467,7 +467,7 @@ public partial class Main : Node3D
         _bloodRenderer.UpdateFrame(alpha);
         _iceRenderer.UpdateFrame();
         _unitIcons.UpdateFrame(alpha);
-        _fallingRenderer.UpdateFrame(alpha, (float)delta);
+        _fallingRenderer.UpdateFrame(alpha, (float)delta, (float)_clock.Scale(1.0));
         _hud.Refresh(delta);
 
         if (_benchmark != null)
@@ -722,9 +722,12 @@ public partial class Main : Node3D
         if (yaw != null) _rig.SetView(yaw.Value, pitch, distance);
     }
 
-    /// <summary>Where the middle of the top of block (x, y, z) is drawn on screen, for scripted input.</summary>
+    /// <summary>
+    /// Where the middle of the top of block (x, y, z) is drawn on screen, for scripted input: half a block
+    /// lower where the block is a lowered step of the half-size ground.
+    /// </summary>
     public Vector2 BlockOnScreen(int x, int y, int z) =>
-        _rig.Camera.UnprojectPosition(new Vector3(x + 0.5f, y + 1f, z + 0.5f) * ChunkMesher.BlockSize);
+        _rig.Camera.UnprojectPosition(new Vector3(x + 0.5f, y + 1f + ChunkRenderer.GroundDrop(x + 0.5f, y + 1, z + 0.5f), z + 0.5f) * ChunkMesher.BlockSize);
 
     /// <summary>UI state for scripted tests.</summary>
     public string DescribeUi()
@@ -1053,7 +1056,7 @@ public partial class Main : Node3D
             else result[trimmed] = "true";
         }
         // More arguments from the environment (space-separated; the command line wins), so a script that
-        // starts the game can be run with, say, RTS_ARGS=--terrain=fine.
+        // starts the game can be run with, say, RTS_ARGS=--terrain=blocks.
         var extra = System.Environment.GetEnvironmentVariable("RTS_ARGS") ?? "";
         foreach (var arg in extra.Split(' ', StringSplitOptions.RemoveEmptyEntries)) Add(arg);
         foreach (var arg in OS.GetCmdlineUserArgs()) Add(arg);

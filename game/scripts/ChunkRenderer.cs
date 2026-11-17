@@ -23,8 +23,8 @@ public partial class ChunkRenderer : Node3D
     /// <summary>Draw far chunks more simply. Off: every chunk as finely as the nearest.</summary>
     public static bool Lod = true;
 
-    /// <summary>Draw the nearest ground in half-size blocks (a prototype; see <see cref="FineTerrain"/>).</summary>
-    public static bool UseFineTerrain;
+    /// <summary>Draw the nearest ground in half-size blocks (see <see cref="FineTerrain"/>). Off: whole blocks everywhere.</summary>
+    public static bool UseFineTerrain = true;
 
     /// <summary>
     /// How far from the camera (metres, to the nearest point of the chunk) each level of detail reaches:
@@ -49,6 +49,13 @@ public partial class ChunkRenderer : Node3D
 
     /// <summary>Most chunks copied and sent to workers per frame.</summary>
     public int MaxDispatchPerFrame { get; set; } = 64;
+
+    /// <summary>
+    /// Most meshes for a change of level of detail being made at once. Chunks whose blocks changed are not
+    /// held to it and their meshes are put on screen first, so what was dug or fell shows at once however
+    /// much of the land is changing level as the camera moves.
+    /// </summary>
+    private static readonly int MaxBackground = Math.Max(8, System.Environment.ProcessorCount * 4);
 
     public int ChunkNodeCount { get; private set; }
     public int PendingCount => _stale + _inFlight;
@@ -80,11 +87,15 @@ public partial class ChunkRenderer : Node3D
     private readonly Dictionary<(int, int, int), Chunk> _chunks = new();
     private readonly List<(float Distance, (int, int, int) Key, ChunkLod Lod)> _wanted = new();
     private readonly ConcurrentQueue<Result> _results = new();
+    /// <summary>Meshes of chunks whose blocks changed: on screen before those of <see cref="_results"/>.</summary>
+    private readonly ConcurrentQueue<Result> _urgent = new();
     private readonly ConcurrentBag<BlockType[]> _bufferPool = new();
     private readonly ConcurrentBag<BlockType[]> _halfPool = new();
-    private int _inFlight, _stale;
+    private int _inFlight, _background, _stale;
 
     private static ChunkRenderer? _current;
+    /// <summary>Lowered steps taken out of the world, as they were drawn (see <see cref="LoweredWhenTaken"/>).</summary>
+    private readonly Dictionary<(int, int, int), byte> _taken = new();
 
     /// <summary>Block columns of half-size ground worked out again since the match began, and the milliseconds that took.</summary>
     private long _upkeepColumns;
@@ -148,6 +159,18 @@ public partial class ChunkRenderer : Node3D
 
     private void OnBlockChanged(int x, int y, int z)
     {
+        // A lowered step that is gone from the world (dug, or falling) is remembered as it was drawn.
+        if (_fine != null && !BlockInfo.IsSolid(_world.Get(x, y, z)) && ShownFine(x, y, z))
+        {
+            int cut = 0;
+            for (int s = 0; s < 4; s++)
+                if (FineTerrain.IsLowered(_fine, 2 * x + (s & 1), y, 2 * z + (s >> 1))) cut |= 1 << s;
+            if (cut != 0)
+            {
+                if (_taken.Count >= 4096) _taken.Clear();
+                _taken[(x, y, z)] = (byte)cut;
+            }
+        }
         // The ground's steps round the change are worked out again before the next frame is drawn.
         _fineWorld?.Changed(x, y, z);
         MarkBlockDirty(x, y, z);
@@ -207,7 +230,6 @@ public partial class ChunkRenderer : Node3D
     {
         long start = Stopwatch.GetTimestamp();
         // The half-size ground catches up with what was dug, built and fell since the last frame.
-        // The half-size ground catches up with what was dug, built and fell since the last frame.
         if (_fineWorld is { Stale: > 0 })
         {
             _upkeepColumns += Math.Min(_fineWorld.Stale, MaxStepsPerFrame);
@@ -241,21 +263,26 @@ public partial class ChunkRenderer : Node3D
         }
         _stale = stale;
         if (_wanted.Count == 0) return;
-        if (_wanted.Count > MaxDispatchPerFrame) _wanted.Sort((a, b) => a.Distance.CompareTo(b.Distance));
+        if (_wanted.Count > 1) _wanted.Sort((a, b) => a.Distance.CompareTo(b.Distance));
         int count = Math.Min(_wanted.Count, MaxDispatchPerFrame);
         for (int i = 0; i < count; i++)
         {
-            var (_, key, lod) = _wanted[i];
+            var (distance, key, lod) = _wanted[i];
+            // A chunk whose blocks changed is always sent; one that only changes level waits its turn.
+            bool urgent = distance < 0;
+            if (!urgent && System.Threading.Volatile.Read(ref _background) >= MaxBackground) break;
             var chunk = _chunks[key];
             int content = chunk.Content;
             chunk.Sent[(int)lod] = content;
             System.Threading.Interlocked.Increment(ref _inFlight);
+            if (!urgent) System.Threading.Interlocked.Increment(ref _background);
             // The worker copies the blocks itself, while the simulation may be changing them: any change to
             // this chunk raises its Content, so a mesh made from a torn copy is thrown away when it comes back.
             Task.Run(() =>
             {
                 var data = Build(key, lod);
-                _results.Enqueue(new Result(key, content, lod, data));
+                (urgent ? _urgent : _results).Enqueue(new Result(key, content, lod, data));
+                if (!urgent) System.Threading.Interlocked.Decrement(ref _background);
                 System.Threading.Interlocked.Decrement(ref _inFlight);
             });
         }
@@ -293,18 +320,23 @@ public partial class ChunkRenderer : Node3D
         long start = Stopwatch.GetTimestamp();
         double budgetTicks = UploadBudgetMs * Stopwatch.Frequency / 1000.0;
         var eye = _eye();
-        while (Stopwatch.GetTimestamp() - start < budgetTicks && _results.TryDequeue(out var r))
-        {
-            var chunk = _chunks[r.Key];
-            int l = (int)r.Lod;
-            if (chunk.Sent[l] == r.Content) chunk.Sent[l] = 0;
-            // The chunk has changed since this was sent off; a newer copy is on its way.
-            if (chunk.Content != r.Content) continue;
-            Store(chunk, r.Key, r.Lod, r.Data);
-            RebuildsCompleted++;
-            // On screen if it is the level wanted now, or if what is on screen is out of date.
-            if ((int)Want(chunk, eye) == l || chunk.Shown < 0 || chunk.Built[chunk.Shown] != chunk.Content) Show(chunk, r.Key, l);
-        }
+        // Chunks whose blocks changed first, and given twice the time: what is on screen for them is wrong.
+        while (Stopwatch.GetTimestamp() - start < budgetTicks * 2 && _urgent.TryDequeue(out var u)) Take(u, eye);
+        while (Stopwatch.GetTimestamp() - start < budgetTicks && _results.TryDequeue(out var r)) Take(r, eye);
+    }
+
+    /// <summary>Takes a finished mesh: kept and put on screen if its chunk has not changed since it was sent off.</summary>
+    private void Take(Result r, Vector3 eye)
+    {
+        var chunk = _chunks[r.Key];
+        int l = (int)r.Lod;
+        if (chunk.Sent[l] == r.Content) chunk.Sent[l] = 0;
+        // The chunk has changed since this was sent off; a newer copy is on its way.
+        if (chunk.Content != r.Content) return;
+        Store(chunk, r.Key, r.Lod, r.Data);
+        RebuildsCompleted++;
+        // On screen if it is the level wanted now, or if what is on screen is out of date.
+        if ((int)Want(chunk, eye) == l || chunk.Shown < 0 || chunk.Built[chunk.Shown] != chunk.Content) Show(chunk, r.Key, l);
     }
 
     /// <summary>
@@ -379,17 +411,42 @@ public partial class ChunkRenderer : Node3D
     }
 
     /// <summary>
+    /// The half-size blocks of <paramref name="world"/>, if it is the world drawn in them (what the mouse is
+    /// aimed at: see <see cref="VoxelRay"/>).
+    /// </summary>
+    public static VoxelWorld? FineOf(VoxelWorld world) =>
+        _current is { _fine: { } fine } r && ReferenceEquals(r._world, world) ? fine : null;
+
+    /// <summary>
     /// How far (blocks, 0 or -0.5) the ground drawn under whole-block position (x, y, z) lies below where the
     /// rules have it: half a block where the nearest ground is drawn in half-size blocks and the step there
     /// has lost its top half. What stands on the ground is drawn that much lower.
     /// </summary>
     public static float GroundDrop(float x, int y, float z)
     {
-        if (_current is not { _fine: { } fine } r || y <= 0) return 0f;
-        const int s = VoxelWorld.ChunkSize;
-        int bx = Mathf.FloorToInt(x), bz = Mathf.FloorToInt(z);
-        if (!r._chunks.TryGetValue((bx / s, (y - 1) / s, bz / s), out var chunk) || chunk.Shown != (int)ChunkLod.Fine) return 0f;
+        if (_current is not { _fine: { } fine } || y <= 0) return 0f;
+        if (!ShownFine(Mathf.FloorToInt(x), y - 1, Mathf.FloorToInt(z))) return 0f;
         return FineTerrain.IsLowered(fine, Mathf.FloorToInt(x * 2), y - 1, Mathf.FloorToInt(z * 2)) ? -0.5f : 0f;
+    }
+
+    /// <summary>
+    /// Which quarters of the top half of whole block (x, y, z) were missing, the block being a lowered step of
+    /// the half-size ground, when it left the world since <see cref="ForgetTaken"/>: bit s is the quarter
+    /// s &amp; 1 along x and s &gt;&gt; 1 along z. 0 if it was whole, or drawn in whole blocks. A piece of ground that
+    /// starts to fall is drawn as it stood (see <see cref="FallingRenderer"/>).
+    /// </summary>
+    public static int LoweredWhenTaken(int x, int y, int z) =>
+        _current != null && _current._taken.TryGetValue((x, y, z), out byte cut) ? cut : 0;
+
+    /// <summary>Forgets the blocks <see cref="LoweredWhenTaken"/> tells of: what fell has been drawn.</summary>
+    public static void ForgetTaken() => _current?._taken.Clear();
+
+    /// <summary>True if whole block (x, y, z) is drawn in half-size blocks now: it is near enough to the camera.</summary>
+    public static bool ShownFine(int x, int y, int z)
+    {
+        const int s = VoxelWorld.ChunkSize;
+        return _current is { _fine: not null } r && x >= 0 && y >= 0 && z >= 0 &&
+               r._chunks.TryGetValue((x / s, y / s, z / s), out var chunk) && chunk.Shown == (int)ChunkLod.Fine;
     }
 
     /// <summary>

@@ -227,29 +227,32 @@ triangles at each level of detail (half-size ground / full detail / bigger voxel
 the time spent keeping them right as blocks changed (`fine_upkeep_columns` block columns of steps worked
 out again; the benchmark digs a hundred blocks a second, far more than a match does).
 
-### Levels of detail and the half-size blocks prototype
+### Levels of detail and half-size ground
 
 `ChunkRenderer` draws each chunk as finely as its distance from the camera calls for (`ChunkLod`), and
 re-meshes a chunk on a worker thread when the camera crosses a line (with a little slack, so nothing
-flickers on it):
+flickers on it). A chunk whose blocks changed goes ahead of those that only change level, on the workers
+and onto the screen, so what was dug or fell shows at once however fast the camera is moving:
 
-- **Full detail** up to 100 m: as before.
+- **Half-size ground** up to 90 m: see below.
+- **Full detail** up to 100 m: whole blocks, trees and buildings in fine voxels.
 - **Bigger voxels** from 100 m: trees, buildings and rubble in voxels four times the size, two to a block
   (`StructureMesher.Shrink`): the same shapes for well under half the triangles. Trees and buildings are
   seven eighths of the world's triangles; the ground is the other eighth.
 - **Plain blocks** from 250 m: everything as whole blocks with no shading in the corners, a seventh of
   the triangles. Crowns get the colour their leaves have on average (`ChunkMesher.HorizonColor`).
 
-`--lod=off` draws everything at full detail; `--lod-reach=A,B,C` sets the three distances.
+`--lod=off` draws everything as finely as the nearest; `--lod-reach=A,B,C` sets the three distances.
 
-`--terrain=fine` is a prototype of **half-size world blocks** (0.25 m): within 90 m of the camera the
-ground is drawn in blocks half the size, with every step of open natural ground split in two
-(`Rts.Sim.World.FineTerrain`): the top half of a ground block goes wherever the ground is nearer to lower
-ground than to higher ground, so a hillside climbs in quarter-metre steps and the edge of a plateau gets
-a shoulder. The rules still run on whole blocks: units, buildings, digging and pathfinding are unchanged,
-and what stands or lies on a lowered step (units, their bars and icons, blood, order markers, the rally
-flag) is drawn a quarter of a metre lower. The finer world is a second `VoxelWorld` of 1024x128x1024
-blocks made at load (53 MB against 8 MB); trees and buildings are drawn from the whole blocks as before.
+The ground is drawn in **half-size blocks** (0.25 m) within 90 m of the camera, with every step of open
+natural ground split in two (`Rts.Sim.World.FineTerrain`): the top half of a ground block goes wherever
+the ground is nearer to lower ground than to higher ground, so a hillside climbs in quarter-metre steps
+and the edge of a plateau gets a shoulder. It is a look only. The rules still run on whole blocks: units,
+buildings, digging, pathfinding, maps and replays are unchanged, and what stands or lies on a lowered step
+(units, their bars and icons, blood, order markers, the rally flag, road, dig and formation marks) is
+drawn a quarter of a metre lower. The finer world is a second `VoxelWorld` of 1024x128x1024 blocks made
+at load (53 MB against 8 MB); trees and buildings are drawn from the whole blocks as before.
+`--terrain=blocks` draws whole blocks everywhere instead.
 
 As the world changes, `Rts.Sim.World.FineWorld` keeps the finer world what it would be if it were made
 afresh: the ground round a new pit gets its shoulder, a step that is built on is filled in, and it comes
@@ -257,12 +260,23 @@ back when the building or rubble on it is gone. A change to the ground's height 
 eight blocks of it worked out again before the next frame (600 block columns a frame at most, so a great
 collapse settles over a few frames); any other change only those beside it.
 
-Known gaps: a plan's ghost stands where the building will (a quarter of a metre over a lowered step,
-which is filled in when it is built), falling ground is drawn in whole blocks, and the ground steps up a
-quarter of a metre where half-size blocks give way to whole ones (90 m off).
+The mouse is aimed at what is drawn (`VoxelRay`): its ray is marched through the half-size blocks where
+they are on screen, so a click on a lowered step lands on that block and not on the one behind it, and
+the terrain tool's right click on one puts its stone on top of it. Scripted clicks (`clickworld`) aim at
+the top of a block as it is drawn.
 
-To run any script that starts the game on the half-size ground, pass it more arguments in `RTS_ARGS`
-(space-separated; the command line wins): `RTS_ARGS=--terrain=fine scripts/ui-dig-screenshots.sh`.
+Falling ground (`FallingRenderer`) looks as it did standing: a piece is drawn with the ground's own look
+(`TerrainMaterials.Piece`: the shade, grain and block lines it had, carried along as it tips), in
+half-size blocks with its lowered steps still lowered, and half-size chunks crumble off it as it falls
+and fly out where it lands. That is for show: the rules' pieces are whole blocks, and where the rubble
+lands is theirs to say.
+
+Known gaps: a plan's ghost stands where the building will (a quarter of a metre over a lowered step,
+which is filled in when it is built), a piece that breaks apart in the air is whole blocks again, and the
+ground steps up a quarter of a metre where half-size blocks give way to whole ones (90 m off).
+
+To run any script that starts the game with other flags, pass them in `RTS_ARGS` (space-separated; the
+command line wins): `RTS_ARGS=--terrain=blocks scripts/ui-dig-screenshots.sh`.
 
 ### Detail prototype
 

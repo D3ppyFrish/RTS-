@@ -14,9 +14,12 @@ namespace Rts.Game;
 /// comes down in water. Building blocks (and rubble) in a piece keep the fine detail they are drawn with
 /// standing (see <see cref="StructureDetail"/>), so a wall comes down with its battlements and a house with
 /// its windows, and where such a piece lands it throws out chips of what it was made of. A felled tree
-/// swings down about its stump, faster as it goes, and throws up dust and leaves where it lands. The tipping,
-/// dust, chips and splashes are only for show: where every block ends up is the core's call, and the
-/// rubble it leaves is drawn with the terrain.
+/// swings down about its stump, faster as it goes, and throws up dust and leaves where it lands. A piece's
+/// ground looks as it did standing (see <see cref="TerrainMaterials.Piece"/>): with half-size ground (see
+/// <see cref="ChunkRenderer.UseFineTerrain"/>) in half-size blocks, lowered steps and all, and chunks of that
+/// size crumble off it as it falls and fly from where it lands. The tipping, crumbling, dust, chips and
+/// splashes are only for show: where every block ends up is the core's call (the rules' pieces are whole
+/// blocks), and the rubble it leaves is drawn with the terrain.
 /// </summary>
 public partial class FallingRenderer : Node3D
 {
@@ -25,20 +28,35 @@ public partial class FallingRenderer : Node3D
     private const float MaxTip = 0.35f;
     private const float DustSeconds = 1.6f;
 
+    /// <summary>How long a chunk shed from a falling piece lasts, and the most such chunks (particles) in the air at once.</summary>
+    private const float CrumbSeconds = 0.7f;
+    private const int MaxCrumbs = 1200;
+    /// <summary>Most places on a piece's surface chunks come off.</summary>
+    private const int MaxCrumbPoints = 200;
+    /// <summary>How long a chunk thrown out where a piece landed lasts.</summary>
+    private const float ChunkSeconds = 0.9f;
+
     private static readonly Color Dust = new(0.5f, 0.44f, 0.37f);
     private static readonly Color Spray = new(0.75f, 0.87f, 1f);
 
     private Simulation _sim = null!;
     private FogOfWar _fog = null!;
-    private StandardMaterial3D _material = null!;
-    private Material? _treeMaterial;
+    private Material _pieceMaterial = null!;
+    private Material _treeMaterial = null!;
     private StandardMaterial3D _particleMaterial = null!;
     private StandardMaterial3D _chipMaterial = null!;
+    private Material _crumbMaterial = null!;
+    private Curve _shrink = null!;
+    private int _crumbs;
+    private readonly Dictionary<Node3D, int> _crumbSizes = new();
     private readonly Dictionary<int, Piece> _pieces = new();
     private readonly Dictionary<int, MeshInstance3D> _trees = new();
 
-    /// <summary>A falling piece as drawn: its node, its centre (blocks), the way it tips, and the colours of its chips.</summary>
-    private sealed record Piece(MeshInstance3D Node, Vector3 Centre, Vector3 Axis, Color[] Chips);
+    /// <summary>
+    /// A falling piece as drawn: its node, its centre (blocks), the way it tips, the colours of its chips (of
+    /// its building blocks) and of its ground, and the emitter of the chunks that crumble off it, if it has one.
+    /// </summary>
+    private sealed record Piece(MeshInstance3D Node, Vector3 Centre, Vector3 Axis, Color[] Chips, Color[] Ground, CpuParticles3D? Crumbs);
     private readonly HashSet<int> _live = new();
     private readonly List<int> _gone = new();
     private readonly List<(Node3D Node, float Left)> _effects = new();
@@ -46,18 +64,13 @@ public partial class FallingRenderer : Node3D
     /// <summary>Dust clouds and splashes started so far (for the UI tests).</summary>
     public int Effects { get; private set; }
 
-    public void Init(Simulation sim, FogOfWar fog, Material? treeMaterial = null)
+    public void Init(Simulation sim, FogOfWar fog, TerrainMaterials terrain)
     {
         _sim = sim;
         _fog = fog;
-        _treeMaterial = treeMaterial;
-        _material = new StandardMaterial3D
-        {
-            VertexColorUseAsAlbedo = true,
-            VertexColorIsSrgb = true, // block colours are written as the terrain shows them
-            Roughness = 0.95f,
-            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-        };
+        _treeMaterial = terrain.Opaque;
+        _pieceMaterial = terrain.Piece;
+        _crumbMaterial = terrain.Chunk;
         _chipMaterial = new StandardMaterial3D
         {
             VertexColorUseAsAlbedo = true,
@@ -65,6 +78,11 @@ public partial class FallingRenderer : Node3D
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             Roughness = 0.95f,
         };
+        // A chunk that has come off keeps its size, then shrinks to nothing as it falls.
+        _shrink = new Curve();
+        _shrink.AddPoint(new Vector2(0f, 1f));
+        _shrink.AddPoint(new Vector2(0.65f, 0.85f));
+        _shrink.AddPoint(new Vector2(1f, 0f));
         _particleMaterial = new StandardMaterial3D
         {
             VertexColorUseAsAlbedo = true,
@@ -86,8 +104,11 @@ public partial class FallingRenderer : Node3D
             if (l.Splash) Burst(at, spread, Spray, Mathf.Clamp(l.Blocks * 4, 20, 100), 3f);
             if (l.Section == 0) // a felled tree: leaves and twigs fly
                 Chips(at, spread, TreeChips, Mathf.Clamp(l.Blocks * 10, 24, 80), 2.5f);
-            if (_pieces.TryGetValue(l.Section, out var piece) && piece.Chips.Length > 0)
+            if (!_pieces.TryGetValue(l.Section, out var piece)) continue;
+            if (piece.Chips.Length > 0)
                 Chips(at, spread, piece.Chips, Mathf.Clamp(l.Blocks * (l.Broke ? 12 : 4), 16, 240), l.Broke ? 4.5f : 2.5f);
+            if (piece.Ground.Length > 0 && ChunkRenderer.UseFineTerrain)
+                Chunks(at, spread, piece.Ground, Mathf.Clamp(l.Blocks * (l.Broke ? 2 : 1), 4, 90), l.Broke ? 3.6f : 2.2f);
         }
     }
 
@@ -97,8 +118,11 @@ public partial class FallingRenderer : Node3D
         ChunkMesher.PaletteColor(StructurePalette.BarkA),
     };
 
-    /// <summary>Each frame: falling pieces where they are, between the last two ticks.</summary>
-    public void UpdateFrame(float alpha, float delta)
+    /// <summary>
+    /// Each frame: falling pieces where they are, between the last two ticks. <paramref name="pace"/> is how
+    /// fast the game runs (0 paused, 1 as normal): chunks come off a piece no faster than it falls.
+    /// </summary>
+    public void UpdateFrame(float alpha, float delta, float pace = 1f)
     {
         UpdateTrees(alpha);
         _live.Clear();
@@ -128,13 +152,17 @@ public partial class FallingRenderer : Node3D
             var origin = pivot - basis * pivot + moved * Bs;
             piece.Node.Transform = new Transform3D(basis, origin);
             piece.Node.Visible = _fog.Sees((int)(piece.Centre.X + moved.X), (int)(piece.Centre.Z + moved.Z));
+            if (piece.Crumbs is { } crumbs && !Mathf.IsEqualApprox((float)crumbs.SpeedScale, pace)) crumbs.SpeedScale = pace;
         }
+        ChunkRenderer.ForgetTaken(); // what has started to fall is drawn now
         _gone.Clear();
         foreach (var id in _pieces.Keys)
             if (!_live.Contains(id)) _gone.Add(id);
         foreach (int id in _gone)
         {
-            _pieces[id].Node.QueueFree();
+            var gone = _pieces[id];
+            if (gone.Crumbs != null) LetCrumblesFall(gone.Crumbs, gone.Node.Visible);
+            gone.Node.QueueFree();
             _pieces.Remove(id);
         }
         for (int k = _effects.Count - 1; k >= 0; k--)
@@ -146,6 +174,7 @@ public partial class FallingRenderer : Node3D
                 _effects[k] = (node, left);
                 continue;
             }
+            if (_crumbSizes.Remove(node, out int size)) _crumbs -= size;
             node.QueueFree();
             _effects.RemoveAt(k);
         }
@@ -167,7 +196,7 @@ public partial class FallingRenderer : Node3D
                 st.Begin(Mesh.PrimitiveType.Triangles);
                 AddDetail(st, t.Blocks, terrain: true);
                 // Drawn with the terrain's own material, so it looks as it did standing.
-                node = new MeshInstance3D { Mesh = st.Commit(), MaterialOverride = _treeMaterial ?? _material };
+                node = new MeshInstance3D { Mesh = st.Commit(), MaterialOverride = _treeMaterial };
                 AddChild(node);
                 _trees[t.Id] = node;
             }
@@ -190,8 +219,10 @@ public partial class FallingRenderer : Node3D
 
     /// <summary>
     /// A mesh of the section's blocks where they broke off, showing only faces not against another block of it:
-    /// plain blocks for ground, fine detail for building blocks and rubble, worked out from the piece alone, so
-    /// where it broke away its insides show.
+    /// ground as it was drawn standing (in half-size blocks with half-size ground, a lowered step still
+    /// lowered), fine detail for building blocks and rubble, worked out from the piece alone, so where it broke
+    /// away its insides show. A piece also gets an emitter of the chunks that crumble off its surface as it
+    /// falls (with half-size ground).
     /// </summary>
     private Piece Build(FallingSection s)
     {
@@ -204,26 +235,138 @@ public partial class FallingRenderer : Node3D
         }
         centre /= s.Blocks.Count;
 
+        bool half = ChunkRenderer.UseFineTerrain;
+        // The steps of its ground that were lowered as it broke off (a piece that broke from another in the
+        // air is whole blocks: it has just been knocked about).
+        Dictionary<(int, int, int), int>? cut = null;
+        if (half && s.Generation == 0)
+            foreach (var b in s.Blocks)
+                if (ChunkRenderer.LoweredWhenTaken(b.X, b.Y, b.Z) is var c and not 0)
+                    (cut ??= new())[(b.X, b.Y, b.Z)] = c;
+        // Is half-size block (hx, hy, hz) part of the piece?
+        bool Has(int hx, int hy, int hz)
+        {
+            // An arithmetic shift is a floor division, which a half-size block's whole block needs below zero.
+            var block = (hx >> 1, hy >> 1, hz >> 1);
+            if (!inPiece.ContainsKey(block)) return false;
+            return (hy & 1) == 0 || cut == null || !cut.TryGetValue(block, out int c) || (c & (1 << ((hx & 1) | (hz & 1) << 1))) == 0;
+        }
+
+        var surface = half ? new List<(Vector3 At, Vector3 Out, Color Colour)>() : null;
+        var ground = new Dictionary<Color, int>();
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
-        var chips = AddDetail(st, s.Blocks);
+        st.SetUV(Vector2.Zero); // fine voxels are an eighth of a block
+        var chips = AddDetail(st, s.Blocks, terrain: true);
+        // The ground is in half-size blocks (see TerrainMaterials: marked in the UV), or in whole ones.
+        st.SetUV(new Vector2(half ? 1f : 0f, 0f));
         foreach (var b in s.Blocks)
         {
-            if (StructureDetail.IsDetailed(b.Block)) continue;
             var colour = ChunkMesher.ColorOf(b.Block);
+            bool detailed = StructureDetail.IsDetailed(b.Block);
+            if (!detailed) ground[colour] = ground.GetValueOrDefault(colour) + 1;
             for (int f = 0; f < 6; f++)
             {
                 var n = Normals[f];
                 if (inPiece.ContainsKey((b.X + (int)n.X, b.Y + (int)n.Y, b.Z + (int)n.Z))) continue;
-                AddFace(st, new Vector3(b.X, b.Y, b.Z), f, colour);
+                surface?.Add((new Vector3(b.X + 0.5f, b.Y + 0.5f, b.Z + 0.5f) + n * 0.5f, n, colour));
+                if (!detailed && !half) AddFace(st, new Vector3(b.X, b.Y, b.Z), f, Shaded(b.Block, f));
+            }
+            if (detailed || !half) continue;
+            for (int k = 0; k < 8; k++)
+            {
+                int hx = 2 * b.X + (k & 1), hy = 2 * b.Y + (k >> 1 & 1), hz = 2 * b.Z + (k >> 2);
+                if (!Has(hx, hy, hz)) continue;
+                for (int f = 0; f < 6; f++)
+                {
+                    var n = Normals[f];
+                    if (!Has(hx + (int)n.X, hy + (int)n.Y, hz + (int)n.Z))
+                        AddFace(st, new Vector3(hx, hy, hz) * 0.5f, f, Shaded(b.Block, f), 0.5f);
+                }
             }
         }
-        var node = new MeshInstance3D { Mesh = st.Commit(), MaterialOverride = _material };
+        var node = new MeshInstance3D { Mesh = st.Commit(), MaterialOverride = _pieceMaterial };
         AddChild(node);
         // Tips over away from the side it broke from, or a way of its own for a piece with no lean.
         float a = (s.Id * 2.3999632f) % Mathf.Tau;
         var axis = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
-        return new Piece(node, centre, axis, chips);
+        // The colours of its ground, the commonest first (three at most).
+        var colours = new List<Color>(ground.Keys);
+        colours.Sort((p, q) => ground[q] != ground[p] ? ground[q].CompareTo(ground[p]) : p.ToRgba32().CompareTo(q.ToRgba32()));
+        if (colours.Count > 3) colours.RemoveRange(3, colours.Count - 3);
+        return new Piece(node, centre, axis, chips, colours.ToArray(), surface == null ? null : Crumble(node, surface, s.Id));
+    }
+
+    /// <summary>The colour of face <paramref name="f"/> of a block for <see cref="TerrainMaterials.Piece"/>: shaded by side and marked as the chunks mark it.</summary>
+    private static Color Shaded(BlockType block, int f)
+    {
+        var c = ChunkMesher.ColorOf(block) * ChunkMesher.Shade[QuadFace[f]];
+        c.A = ChunkMesher.MarkOf(block);
+        return c;
+    }
+
+    /// <summary>
+    /// An emitter, on the piece's node, of half-size chunks that come off its surface as it falls: out from
+    /// where each outside face is, in that face's colour, falling and shrinking away over
+    /// <see cref="CrumbSeconds"/>. None for a piece that has no outside, or when too many are in the air.
+    /// </summary>
+    private CpuParticles3D? Crumble(MeshInstance3D node, List<(Vector3 At, Vector3 Out, Color Colour)> surface, int seed)
+    {
+        if (surface.Count == 0 || _crumbs >= MaxCrumbs) return null;
+        int stride = Math.Max(1, (surface.Count + MaxCrumbPoints - 1) / MaxCrumbPoints);
+        var at = new List<Vector3>();
+        var outward = new List<Vector3>();
+        var colours = new List<Color>();
+        for (int i = Math.Abs(seed) % stride; i < surface.Count; i += stride)
+        {
+            at.Add(surface[i].At * Bs);
+            outward.Add(surface[i].Out);
+            colours.Add(surface[i].Colour);
+        }
+        // A chunk in the air for every few faces: the piece sheds them, it is not hidden by them.
+        int amount = Math.Min(Mathf.Clamp(at.Count / 3, 4, 70), MaxCrumbs - _crumbs);
+        var p = new CpuParticles3D
+        {
+            Amount = amount,
+            Lifetime = CrumbSeconds,
+            LocalCoords = false, // once off, a chunk is the world's, not the piece's
+            EmissionShape = CpuParticles3D.EmissionShapeEnum.DirectedPoints,
+            EmissionPoints = at.ToArray(),
+            EmissionNormals = outward.ToArray(),
+            EmissionColors = colours.ToArray(),
+            // Directed points turn the direction's z along each face's normal.
+            Direction = Vector3.Back,
+            Spread = 35,
+            InitialVelocityMin = 0.3f,
+            InitialVelocityMax = 1.4f,
+            Gravity = new Vector3(0, -6f, 0),
+            AngularVelocityMin = -300,
+            AngularVelocityMax = 300,
+            ScaleAmountMin = 0.6f,
+            ScaleAmountMax = 1f,
+            ScaleAmountCurve = _shrink,
+            Mesh = new BoxMesh { Size = Vector3.One * (Bs * 0.5f), Material = _crumbMaterial },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        node.AddChild(p);
+        p.Emitting = true;
+        _crumbs += amount;
+        _crumbSizes[p] = amount;
+        return p;
+    }
+
+    /// <summary>A piece has landed: its emitter stops, and the chunks already off it finish falling where it was.</summary>
+    private void LetCrumblesFall(CpuParticles3D crumbs, bool seen)
+    {
+        if (seen)
+        {
+            crumbs.Reparent(this);
+            crumbs.Emitting = false;
+            _effects.Add((crumbs, CrumbSeconds + 0.1f));
+            return;
+        }
+        // Out of sight: nothing to finish.
+        if (_crumbSizes.Remove(crumbs, out int size)) _crumbs -= size;
     }
 
     // Quad face numbering (0 +X, 1 -X, 2 +Y, 3 -Y, 4 +Z, 5 -Z) as normals.
@@ -318,7 +461,10 @@ public partial class FallingRenderer : Node3D
         Vector3.Up, Vector3.Down, Vector3.Right, Vector3.Left, Vector3.Back, Vector3.Forward,
     };
 
-    // Corners of each face (unit cube), counter-clockwise seen from outside.
+    /// <summary>The quad face numbering (see <see cref="QuadNormals"/>) of each of <see cref="Normals"/>.</summary>
+    private static readonly int[] QuadFace = { 2, 3, 0, 1, 4, 5 };
+
+    // Corners of each face (unit cube), clockwise seen from outside: front-facing to Godot.
     private static readonly Vector3[][] Corners =
     {
         new[] { new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 1, 1), new Vector3(0, 1, 1) },
@@ -331,13 +477,14 @@ public partial class FallingRenderer : Node3D
 
     private static readonly int[] FaceOrder = { 0, 1, 2, 0, 2, 3 };
 
-    private static void AddFace(SurfaceTool st, Vector3 at, int f, Color colour)
+    /// <summary>A face of the cube <paramref name="size"/> (blocks) across whose lowest corner is <paramref name="at"/> (blocks).</summary>
+    private static void AddFace(SurfaceTool st, Vector3 at, int f, Color colour, float size = 1f)
     {
         var c = Corners[f];
         st.SetNormal(Normals[f]);
         st.SetColor(colour);
         foreach (int k in FaceOrder)
-            st.AddVertex((at + c[k]) * Bs);
+            st.AddVertex((at + c[k] * size) * Bs);
     }
 
     /// <summary>
@@ -380,6 +527,44 @@ public partial class FallingRenderer : Node3D
         p.Emitting = true;
         _effects.Add((p, 1.3f));
         Effects++;
+    }
+
+    /// <summary>
+    /// Half-size chunks of the ground of a piece that came down, in its colours: thrown up and out, falling
+    /// back and shrinking away.
+    /// </summary>
+    private void Chunks(Vector3 at, float spread, Color[] colours, int amount, float speed)
+    {
+        var ramp = new Gradient();
+        ramp.SetColor(0, colours[0]);
+        ramp.SetColor(1, colours[^1]);
+        for (int k = 1; k < colours.Length - 1; k++) ramp.AddPoint((float)k / (colours.Length - 1), colours[k]);
+        var p = new CpuParticles3D
+        {
+            Amount = amount,
+            Lifetime = ChunkSeconds,
+            OneShot = true,
+            Explosiveness = 0.95f,
+            EmissionShape = CpuParticles3D.EmissionShapeEnum.Box,
+            EmissionBoxExtents = new Vector3(spread * 0.8f, Bs * 0.4f, spread * 0.8f),
+            Direction = Vector3.Up,
+            Spread = 55,
+            InitialVelocityMin = speed * 0.4f,
+            InitialVelocityMax = speed,
+            Gravity = new Vector3(0, -9.8f, 0),
+            AngularVelocityMin = -360,
+            AngularVelocityMax = 360,
+            ScaleAmountMin = 0.6f,
+            ScaleAmountMax = 1f,
+            ScaleAmountCurve = _shrink,
+            ColorInitialRamp = ramp,
+            Mesh = new BoxMesh { Size = Vector3.One * (Bs * 0.5f), Material = _crumbMaterial },
+            Position = at,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        AddChild(p);
+        p.Emitting = true;
+        _effects.Add((p, ChunkSeconds + 0.2f));
     }
 
     /// <summary>A one-off burst of particles: dust (low, drifting) or spray (thrown up, falling back).</summary>
