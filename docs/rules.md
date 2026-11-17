@@ -333,6 +333,24 @@ its commands played back ends the same. An order of the player's always comes fi
   time on one building, and go back to other work once there is nothing to fetch. Costs are paid from the
   storage nearest the work, so a forward storehouse kept stocked with stone pays for the walls going up
   beside it; it is also there for raiders to capture or burn, and a captured one loses its rules.
+- **Town governor** (`GovernCommand`, the Governor buttons of a selected town hall or Shift+U,
+  `AutomationSystem.Governor.cs`): a town hall of yours can be given a governor with a focus, Growth, Army
+  or Defence, or none (Off). Every 2 seconds the governor looks over its town, the ground within 24 columns
+  of the hall, and gives the orders you would. It makes your idle workers there automatic (not ones you held
+  with an order of your own). If no site of yours in the town is still going up, it places the first
+  building wanted: a house when fewer than 4 places are free in your housing, a farm on the same rule as
+  above, then what its focus wants. Growth wants a storehouse at least 12 columns out once you have 10
+  workers, then a smelter once you have 20 iron ore; Army wants a barracks; Defence wants a barracks, then a
+  watchtower at each of the four corners 9 columns out from the hall. The hall trains workers up to 30
+  (Growth), 15 (Army) or 20 (Defence). Under Army or Defence each barracks in the town with nothing queued
+  trains a soldier: Army the fighting type (line, heavy, ranged or cavalry) you have fewest of, Defence the
+  ranged type you have fewest of, or spearmen until it has archers. Soldiers wait while a wanted building
+  waits for goods. With nothing being researched, the governor of your first town hall researches the next
+  tech its focus needs, read from the data: whatever farms need, then what smelters need (Growth), what the
+  barracks' fighting units need (Army) or what its ranged units need (Defence); a tech that needs another
+  starts with that one. Nothing is trained or researched without room in the houses and a minute's food left
+  for everyone. With a governor in your town hall, the houses and farms for all-automatic workers above come
+  from the governor instead.
 - **Stances** (`StanceCommand`, V): soldiers are aggressive (they chase what they see), hold their
   ground (they fight only what is in reach and never move to chase), or retreat when hurt (aggressive
   until down to a third of their hit points, then they hold their ground, and when hit away from home

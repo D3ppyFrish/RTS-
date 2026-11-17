@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using Godot;
 using Rts.Sim;
+using Rts.Sim.Automation;
 using Rts.Sim.Content;
 using Rts.Sim.Economy;
 using Rts.Sim.Units;
@@ -55,6 +56,8 @@ public partial class Hud : CanvasLayer
     private HBoxContainer _upgradeRow = null!;
     // Supply rules of the selected storage building of yours: a button per good.
     private VBoxContainer _supplyBox = null!;
+    private VBoxContainer _governorBox = null!;
+    private readonly List<(Button Button, GovernorFocus Focus)> _governorButtons = new();
     private readonly Button[] _supplyButtons = new Button[Goods.Count];
     private Button _upgradeButton = null!;
     private Button _upgradeOneButton = null!;
@@ -483,6 +486,7 @@ public partial class Hud : CanvasLayer
         _upgradeRow.AddChild(_upgradeOneButton);
         column.AddChild(_upgradeRow);
         BuildSupplyRow(column);
+        BuildGovernorRow(column);
         _evolveBox = new VBoxContainer();
         _evolveBox.AddThemeConstantOverride("separation", 4);
         column.AddChild(_evolveBox);
@@ -718,6 +722,50 @@ public partial class Hud : CanvasLayer
         column.AddChild(_supplyBox);
     }
 
+    /// <summary>"Governor": Off, Growth, Army and Defence buttons for the selected town hall of yours (see <see cref="GovernCommand"/>).</summary>
+    private void BuildGovernorRow(VBoxContainer column)
+    {
+        _governorBox = new VBoxContainer { Name = "governor_box", Visible = false };
+        _governorBox.AddThemeConstantOverride("separation", 4);
+        var title = MakeLabel("Governor (runs this town for you; Shift+U steps through):", 13);
+        title.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        title.CustomMinimumSize = new Vector2(360, 0);
+        title.ThemeTypeVariation = UiStyle.Dim;
+        _governorBox.AddChild(title);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 4);
+        _governorBox.AddChild(row);
+        foreach (var (focus, label, tip) in new[]
+        {
+            (GovernorFocus.None, "Off", "You run this town yourself."),
+            (GovernorFocus.Growth, "Growth", "Houses and farms as needed, workers up to " + AutomationSystem.WorkerTarget(GovernorFocus.Growth) +
+                ", a storehouse and a smelter, and the techs for them."),
+            (GovernorFocus.Army, "Army", "Houses and farms as needed, workers up to " + AutomationSystem.WorkerTarget(GovernorFocus.Army) +
+                ", a barracks and a steady stream of mixed soldiers, and the techs for them."),
+            (GovernorFocus.Defence, "Defence", "Houses and farms as needed, workers up to " + AutomationSystem.WorkerTarget(GovernorFocus.Defence) +
+                ", a barracks, a watchtower at each corner of the town, archers, and archery."),
+        })
+        {
+            var f = focus;
+            var button = MakeToolButton(label);
+            button.Name = "governor_" + f.ToString().ToLowerInvariant();
+            button.TooltipText = tip + " The governor makes idle workers in the town automatic and gives only orders you could give.";
+            button.Pressed += () => _control.SetGovernor(f);
+            row.AddChild(button);
+            _governorButtons.Add((button, f));
+        }
+        column.AddChild(_governorBox);
+    }
+
+    /// <summary>Shows the governor buttons for a town hall of yours.</summary>
+    private void RefreshGovernor(Building? b)
+    {
+        bool show = b != null && b.Owner == PlayerControl.LocalPlayer && b.Def.Kind == BuildingKind.TownHall && !b.Planned;
+        _governorBox.Visible = show;
+        if (!show) return;
+        foreach (var (button, focus) in _governorButtons) button.SetPressedNoSignal(b!.Governor == focus);
+    }
+
     /// <summary>Shows the supply buttons for a finished storage building of yours.</summary>
     private void RefreshSupply(Building? b)
     {
@@ -892,6 +940,7 @@ public partial class Hud : CanvasLayer
         if (plan) _startPlanButton.Disabled = econ.CanStart(b!) != PlaceResult.Ok;
         RefreshUpgrade(b);
         RefreshSupply(b);
+        RefreshGovernor(b);
         bool trains = b != null && b.Owner == player && b.Active && b.Def.Trains.Length > 0;
         var trainFor = trains ? b!.Def : null;
         if (trainFor != _trainFor) BuildTrainButtons(trainFor);
@@ -1378,6 +1427,8 @@ public partial class Hud : CanvasLayer
                 text.Append(b.HasRally
                     ? "\nRally point set: new units walk to the flag (right click the building to clear it)"
                     : "\nRight click the ground to set a rally point for new units");
+            if (b.Governor != GovernorFocus.None)
+                text.Append($"\nGoverned for {b.Governor.ToString().ToLowerInvariant()}: the governor builds, trains and researches for this town");
             if (b.Repeat)
             {
                 text.Append("\nOn repeat");

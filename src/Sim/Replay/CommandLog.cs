@@ -46,6 +46,7 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// 55 automate 0 on 5,6              (workers 5 and 6 find their own jobs; off: they wait for orders)
 /// 56 automate-all 0 on              (all of player 0's workers, and those trained later)
 /// 57 repeat 0 1 on                  (building 1 repeats its training)
+/// 57 governor 0 1 army             (a governor runs town hall 1 for an army; none, growth, army or defence)
 /// 58 stance 0 hold 1,2,3            (hold, aggressive or retreat)
 /// 59 evolve 0 knight 1,2            (units 1 and 2 take the form "knight", if they can)
 /// 60 auto-evolve 0 spearman knight  (player 0's spearmen become knights on their own; off: the player picks)
@@ -208,6 +209,7 @@ public sealed class CommandLog
                 TunnelCommand tn => string.Create(ci, $"{tick} tunnel {tn.PlayerId} {tn.X} {tn.Y} {tn.Z} {Ids(tn.Units)}"),
                 AutomateCommand au => string.Create(ci, $"{tick} automate {au.PlayerId} {OnOff(au.On)} {Ids(au.Units)}"),
                 AutomateAllCommand aa => string.Create(ci, $"{tick} automate-all {aa.PlayerId} {OnOff(aa.On)}"),
+                GovernCommand gv => string.Create(ci, $"{tick} governor {gv.PlayerId} {gv.Building} {gv.Focus.ToString().ToLowerInvariant()}"),
                 RebuildCommand rb => string.Create(ci, $"{tick} rebuild {rb.PlayerId} {OnOff(rb.On)}"),
                 PriorityCommand pr => string.Create(ci, $"{tick} priority {pr.PlayerId} {WorkPriorities.ToLog(pr.List)} {Ids(pr.Units)}"),
                 DefaultPriorityCommand dp => string.Create(ci, $"{tick} default-priority {dp.PlayerId} {WorkPriorities.ToLog(dp.List)}"),
@@ -328,6 +330,7 @@ public sealed class CommandLog
                             "tunnel" => new TunnelCommand(Int(f[2]), ParseIds(f[6]), Int(f[3]), Int(f[4]), Int(f[5])),
                             "automate" => new AutomateCommand(Int(f[2]), ParseIds(f[4]), ParseOnOff(f[3])),
                             "automate-all" => new AutomateAllCommand(Int(f[2]), ParseOnOff(f[3])),
+                            "governor" => new GovernCommand(Int(f[2]), Int(f[3]), ParseFocus(f[4])),
                             "rebuild" => new RebuildCommand(Int(f[2]), ParseOnOff(f[3])),
                             "priority" => new PriorityCommand(Int(f[2]), ParseIds(f[4]), WorkPriorities.ParseLog(f[3])),
                             "default-priority" => new DefaultPriorityCommand(Int(f[2]), WorkPriorities.ParseLog(f[3])),
@@ -452,6 +455,9 @@ public sealed class CommandLog
         UnitStance.Retreat => "retreat",
         _ => throw new NotSupportedException($"No log name for stance {(int)stance}"),
     };
+
+    private static Economy.GovernorFocus ParseFocus(string s) =>
+        Enum.TryParse<Economy.GovernorFocus>(s, ignoreCase: true, out var f) && Enum.IsDefined(f) && !char.IsDigit(s[0]) ? f : throw new FormatException($"Unknown governor focus '{s}'");
 
     private static UnitStance ParseStance(string s) => s switch
     {

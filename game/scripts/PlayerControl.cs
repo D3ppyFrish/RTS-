@@ -38,6 +38,7 @@ namespace Rts.Game;
 ///                         deck across deep water or a drop (Shift keeps the tool); Ctrl+right click a
 ///                         bridge to knock that column out
 ///   U                     train at the selected building (a worker at a town hall, a spearman at a barracks)
+///   Shift+U               the selected town hall's governor: off, growth, army, defence, then off again
 ///   K                     open or close the tech tree
 ///   Ctrl+1..9, 1..9       assign / recall a control group (press twice to centre the camera on it)
 ///   Space, -, +           pause, slower, faster (0.5x to 4x)
@@ -349,6 +350,8 @@ public partial class PlayerControl : Node
             case Key.Apostrophe: ToggleBridge(); break;
             case Key.U:
                 if (_sim.Buildings.Get(SelectedBuilding) is { Def.IsWall: true }) UpgradeSelected(stretch: !key.ShiftPressed);
+                else if (key.ShiftPressed && _sim.Buildings.Get(SelectedBuilding) is { Def.Kind: BuildingKind.TownHall } hall)
+                    SetGovernor((GovernorFocus)(((int)hall.Governor + 1) % Enum.GetValues<GovernorFocus>().Length));
                 else TrainAtSelected(null);
                 break;
             case Key.J:
@@ -1060,6 +1063,15 @@ public partial class PlayerControl : Node
     {
         _sim.Schedule(_sim.Tick, new SurrenderCommand(LocalPlayer));
         _clock.SetSpeed(_clock.SpeedIndex, resume: true);
+        Changed?.Invoke();
+    }
+
+    /// <summary>Puts a governor with that focus in charge of the selected town hall of yours, or takes it away (see <see cref="GovernCommand"/>).</summary>
+    public void SetGovernor(GovernorFocus focus)
+    {
+        var b = _sim.Buildings.Get(SelectedBuilding);
+        if (b == null || b.Owner != LocalPlayer || b.Def.Kind != BuildingKind.TownHall) return;
+        _sim.Schedule(_sim.Tick, new GovernCommand(LocalPlayer, b.Id, focus));
         Changed?.Invoke();
     }
 
@@ -1796,6 +1808,8 @@ public partial class PlayerControl : Node
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} " +
                $"rebuild={(_sim.Economy.Rebuilds(LocalPlayer) ? 1 : 0)} ruins={OwnRuins()} " +
+               $"governor={(sel?.Governor ?? GovernorFocus.None).ToString().ToLowerInvariant()} houses={OwnKind(BuildingKind.House)} " +
+               $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +
                $"beaten={beaten} monsters={monsters} riders={riders} wild={wild} lairs={lairs} " +
@@ -1815,6 +1829,15 @@ public partial class PlayerControl : Node
         int n = 0;
         foreach (var b in _sim.Buildings.All)
             if (b.Owner == LocalPlayer && b.Def.IsWall && b.Def.FacingOf == null && b.Def.Tier == tier) n++;
+        return n;
+    }
+
+    /// <summary>Your buildings of a kind, built or going up (not plans).</summary>
+    private int OwnKind(BuildingKind kind)
+    {
+        int n = 0;
+        foreach (var b in _sim.Buildings.All)
+            if (b.Owner == LocalPlayer && b.Def.Kind == kind && !b.Planned) n++;
         return n;
     }
 

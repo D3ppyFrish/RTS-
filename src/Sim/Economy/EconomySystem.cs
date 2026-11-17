@@ -692,6 +692,7 @@ public sealed partial class EconomySystem
             b.Repeat = false;
             b.Owed.Clear();
             Array.Clear(b.Supply); // the old owner's supply rules go with it
+            b.Governor = GovernorFocus.None; // and so does their governor
             return false;
         }
         // Burned: the goods are lost and what is left of it crumbles.

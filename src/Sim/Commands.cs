@@ -312,6 +312,15 @@ public sealed record SupplyCommand(int PlayerId, int Building, Economy.Good Good
 public sealed record RebuildCommand(int PlayerId, bool On) : Command(PlayerId);
 
 /// <summary>
+/// Puts a governor in charge of the player's town hall <paramref name="Building"/>, with a focus, or takes it
+/// away (<see cref="Economy.GovernorFocus.None"/>). The governor runs the settlement around the hall: it makes
+/// the idle workers there automatic, trains workers, puts up houses and farms as they are needed, and then
+/// builds and trains for its focus (see <see cref="Automation.AutomationSystem"/>). It acts only through the
+/// commands a player could give.
+/// </summary>
+public sealed record GovernCommand(int PlayerId, int Building, Economy.GovernorFocus Focus) : Command(PlayerId);
+
+/// <summary>
 /// Sets where the building's trained units walk when they step out: level Y (-1 for the top) of column
 /// (X, Z). An X below 0, or a spot on the building itself, clears it (they stay at the door).
 /// </summary>
