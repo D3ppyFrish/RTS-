@@ -195,7 +195,7 @@ void fragment() {
             var def = defs[u.Def[i]];
             float x = Mathf.Lerp(u.PrevX[i].ToFloat(), u.X[i].ToFloat(), alpha);
             float z = Mathf.Lerp(u.PrevZ[i].ToFloat(), u.Z[i].ToFloat(), alpha);
-            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha);
+            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + ChunkRenderer.GroundDrop(x, u.Y[i], z);
             float size = SizePerMetre * eye.DistanceTo(new Vector3(x, y, z) * bs);
             // Above the unit's head, clear of the model however far out the camera is.
             var p = new Vector3(x * bs, y * bs + 1.6f + size * 0.6f, z * bs);

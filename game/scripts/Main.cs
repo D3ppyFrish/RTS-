@@ -1045,13 +1045,18 @@ public partial class Main : Node3D
     private static Dictionary<string, string> ParseArgs()
     {
         var result = new Dictionary<string, string>();
-        foreach (var arg in OS.GetCmdlineUserArgs())
+        void Add(string arg)
         {
             var trimmed = arg.TrimStart('-');
             int eq = trimmed.IndexOf('=');
             if (eq > 0) result[trimmed[..eq]] = trimmed[(eq + 1)..];
             else result[trimmed] = "true";
         }
+        // More arguments from the environment (space-separated; the command line wins), so a script that
+        // starts the game can be run with, say, RTS_ARGS=--terrain=fine.
+        var extra = System.Environment.GetEnvironmentVariable("RTS_ARGS") ?? "";
+        foreach (var arg in extra.Split(' ', StringSplitOptions.RemoveEmptyEntries)) Add(arg);
+        foreach (var arg in OS.GetCmdlineUserArgs()) Add(arg);
         return result;
     }
 }

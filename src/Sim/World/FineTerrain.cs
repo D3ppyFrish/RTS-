@@ -12,9 +12,10 @@ namespace Rts.Sim.World;
 /// taken off wherever the ground there is nearer to lower ground than to higher ground: a hillside that
 /// climbed in half-metre steps climbs in quarter-metre ones, each contour halfway between the two it lies
 /// between, and the edge of a plateau gets a shoulder. Only open natural ground changes (grass, soil, sand,
-/// mud and stone with air above, and no water beside it at its level); what stands on the ground, and what has been dug or built, keeps
-/// its whole blocks. So the finer world is never higher than the whole blocks, and never more than half a
-/// block lower. Integer-only: the same world gives the same finer world.
+/// mud and stone with air above, and no water, ice or lava beside it at its level); what stands on the
+/// ground, and what is built, keeps its whole blocks. So the finer world is never higher than the whole
+/// blocks, and never more than half a block lower. Integer-only: the same world gives the same finer world,
+/// however it came to be (<see cref="FineWorld"/> keeps one up to date as the world changes).
 /// </summary>
 public static class FineTerrain
 {
@@ -53,8 +54,6 @@ public static class FineTerrain
         return h;
     }
 
-    private static bool IsLevel(BlockType t) => t == BlockType.Water || IsTerrain(t);
-
     /// <summary>
     /// Which fine columns (two a block each way, indexed <c>fz * 2 * SizeX + fx</c>) lose the top half of
     /// their ground block, from the ground's heights (see <see cref="Heights"/>).
@@ -63,47 +62,59 @@ public static class FineTerrain
     {
         int sx = coarse.SizeX, sz = coarse.SizeZ;
         var lowered = new bool[4 * sx * sz];
-        // Distances are doubled fine blocks (so the middle of a fine column is a whole number), squared.
-        int reach2 = 4 * Reach * 4 * Reach, shoulder2 = 4 * Shoulder * 4 * Shoulder;
-        Span<int> down = stackalloc int[4];
-        Span<int> up = stackalloc int[4];
         for (int z = 0; z < sz; z++)
         for (int x = 0; x < sx; x++)
         {
-            int g = heights[z * sx + x];
-            if (g < 0 || !BlockInfo.IsGround(coarse.Get(x, g, z))) continue;
-            if (g + 1 < coarse.SizeY && coarse.Get(x, g + 1, z) != BlockType.Air) continue;
-            // Ground level with water beside it stays whole: a lowered step there would lie under the water.
-            if (WaterBeside(coarse, x, g, z)) continue;
-            down.Fill(int.MaxValue);
-            up.Fill(int.MaxValue);
-            for (int dz = -Reach; dz <= Reach; dz++)
-            {
-                int nz = z + dz;
-                if (nz < 0 || nz >= sz) continue;
-                for (int dx = -Reach; dx <= Reach; dx++)
-                {
-                    int nx = x + dx;
-                    if (nx < 0 || nx >= sx) continue;
-                    int hn = heights[nz * sx + nx];
-                    if (hn == g) continue;
-                    var to = hn < g ? down : up;
-                    for (int s = 0; s < 4; s++)
-                    {
-                        int ex = Gap(dx, s & 1), ez = Gap(dz, s >> 1);
-                        int d2 = ex * ex + ez * ez;
-                        if (d2 < to[s]) to[s] = d2;
-                    }
-                }
-            }
+            int bits = LoweredAt(coarse, heights, x, z);
             for (int s = 0; s < 4; s++)
-            {
-                if (down[s] > reach2) continue;
-                int limit = up[s] > reach2 ? shoulder2 : up[s];
-                if (down[s] < limit) lowered[(z * 2 + (s >> 1)) * 2 * sx + x * 2 + (s & 1)] = true;
-            }
+                if ((bits & (1 << s)) != 0) lowered[(z * 2 + (s >> 1)) * 2 * sx + x * 2 + (s & 1)] = true;
         }
         return lowered;
+    }
+
+    /// <summary>
+    /// Which of the four fine columns of block column (x, z) lose the top half of their ground block: bit
+    /// <c>s</c> is the fine column <c>s &amp; 1</c> along x and <c>s &gt;&gt; 1</c> along z.
+    /// </summary>
+    public static int LoweredAt(VoxelWorld coarse, int[] heights, int x, int z)
+    {
+        int sx = coarse.SizeX, sz = coarse.SizeZ;
+        int g = heights[z * sx + x];
+        if (g < 0 || !BlockInfo.IsGround(coarse.Get(x, g, z))) return 0;
+        if (g + 1 < coarse.SizeY && coarse.Get(x, g + 1, z) != BlockType.Air) return 0;
+        // Ground level with water, ice or lava beside it stays whole: a lowered step there would lie under it.
+        if (LiquidBeside(coarse, x, g, z)) return 0;
+        // Distances are doubled fine blocks (so the middle of a fine column is a whole number), squared.
+        const int reach2 = 4 * Reach * 4 * Reach, shoulder2 = 4 * Shoulder * 4 * Shoulder;
+        Span<int> down = stackalloc int[4];
+        Span<int> up = stackalloc int[4];
+        down.Fill(int.MaxValue);
+        up.Fill(int.MaxValue);
+        int x0 = Math.Max(x - Reach, 0), x1 = Math.Min(x + Reach, sx - 1);
+        for (int nz = Math.Max(z - Reach, 0); nz <= Math.Min(z + Reach, sz - 1); nz++)
+        {
+            int z0 = GapSquared[2 * (nz - z + Reach)], z1 = GapSquared[2 * (nz - z + Reach) + 1];
+            int row = nz * sx;
+            for (int nx = x0; nx <= x1; nx++)
+            {
+                int hn = heights[row + nx];
+                if (hn == g) continue;
+                var to = hn < g ? down : up;
+                int e0 = GapSquared[2 * (nx - x + Reach)], e1 = GapSquared[2 * (nx - x + Reach) + 1];
+                if (e0 + z0 < to[0]) to[0] = e0 + z0;
+                if (e1 + z0 < to[1]) to[1] = e1 + z0;
+                if (e0 + z1 < to[2]) to[2] = e0 + z1;
+                if (e1 + z1 < to[3]) to[3] = e1 + z1;
+            }
+        }
+        int bits = 0;
+        for (int s = 0; s < 4; s++)
+        {
+            if (down[s] > reach2) continue;
+            int limit = up[s] > reach2 ? shoulder2 : up[s];
+            if (down[s] < limit) bits |= 1 << s;
+        }
+        return bits;
     }
 
     /// <summary>
@@ -111,6 +122,18 @@ public static class FineTerrain
     /// <paramref name="sub"/> (0 or 1) to the block <paramref name="d"/> blocks along.
     /// </summary>
     private static int Gap(int d, int sub) => d > 0 ? 4 * d - 2 * sub - 1 : d < 0 ? -4 * d + 2 * sub - 3 : 0;
+
+    /// <summary><see cref="Gap"/> squared, for each block from -<see cref="Reach"/> to <see cref="Reach"/> along and each fine column: at <c>2 * (d + Reach) + sub</c>.</summary>
+    private static readonly int[] GapSquared = MakeGapSquared();
+
+    private static int[] MakeGapSquared()
+    {
+        var squared = new int[2 * (2 * Reach + 1)];
+        for (int d = -Reach; d <= Reach; d++)
+        for (int sub = 0; sub < 2; sub++)
+            squared[2 * (d + Reach) + sub] = Gap(d, sub) * Gap(d, sub);
+        return squared;
+    }
 
     /// <summary>Takes the lowered half blocks (see <see cref="Lowered"/>) off <paramref name="fine"/>, a plain upscale of <paramref name="coarse"/>.</summary>
     private static void Refine(VoxelWorld coarse, VoxelWorld fine)
@@ -123,37 +146,26 @@ public static class FineTerrain
             if (lowered[fz * fx2 + fx]) fine.Set(fx, 2 * heights[(fz / 2) * sx + fx / 2] + 1, fz, BlockType.Air);
     }
 
-    private static bool WaterBeside(VoxelWorld w, int x, int y, int z)
+    /// <summary>True if water, ice or lava lies beside block (x, y, z) at its level.</summary>
+    private static bool LiquidBeside(VoxelWorld w, int x, int y, int z)
     {
         for (int dz = -1; dz <= 1; dz++)
         for (int dx = -1; dx <= 1; dx++)
-            if (w.Get(x + dx, y, z + dz) == BlockType.Water) return true;
+            if (w.Get(x + dx, y, z + dz) is BlockType.Water or BlockType.Ice or BlockType.Lava) return true;
         return false;
     }
 
-    /// <summary>
-    /// Brings <paramref name="fine"/> up to date after block (x, y, z) of <paramref name="coarse"/> changed:
-    /// its eight half-size blocks become what it is now, and a block set down on a lowered step fills the step
-    /// under it in, so nothing stands on a gap.
-    /// </summary>
-    public static void Mirror(VoxelWorld coarse, VoxelWorld fine, int x, int y, int z)
-    {
-        var b = coarse.Get(x, y, z);
-        Fill(fine, x, y, z, b);
-        if (BlockInfo.IsSolid(b) && y > 0)
-        {
-            var below = coarse.Get(x, y - 1, z);
-            if (BlockInfo.IsSolid(below)) Fill(fine, x, y - 1, z, below);
-        }
-    }
-
-    private static void Fill(VoxelWorld fine, int x, int y, int z, BlockType b)
+    /// <summary>Makes the eight half-size blocks of whole block (x, y, z) of <paramref name="fine"/> <paramref name="b"/>.</summary>
+    internal static void Fill(VoxelWorld fine, int x, int y, int z, BlockType b)
     {
         for (int dy = 0; dy < 2; dy++)
         for (int dz = 0; dz < 2; dz++)
         for (int dx = 0; dx < 2; dx++)
             fine.Set(2 * x + dx, 2 * y + dy, 2 * z + dz, b);
     }
+
+    /// <summary>True if <paramref name="t"/> makes up the ground's height as lower or higher ground is told by (see <see cref="Heights"/>).</summary>
+    internal static bool IsLevel(BlockType t) => t == BlockType.Water || IsTerrain(t);
 
     /// <summary>
     /// True if the top half of whole block (x, y, z) is missing above fine column (fx, fz) of
