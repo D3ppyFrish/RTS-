@@ -8,7 +8,7 @@ namespace Rts.Sim.Automation;
 
 /// <summary>
 /// Optional automation, for players who want it: workers that find their own jobs, training that repeats,
-/// and soldiers that walk home when they are hurt. It runs on every machine right after the tick's
+/// soldiers that walk home when they are hurt, and town governors (see <c>AutomationSystem.Governor.cs</c>). It runs on every machine right after the tick's
 /// commands, and it acts only by giving the same commands a player can give, applied as if the player had
 /// given them just then. So it never does anything a player could not do by hand.
 ///
@@ -183,7 +183,8 @@ public sealed partial class AutomationSystem
 
         // Houses and farms, for players whose workers are all automatic.
         for (int p = 0; p < Economy.PlayerCount; p++)
-            if ((tick + p * 7) % PlanTicks == 0 && Economy.AutoWorkers(p)) Plan(p);
+            if ((tick + p * 7) % PlanTicks == 0 && Economy.AutoWorkers(p) && !Governed(p)) Plan(p);
+        StepGovernors();
 
         StepEvolution();
         StepRebuild();

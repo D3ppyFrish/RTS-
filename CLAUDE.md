@@ -28,6 +28,7 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 | Formations | `Units/Formations.cs` | `FormationTests.cs` | `ui-formation-screenshots.sh` |
 | Automation (automatic workers, repeat, stances) | `Automation/AutomationSystem.cs` | `AutomationTests.cs` | `ui-automation-screenshots.sh` |
 | Rebuild orders (ruins put back) | `Automation/AutomationSystem.Rebuild.cs` (hooks: `CombatSystem.Collapse`, `EconomySystem.StepRaid`); game: `GhostRenderer.cs` (ruin ghosts) | `RebuildTests.cs` | `ui-rebuild-screenshots.sh` |
+| Town governor (a town hall run to a focus) | `Automation/AutomationSystem.Governor.cs` (`GovernCommand`, `Building.Governor`); game: `Hud.cs` (`BuildGovernorRow`), `PlayerControl.cs` (`SetGovernor`, Shift+U) | `GovernorTests.cs` | `ui-governor-screenshots.sh` |
 | Supply rules (storage kept stocked from other storage) | `Economy/EconomySystem.Supply.cs` (`SupplyCommand`, `UnitJob.Supply`), `Automation/AutomationSystem.cs` (`Wants`, rank 3); game: `Hud.cs` (`BuildSupplyRow`), `PlayerControl.cs` (`CycleSupply`) | `SupplyTests.cs` | `ui-supply-screenshots.sh` |
 | Work priorities (per-worker and default lists) | `Automation/WorkPriorities.cs`, `Automation/AutomationSystem.cs` (`FindJob`); game: `PrioritiesPanel.cs` | `PriorityTests.cs` | `ui-priorities-screenshots.sh` |
 | Evolution (Settlers) | `Units/EvolutionSystem.cs` | `EvolutionTests.cs` | `ui-evolution-screenshots.sh` |

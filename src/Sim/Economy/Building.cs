@@ -28,6 +28,19 @@ public enum RaidKind : byte
 /// A placed building. Its footprint is columns [X, X + SizeX) by [Z, Z + SizeZ); Y is the level units
 /// stand at around it, so its first layer of blocks is at Y (a farm's field is at Y - 1).
 /// </summary>
+/// <summary>What a town hall's governor builds and trains for, beyond keeping the settlement housed and fed (see <see cref="GovernCommand"/>).</summary>
+public enum GovernorFocus : byte
+{
+    /// <summary>No governor: the player runs the settlement.</summary>
+    None,
+    /// <summary>More workers, a storehouse and a smelter: a bigger economy.</summary>
+    Growth,
+    /// <summary>A barracks and a steady stream of mixed soldiers.</summary>
+    Army,
+    /// <summary>A barracks, watchtowers around the hall, and archers.</summary>
+    Defence,
+}
+
 public sealed class Building
 {
     public int Id { get; }
@@ -80,6 +93,9 @@ public sealed class Building
     public int RallyY { get; internal set; }
     /// <summary>True if it has a rally point.</summary>
     public bool HasRally => RallyX >= 0;
+
+    /// <summary>A town hall's governor and its focus, or <see cref="GovernorFocus.None"/> (see <see cref="GovernCommand"/>).</summary>
+    public GovernorFocus Governor { get; internal set; }
 
     /// <summary>
     /// The toughness of its placed blocks that are gone: knocked out, dug away or fallen. It collapses once
@@ -222,6 +238,7 @@ public sealed class BuildingStore
             Mix(b.Lost); Mix(b.Damage);
             Mix(b.Upgrade?.Index ?? -1); Mix(b.UpgradeWork);
             Mix(b.RallyX); Mix(b.RallyZ); Mix(b.RallyY);
+            Mix((int)b.Governor);
         }
         return h;
     }

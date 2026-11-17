@@ -25,6 +25,7 @@ scripts/ui-economy-screenshots.sh   # scripted economy: gather, research, build,
 scripts/ui-combat-screenshots.sh    # scripted battle: attack-move, tunnel under a house
 scripts/ui-automation-screenshots.sh  # scripted automation: automatic workers, repeat, a house put up on its own
 scripts/ui-supply-screenshots.sh      # scripted supply rules: a storehouse told to keep stone and wood is stocked from the town hall
+scripts/ui-governor-screenshots.sh    # scripted town governor: a Defence governor runs the town, putting up a barracks and four watchtowers
 scripts/ui-evolution-screenshots.sh   # scripted evolution: evolve buttons, auto-evolve, a knight's panel
 scripts/ui-monsters-screenshots.sh    # scripted wolf lairs: Orcs beat a pack, ride one wolf and recruit one; Settlers get the reward
 scripts/ui-citystate-screenshots.sh   # scripted city-state: break the goblins' totem, hire goblins, a caravan trades
