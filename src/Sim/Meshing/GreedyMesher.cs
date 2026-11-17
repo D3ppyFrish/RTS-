@@ -69,7 +69,6 @@ public static class Occlusion
 /// </summary>
 public static class GreedyMesher
 {
-    private const int S = VoxelWorld.ChunkSize;
     private const int P = VoxelWorld.PaddedSize;
 
     /// <summary>Whether a face of <paramref name="block"/> touching <paramref name="neighbour"/> is drawn.</summary>
@@ -83,8 +82,18 @@ public static class GreedyMesher
     /// Appends quads for one chunk. Water goes to <paramref name="water"/>, everything else to <paramref name="opaque"/>.
     /// With <paramref name="ao"/> the opaque quads carry their corners' ambient occlusion (see <see cref="Occlusion"/>).
     /// </summary>
-    public static void Build(ReadOnlySpan<BlockType> padded, List<Quad> opaque, List<Quad> water, bool ao = false)
+    public static void Build(ReadOnlySpan<BlockType> padded, List<Quad> opaque, List<Quad> water, bool ao = false) =>
+        Build(padded, VoxelWorld.ChunkSize, opaque, water, ao);
+
+    /// <summary>
+    /// As <see cref="Build(ReadOnlySpan{BlockType}, List{Quad}, List{Quad}, bool)"/> for a cube of
+    /// <paramref name="size"/> blocks a side, padded by one block all round and indexed as
+    /// <see cref="Index(int, int, int, int)"/>: the half-size blocks of nearby ground are meshed 32 to a chunk.
+    /// </summary>
+    public static void Build(ReadOnlySpan<BlockType> padded, int size, List<Quad> opaque, List<Quad> water, bool ao = false)
     {
+        int S = size, P = size + 2;
+        if (S <= 0 || S > 64) throw new ArgumentOutOfRangeException(nameof(size));
         if (padded.Length < P * P * P) throw new ArgumentException("Padded chunk is too small", nameof(padded));
         Span<BlockType> mask = stackalloc BlockType[S * S];
         Span<byte> aoMask = stackalloc byte[S * S];
@@ -98,7 +107,7 @@ public static class GreedyMesher
             bool positive = (face & 1) == 0;
             step.Clear();
             step[a] = positive ? 1 : -1;
-            int neighbourOffset = Index(step[0], step[1], step[2]) - Index(0, 0, 0);
+            int neighbourOffset = (step[1] * P + step[2]) * P + step[0];
             int su = strides[u], sv = strides[v];
 
             for (int slice = 0; slice < S; slice++)
@@ -111,7 +120,7 @@ public static class GreedyMesher
                     for (int i = 0; i < S; i++)
                     {
                         pos[u] = i;
-                        int idx = Index(pos[0], pos[1], pos[2]);
+                        int idx = ((pos[1] + 1) * P + (pos[2] + 1)) * P + (pos[0] + 1);
                         var b = padded[idx];
                         bool visible = FaceVisible(b, padded[idx + neighbourOffset]);
                         mask[j * S + i] = visible ? b : BlockType.Air;
@@ -167,4 +176,7 @@ public static class GreedyMesher
 
     /// <summary>Index into the padded array for chunk-local coordinates (-1..16).</summary>
     public static int Index(int x, int y, int z) => ((y + 1) * P + (z + 1)) * P + (x + 1);
+
+    /// <summary>Index into the padded array of a cube <paramref name="size"/> blocks a side, for local coordinates (-1..size).</summary>
+    public static int Index(int x, int y, int z, int size) => ((y + 1) * (size + 2) + (z + 1)) * (size + 2) + (x + 1);
 }

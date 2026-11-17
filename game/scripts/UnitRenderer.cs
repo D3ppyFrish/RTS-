@@ -262,7 +262,7 @@ void fragment() {
             float px = u.PrevX[i].ToFloat(), pz = u.PrevZ[i].ToFloat();
             float cx = u.X[i].ToFloat(), cz = u.Z[i].ToFloat();
             float x = Mathf.Lerp(px, cx, alpha), z = Mathf.Lerp(pz, cz, alpha);
-            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + DeckOffset(_sim, i);
+            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + DeckOffset(_sim, i) + ChunkRenderer.GroundDrop(x, u.Y[i], z);
 
             int id = u.Id[i];
             if (id >= _yawById.Length) Array.Resize(ref _yawById, Math.Max(id + 1, _yawById.Length * 2));

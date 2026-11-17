@@ -111,6 +111,93 @@ public sealed class VoxelWorld
         }
     }
 
+    /// <summary>
+    /// Copies the cube of <paramref name="size"/> blocks a side whose lowest corner is block (x0, y0, z0), plus a
+    /// one-block border all round, into <paramref name="dest"/>, indexed
+    /// <c>((y + 1) * (size + 2) + z + 1) * (size + 2) + x + 1</c> for coordinates local to the cube. Outside the
+    /// world is air. Like <see cref="CopyChunkPadded"/>, for cubes that are not one chunk.
+    /// </summary>
+    public void CopyBoxPadded(int x0, int y0, int z0, int size, BlockType[] dest)
+    {
+        int p = size + 2;
+        if (dest.Length < p * p * p) throw new ArgumentException("Destination is too small", nameof(dest));
+        for (int y = 0; y < p; y++)
+        for (int z = 0; z < p; z++)
+        {
+            int row = (y * p + z) * p;
+            int wy = y0 - 1 + y, wz = z0 - 1 + z;
+            if (wy < 0 || wz < 0 || wy >= SizeY || wz >= SizeZ)
+            {
+                Array.Fill(dest, BlockType.Air, row, p);
+                continue;
+            }
+            int cy = wy / ChunkSize, cz = wz / ChunkSize;
+            int local = ((wy % ChunkSize) * ChunkSize + wz % ChunkSize) * ChunkSize;
+            for (int x = 0; x < p;)
+            {
+                int wx = x0 - 1 + x;
+                if (wx < 0 || wx >= SizeX) { dest[row + x++] = BlockType.Air; continue; }
+                // The rest of this row that lies in the same chunk, in one go.
+                int lx = wx % ChunkSize;
+                int run = Math.Min(Math.Min(ChunkSize - lx, p - x), SizeX - wx);
+                var chunk = _chunks[ChunkIndex(wx / ChunkSize, cy, cz)];
+                if (chunk is null) Array.Fill(dest, BlockType.Air, row + x, run);
+                else Array.Copy(chunk, local + lx, dest, row + x, run);
+                x += run;
+            }
+        }
+    }
+
+    /// <summary>
+    /// A world twice as fine: every block of this one as eight blocks half its size (see
+    /// <see cref="World.FineTerrain"/>).
+    /// </summary>
+    public VoxelWorld Upscaled()
+    {
+        const int half = ChunkSize / 2;
+        var fine = new VoxelWorld(SizeX * 2, SizeY * 2, SizeZ * 2);
+        for (int cy = 0; cy < ChunksY; cy++)
+        for (int cz = 0; cz < ChunksZ; cz++)
+        for (int cx = 0; cx < ChunksX; cx++)
+        {
+            if (_chunks[ChunkIndex(cx, cy, cz)] is not { } chunk) continue;
+            for (int o = 0; o < 8; o++)
+            {
+                int ox = o & 1, oy = o >> 1 & 1, oz = o >> 2;
+                int fx = cx * 2 + ox, fy = cy * 2 + oy, fz = cz * 2 + oz;
+                if (fx >= fine.ChunksX || fy >= fine.ChunksY || fz >= fine.ChunksZ) continue;
+                BlockType[]? to = null;
+                for (int y = 0; y < half; y++)
+                for (int z = 0; z < half; z++)
+                for (int x = 0; x < half; x++)
+                {
+                    var b = chunk[LocalIndex(ox * half + x, oy * half + y, oz * half + z)];
+                    if (b == BlockType.Air) continue;
+                    to ??= new BlockType[ChunkSize * ChunkSize * ChunkSize];
+                    int at = LocalIndex(x * 2, y * 2, z * 2);
+                    to[at] = to[at + 1] = b;
+                    to[at + ChunkSize] = to[at + ChunkSize + 1] = b;
+                    at += ChunkSize * ChunkSize;
+                    to[at] = to[at + 1] = b;
+                    to[at + ChunkSize] = to[at + ChunkSize + 1] = b;
+                }
+                fine._chunks[fine.ChunkIndex(fx, fy, fz)] = to;
+            }
+        }
+        return fine;
+    }
+
+    /// <summary>Bytes of block storage in use: a byte a block for every chunk that holds anything.</summary>
+    public long StorageBytes
+    {
+        get
+        {
+            long n = 0;
+            foreach (var c in _chunks) if (c is not null) n += c.Length;
+            return n;
+        }
+    }
+
     /// <summary>Highest solid block in a column, or -1 if the column is empty.</summary>
     public int SurfaceHeight(int x, int z)
     {

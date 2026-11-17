@@ -6,12 +6,32 @@ using Rts.Sim.Meshing;
 
 namespace Rts.Game;
 
+/// <summary>
+/// How finely a chunk is drawn, by how far it is from the camera (see <see cref="ChunkRenderer"/>): the
+/// nearest ground in half-size blocks, then as the rules have it, then with its trees and buildings in
+/// voxels four times the size, and the horizon in plain whole blocks.
+/// </summary>
+public enum ChunkLod : byte
+{
+    /// <summary>Ground in half-size blocks (see <see cref="Rts.Sim.World.FineTerrain"/>); trees and buildings in full detail.</summary>
+    Fine,
+    /// <summary>Ground in whole blocks; trees and buildings in full detail.</summary>
+    Near,
+    /// <summary>Ground in whole blocks; trees and buildings in voxels four times the size (two to a block).</summary>
+    Far,
+    /// <summary>Everything in plain whole blocks, with no shading in the corners.</summary>
+    Horizon,
+}
+
 /// <summary>Vertex arrays for one chunk, built off the main thread and uploaded later.</summary>
 public sealed class ChunkMeshData
 {
     public SurfaceData? Opaque;
     public SurfaceData? Water;
     public bool IsEmpty => Opaque == null && Water == null;
+    public int Triangles => ((Opaque?.Indices.Length ?? 0) + (Water?.Indices.Length ?? 0)) / 3;
+    /// <summary>Bytes of vertex and index data.</summary>
+    public long Bytes => (Opaque?.Bytes ?? 0) + (Water?.Bytes ?? 0);
 }
 
 public sealed class SurfaceData
@@ -20,6 +40,12 @@ public sealed class SurfaceData
     public required Vector3[] Normals;
     public required Color[] Colors;
     public required int[] Indices;
+    /// <summary>
+    /// Only for ground in half-size blocks (<see cref="ChunkLod.Fine"/>): x is 1 at the vertices of half-size
+    /// blocks and 0 at the rest, which tells the terrain shader the size of the blocks it draws.
+    /// </summary>
+    public Vector2[]? Uvs;
+    public long Bytes => Vertices.Length * (Uvs != null ? 48L : 40L) + Indices.Length * 4L;
 }
 
 /// <summary>
@@ -30,6 +56,12 @@ public sealed class SurfaceData
 public static class ChunkMesher
 {
     public const float BlockSize = 0.5f;
+
+    /// <summary>Blocks a side of a chunk of half-size blocks: the same piece of the world as a chunk of whole blocks.</summary>
+    public const int HalfChunk = VoxelWorld.ChunkSize * 2;
+
+    /// <summary>Length of the padded copy a chunk of half-size blocks is meshed from (see <see cref="VoxelWorld.CopyBoxPadded"/>).</summary>
+    public const int HalfPaddedLength = (HalfChunk + 2) * (HalfChunk + 2) * (HalfChunk + 2);
 
     private static readonly Vector3[] FaceNormals =
     {
@@ -83,9 +115,12 @@ public static class ChunkMesher
 
     /// <summary>
     /// Meshes chunk (cx, cy, cz) from its padded copy: terrain as whole blocks, building blocks at character
-    /// scale (see <see cref="StructureMesher"/>).
+    /// scale (see <see cref="StructureMesher"/>), as simply as <paramref name="lod"/> says. For
+    /// <see cref="ChunkLod.Fine"/>, <paramref name="half"/> is the padded copy of the same chunk in half-size
+    /// blocks (changed here), which the ground is meshed from; the whole blocks then only give the buildings and trees.
     /// </summary>
-    public static ChunkMeshData BuildData(BlockType[] padded, int cx = 0, int cy = 0, int cz = 0)
+    public static ChunkMeshData BuildData(BlockType[] padded, int cx = 0, int cy = 0, int cz = 0,
+        ChunkLod lod = ChunkLod.Near, BlockType[]? half = null)
     {
         var opaque = _opaque ??= new List<Quad>(1024);
         var water = _water ??= new List<Quad>(256);
@@ -93,9 +128,26 @@ public static class ChunkMesher
         opaque.Clear();
         water.Clear();
         fine.Clear();
-        if (StructureMesher.HasStructures(padded))
+        if (lod == ChunkLod.Horizon)
         {
-            StructureMesher.Build(padded, cx, cy, cz, fine, ao: true);
+            GreedyMesher.Build(padded, opaque, water, ao: false);
+            return new ChunkMeshData { Opaque = ToArrays(opaque, null, 1f, BlockSize, horizon: true), Water = ToArrays(water, null, 0.7f, BlockSize) };
+        }
+        bool structures = StructureMesher.HasStructures(padded);
+        if (structures) StructureMesher.Build(padded, cx, cy, cz, fine, ao: true, step: lod == ChunkLod.Far ? 4 : 1);
+        if (lod == ChunkLod.Fine && half != null)
+        {
+            for (int i = 0; i < HalfPaddedLength; i++)
+                if (StructureDetail.IsDetailed(half[i])) half[i] = BlockType.Air;
+            GreedyMesher.Build(half, HalfChunk, opaque, water, ao: true);
+            return new ChunkMeshData
+            {
+                Opaque = ToArrays(opaque, fine, 1f, BlockSize / 2, half: true),
+                Water = ToArrays(water, null, 0.7f, BlockSize / 2),
+            };
+        }
+        if (structures)
+        {
             var stripped = _stripped ??= new BlockType[padded.Length];
             StructureMesher.StripStructures(padded, stripped);
             GreedyMesher.Build(stripped, opaque, water, ao: true);
@@ -104,7 +156,7 @@ public static class ChunkMesher
         {
             GreedyMesher.Build(padded, opaque, water, ao: true);
         }
-        return new ChunkMeshData { Opaque = ToArrays(opaque, fine, 1f), Water = ToArrays(water, null, 0.7f) };
+        return new ChunkMeshData { Opaque = ToArrays(opaque, fine, 1f, BlockSize), Water = ToArrays(water, null, 0.7f, BlockSize) };
     }
 
     /// <summary>The mark (see <see cref="FineMark"/>) a fine voxel of this colour is drawn with.</summary>
@@ -112,7 +164,7 @@ public static class ChunkMesher
         StructurePalette.IsGlow(colour) ? GlowMark : StructurePalette.IsLeaf(colour) ? FineLeafMark
         : colour == StructurePalette.Glass ? WindowMark : FineMark;
 
-    private static SurfaceData? ToArrays(List<Quad> quads, List<FineQuad>? fine, float alpha)
+    private static SurfaceData? ToArrays(List<Quad> quads, List<FineQuad>? fine, float alpha, float blockSize, bool horizon = false, bool half = false)
     {
         int fineCount = fine?.Count ?? 0;
         int total = quads.Count + fineCount;
@@ -121,6 +173,7 @@ public static class ChunkMesher
         var normals = new Vector3[verts.Length];
         var colors = new Color[verts.Length];
         var indices = new int[total * 6];
+        var uvs = half ? new Vector2[verts.Length] : null;
         for (int f = 0; f < fineCount; f++)
         {
             var quad = fine![f];
@@ -140,7 +193,7 @@ public static class ChunkMesher
         for (int q = 0; q < quads.Count; q++)
         {
             var quad = quads[q];
-            var c = ColorOf(quad.Block) * Shade[quad.Face];
+            var c = (horizon ? HorizonColor(quad.Block, quad.Face) : ColorOf(quad.Block)) * Shade[quad.Face];
             c.A = alpha < 1 ? alpha : quad.Block switch
             {
                 BlockType.Crystal => GlowMark,
@@ -152,14 +205,15 @@ public static class ChunkMesher
             {
                 var (x, y, z) = quad.Corner(k);
                 int vi = q * 4 + k;
-                verts[vi] = new Vector3(x, y, z) * BlockSize;
+                verts[vi] = new Vector3(x, y, z) * blockSize;
+                if (uvs != null) uvs[vi] = new Vector2(1f, 0f);
                 normals[vi] = FaceNormals[quad.Face];
                 colors[vi] = Lit(c, quad.AoAt(k));
             }
             // Corners are counter-clockwise from outside; Godot treats clockwise as front-facing.
             QuadIndices(indices, q * 6, q * 4, quad.AoAt(0), quad.AoAt(1), quad.AoAt(2), quad.AoAt(3));
         }
-        return new SurfaceData { Vertices = verts, Normals = normals, Colors = colors, Indices = indices };
+        return new SurfaceData { Vertices = verts, Normals = normals, Colors = colors, Indices = indices, Uvs = uvs };
     }
 
     /// <summary>Colour <paramref name="c"/> at a corner of openness <paramref name="ao"/>, its mark kept.</summary>
@@ -185,6 +239,7 @@ public static class ChunkMesher
         arrays[(int)Mesh.ArrayType.Vertex] = s.Vertices;
         arrays[(int)Mesh.ArrayType.Normal] = s.Normals;
         arrays[(int)Mesh.ArrayType.Color] = s.Colors;
+        if (s.Uvs != null) arrays[(int)Mesh.ArrayType.TexUV] = s.Uvs;
         arrays[(int)Mesh.ArrayType.Index] = s.Indices;
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
         mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, material);
@@ -269,6 +324,21 @@ public static class ChunkMesher
         StructurePalette.RampartC => new Color(0.89f, 0.88f, 0.83f),
         StructurePalette.RampartMortar => new Color(0.5f, 0.49f, 0.46f),
         _ => new Color(1, 0, 1),
+    };
+
+    /// <summary>
+    /// The colour of a block's face on the horizon (<see cref="ChunkLod.Horizon"/>), where trees are plain
+    /// blocks: a crown gets the colours its leaves have on average up close (lighter on top), so a forest does
+    /// not darken where it is drawn simply.
+    /// </summary>
+    public static Color HorizonColor(BlockType t, int face) => t switch
+    {
+        BlockType.Leaves => face == 2 ? new Color(0.36f, 0.57f, 0.21f) : new Color(0.27f, 0.52f, 0.2f),
+        BlockType.PineNeedles => face == 2 ? new Color(0.2f, 0.46f, 0.28f) : new Color(0.17f, 0.41f, 0.25f),
+        BlockType.BirchLeaves => face == 2 ? new Color(0.51f, 0.66f, 0.22f) : new Color(0.49f, 0.66f, 0.23f),
+        BlockType.WillowLeaves => face == 2 ? new Color(0.44f, 0.59f, 0.27f) : new Color(0.4f, 0.54f, 0.27f),
+        BlockType.DuskLeaves => face == 2 ? new Color(0.55f, 0.34f, 0.68f) : new Color(0.48f, 0.29f, 0.62f),
+        _ => ColorOf(t),
     };
 
     public static Color ColorOf(BlockType t) => t switch

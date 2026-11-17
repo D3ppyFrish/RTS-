@@ -31,6 +31,9 @@ public sealed class Benchmark
 
     private readonly string _outPath;
     private readonly List<double> _tris = new();
+    // Frame times by the clock: the engine's own delta is rounded to whole screen refreshes.
+    private readonly List<double> _clockMs = new();
+    private long _lastFrame;
     private readonly List<double> _draws = new();
 
     /// <summary>More to add to the result line (what was drawn and how), worked out when the run ends.</summary>
@@ -88,6 +91,9 @@ public sealed class Benchmark
         if (_warmup > 0) { _warmup--; return false; }
         if (_rebuildsAtStart < 0) _rebuildsAtStart = chunks.RebuildsCompleted;
         _frameMs.Add(delta * 1000.0);
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (_lastFrame != 0) _clockMs.Add((now - _lastFrame) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        _lastFrame = now;
         _tris.Add(RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame));
         _draws.Add(RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame));
         // Main-thread time spent on our own work this frame: simulation ticks plus chunk dispatch and upload.
@@ -109,6 +115,11 @@ public sealed class Benchmark
             _digsScheduled, chunks.RebuildsCompleted - _rebuildsAtStart, _maxPending, chunks.ChunkNodeCount,
             _processMs.Average(), _processMs.Max(), RenderingServer.GetVideoAdapterName(), _unitsMoving);
         line += string.Format(ci, " avg_tris={0:F0} avg_draws={1:F0}", _tris.Average(), _draws.Average());
+        if (_clockMs.Count > 0)
+        {
+            var clock = _clockMs.OrderBy(f => f).ToArray();
+            line += string.Format(ci, " clock_avg_ms={0:F1} clock_p95_ms={1:F1}", clock.Average(), clock[Math.Min(clock.Length - 1, (int)(0.95 * clock.Length))]);
+        }
         if (Extra != null) line += " " + Extra();
         GD.Print(line);
         // Release builds on Windows have no console, so also append the result to a file.
