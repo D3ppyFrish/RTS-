@@ -223,7 +223,9 @@ The cloud dev container only has a software renderer, so its FPS numbers are not
 (`clock_avg_ms` is the time a frame really took there; the engine's own figure is rounded to whole screen
 refreshes). The line also says how the world was drawn: `lod_chunks` and `lod_tris` are the chunks and
 triangles at each level of detail (half-size ground / full detail / bigger voxels / plain blocks),
-`mesh_mb` the vertex data on screen and `fine_world_mb` the half-size blocks' storage.
+`mesh_mb` the vertex data on screen, `fine_world_mb` the half-size blocks' storage, and `fine_upkeep_ms`
+the time spent keeping them right as blocks changed (`fine_upkeep_columns` block columns of steps worked
+out again; the benchmark digs a hundred blocks a second, far more than a match does).
 
 ### Levels of detail and the half-size blocks prototype
 
@@ -245,12 +247,22 @@ ground is drawn in blocks half the size, with every step of open natural ground 
 (`Rts.Sim.World.FineTerrain`): the top half of a ground block goes wherever the ground is nearer to lower
 ground than to higher ground, so a hillside climbs in quarter-metre steps and the edge of a plateau gets
 a shoulder. The rules still run on whole blocks: units, buildings, digging and pathfinding are unchanged,
-and what stands on a lowered step is drawn a quarter of a metre lower. The finer world is a second
-`VoxelWorld` of 1024x128x1024 blocks made at load (53 MB against 8 MB) and kept in step with the whole blocks as
-they change; trees and buildings are drawn from the whole blocks as before. Known gaps: blood, plans and
-marks laid on the ground (all but the rings under units) float a quarter of a metre over a lowered step,
-falling ground is drawn in whole blocks, and the ground steps up a quarter of a metre where half-size
-blocks give way to whole ones (90 m off).
+and what stands or lies on a lowered step (units, their bars and icons, blood, order markers, the rally
+flag) is drawn a quarter of a metre lower. The finer world is a second `VoxelWorld` of 1024x128x1024
+blocks made at load (53 MB against 8 MB); trees and buildings are drawn from the whole blocks as before.
+
+As the world changes, `Rts.Sim.World.FineWorld` keeps the finer world what it would be if it were made
+afresh: the ground round a new pit gets its shoulder, a step that is built on is filled in, and it comes
+back when the building or rubble on it is gone. A change to the ground's height has the steps within
+eight blocks of it worked out again before the next frame (600 block columns a frame at most, so a great
+collapse settles over a few frames); any other change only those beside it.
+
+Known gaps: a plan's ghost stands where the building will (a quarter of a metre over a lowered step,
+which is filled in when it is built), falling ground is drawn in whole blocks, and the ground steps up a
+quarter of a metre where half-size blocks give way to whole ones (90 m off).
+
+To run any script that starts the game on the half-size ground, pass it more arguments in `RTS_ARGS`
+(space-separated; the command line wins): `RTS_ARGS=--terrain=fine scripts/ui-dig-screenshots.sh`.
 
 ### Detail prototype
 

@@ -190,27 +190,130 @@ public class FineTerrainTests
         Assert.Equal(Hash(), Hash());
     }
 
+    [Theory]
+    [InlineData(BlockType.Ice)]
+    [InlineData(BlockType.Lava)]
+    public void GroundLevelWithIceOrLavaStaysWholeToo(BlockType pool)
+    {
+        // As with water: a frozen pool's bank does not drop when the water turns to ice.
+        var w = Ground(32, 32, (x, _) => x < 8 ? 3 : x < 20 ? 4 : 5);
+        for (int z = 0; z < 32; z++)
+        for (int x = 0; x < 8; x++)
+            w.Set(x, 4, z, pool);
+        var fine = FineTerrain.Build(w);
+        for (int fx = 16; fx < 40; fx++) Assert.Equal(9, Top(fine, fx, 30));
+        Assert.Equal(10, Top(fine, 40, 30));
+    }
+
     [Fact]
     public void ChangesToTheWorldCarryOver()
     {
         var w = Ground(32, 32, (x, _) => x < 16 ? 4 : 5);
-        var fine = FineTerrain.Build(w);
-        w.BlockChanged += (x, y, z) => FineTerrain.Mirror(w, fine, x, y, z);
-        // Dug: all eight half-size blocks go, and what is under it shows whole.
+        var fine = new FineWorld(w);
+        w.BlockChanged += fine.Changed;
+        Assert.Equal(FineTerrain.Build(w).ComputeHash(), fine.Blocks.ComputeHash());
+        // Dug: all eight half-size blocks go and what is under it shows whole, and the ground round the new
+        // pit gets a shoulder two blocks wide.
+        Assert.Equal(9, Top(fine.Blocks, 14, 16));
         w.Set(8, 4, 8, BlockType.Air);
-        Assert.Equal(7, Top(fine, 16, 16));
-        Assert.Equal(7, Top(fine, 17, 17));
+        Assert.Equal(7, Top(fine.Blocks, 16, 16));
+        Assert.True(fine.Stale > 0);
+        Assert.True(fine.Refresh() > 0);
+        Assert.Equal(0, fine.Stale);
+        Assert.Equal(7, Top(fine.Blocks, 16, 16));
+        Assert.Equal(7, Top(fine.Blocks, 17, 17));
+        Assert.Equal(8, Top(fine.Blocks, 15, 16));
+        Assert.Equal(8, Top(fine.Blocks, 12, 16));
+        Assert.Equal(9, Top(fine.Blocks, 11, 16));
         // Built on a lowered step: the step under it is filled in, so the wall does not stand on a gap.
-        Assert.Equal(BlockType.Air, fine.Get(32, 11, 20));
+        Assert.Equal(BlockType.Air, fine.Blocks.Get(32, 11, 20));
         w.Set(16, 6, 10, BlockType.Planks);
+        fine.Refresh();
         for (int k = 0; k < 4; k++)
         {
-            Assert.Equal(BlockType.Grass, fine.Get(32 + (k & 1), 11, 20 + (k >> 1)));
-            Assert.Equal(BlockType.Planks, fine.Get(32 + (k & 1), 12, 20 + (k >> 1)));
-            Assert.Equal(BlockType.Planks, fine.Get(32 + (k & 1), 13, 20 + (k >> 1)));
+            Assert.Equal(BlockType.Grass, fine.Blocks.Get(32 + (k & 1), 11, 20 + (k >> 1)));
+            Assert.Equal(BlockType.Planks, fine.Blocks.Get(32 + (k & 1), 12, 20 + (k >> 1)));
+            Assert.Equal(BlockType.Planks, fine.Blocks.Get(32 + (k & 1), 13, 20 + (k >> 1)));
         }
         // Its neighbour on the edge keeps its step.
-        Assert.Equal(BlockType.Air, fine.Get(32, 11, 24));
+        Assert.Equal(BlockType.Air, fine.Blocks.Get(32, 11, 24));
+        // The wall comes down: the step is back.
+        w.Set(16, 6, 10, BlockType.Air);
+        fine.Refresh();
+        Assert.Equal(BlockType.Air, fine.Blocks.Get(32, 11, 20));
+        Assert.Equal(BlockType.Air, fine.Blocks.Get(32, 12, 20));
+    }
+
+    [Fact]
+    public void CatchingUpALittleAtATimeEndsTheSame()
+    {
+        // A long trench dug at once, worked out a hundred columns a call: it takes several calls, and ends as
+        // the finer world made afresh.
+        var w = Ground(48, 48, (x, z) => 6 + (x + z) / 12);
+        var fine = new FineWorld(w);
+        w.BlockChanged += fine.Changed;
+        for (int x = 4; x < 44; x++)
+        for (int y = 5; y < 12; y++)
+            w.Set(x, y, 24, BlockType.Air);
+        int waiting = fine.Stale, calls = 0;
+        Assert.True(waiting > 300);
+        while (fine.Stale > 0)
+        {
+            fine.Refresh(most: 100);
+            Assert.Equal(Math.Max(0, waiting - 100), fine.Stale);
+            waiting = fine.Stale;
+            calls++;
+        }
+        Assert.True(calls > 3);
+        Assert.Equal(FineTerrain.Build(w).ComputeHash(), fine.Blocks.ComputeHash());
+    }
+
+    [Fact]
+    public void AChangedWorldGivesTheFinerWorldItWouldGiveAfresh()
+    {
+        // Dig, pile up, build, flood, freeze and pave at random, catching up now and then: the finer world is
+        // always the one the world as it stands would be given from scratch, whatever happened on the way.
+        var w = RegionGenerator.Generate(1234, 96, 32, 96).World;
+        var fine = new FineWorld(w);
+        w.BlockChanged += fine.Changed;
+        var rng = new DeterministicRandom(5);
+        var steps = new List<(int X, int Y, int Z)>();
+        int moved = 0;
+        for (int round = 0; round < 8; round++)
+        {
+            for (int i = 0; i < 80; i++)
+            {
+                // Mostly near one spot, as a pit or a wall is: changes whose reach overlaps.
+                int x = round % 2 == 0 ? rng.Range(0, 96) : 40 + rng.Range(0, 12);
+                int z = round % 2 == 0 ? rng.Range(0, 96) : 40 + rng.Range(0, 12);
+                int top = 31;
+                while (top > 0 && w.Get(x, top, z) == BlockType.Air) top--;
+                switch (rng.Range(0, 8))
+                {
+                    case 0: case 1: if (top > 1) w.Set(x, top, z, BlockType.Air); break;
+                    case 2: if (top < 30) w.Set(x, top + 1, z, BlockType.Stone); break;
+                    case 3: if (top < 30) w.Set(x, top + 1, z, BlockType.Planks); break;
+                    case 4: if (top < 30) w.Set(x, top + 1, z, BlockType.Water); break;
+                    case 5: w.Set(x, top, z, w.Get(x, top, z) == BlockType.Water ? BlockType.Ice : BlockType.Road); break;
+                    case 6: if (top < 28) w.Set(x, top + 3, z, BlockType.Soil); break;
+                    case 7: w.Set(x, rng.Range(1, 31), z, rng.Range(0, 2) == 0 ? BlockType.Air : BlockType.Grass); break;
+                }
+            }
+            steps.Clear();
+            int changed = fine.Refresh((x, y, z) => steps.Add((x, y, z)));
+            Assert.Equal(changed, steps.Count);
+            moved += changed;
+            var fresh = FineTerrain.Build(w);
+            for (int y = 0; y < fresh.SizeY; y++)
+            for (int z = 0; z < fresh.SizeZ; z++)
+            for (int x = 0; x < fresh.SizeX; x++)
+                Assert.True(fresh.Get(x, y, z) == fine.Blocks.Get(x, y, z), $"round {round}: half-size block ({x}, {y}, {z})");
+            // Every block it said was stepped is ground on top.
+            foreach (var (x, y, z) in steps) Assert.True(BlockInfo.IsGround(w.Get(x, y, z)));
+        }
+        // The changes moved a good many steps. Nothing waits, and catching up again changes nothing.
+        Assert.True(moved > 200, $"{moved} columns changed their steps");
+        Assert.Equal(0, fine.Refresh());
     }
 
     [Fact]

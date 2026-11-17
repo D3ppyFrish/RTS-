@@ -115,7 +115,7 @@ public partial class CombatRenderer : Node3D
             if (!_fog.Shows(i)) continue;
             float x = Mathf.Lerp(u.PrevX[i].ToFloat(), u.X[i].ToFloat(), alpha);
             float z = Mathf.Lerp(u.PrevZ[i].ToFloat(), u.Z[i].ToFloat(), alpha);
-            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha);
+            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + ChunkRenderer.GroundDrop(x, u.Y[i], z);
             if (u.Rout[i] > 0)
                 _rings.Add(Vector3.Right, Vector3.Up, Vector3.Back, new Vector3(x * bs, y * bs + 0.04f, z * bs), Routing);
             if (u.Owner[i] == PlayerControl.LocalPlayer && (u.Subdued[i] || (evolves && evolution.CanEvolve(i))))

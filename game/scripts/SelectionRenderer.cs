@@ -150,7 +150,11 @@ void fragment() {
         }
         // The selected building's rally point: a flag where its trained units walk to.
         _rally.Visible = b is { HasRally: true } && b.Owner == PlayerControl.LocalPlayer;
-        if (_rally.Visible) _rally.Position = new Vector3(b!.RallyX + 0.5f, b.RallyY, b.RallyZ + 0.5f) * bs;
+        if (_rally.Visible)
+        {
+            var foot = new Vector3(b!.RallyX + 0.5f, b.RallyY, b.RallyZ + 0.5f) * bs;
+            _rally.Position = foot + new Vector3(0, ChunkRenderer.GroundDropAt(foot), 0);
+        }
 
         var road = control.RoadPreview;
         int needed = Math.Max(16, road.Count);
@@ -246,10 +250,10 @@ void fragment() {
         _dig.VisibleInstanceCount = _digSquares.Count;
     }
 
-    /// <summary>Shows the order marker at a world position (metres).</summary>
+    /// <summary>Shows the order marker at a world position (metres), on the ground as it is drawn there.</summary>
     public void ShowMarker(Vector3 position, Color color)
     {
-        _marker.Position = position + new Vector3(0, 0.04f, 0);
+        _marker.Position = position + new Vector3(0, 0.04f + ChunkRenderer.GroundDropAt(position), 0);
         _markerMaterial.AlbedoColor = color;
         _markerAge = 0;
         _marker.Visible = true;

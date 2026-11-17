@@ -41,6 +41,12 @@ public partial class ChunkRenderer : Node3D
     /// <summary>Main-thread milliseconds per frame spent uploading finished meshes.</summary>
     public double UploadBudgetMs { get; set; } = 3.0;
 
+    /// <summary>
+    /// Most block columns of half-size ground worked out again per frame (see <see cref="FineWorld.Refresh"/>):
+    /// a dug block is at most 300, so only a collapse takes more than a frame to settle.
+    /// </summary>
+    public int MaxStepsPerFrame { get; set; } = 600;
+
     /// <summary>Most chunks copied and sent to workers per frame.</summary>
     public int MaxDispatchPerFrame { get; set; } = 64;
 
@@ -58,9 +64,16 @@ public partial class ChunkRenderer : Node3D
     /// <summary>The world in half-size blocks, if it is drawn (see <see cref="UseFineTerrain"/>).</summary>
     public VoxelWorld? Fine => _fine;
 
+    /// <summary>
+    /// Goes up whenever the ground drawn may have moved under what lies on it (see <see cref="GroundDrop"/>):
+    /// a chunk starts or stops being drawn in half-size blocks, or its steps change.
+    /// </summary>
+    public static int GroundVersion { get; private set; }
+
     private const int PaddedLength = VoxelWorld.PaddedSize * VoxelWorld.PaddedSize * VoxelWorld.PaddedSize;
 
     private VoxelWorld _world = null!;
+    private FineWorld? _fineWorld;
     private VoxelWorld? _fine;
     private TerrainMaterials _materials = null!;
     private Func<Vector3> _eye = () => Vector3.Zero;
@@ -72,6 +85,10 @@ public partial class ChunkRenderer : Node3D
     private int _inFlight, _stale;
 
     private static ChunkRenderer? _current;
+
+    /// <summary>Block columns of half-size ground worked out again since the match began, and the milliseconds that took.</summary>
+    private long _upkeepColumns;
+    private double _upkeepMs;
 
     /// <summary>One chunk: the mesh on screen, and the meshes kept for the levels of detail next to it.</summary>
     private sealed class Chunk
@@ -101,7 +118,8 @@ public partial class ChunkRenderer : Node3D
         if (UseFineTerrain)
         {
             var sw = Stopwatch.StartNew();
-            _fine = FineTerrain.Build(world);
+            _fineWorld = new FineWorld(world);
+            _fine = _fineWorld.Blocks;
             FineBuildMs = sw.Elapsed.TotalMilliseconds;
         }
         _world.BlockChanged += OnBlockChanged;
@@ -130,10 +148,9 @@ public partial class ChunkRenderer : Node3D
 
     private void OnBlockChanged(int x, int y, int z)
     {
-        if (_fine != null) FineTerrain.Mirror(_world, _fine, x, y, z);
+        // The ground's steps round the change are worked out again before the next frame is drawn.
+        _fineWorld?.Changed(x, y, z);
         MarkBlockDirty(x, y, z);
-        // A block set down fills in the step under it, which may be in the chunk below.
-        if (_fine != null && y > 0) MarkBlockDirty(x, y - 1, z);
     }
 
     /// <summary>Marks the chunk holding a block dirty, plus any neighbour whose border faces it affects.</summary>
@@ -189,6 +206,14 @@ public partial class ChunkRenderer : Node3D
     public override void _Process(double delta)
     {
         long start = Stopwatch.GetTimestamp();
+        // The half-size ground catches up with what was dug, built and fell since the last frame.
+        // The half-size ground catches up with what was dug, built and fell since the last frame.
+        if (_fineWorld is { Stale: > 0 })
+        {
+            _upkeepColumns += Math.Min(_fineWorld.Stale, MaxStepsPerFrame);
+            if (_fineWorld.Refresh(MarkBlockDirty, MaxStepsPerFrame) > 0) GroundVersion++;
+            _upkeepMs += (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
+        }
         Dispatch();
         Upload();
         LastProcessMs = (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
@@ -323,6 +348,7 @@ public partial class ChunkRenderer : Node3D
             }
             chunk.Node.Mesh = mesh;
         }
+        if ((chunk.Shown == (int)ChunkLod.Fine) != (level == (int)ChunkLod.Fine)) GroundVersion++;
         chunk.Shown = level;
         for (int l = 0; l < Levels; l++)
         {
@@ -349,7 +375,7 @@ public partial class ChunkRenderer : Node3D
         }
         return $"lod={(Lod ? "on" : "off")} terrain={(_fine != null ? "fine" : "blocks")} lod_chunks={string.Join("/", chunks)} " +
                $"lod_tris={string.Join("/", triangles)} mesh_mb={shownBytes / 1e6:F0} mesh_kept_mb={keptBytes / 1e6:F0} " +
-               $"fine_world_mb={FineBytes / 1e6:F0} fine_build_ms={FineBuildMs:F0}";
+               $"fine_world_mb={FineBytes / 1e6:F0} fine_build_ms={FineBuildMs:F0} fine_upkeep_columns={_upkeepColumns} fine_upkeep_ms={_upkeepMs:F0}";
     }
 
     /// <summary>
@@ -364,6 +390,16 @@ public partial class ChunkRenderer : Node3D
         int bx = Mathf.FloorToInt(x), bz = Mathf.FloorToInt(z);
         if (!r._chunks.TryGetValue((bx / s, (y - 1) / s, bz / s), out var chunk) || chunk.Shown != (int)ChunkLod.Fine) return 0f;
         return FineTerrain.IsLowered(fine, Mathf.FloorToInt(x * 2), y - 1, Mathf.FloorToInt(z * 2)) ? -0.5f : 0f;
+    }
+
+    /// <summary>
+    /// How far (metres, 0 or less) the ground drawn at world position <paramref name="p"/> (metres, on the
+    /// ground) lies below where the rules have it (see <see cref="GroundDrop"/>).
+    /// </summary>
+    public static float GroundDropAt(Vector3 p)
+    {
+        float bs = ChunkMesher.BlockSize;
+        return GroundDrop(p.X / bs, Mathf.RoundToInt(p.Y / bs), p.Z / bs) * bs;
     }
 
     private BlockType[] RentBuffer() => _bufferPool.TryTake(out var b) ? b : new BlockType[PaddedLength];

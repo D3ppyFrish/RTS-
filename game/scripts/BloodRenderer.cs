@@ -46,6 +46,9 @@ void fragment() {
     private float[] _stainBuffer = Array.Empty<float>(), _dropBuffer = Array.Empty<float>();
     private int _stainCount, _dropCount;
     private int _version = -1;
+    private int _ground = -1;
+    private ulong _groundAt;
+    private const ulong GroundRebuildMs = 250;
     private long _tick = long.MinValue / 2;
     private const int RebuildTicks = 4;
 
@@ -71,11 +74,17 @@ void fragment() {
     /// <summary>Rebuilds the stains if the blood changed since the last tick, and the drops every frame.</summary>
     public void UpdateFrame(float alpha)
     {
-        // Blood changes slowly: a few rebuilds a second are enough, however busy the battle.
-        if (_sim.Blood.Version != _version && (_sim.Tick - _tick >= RebuildTicks || _sim.Tick < _tick))
+        // Blood changes slowly: a few rebuilds a second are enough, however busy the battle. The same goes for
+        // the ground drawn under the stains moving (half-size blocks coming and going as the camera moves).
+        ulong now = Time.GetTicksMsec();
+        bool bled = _sim.Blood.Version != _version && (_sim.Tick - _tick >= RebuildTicks || _sim.Tick < _tick);
+        bool moved = ChunkRenderer.GroundVersion != _ground && now - _groundAt >= GroundRebuildMs;
+        if (bled || moved)
         {
             _tick = _sim.Tick;
             _version = _sim.Blood.Version;
+            _ground = ChunkRenderer.GroundVersion;
+            _groundAt = now;
             RebuildStains();
         }
         RebuildDrops(alpha);
@@ -182,7 +191,9 @@ void fragment() {
     private static Vector3 Spot(Stain st) =>
         new Vector3(st.X + (st.FX + 0.5f) / 16f, 0, st.Z + (st.FZ + 0.5f) / 16f) * ChunkMesher.BlockSize;
 
-    private static float Top(Stain st) => (st.Y + 1) * ChunkMesher.BlockSize + 0.015f * ChunkMesher.BlockSize;
+    /// <summary>The height (metres) of the ground the stain lies on, as it is drawn where the blood fell.</summary>
+    private static float Top(Stain st) =>
+        (st.Y + 1 + ChunkRenderer.GroundDrop(st.X + (st.FX + 0.5f) / 16f, st.Y + 1, st.Z + (st.FZ + 0.5f) / 16f) + 0.015f) * ChunkMesher.BlockSize;
 
     /// <summary>Bright and wet when fresh, drying darker and browner and fading as it ages; thin blood shows less.</summary>
     private static Color Tint(Stain st, int life)
@@ -213,7 +224,7 @@ void fragment() {
             if (u.Bleeding[i] == 0 || !_fog.Shows(i)) continue;
             float x = Mathf.Lerp(u.PrevX[i].ToFloat(), u.X[i].ToFloat(), alpha);
             float z = Mathf.Lerp(u.PrevZ[i].ToFloat(), u.Z[i].ToFloat(), alpha);
-            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha);
+            float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + ChunkRenderer.GroundDrop(x, u.Y[i], z);
             int parts = 0;
             for (int p = 0; p < Body.Parts; p++)
                 if ((u.Bleeding[i] & (1 << p)) != 0) parts++;
