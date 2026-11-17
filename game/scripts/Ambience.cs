@@ -119,6 +119,7 @@ public partial class Ambience : Node3D
         float wetTarget = look.Rain > 0.15f ? Mathf.Min(1f, look.Rain * 1.4f) : 0f;
         _wet = Mathf.MoveToward(_wet, wetTarget, delta * (wetTarget > _wet ? 0.15f : 0.02f));
         _terrain.SetWeather(look.Wind, _wet);
+        _terrain.SetNight(_lighting.Light.Lanterns);
 
         var wind = new Vector3(WindTo.X, 0, WindTo.Y);
         foreach (var m in new[] { _smokeMat, _rainMat, _flameMat })

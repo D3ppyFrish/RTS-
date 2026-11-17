@@ -46,7 +46,32 @@ public static class ChunkMesher
     /// <see cref="LeafMark"/> for leaves, which sway in the wind, and <see cref="FineLeafMark"/> for the fine
     /// voxels of leaves (they sway too, with no block grid drawn on them).
     /// </summary>
-    public const float FineMark = 0.875f, GlowMark = 0.625f, LavaMark = 0.5625f, LeafMark = 0.375f, FineLeafMark = 0.3125f;
+    public const float FineMark = 0.875f, GlowMark = 0.625f, LavaMark = 0.5625f, LeafMark = 0.375f, FineLeafMark = 0.3125f,
+        WindowMark = 0.6875f;
+
+    /// <summary>
+    /// How much light a corner gets by how open it is (see <see cref="Occlusion"/>): faces darken into the
+    /// corners where blocks meet, so leaf clumps, steps and walls stand apart from each other.
+    /// </summary>
+    public static readonly float[] AoLight = { 0.48f, 0.66f, 0.83f, 1f };
+
+    /// <summary>
+    /// The two triangles of a quad, split along the diagonal that keeps a dark corner from spreading over
+    /// the whole quad.
+    /// </summary>
+    public static void QuadIndices(int[] indices, int ii, int b, int a0, int a1, int a2, int a3)
+    {
+        if (a0 + a2 < a1 + a3)
+        {
+            indices[ii] = b; indices[ii + 1] = b + 3; indices[ii + 2] = b + 1;
+            indices[ii + 3] = b + 1; indices[ii + 4] = b + 3; indices[ii + 5] = b + 2;
+        }
+        else
+        {
+            indices[ii] = b; indices[ii + 1] = b + 2; indices[ii + 2] = b + 1;
+            indices[ii + 3] = b; indices[ii + 4] = b + 3; indices[ii + 5] = b + 2;
+        }
+    }
 
     /// <summary>Size of the fine voxels buildings are drawn with: the size units are built from.</summary>
     public const float FineSize = BlockSize / StructureDetail.Size;
@@ -70,21 +95,22 @@ public static class ChunkMesher
         fine.Clear();
         if (StructureMesher.HasStructures(padded))
         {
-            StructureMesher.Build(padded, cx, cy, cz, fine);
+            StructureMesher.Build(padded, cx, cy, cz, fine, ao: true);
             var stripped = _stripped ??= new BlockType[padded.Length];
             StructureMesher.StripStructures(padded, stripped);
-            GreedyMesher.Build(stripped, opaque, water);
+            GreedyMesher.Build(stripped, opaque, water, ao: true);
         }
         else
         {
-            GreedyMesher.Build(padded, opaque, water);
+            GreedyMesher.Build(padded, opaque, water, ao: true);
         }
         return new ChunkMeshData { Opaque = ToArrays(opaque, fine, 1f), Water = ToArrays(water, null, 0.7f) };
     }
 
     /// <summary>The mark (see <see cref="FineMark"/>) a fine voxel of this colour is drawn with.</summary>
     public static float FineMarkOf(byte colour) =>
-        StructurePalette.IsGlow(colour) ? GlowMark : StructurePalette.IsLeaf(colour) ? FineLeafMark : FineMark;
+        StructurePalette.IsGlow(colour) ? GlowMark : StructurePalette.IsLeaf(colour) ? FineLeafMark
+        : colour == StructurePalette.Glass ? WindowMark : FineMark;
 
     private static SurfaceData? ToArrays(List<Quad> quads, List<FineQuad>? fine, float alpha)
     {
@@ -107,11 +133,9 @@ public static class ChunkMesher
                 int vi = q * 4 + k;
                 verts[vi] = new Vector3(x, y, z) * FineSize;
                 normals[vi] = FaceNormals[quad.Face];
-                colors[vi] = c;
+                colors[vi] = Lit(c, quad.AoAt(k));
             }
-            int b = q * 4, ii = q * 6;
-            indices[ii] = b; indices[ii + 1] = b + 2; indices[ii + 2] = b + 1;
-            indices[ii + 3] = b; indices[ii + 4] = b + 3; indices[ii + 5] = b + 2;
+            QuadIndices(indices, q * 6, q * 4, quad.AoAt(0), quad.AoAt(1), quad.AoAt(2), quad.AoAt(3));
         }
         for (int q = 0; q < quads.Count; q++)
         {
@@ -130,14 +154,19 @@ public static class ChunkMesher
                 int vi = q * 4 + k;
                 verts[vi] = new Vector3(x, y, z) * BlockSize;
                 normals[vi] = FaceNormals[quad.Face];
-                colors[vi] = c;
+                colors[vi] = Lit(c, quad.AoAt(k));
             }
             // Corners are counter-clockwise from outside; Godot treats clockwise as front-facing.
-            int b = q * 4, ii = q * 6;
-            indices[ii] = b; indices[ii + 1] = b + 2; indices[ii + 2] = b + 1;
-            indices[ii + 3] = b; indices[ii + 4] = b + 3; indices[ii + 5] = b + 2;
+            QuadIndices(indices, q * 6, q * 4, quad.AoAt(0), quad.AoAt(1), quad.AoAt(2), quad.AoAt(3));
         }
         return new SurfaceData { Vertices = verts, Normals = normals, Colors = colors, Indices = indices };
+    }
+
+    /// <summary>Colour <paramref name="c"/> at a corner of openness <paramref name="ao"/>, its mark kept.</summary>
+    private static Color Lit(Color c, int ao)
+    {
+        float f = AoLight[ao];
+        return new Color(c.R * f, c.G * f, c.B * f, c.A);
     }
 
     public static ArrayMesh? ToMesh(ChunkMeshData data, Material opaque, Material water)
@@ -244,7 +273,7 @@ public static class ChunkMesher
 
     public static Color ColorOf(BlockType t) => t switch
     {
-        BlockType.Grass => new Color(0.36f, 0.62f, 0.28f),
+        BlockType.Grass => new Color(0.35f, 0.53f, 0.25f),
         BlockType.Soil => new Color(0.47f, 0.33f, 0.2f),
         BlockType.Sand => new Color(0.86f, 0.8f, 0.55f),
         BlockType.Stone => new Color(0.5f, 0.5f, 0.52f),
