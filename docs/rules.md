@@ -723,7 +723,7 @@ All the numbers are first guesses for playtesting.
 ## Terrain magic
 
 `src/Sim/Units/SpellSystem.cs`: spells that reshape the ground, made of the same blocks digging and building
-use (the design doc's "Shape with magic"). A unit type has a spell in `data/units.json`; so far there is one.
+use (the design doc's "Shape with magic"). A unit type has its spells in `data/units.json`; the mage has two.
 
 - **Earth Wall** (`EarthWallCommand`, `"earthWall": true`: the mage): a wall of earth rises along a line
   (the line a wall is laid along) of up to 8 columns, 3 blocks high from the ground, so nobody walks through
@@ -736,9 +736,26 @@ use (the design doc's "Shape with magic"). A unit type has a spell in `data/unit
 - **How long**: the wall stands 45 seconds, then the earth still there sinks back into the ground. Until then
   workers can dig through it (it gives nothing) and sappers can tunnel it, like any earth; earth dug out from
   under falls as rubble, which stays.
-- **Waiting**: a mage that raised a wall waits 40 seconds before it can raise another; others are not held up.
-- **In the game**: the Earth Wall button (Shift+Y) shows with a mage selected, greyed out with the wait while
-  none of the selected is ready. All numbers are starting guesses to be tuned in playtests.
+- **Waiting**: a mage that cast a spell (either one) waits 40 seconds before it can cast again; others are
+  not held up.
+- **Ice Bridge** (`IceBridgeCommand`, `"iceBridge": true`: the mage): the mage freezes the water into a
+  level way of ice from bank to bank, the way a bridge is laid: both ends must be ground about level with each
+  other (at most a climb apart), and the ice runs one block under the higher end's standing level, in every
+  column of the line whose ground is lower than that, and in the column on each side (across the line's longer
+  axis), so an army crosses three abreast. At most 16 columns of the line take ice. Some column of the line
+  must have water under it: the ice is frozen out of the river, so a dry trench or chasm gets none. Where the
+  banks are as low as the water the water's top freezes; where they are higher (the river's steep banks) the
+  ice stands over the water at their height. Ice forms in open air or water (leaves are pushed aside) with
+  room to stand above it, and not where a building or a city-state's town is. The middle of the line must be
+  within 12 blocks of the mage, which otherwise walks there, or to the nearest dry ground beside it, first.
+  A line that spans nothing (its ends not ground, or no water between) freezes nothing and costs nothing.
+- **Ice**: anyone walks on it; nobody digs it, and earth does not rise on it. It holds 30 seconds, shows dark
+  cracks in its last 5, then melts, back into water where it was water and into air above that. A unit still
+  on it falls to whatever is under it: into shallow water it wades on, but with only deep water under it, it
+  drowns (as if crushed: nobody gets the kill).
+- **In the game**: the Earth Wall button (Shift+Y) and the Ice Bridge button (Shift+') show with a mage
+  selected, greyed out with the wait while none of the selected is ready. All numbers are starting guesses to
+  be tuned in playtests.
 
 ## Fog of war
 

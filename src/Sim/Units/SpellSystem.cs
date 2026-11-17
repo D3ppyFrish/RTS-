@@ -17,6 +17,31 @@ public sealed class EarthWall
 }
 
 /// <summary>
+/// Water frozen by <see cref="SpellSystem"/>'s Ice Bridge: its blocks (each the top of a column of water, now
+/// <see cref="BlockType.Ice"/>), and when it thaws.
+/// </summary>
+public sealed class IceBridge
+{
+    /// <summary>Who froze it.</summary>
+    public int Owner { get; internal set; }
+    /// <summary>The tick it was frozen.</summary>
+    public long Frozen { get; internal set; }
+    /// <summary>The tick it thaws back into water.</summary>
+    public long Thaws { get; internal set; }
+    /// <summary>Its blocks, in the order they froze.</summary>
+    public List<(int X, int Y, int Z)> Blocks { get; } = new();
+    /// <summary>For each block, whether it was water before it froze (it thaws back into water, else into air).</summary>
+    public List<bool> Water { get; } = new();
+}
+
+/// <summary>A terrain spell (see <see cref="SpellSystem"/>).</summary>
+public enum Spell
+{
+    EarthWall,
+    IceBridge,
+}
+
+/// <summary>
 /// Terrain magic (design doc: "Shape with magic"): spells that change the ground, made with the same blocks
 /// digging and building use. The first spell is <b>Earth Wall</b> (<see cref="EarthWallCommand"/>): a unit
 /// whose type has it (<see cref="UnitDef.EarthWall"/>, the mage) raises a wall of earth along a line of up to
@@ -24,8 +49,13 @@ public sealed class EarthWall
 /// The line's middle must be within <see cref="CastRange"/> blocks of the caster, which walks into range
 /// first if it is not. A column is skipped where a building, a city-state's town, water or a unit stands.
 /// The wall lasts <see cref="LastsTicks"/>, then crumbles back into the ground; until then workers can dig
-/// through it and sappers tunnel it like any earth. A caster can raise another wall
-/// <see cref="CooldownTicks"/> after its last. All numbers are starting guesses to be tuned in playtests.
+/// through it and sappers tunnel it like any earth.
+/// <para>The second is <b>Ice Bridge</b> (<see cref="IceBridgeCommand"/>, <see cref="UnitDef.IceBridge"/>):
+/// the caster freezes the water into a level deck of ice from bank to bank, like a bridge, up to
+/// <see cref="IceLength"/> columns long and <see cref="IceWidth"/> wide, that anyone can walk on. It melts after
+/// <see cref="IceLastsTicks"/>; a unit still on it then falls, and drowns where only deep water is under it.</para>
+/// A caster that cast either spell waits <see cref="CooldownTicks"/> before it casts again. All numbers are
+/// starting guesses to be tuned in playtests.
 /// </summary>
 public sealed class SpellSystem
 {
@@ -39,6 +69,14 @@ public sealed class SpellSystem
     public const int CooldownTicks = 40 * Simulation.TicksPerSecond;
     /// <summary>Ticks an earth wall stands before it crumbles: 45 seconds.</summary>
     public const int LastsTicks = 45 * Simulation.TicksPerSecond;
+    /// <summary>Most columns along its line that one ice bridge covers: enough to span the river and its banks.</summary>
+    public const int IceLength = 16;
+    /// <summary>Columns across an ice bridge: its line and one on each side, so an army crosses three abreast.</summary>
+    public const int IceWidth = 3;
+    /// <summary>Ticks an ice bridge holds before it thaws: 30 seconds.</summary>
+    public const int IceLastsTicks = 30 * Simulation.TicksPerSecond;
+    /// <summary>Ticks before it thaws that an ice bridge shows cracks: the last 5 seconds.</summary>
+    public const int CrackTicks = 5 * Simulation.TicksPerSecond;
 
     private readonly Simulation _sim;
     // Casters (unit id) and the tick each can cast again; sorted, so the hash is the same everywhere.
@@ -46,10 +84,12 @@ public sealed class SpellSystem
     // Casters walking into range of a line to raise a wall on it, in the order they were told.
     private readonly List<Pending> _pending = new();
     private readonly List<EarthWall> _walls = new();
+    private readonly List<IceBridge> _ice = new();
 
     private sealed class Pending
     {
         public int Id;
+        public Spell Spell;
         public int X1, Z1, X2, Z2;
         // Where it walks to: the line's middle.
         public int GoX, GoY, GoZ;
@@ -66,18 +106,36 @@ public sealed class SpellSystem
     /// <summary>Earth walls standing now, oldest first.</summary>
     public IReadOnlyList<EarthWall> Walls => _walls;
 
+    /// <summary>Ice bridges holding now, oldest first.</summary>
+    public IReadOnlyList<IceBridge> IceBridges => _ice;
+
     /// <summary>The tick of the last earth wall raised, or -1 (for drawing it going up).</summary>
     public long LastCast { get; private set; } = -1;
+
+    /// <summary>The tick of the last ice bridge frozen, or -1.</summary>
+    public long LastFreeze { get; private set; } = -1;
 
     /// <summary>Unit i's type can raise earth walls.</summary>
     public bool HasEarthWall(int i) => i >= 0 && _sim.Content.Units[U.Def[i]].EarthWall;
 
-    /// <summary>The tick unit i can next raise an earth wall (now or earlier if it is ready).</summary>
+    /// <summary>Unit i's type can freeze ice bridges.</summary>
+    public bool HasIceBridge(int i) => i >= 0 && _sim.Content.Units[U.Def[i]].IceBridge;
+
+    /// <summary>Unit i's type has the spell.</summary>
+    public bool Has(int i, Spell spell) => spell == Spell.IceBridge ? HasIceBridge(i) : HasEarthWall(i);
+
+    /// <summary>The tick unit i can next cast a spell (now or earlier if it is ready).</summary>
     public long ReadyAt(int i) => i >= 0 && _ready.TryGetValue(U.Id[i], out long t) ? t : 0;
 
     /// <summary>Unit i can raise an earth wall now: it has the spell, is not on its cooldown, and is not running or beaten.</summary>
-    public bool CanCast(int i) =>
-        HasEarthWall(i) && _sim.Tick >= ReadyAt(i) && U.Rout[i] == 0 && !U.Subdued[i] && U.Owner[i] != Simulation.WildPlayer;
+    public bool CanCast(int i) => CanCast(i, Spell.EarthWall);
+
+    /// <summary>Unit i can cast the spell now: it has it, is not waiting after its last spell, and is not running or beaten.</summary>
+    public bool CanCast(int i, Spell spell) =>
+        Has(i, spell) && _sim.Tick >= ReadyAt(i) && U.Rout[i] == 0 && !U.Subdued[i] && U.Owner[i] != Simulation.WildPlayer;
+
+    /// <summary>The ice bridge is in its last <see cref="CrackTicks"/>: it shows cracks before it thaws.</summary>
+    public bool Cracking(IceBridge ice) => _sim.Tick >= ice.Thaws - CrackTicks;
 
     /// <summary>Unit (id) is walking into range to raise a wall.</summary>
     public bool Casting(int id)
@@ -107,7 +165,7 @@ public sealed class SpellSystem
     {
         var w = World;
         if (g < 1 || x < 1 || z < 1 || x > w.SizeX - 2 || z > w.SizeZ - 2 || g + Height >= w.SizeY) return false;
-        if (w.Get(x, g - 1, z) == BlockType.Water || w.Get(x, g, z) == BlockType.Water) return false;
+        if (w.Get(x, g - 1, z) is BlockType.Water or BlockType.Ice || w.Get(x, g, z) == BlockType.Water) return false;
         if (_sim.Buildings.AtColumn(x, z) != null || _sim.Cities.Crowds(x, z, x, z)) return false;
         if (!Fits(w.Get(x, g, z))) return false;
         // Nobody standing in (or right at the edge of) the column, from the ground to the wall's top.
@@ -123,32 +181,130 @@ public sealed class SpellSystem
     private static bool Fits(BlockType b) => b == BlockType.Air || BlockInfo.IsLeaves(b);
 
     /// <summary>
+    /// Plans an ice bridge from column (x1, z1) to (x2, z2) into <paramref name="columns"/>, as the bridge tool
+    /// plans a deck: both ends must be ground to stand on, at most a climb apart, and the ice runs level at the
+    /// higher end's standing level, one block under it. It covers the line (at most <see cref="IceLength"/>
+    /// columns that need ice) and the column on each side (across the line's longer axis): a column gets ice
+    /// where its ground is lower than the deck. Each column has the level units would stand at on the ice and
+    /// whether ice forms there (open air or water where the ice goes and above it, no building or city-state's
+    /// town). Returns that level, or -1 (and no columns) if the ends are not ground, too far apart in height, or
+    /// no column of the line has water under it: the ice is frozen out of water. The game previews the same plan.
+    /// </summary>
+    public int PlanIce(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns)
+    {
+        columns.Clear();
+        var w = World;
+        if (!w.InBounds(x1, 1, z1) || !w.InBounds(x2, 1, z2)) return -1;
+        int a = Walk.GroundLevel(w, x1, z1), b = Walk.GroundLevel(w, x2, z2);
+        if (a < 0 || b < 0 || Math.Abs(a - b) > Walk.MaxClimb) return -1;
+        int stand = Math.Max(a, b), deckY = stand - 1;
+        if (stand + Walk.Clearance > w.SizeY - 1) return -1;
+        bool alongX = Math.Abs(x2 - x1) >= Math.Abs(z2 - z1);
+        var seen = new HashSet<long>();
+        bool water = false;
+        int n = 0;
+        foreach (var (lx, lz) in Economy.EconomySystem.WallLine(x1, z1, x2, z2))
+        {
+            if (!Needs(lx, lz, stand)) continue;
+            if (n++ == IceLength) break;
+            if (OverWater(lx, lz, deckY)) water = true;
+            for (int s = 0; s < IceWidth; s++)
+            {
+                int side = s == 0 ? 0 : s % 2 == 1 ? -(s + 1) / 2 : s / 2;
+                int x = alongX ? lx : lx + side, z = alongX ? lz + side : lz;
+                if (!seen.Add(((long)x << 32) | (uint)z) || !Needs(x, z, stand)) continue;
+                columns.Add((x, z, stand, IceRoom(x, z, deckY)));
+            }
+        }
+        if (!water)
+        {
+            columns.Clear();
+            return -1;
+        }
+        return stand;
+    }
+
+    /// <summary>Column (x, z) needs ice to walk across at <paramref name="stand"/>: its ground is lower.</summary>
+    private bool Needs(int x, int z, int stand) => World.InBounds(x, 1, z) && Walk.GroundLevel(World, x, z) < stand;
+
+    /// <summary>Column (x, z) has water at or below <paramref name="deckY"/> with open air or water above it.</summary>
+    private bool OverWater(int x, int z, int deckY)
+    {
+        var w = World;
+        for (int y = deckY; y >= 1; y--)
+        {
+            var b = w.Get(x, y, z);
+            if (b == BlockType.Water) return true;
+            if (b != BlockType.Air) return false;
+        }
+        return false;
+    }
+
+    private bool IceRoom(int x, int z, int deckY)
+    {
+        var w = World;
+        if (x < 1 || z < 1 || x > w.SizeX - 2 || z > w.SizeZ - 2) return false;
+        if (_sim.Buildings.AtColumn(x, z) != null || _sim.Cities.Crowds(x, z, x, z)) return false;
+        if (w.Get(x, deckY, z) is not (BlockType.Air or BlockType.Water) && !BlockInfo.IsLeaves(w.Get(x, deckY, z))) return false;
+        for (int y = deckY + 1; y <= deckY + Walk.Clearance; y++)
+            if (w.Get(x, y, z) is var r && r != BlockType.Air && !BlockInfo.IsLeaves(r)) return false;
+        return true;
+    }
+
+    /// <summary>
     /// The first of the player's units that can raise an earth wall now (one already in range first) raises
     /// it on the command's line, or walks into range and then raises it.
     /// </summary>
-    internal void Apply(EarthWallCommand c)
+    internal void Apply(EarthWallCommand c) => Order(c, Spell.EarthWall, c.X1, c.Z1, c.X2, c.Z2);
+
+    /// <summary>
+    /// The first of the player's units that can freeze an ice bridge now (one already in range first) freezes
+    /// the water along the command's line, or walks into range and then freezes it.
+    /// </summary>
+    internal void Apply(IceBridgeCommand c) => Order(c, Spell.IceBridge, c.X1, c.Z1, c.X2, c.Z2);
+
+    private void Order(UnitsCommand c, Spell spell, int x1, int z1, int x2, int z2)
     {
-        int mx = (c.X1 + c.X2) / 2, mz = (c.Z1 + c.Z2) / 2;
+        int mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
         int far = -1;
         foreach (int i in _sim.OwnedUnits(c))
         {
-            if (!CanCast(i) || Casting(U.Id[i])) continue;
+            if (!CanCast(i, spell) || Casting(U.Id[i])) continue;
             if (InRange(i, mx, mz))
             {
                 U.Order[i] = UnitOrder.Idle;
-                Cast(i, c.X1, c.Z1, c.X2, c.Z2);
+                Cast(i, spell, x1, z1, x2, z2);
                 return;
             }
             if (far < 0) far = i;
         }
         if (far < 0 || !World.InBounds(mx, 1, mz)) return;
-        int gy = Walk.GroundLevel(World, mx, mz);
-        if (gy < 0) return;
+        // Walk to the line's middle, or (over water) to the nearest ground beside it.
+        int gy = Walk.GroundLevel(World, mx, mz), gx = mx, gz = mz;
+        if ((gy < 0 || World.Get(mx, gy, mz) == BlockType.Water) && !Shore(mx, mz, out gx, out gy, out gz)) return;
         U.ClearJob(far);
         U.ClearCombat(far);
         U.ClearFormation(far);
-        _pending.Add(new Pending { Id = U.Id[far], X1 = c.X1, Z1 = c.Z1, X2 = c.X2, Z2 = c.Z2, GoX = mx, GoY = gy, GoZ = mz });
-        _sim.SendUnit(far, mx, mz, gy);
+        _pending.Add(new Pending { Id = U.Id[far], Spell = spell, X1 = x1, Z1 = z1, X2 = x2, Z2 = z2, GoX = gx, GoY = gy, GoZ = gz });
+        _sim.SendUnit(far, gx, gz, gy);
+    }
+
+    /// <summary>The nearest column to (x, z), within cast range, with ground to stand on out of the water.</summary>
+    private bool Shore(int x, int z, out int sx, out int sy, out int sz)
+    {
+        var w = World;
+        for (int r = 1; r < CastRange; r++)
+        for (int dz = -r; dz <= r; dz++)
+        for (int dx = -r; dx <= r; dx++)
+        {
+            if (Math.Max(Math.Abs(dx), Math.Abs(dz)) != r || !w.InBounds(x + dx, 1, z + dz)) continue;
+            int g = Walk.GroundLevel(w, x + dx, z + dz);
+            if (g < 1 || w.Get(x + dx, g, z + dz) == BlockType.Water) continue;
+            (sx, sy, sz) = (x + dx, g, z + dz);
+            return true;
+        }
+        (sx, sy, sz) = (x, -1, z);
+        return false;
     }
 
     /// <summary>The player's units among the command's stop walking to raise a wall (they were given another order).</summary>
@@ -167,7 +323,15 @@ public sealed class SpellSystem
         return dx * dx + dz * dz <= r * r;
     }
 
-    private void Cast(int i, int x1, int z1, int x2, int z2)
+    private void Cast(int i, Spell spell, int x1, int z1, int x2, int z2)
+    {
+        // A plan that spans nothing (no ground at its ends, no water between) freezes nothing and costs nothing.
+        if (spell == Spell.IceBridge && !Freeze(i, x1, z1, x2, z2)) return;
+        if (spell == Spell.EarthWall) Raise(i, x1, z1, x2, z2);
+        _ready[U.Id[i]] = _sim.Tick + CooldownTicks;
+    }
+
+    private void Raise(int i, int x1, int z1, int x2, int z2)
     {
         var w = World;
         var wall = new EarthWall { Owner = U.Owner[i], Raised = _sim.Tick, Crumbles = _sim.Tick + LastsTicks };
@@ -182,9 +346,32 @@ public sealed class SpellSystem
                 wall.Blocks.Add((x, y, z));
             }
         }
-        _ready[U.Id[i]] = _sim.Tick + CooldownTicks;
         LastCast = _sim.Tick;
         if (wall.Blocks.Count > 0) _walls.Add(wall);
+    }
+
+    private readonly List<(int X, int Z, int Y, bool Room)> _icePlan = new();
+
+    /// <summary>Ice forms in each column of the plan with room, level with the deck; leaves in the way are pushed aside.</summary>
+    private bool Freeze(int i, int x1, int z1, int x2, int z2)
+    {
+        var w = World;
+        int stand = PlanIce(x1, z1, x2, z2, _icePlan);
+        if (stand < 0) return false;
+        LastFreeze = _sim.Tick;
+        var ice = new IceBridge { Owner = U.Owner[i], Frozen = _sim.Tick, Thaws = _sim.Tick + IceLastsTicks };
+        foreach (var (x, z, _, room) in _icePlan)
+        {
+            if (!room) continue;
+            for (int y = stand; y < stand + Walk.Clearance; y++)
+                if (BlockInfo.IsLeaves(w.Get(x, y, z))) w.Set(x, y, z, BlockType.Air);
+            bool wet = w.Get(x, stand - 1, z) == BlockType.Water;
+            w.Set(x, stand - 1, z, BlockType.Ice);
+            ice.Blocks.Add((x, stand - 1, z));
+            ice.Water.Add(wet);
+        }
+        if (ice.Blocks.Count > 0) _ice.Add(ice);
+        return true;
     }
 
     /// <summary>
@@ -199,7 +386,7 @@ public sealed class SpellSystem
             var p = _pending[k];
             int i = u.IndexOf(p.Id);
             bool walking = i >= 0 && u.Order[i] == UnitOrder.Move && u.OrderX[i] == p.GoX && u.OrderZ[i] == p.GoZ;
-            if (i < 0 || !CanCast(i) || u.Target[i] != 0 || u.Job[i] != UnitJob.None)
+            if (i < 0 || !CanCast(i, p.Spell) || u.Target[i] != 0 || u.Job[i] != UnitJob.None)
             {
                 _pending.RemoveAt(k--);
                 continue;
@@ -209,7 +396,7 @@ public sealed class SpellSystem
             {
                 _pending.RemoveAt(k--);
                 u.Order[i] = UnitOrder.Idle;
-                Cast(i, p.X1, p.Z1, p.X2, p.Z2);
+                Cast(i, p.Spell, p.X1, p.Z1, p.X2, p.Z2);
             }
             else if (!walking) _pending.RemoveAt(k--);
         }
@@ -218,6 +405,12 @@ public sealed class SpellSystem
             if (_sim.Tick < _walls[k].Crumbles) continue;
             Crumble(_walls[k]);
             _walls.RemoveAt(k--);
+        }
+        for (int k = 0; k < _ice.Count; k++)
+        {
+            if (_sim.Tick < _ice[k].Thaws) continue;
+            Thaw(_ice[k]);
+            _ice.RemoveAt(k--);
         }
         if (_sim.Tick % (60 * Simulation.TicksPerSecond) == 0) Forget();
     }
@@ -230,6 +423,37 @@ public sealed class SpellSystem
         {
             var (x, y, z) = wall.Blocks[k];
             if (w.Get(x, y, z) is BlockType.Soil or BlockType.Grass) w.Set(x, y, z, BlockType.Air);
+        }
+    }
+
+    /// <summary>
+    /// The ice still there melts: back into water where it was frozen out of water, into air above it. A unit
+    /// standing on it falls to whatever is under it; one with only deep water under it drowns (nobody gets the
+    /// kill), one over shallow water wades on.
+    /// </summary>
+    private void Thaw(IceBridge ice)
+    {
+        var w = World;
+        var thawed = new HashSet<long>();
+        for (int k = 0; k < ice.Blocks.Count; k++)
+        {
+            var (x, y, z) = ice.Blocks[k];
+            if (w.Get(x, y, z) != BlockType.Ice) continue;
+            w.Set(x, y, z, ice.Water[k] ? BlockType.Water : BlockType.Air);
+            if (ice.Water[k]) _sim.Physics.WakeWater(x, y, z);
+            thawed.Add(((long)y << 40) | ((long)z << 20) | (long)x);
+        }
+        if (thawed.Count == 0) return;
+        var u = U;
+        for (int i = 0; i < u.Count; i++)
+        {
+            int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i] - 1;
+            if (y < 0 || !thawed.Contains(((long)y << 40) | ((long)z << 20) | (long)x)) continue;
+            // It sinks through air and water to the first solid block under it.
+            int feet = y;
+            while (feet > 1 && Walk.Passable(w.Get(x, feet - 1, z))) feet--;
+            if (Walk.CanStand(w, x, feet, z)) u.Y[i] = feet;
+            else _sim.Combat.Crush(i, Math.Max(1, u.Hp[i]));
         }
     }
 
@@ -253,10 +477,11 @@ public sealed class SpellSystem
         {
             Mix(id); Mix(t);
         }
+        Mix(LastFreeze);
         Mix(_pending.Count);
         foreach (var p in _pending)
         {
-            Mix(p.Id); Mix(p.X1); Mix(p.Z1); Mix(p.X2); Mix(p.Z2); Mix(p.GoX); Mix(p.GoY); Mix(p.GoZ);
+            Mix(p.Id); Mix((int)p.Spell); Mix(p.X1); Mix(p.Z1); Mix(p.X2); Mix(p.Z2); Mix(p.GoX); Mix(p.GoY); Mix(p.GoZ);
         }
         Mix(_walls.Count);
         foreach (var wall in _walls)
@@ -265,6 +490,16 @@ public sealed class SpellSystem
             foreach (var (x, y, z) in wall.Blocks)
             {
                 Mix(x); Mix(y); Mix(z);
+            }
+        }
+        Mix(_ice.Count);
+        foreach (var ice in _ice)
+        {
+            Mix(ice.Owner); Mix(ice.Frozen); Mix(ice.Thaws); Mix(ice.Blocks.Count);
+            for (int k = 0; k < ice.Blocks.Count; k++)
+            {
+                var (x, y, z) = ice.Blocks[k];
+                Mix(x); Mix(y); Mix(z); Mix(ice.Water[k] ? 1 : 0);
             }
         }
         return h;
