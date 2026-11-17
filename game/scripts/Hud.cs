@@ -70,6 +70,7 @@ public partial class Hud : CanvasLayer
     private Button _denButton = null!;
     private Button _bloomButton = null!;
     private Button _earthWallButton = null!;
+    private Button _iceBridgeButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
@@ -550,6 +551,13 @@ public partial class Hud : CanvasLayer
         _earthWallButton.Pressed += () => _control.ToggleEarthWall();
         column.AddChild(_earthWallButton);
 
+        _iceBridgeButton = MakeToolButton("Ice Bridge  [Shift+']");
+        _iceBridgeButton.Name = "ice_bridge";
+        _iceBridgeButton.Icon = UiIcons.Get("ice_bridge");
+        _iceBridgeButton.Visible = false;
+        _iceBridgeButton.Pressed += () => _control.ToggleIceBridge();
+        column.AddChild(_iceBridgeButton);
+
         _cityBox = new VBoxContainer { Visible = false };
         _cityBox.AddThemeConstantOverride("separation", 4);
         _hireRow = new HBoxContainer();
@@ -974,6 +982,7 @@ public partial class Hud : CanvasLayer
         RefreshDen();
         RefreshBloom();
         RefreshEarthWall();
+        RefreshIceBridge();
         RefreshCities();
     }
 
@@ -1131,6 +1140,26 @@ public partial class Hud : CanvasLayer
         _earthWallButton.Disabled = ready == 0 && !tool;
     }
 
+    /// <summary>The Ice Bridge button while a mage of yours is selected (greyed out while none is ready).</summary>
+    private void RefreshIceBridge()
+    {
+        bool tool = _control.Tool == PlayerControl.ToolMode.IceBridge;
+        _iceBridgeButton.Visible = _control.OwnCasters(Spell.IceBridge).Count > 0 || tool;
+        _iceBridgeButton.SetPressedNoSignal(tool);
+        if (!_iceBridgeButton.Visible) return;
+        int ready = _control.ReadyCaster(spell: Spell.IceBridge);
+        int next = ready != 0 ? ready : _control.ReadyCaster(soonest: true, spell: Spell.IceBridge);
+        long wait = next == 0 ? 0 : Math.Max(0, _sim.Spells.ReadyAt(_sim.Units.IndexOf(next)) - _sim.Tick);
+        _iceBridgeButton.Text = ready != 0 || next == 0 ? "Ice Bridge  [Shift+']"
+            : $"Ice Bridge in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond} s";
+        _iceBridgeButton.TooltipText = $"A mage freezes the water into a level way of ice from bank to bank, up to {SpellSystem.IceLength} columns long " +
+                                       $"and {SpellSystem.IceWidth} wide, within {SpellSystem.CastRange} blocks of it, that anyone can walk on. " +
+                                       $"It cracks, then melts after {SpellSystem.IceLastsTicks / Simulation.TicksPerSecond} s: " +
+                                       "whoever is still on it falls, and drowns in deep water. " +
+                                       $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s before its next spell.";
+        _iceBridgeButton.Disabled = ready == 0 && !tool;
+    }
+
     private void RefreshDen()
     {
         int player = PlayerControl.LocalPlayer;
@@ -1283,6 +1312,21 @@ public partial class Hud : CanvasLayer
                            : _control.ReadyCaster() == 0 ? "   (no selected mage is ready)" : "") +
                        "\nRight click or Esc to stop";
             }
+            case PlayerControl.ToolMode.IceBridge:
+            {
+                var preview = _control.WallPreview;
+                int ok = 0;
+                foreach (var c in preview)
+                    if (c.Ok) ok++;
+                return (!_control.WallStarted
+                           ? $"Ice Bridge: drag from bank to bank, across water, for a mage to freeze a way over (up to {SpellSystem.IceLength} columns)"
+                           : preview.Count == 0
+                               ? "Ice Bridge: both ends must be ground about level with each other, with water between"
+                               : $"Ice Bridge: let go to freeze {ok} columns of ice" + (ok < preview.Count ? $" ({preview.Count - ok} have something in the way)" : "")) +
+                       (_control.OwnCasters(Spell.IceBridge).Count == 0 ? "   (select a mage first)"
+                           : _control.ReadyCaster(spell: Spell.IceBridge) == 0 ? "   (no selected mage is ready)" : "") +
+                       "\nRight click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Bridge:
             {
                 var preview = _control.WallPreview;
@@ -1301,7 +1345,7 @@ public partial class Hud : CanvasLayer
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance";
         }
     }

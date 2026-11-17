@@ -129,6 +129,7 @@ public partial class Main : Node3D
     private GhostRenderer _ghostRenderer = null!;
     private CombatRenderer _combatRenderer = null!;
     private BloodRenderer _bloodRenderer = null!;
+    private IceRenderer _iceRenderer = null!;
     private UnitIcons _unitIcons = null!;
     private FallingRenderer _fallingRenderer = null!;
     private PlayerControl _control = null!;
@@ -356,6 +357,9 @@ public partial class Main : Node3D
         _bloodRenderer = new BloodRenderer();
         _match.AddChild(_bloodRenderer);
         _bloodRenderer.Init(_sim, _fog);
+        _iceRenderer = new IceRenderer();
+        _match.AddChild(_iceRenderer);
+        _iceRenderer.Init(_sim, _fog);
         _unitIcons = new UnitIcons();
         _match.AddChild(_unitIcons);
         _unitIcons.Init(_sim, _rig, _fog);
@@ -445,6 +449,7 @@ public partial class Main : Node3D
         _ghostRenderer.UpdateGhosts(_control);
         _combatRenderer.UpdateFrame(alpha, _control.Selected);
         _bloodRenderer.UpdateFrame(alpha);
+        _iceRenderer.UpdateFrame();
         _unitIcons.UpdateFrame(alpha);
         _fallingRenderer.UpdateFrame(alpha, (float)delta);
         _hud.Refresh(delta);
@@ -738,6 +743,7 @@ public partial class Main : Node3D
         _ghostRenderer.SetSlice(y);
         _combatRenderer.Material.SetShaderParameter("slice_y", y);
         _bloodRenderer.Material.SetShaderParameter("slice_y", y);
+        _iceRenderer.Material.SetShaderParameter("slice_y", y);
         _unitIcons.Material.SetShaderParameter("slice_y", y);
     }
 

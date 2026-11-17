@@ -98,18 +98,23 @@ public enum BlockType : byte
     /// building block). As solid as planks to whoever would walk or shoot through it.
     /// </summary>
     Trestle,
+    /// <summary>
+    /// Water frozen by a mage's Ice Bridge (see <see cref="Units.SpellSystem"/>): units walk on it until it
+    /// thaws back into water. Nothing digs it or falls with it.
+    /// </summary>
+    Ice,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Trestle;
+    public const BlockType Last = BlockType.Ice;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
-    /// <summary>Bedrock, water, lava and the dusk tree cannot be dug.</summary>
+    /// <summary>Bedrock, water, ice, lava and the dusk tree cannot be dug.</summary>
     public static bool IsDiggable(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Bedrock && t != BlockType.Lava
-        && !IsDuskTree(t);
+        && t != BlockType.Ice && !IsDuskTree(t);
 
     /// <summary>The dusk tree's wood: its trunk, roots and branches (not its leaves).</summary>
     public static bool IsDuskTree(BlockType t) => t is BlockType.DuskWood or BlockType.DuskBranch;

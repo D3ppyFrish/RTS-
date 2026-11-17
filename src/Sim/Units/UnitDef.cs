@@ -80,6 +80,8 @@ public sealed class UnitDef
     public bool TracksBlood { get; init; }
     /// <summary>It can raise earth walls (see <see cref="SpellSystem"/>).</summary>
     public bool EarthWall { get; init; }
+    /// <summary>It can freeze ice bridges over water (see <see cref="SpellSystem"/>).</summary>
+    public bool IceBridge { get; init; }
 
     /// <summary>Hit points it gives back to the most hurt ally near it (<see cref="HealRange"/>) every <see cref="HealTicks"/>; 0 if it does not heal.</summary>
     public int Heal { get; init; }

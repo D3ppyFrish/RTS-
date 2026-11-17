@@ -73,7 +73,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, IceBridge, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -256,7 +256,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Test:
@@ -274,7 +274,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -348,6 +348,7 @@ public partial class PlayerControl : Node
             case Key.Comma: Bloom(); break;
             case Key.Y when key.ShiftPressed: ToggleEarthWall(); break;
             case Key.Y: ToggleWall(); break;
+            case Key.Apostrophe when key.ShiftPressed: ToggleIceBridge(); break;
             case Key.Apostrophe: ToggleBridge(); break;
             case Key.U:
                 if (_sim.Buildings.Get(SelectedBuilding) is { Def.IsWall: true }) UpgradeSelected(stretch: !key.ShiftPressed);
@@ -564,12 +565,12 @@ public partial class PlayerControl : Node
     /// <summary>The selected workers of yours.</summary>
     public List<int> OwnWorkers() => OwnWorkers(OwnSelected());
 
-    /// <summary>The selected units of yours that can raise earth walls (mages), in id order.</summary>
-    public List<int> OwnCasters()
+    /// <summary>The selected units of yours that can cast the spell (mages), in id order.</summary>
+    public List<int> OwnCasters(Spell spell = Spell.EarthWall)
     {
         var list = new List<int>();
         foreach (int id in OwnSelected())
-            if (_sim.Spells.HasEarthWall(_sim.Units.IndexOf(id))) list.Add(id);
+            if (_sim.Spells.Has(_sim.Units.IndexOf(id), spell)) list.Add(id);
         return list;
     }
 
@@ -991,7 +992,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1563,18 +1564,21 @@ public partial class PlayerControl : Node
     /// <summary>The Earth Wall button and key (Shift+Y): starts (or stops) drawing an earth wall for a selected mage to raise.</summary>
     public void ToggleEarthWall() => SetTool(Tool == ToolMode.EarthWall ? ToolMode.Select : ToolMode.EarthWall);
 
+    /// <summary>The Ice Bridge button and key (Shift+'): starts (or stops) drawing an ice bridge for a selected mage to freeze.</summary>
+    public void ToggleIceBridge() => SetTool(Tool == ToolMode.IceBridge ? ToolMode.Select : ToolMode.IceBridge);
+
     /// <summary>
     /// The selected caster that would raise the next earth wall: the first ready one, or 0. With
     /// <paramref name="soonest"/>, the one ready soonest when none is ready.
     /// </summary>
-    public int ReadyCaster(bool soonest = false)
+    public int ReadyCaster(bool soonest = false, Spell spell = Spell.EarthWall)
     {
         int best = 0;
         long at = long.MaxValue;
-        foreach (int id in OwnCasters())
+        foreach (int id in OwnCasters(spell))
         {
             int i = _sim.Units.IndexOf(id);
-            if (_sim.Spells.CanCast(i)) return id;
+            if (_sim.Spells.CanCast(i, spell)) return id;
             if (soonest && _sim.Spells.ReadyAt(i) < at) (best, at) = (id, _sim.Spells.ReadyAt(i));
         }
         return best;
@@ -1597,6 +1601,8 @@ public partial class PlayerControl : Node
             var workers = OwnWorkers(OwnSelected()).ToArray();
             if (Tool == ToolMode.EarthWall)
                 _sim.Schedule(_sim.Tick, new EarthWallCommand(LocalPlayer, OwnCasters().ToArray(), _wallX, _wallZ, x2, z2));
+            else if (Tool == ToolMode.IceBridge)
+                _sim.Schedule(_sim.Tick, new IceBridgeCommand(LocalPlayer, OwnCasters(Spell.IceBridge).ToArray(), _wallX, _wallZ, x2, z2));
             else _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
                 ? new BridgeCommand(LocalPlayer, workers, BridgeBuilding, _wallX, _wallZ, x2, z2)
                 : new WallCommand(LocalPlayer, workers, WallBuilding, _wallX, _wallZ, x2, z2));
@@ -1617,7 +1623,7 @@ public partial class PlayerControl : Node
             UpdateBridgePreview();
             return;
         }
-        if (Tool == ToolMode.EarthWall)
+        if (Tool is ToolMode.EarthWall or ToolMode.IceBridge)
         {
             UpdateEarthWallPreview();
             return;
@@ -1649,7 +1655,8 @@ public partial class PlayerControl : Node
     private void UpdateEarthWallPreview()
     {
         if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
-        _sim.Spells.Plan(_wallX, _wallZ, x2, z2, _earthPlan);
+        if (Tool == ToolMode.IceBridge) _sim.Spells.PlanIce(_wallX, _wallZ, x2, z2, _earthPlan); // empty if it cannot span
+        else _sim.Spells.Plan(_wallX, _wallZ, x2, z2, _earthPlan);
         foreach (var (x, z, y, room) in _earthPlan)
             if (y >= 1) _wallPreview.Add((x, y, z, room));
     }
@@ -1849,6 +1856,7 @@ public partial class PlayerControl : Node
                $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
+               $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
@@ -1886,6 +1894,22 @@ public partial class PlayerControl : Node
         int n = 0;
         foreach (var wall in _sim.Spells.Walls)
             if (wall.Owner == LocalPlayer) n++;
+        return n;
+    }
+
+    /// <summary>Ice bridges of yours holding now, their ice blocks, and how many of them are cracking.</summary>
+    private int OwnIce(out int blocks, out int cracking)
+    {
+        int n = 0;
+        blocks = cracking = 0;
+        foreach (var ice in _sim.Spells.IceBridges)
+        {
+            if (ice.Owner != LocalPlayer) continue;
+            n++;
+            if (_sim.Spells.Cracking(ice)) cracking++;
+            foreach (var (x, y, z) in ice.Blocks)
+                if (_sim.World.Get(x, y, z) == BlockType.Ice) blocks++;
+        }
         return n;
     }
 

@@ -130,6 +130,12 @@ public static class UiIcons
             "t.........v.", "...kkkkkk...", "..kggggggk.t", "..kGGGGGGk..", "..kbbBbbbk..", "v.kbBbbbBk..",
             "..kbbbbBbk..", "..kBbbbbbk..", "..kbbBbbbk..", "kkkbbbbbBkkk", "kBbBbbBbbBbk", "kkkkkkkkkkkk",
         },
+        // Ice Bridge: a slab of ice over blue water, with sparks of magic.
+        ["ice_bridge"] = new[]
+        {
+            "v.........t.", "....t.......", "..........v.", "kkkkkkkkkkkk", "kwwlwwwwlwwk", "klwwtwwlwwtk",
+            "ktttltttlttk", "kkkkkkkkkkkk", "nnnnnnnnnnnn", "nntnnnnnntnn", "nnnnnntnnnnn", "nnnnnnnnnnnn",
+        },
         ["food"] = new[]
         {
             "............", "............", "....kkkkk...", "..kkoyoyokk.", ".koyoooyooyk", ".kooyooooyok",
