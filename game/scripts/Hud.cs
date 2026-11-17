@@ -1153,7 +1153,7 @@ public partial class Hud : CanvasLayer
         _iceBridgeButton.Text = ready != 0 || next == 0 ? "Ice Bridge  [Shift+']"
             : $"Ice Bridge in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond} s";
         _iceBridgeButton.TooltipText = $"A mage freezes the water into a level way of ice from bank to bank, up to {SpellSystem.IceLength} columns long " +
-                                       $"and {SpellSystem.IceWidth} wide, within {SpellSystem.CastRange} blocks of it, that anyone can walk on. " +
+                                       $"and {SpellSystem.IceWidth} wide, within {SpellSystem.CastRange} blocks of it, that anyone can walk on, slipping and sliding. " +
                                        $"It cracks, then melts after {SpellSystem.IceLastsTicks / Simulation.TicksPerSecond} s: " +
                                        "whoever is still on it falls, and drowns in deep water. " +
                                        $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s before its next spell.";

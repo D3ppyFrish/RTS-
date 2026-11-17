@@ -302,6 +302,53 @@ public class IceBridgeTests
         Assert.Equal(log.ToString(), CommandLog.Parse(log.ToString()).ToString());
     }
 
+    /// <summary>A flat world with a sheet of ice for ground from z 20 to 29 (the rest is grass).</summary>
+    private static Simulation IceSheet()
+    {
+        var sim = TestWorlds.Sim(TestWorlds.Flat(64, 16, 64, Ground));
+        for (int x = 0; x < 64; x++)
+        for (int z = 20; z < 30; z++)
+            sim.World.Set(x, Ground, z, BlockType.Ice);
+        return sim;
+    }
+
+    [Fact]
+    public void OnIceAUnitIsSlowToGetGoing()
+    {
+        var sim = IceSheet();
+        int onIce = Spawn(sim, P, "spearman", 5, 25), onGrass = Spawn(sim, P, "spearman", 5, 40);
+        sim.Schedule(sim.Tick, new MoveCommand(P, new[] { onIce }, 50, 25));
+        sim.Schedule(sim.Tick, new MoveCommand(P, new[] { onGrass }, 50, 40));
+        sim.Run(Tps / 2);
+        Fix64 ice = sim.Units.X[Index(sim, onIce)] - Fix64.FromInt(5), grass = sim.Units.X[Index(sim, onGrass)] - Fix64.FromInt(5);
+        Assert.True(ice > Fix64.Zero, "it gets going");
+        Assert.True(ice * 4 < grass * 3, $"slower off the mark on ice ({ice} against {grass})");
+        // Once going it keeps up, and it still gets there.
+        sim.Run(15 * Tps);
+        Assert.True(sim.Units.X[Index(sim, onIce)] > Fix64.FromInt(49));
+    }
+
+    [Fact]
+    public void OnIceAUnitSlidesOnAfterItStops()
+    {
+        var sim = IceSheet();
+        int onIce = Spawn(sim, P, "spearman", 5, 25), onGrass = Spawn(sim, P, "spearman", 5, 40);
+        sim.Schedule(sim.Tick, new MoveCommand(P, new[] { onIce }, 60, 25));
+        sim.Schedule(sim.Tick, new MoveCommand(P, new[] { onGrass }, 60, 40));
+        sim.Run(3 * Tps);
+        int a = Index(sim, onIce), b = Index(sim, onGrass);
+        Assert.NotEqual(Fix64.Zero, sim.Units.SlideX[a]);
+        Assert.Equal(Fix64.Zero, sim.Units.SlideX[b]); // only on ice
+        Fix64 iceAt = sim.Units.X[a], grassAt = sim.Units.X[b];
+        sim.Schedule(sim.Tick, new StopCommand(P, new[] { onIce, onGrass }));
+        sim.Run(2 * Tps);
+        a = Index(sim, onIce);
+        b = Index(sim, onGrass);
+        Assert.True(sim.Units.X[a] - iceAt > Fix64.One, $"it slid on ({sim.Units.X[a] - iceAt})");
+        Assert.True(sim.Units.X[b] - grassAt < Fix64.Half, "on grass it stops");
+        Assert.Equal(Fix64.Zero, sim.Units.SlideX[a]); // and the slide dies away
+    }
+
     [Fact]
     public void TheMageHasTheSpellInTheData()
     {

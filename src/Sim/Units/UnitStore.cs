@@ -168,6 +168,11 @@ public sealed class UnitStore
     public Fix64[] FaceZ = Array.Empty<Fix64>();
     /// <summary>Fastest the unit walks on its formation move (blocks per tick, before roads): the slowest unit's speed.</summary>
     public Fix64[] SpeedCap = Array.Empty<Fix64>();
+    /// <summary>
+    /// How far (blocks per tick, across) the unit slid last tick on ice: on ice it keeps most of it, so it is
+    /// slow to get going, to turn and to stop (see <see cref="UnitMovement"/>). Zero off ice.
+    /// </summary>
+    public Fix64[] SlideX = Array.Empty<Fix64>(), SlideZ = Array.Empty<Fix64>();
     /// <summary>Ticks left in which a formation unit that got stuck keeping its place follows its own way instead.</summary>
     public int[] Loose = Array.Empty<int>();
 
@@ -371,6 +376,7 @@ public sealed class UnitStore
         Array.Clear(ExtraArmour, i * Body.Parts, Body.Parts);
         StopBleeding(i);
         Cutter[i] = 0;
+        SlideX[i] = SlideZ[i] = Fix64.Zero;
         return id;
     }
 
@@ -451,7 +457,7 @@ public sealed class UnitStore
             Mix(Hp[i]); Mix((int)Order[i]); Mix(OrderX[i]); Mix(OrderZ[i]);
             Mix(Group[i]); Mix(ArriveRadius[i].Raw); Mix(Blocked[i]); Mix(Field[i]);
             Mix(Formation[i] ? 1 : 0); Mix(SlotX[i].Raw); Mix(SlotZ[i].Raw); Mix(FaceX[i].Raw); Mix(FaceZ[i].Raw);
-            Mix(SpeedCap[i].Raw); Mix(Loose[i]);
+            Mix(SpeedCap[i].Raw); Mix(Loose[i]); Mix(SlideX[i].Raw); Mix(SlideZ[i].Raw);
             Mix((int)Job[i]); Mix((int)Phase[i]); Mix(JobTarget[i]); Mix(JobX[i]); Mix(JobY[i]); Mix(JobZ[i]);
             Mix((int)JobBlock[i]); Mix(JobTimer[i]); Mix(JobStore[i]); Mix(JobRetry[i]); Mix(JobMisses[i]);
             Mix((int)Carry[i]); Mix(CarryAmount[i]);
@@ -477,7 +483,7 @@ public sealed class UnitStore
         Group[to] = Group[from]; ArriveRadius[to] = ArriveRadius[from]; Blocked[to] = Blocked[from];
         Field[to] = Field[from];
         Formation[to] = Formation[from]; SlotX[to] = SlotX[from]; SlotZ[to] = SlotZ[from];
-        FaceX[to] = FaceX[from]; FaceZ[to] = FaceZ[from]; SpeedCap[to] = SpeedCap[from]; Loose[to] = Loose[from];
+        FaceX[to] = FaceX[from]; FaceZ[to] = FaceZ[from]; SpeedCap[to] = SpeedCap[from]; Loose[to] = Loose[from]; SlideX[to] = SlideX[from]; SlideZ[to] = SlideZ[from];
         Job[to] = Job[from]; Phase[to] = Phase[from]; JobTarget[to] = JobTarget[from];
         JobX[to] = JobX[from]; JobY[to] = JobY[from]; JobZ[to] = JobZ[from]; JobBlock[to] = JobBlock[from];
         JobTimer[to] = JobTimer[from]; JobStore[to] = JobStore[from]; JobRetry[to] = JobRetry[from]; JobMisses[to] = JobMisses[from];
@@ -507,7 +513,7 @@ public sealed class UnitStore
         Array.Resize(ref Group, capacity); Array.Resize(ref ArriveRadius, capacity); Array.Resize(ref Blocked, capacity);
         Array.Resize(ref Field, capacity);
         Array.Resize(ref Formation, capacity); Array.Resize(ref SlotX, capacity); Array.Resize(ref SlotZ, capacity);
-        Array.Resize(ref FaceX, capacity); Array.Resize(ref FaceZ, capacity); Array.Resize(ref SpeedCap, capacity);
+        Array.Resize(ref FaceX, capacity); Array.Resize(ref FaceZ, capacity); Array.Resize(ref SpeedCap, capacity); Array.Resize(ref SlideX, capacity); Array.Resize(ref SlideZ, capacity);
         Array.Resize(ref Loose, capacity);
         Array.Resize(ref Job, capacity); Array.Resize(ref Phase, capacity); Array.Resize(ref JobTarget, capacity);
         Array.Resize(ref JobX, capacity); Array.Resize(ref JobY, capacity); Array.Resize(ref JobZ, capacity);
