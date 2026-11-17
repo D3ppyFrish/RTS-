@@ -78,6 +78,8 @@ public sealed class UnitDef
     public bool Bleeds { get; init; } = true;
     /// <summary>A wild monster that picks up a fresh blood trail follows it to the bleeding unit (see <see cref="MonsterSystem"/>).</summary>
     public bool TracksBlood { get; init; }
+    /// <summary>It can raise earth walls (see <see cref="SpellSystem"/>).</summary>
+    public bool EarthWall { get; init; }
 
     /// <summary>Hit points it gives back to the most hurt ally near it (<see cref="HealRange"/>) every <see cref="HealTicks"/>; 0 if it does not heal.</summary>
     public int Heal { get; init; }

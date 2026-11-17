@@ -124,6 +124,12 @@ public static class UiIcons
             "t....tt....t", "...kvvvvk...", "..kvvttvvk..", "..kvtwwtvk..", "..kvvttvvk..", "t..kvvvvk..t",
             ".....kSk....", ".....kSk....", ".....ktk....", ".....kSk....", ".....kSk....", "......k.....",
         },
+        // Earth Wall: a block of earth risen from the ground, grass on top, with sparks of magic.
+        ["earth_wall"] = new[]
+        {
+            "t.........v.", "...kkkkkk...", "..kggggggk.t", "..kGGGGGGk..", "..kbbBbbbk..", "v.kbBbbbBk..",
+            "..kbbbbBbk..", "..kBbbbbbk..", "..kbbBbbbk..", "kkkbbbbbBkkk", "kBbBbbBbbBbk", "kkkkkkkkkkkk",
+        },
         ["food"] = new[]
         {
             "............", "............", "....kkkkk...", "..kkoyoyokk.", ".koyoooyooyk", ".kooyooooyok",

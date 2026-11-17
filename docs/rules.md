@@ -720,6 +720,26 @@ the matches are Hard against Classic with fog of war; Hard plays the Settlers th
 it plays them balanced they are won in 23 to 34 minutes (20 to 27 before).
 All the numbers are first guesses for playtesting.
 
+## Terrain magic
+
+`src/Sim/Units/SpellSystem.cs`: spells that reshape the ground, made of the same blocks digging and building
+use (the design doc's "Shape with magic"). A unit type has a spell in `data/units.json`; so far there is one.
+
+- **Earth Wall** (`EarthWallCommand`, `"earthWall": true`: the mage): a wall of earth rises along a line
+  (the line a wall is laid along) of up to 8 columns, 3 blocks high from the ground, so nobody walks through
+  or climbs over it. Its top is grass, the rest soil. The line's middle must be within 12 blocks of the mage;
+  one further away walks up and casts once in range (any other order on the way calls it off, and costs
+  nothing). Of the selected units, the first mage that is ready casts, one already in range first.
+- **Where earth rises**: on ground a unit stands on, but not where a building or a city-state's town is, on
+  water, or in a column with a unit standing in it (or right at its edge). Leaves in the way are pushed aside;
+  an overhang stops the column short.
+- **How long**: the wall stands 45 seconds, then the earth still there sinks back into the ground. Until then
+  workers can dig through it (it gives nothing) and sappers can tunnel it, like any earth; earth dug out from
+  under falls as rubble, which stays.
+- **Waiting**: a mage that raised a wall waits 40 seconds before it can raise another; others are not held up.
+- **In the game**: the Earth Wall button (Shift+Y) shows with a mage selected, greyed out with the wait while
+  none of the selected is ready. All numbers are starting guesses to be tuned in playtests.
+
 ## Fog of war
 
 `src/Sim/VisionSystem.cs`: with fog of war on, each player sees only what is within sight of their

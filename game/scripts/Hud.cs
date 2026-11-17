@@ -69,6 +69,7 @@ public partial class Hud : CanvasLayer
     private Button _rideButton = null!, _recruitButton = null!, _beatenButton = null!;
     private Button _denButton = null!;
     private Button _bloomButton = null!;
+    private Button _earthWallButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
@@ -542,6 +543,13 @@ public partial class Hud : CanvasLayer
         _bloomButton.Pressed += () => _control.Bloom();
         column.AddChild(_bloomButton);
 
+        _earthWallButton = MakeToolButton("Earth Wall  [Shift+Y]");
+        _earthWallButton.Name = "earth_wall";
+        _earthWallButton.Icon = UiIcons.Get("earth_wall");
+        _earthWallButton.Visible = false;
+        _earthWallButton.Pressed += () => _control.ToggleEarthWall();
+        column.AddChild(_earthWallButton);
+
         _cityBox = new VBoxContainer { Visible = false };
         _cityBox.AddThemeConstantOverride("separation", 4);
         _hireRow = new HBoxContainer();
@@ -965,6 +973,7 @@ public partial class Hud : CanvasLayer
         RefreshTaming();
         RefreshDen();
         RefreshBloom();
+        RefreshEarthWall();
         RefreshCities();
     }
 
@@ -1101,6 +1110,25 @@ public partial class Hud : CanvasLayer
         _bloomButton.TooltipText = $"The Dusk Staff's bearer heals every ally within {DuskTreeSystem.BloomRange} blocks, itself too, " +
                                    $"by {DuskTreeSystem.BloomHeal}. Then it waits {DuskTreeSystem.BloomCooldownTicks / Simulation.TicksPerSecond} s.";
         _bloomButton.Disabled = !ready;
+    }
+
+    /// <summary>The Earth Wall button while a mage of yours is selected (greyed out while none is ready).</summary>
+    private void RefreshEarthWall()
+    {
+        bool tool = _control.Tool == PlayerControl.ToolMode.EarthWall;
+        _earthWallButton.Visible = _control.OwnCasters().Count > 0 || tool;
+        _earthWallButton.SetPressedNoSignal(tool);
+        if (!_earthWallButton.Visible) return;
+        int ready = _control.ReadyCaster();
+        int next = ready != 0 ? ready : _control.ReadyCaster(soonest: true);
+        long wait = next == 0 ? 0 : Math.Max(0, _sim.Spells.ReadyAt(_sim.Units.IndexOf(next)) - _sim.Tick);
+        _earthWallButton.Text = ready != 0 || next == 0 ? "Earth Wall  [Shift+Y]"
+            : $"Earth Wall in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond} s";
+        _earthWallButton.TooltipText = $"A mage raises a wall of earth {SpellSystem.Height} blocks high along a line of up to " +
+                                       $"{SpellSystem.MaxLength} columns, within {SpellSystem.CastRange} blocks of it. " +
+                                       $"It crumbles after {SpellSystem.LastsTicks / Simulation.TicksPerSecond} s; workers can dig through it before then. " +
+                                       $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s.";
+        _earthWallButton.Disabled = ready == 0 && !tool;
     }
 
     private void RefreshDen()
@@ -1242,6 +1270,19 @@ public partial class Hud : CanvasLayer
                        (_control.OwnWorkers().Count == 0 ? "   (select workers first)" : "") +
                        "\nShift: draw another   Right click or Esc to stop   (O: a gate, which only your units walk through)";
             }
+            case PlayerControl.ToolMode.EarthWall:
+            {
+                var preview = _control.WallPreview;
+                int ok = 0;
+                foreach (var c in preview)
+                    if (c.Ok) ok++;
+                return (_control.WallStarted
+                           ? $"Earth Wall: let go to raise earth on {ok} columns" + (ok < preview.Count ? $" ({preview.Count - ok} have a unit, a building or water on them)" : "")
+                           : $"Earth Wall: drag a line of up to {SpellSystem.MaxLength} columns for a mage to raise earth along") +
+                       (_control.OwnCasters().Count == 0 ? "   (select a mage first)"
+                           : _control.ReadyCaster() == 0 ? "   (no selected mage is ready)" : "") +
+                       "\nRight click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Bridge:
             {
                 var preview = _control.WallPreview;
@@ -1260,7 +1301,7 @@ public partial class Hud : CanvasLayer
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   ': bridge   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance";
         }
     }

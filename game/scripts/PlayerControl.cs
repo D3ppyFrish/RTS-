@@ -73,7 +73,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -256,7 +256,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Test:
@@ -274,7 +274,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -346,6 +346,7 @@ public partial class PlayerControl : Node
         {
             case Key.L: StartRoad(); break;
             case Key.Comma: Bloom(); break;
+            case Key.Y when key.ShiftPressed: ToggleEarthWall(); break;
             case Key.Y: ToggleWall(); break;
             case Key.Apostrophe: ToggleBridge(); break;
             case Key.U:
@@ -562,6 +563,15 @@ public partial class PlayerControl : Node
 
     /// <summary>The selected workers of yours.</summary>
     public List<int> OwnWorkers() => OwnWorkers(OwnSelected());
+
+    /// <summary>The selected units of yours that can raise earth walls (mages), in id order.</summary>
+    public List<int> OwnCasters()
+    {
+        var list = new List<int>();
+        foreach (int id in OwnSelected())
+            if (_sim.Spells.HasEarthWall(_sim.Units.IndexOf(id))) list.Add(id);
+        return list;
+    }
 
     /// <summary>
     /// A right click: on an enemy unit, attack it (units that cannot fight go to it); on a building of
@@ -981,7 +991,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1550,6 +1560,26 @@ public partial class PlayerControl : Node
     /// <summary>The Bridge button and key: starts (or stops) drawing bridges for the selected workers to build.</summary>
     public void ToggleBridge() => SetTool(Tool == ToolMode.Bridge ? ToolMode.Select : ToolMode.Bridge);
 
+    /// <summary>The Earth Wall button and key (Shift+Y): starts (or stops) drawing an earth wall for a selected mage to raise.</summary>
+    public void ToggleEarthWall() => SetTool(Tool == ToolMode.EarthWall ? ToolMode.Select : ToolMode.EarthWall);
+
+    /// <summary>
+    /// The selected caster that would raise the next earth wall: the first ready one, or 0. With
+    /// <paramref name="soonest"/>, the one ready soonest when none is ready.
+    /// </summary>
+    public int ReadyCaster(bool soonest = false)
+    {
+        int best = 0;
+        long at = long.MaxValue;
+        foreach (int id in OwnCasters())
+        {
+            int i = _sim.Units.IndexOf(id);
+            if (_sim.Spells.CanCast(i)) return id;
+            if (soonest && _sim.Spells.ReadyAt(i) < at) (best, at) = (id, _sim.Spells.ReadyAt(i));
+        }
+        return best;
+    }
+
     /// <summary>Pressing the button down on the ground starts the wall (or bridge) there.</summary>
     private void WallStart(Vector2 screen)
     {
@@ -1565,7 +1595,9 @@ public partial class PlayerControl : Node
         if (GroundUnder(_mousePos, out int x2, out int y2, out int z2))
         {
             var workers = OwnWorkers(OwnSelected()).ToArray();
-            _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
+            if (Tool == ToolMode.EarthWall)
+                _sim.Schedule(_sim.Tick, new EarthWallCommand(LocalPlayer, OwnCasters().ToArray(), _wallX, _wallZ, x2, z2));
+            else _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
                 ? new BridgeCommand(LocalPlayer, workers, BridgeBuilding, _wallX, _wallZ, x2, z2)
                 : new WallCommand(LocalPlayer, workers, WallBuilding, _wallX, _wallZ, x2, z2));
             _rings.ShowMarker(new Vector3((_wallX + x2) / 2f + 0.5f, y2, (_wallZ + z2) / 2f + 0.5f) * ChunkMesher.BlockSize,
@@ -1583,6 +1615,11 @@ public partial class PlayerControl : Node
         if (Tool == ToolMode.Bridge)
         {
             UpdateBridgePreview();
+            return;
+        }
+        if (Tool == ToolMode.EarthWall)
+        {
+            UpdateEarthWallPreview();
             return;
         }
         if (Tool != ToolMode.Wall || !_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
@@ -1606,6 +1643,16 @@ public partial class PlayerControl : Node
     }
 
     private readonly List<BridgeSpan> _bridgePlan = new();
+    private readonly List<(int X, int Z, int Y, bool Room)> _earthPlan = new();
+
+    /// <summary>The columns the earth wall being dragged covers, as the simulation plans them, each with whether earth rises there.</summary>
+    private void UpdateEarthWallPreview()
+    {
+        if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
+        _sim.Spells.Plan(_wallX, _wallZ, x2, z2, _earthPlan);
+        foreach (var (x, z, y, room) in _earthPlan)
+            if (y >= 1) _wallPreview.Add((x, y, z, room));
+    }
 
     /// <summary>
     /// The deck columns of the bridge being dragged, as the simulation plans them (at the level units would stand
@@ -1801,6 +1848,7 @@ public partial class PlayerControl : Node
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
                $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
+               $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
@@ -1821,6 +1869,35 @@ public partial class PlayerControl : Node
                $"idle={_sim.Economy.IdleWorkers(LocalPlayer).Count} camera={cam.X},{cam.Z} " +
                $"dusk_tree={duskState} warden={warden} staff={staff} staff_at={staffAt} tending={tending} bloom_ready={(StaffSelected() is int sb && sb != 0 && dusk.CanBloom(u.IndexOf(sb)) ? 1 : 0)} " +
                $"formation={inFormation} line_preview={_formationPreview.Count} spread={Spread(own)}";
+    }
+
+    /// <summary>Your units walking into range to raise an earth wall.</summary>
+    private int OwnCasting()
+    {
+        int n = 0;
+        for (int i = 0; i < _sim.Units.Count; i++)
+            if (_sim.Units.Owner[i] == LocalPlayer && _sim.Spells.Casting(_sim.Units.Id[i])) n++;
+        return n;
+    }
+
+    /// <summary>Earth walls of yours standing now.</summary>
+    private int OwnEarthWalls()
+    {
+        int n = 0;
+        foreach (var wall in _sim.Spells.Walls)
+            if (wall.Owner == LocalPlayer) n++;
+        return n;
+    }
+
+    /// <summary>Blocks of your standing earth walls still there (not dug away).</summary>
+    private int OwnEarthBlocks()
+    {
+        int n = 0;
+        foreach (var wall in _sim.Spells.Walls)
+            if (wall.Owner == LocalPlayer)
+                foreach (var (x, y, z) in wall.Blocks)
+                    if (_sim.World.Get(x, y, z) is BlockType.Soil or BlockType.Grass) n++;
+        return n;
     }
 
     /// <summary>Your walls and gates of a tier (0 the barrier, 1 the wooden wall, 2 the stone wall).</summary>
