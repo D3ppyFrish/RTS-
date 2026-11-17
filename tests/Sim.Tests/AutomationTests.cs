@@ -160,6 +160,41 @@ public class AutomationTests
     }
 
     [Fact]
+    public void AWorkerWalksFurtherOutOnceTheGroundNearTownIsBare()
+    {
+        // Issue #36: with nothing to gather within SearchRadius, automatic workers stood idle by the town
+        // hall. The only tree is twice that far away: it is gathered rather than nothing.
+        var sim = Flat(160);
+        var store = Place(sim, 0, "storehouse", 10, 10);
+        int far = 20 + 2 * AutomationSystem.SearchRadius;
+        Assert.True(far - 20 <= AutomationSystem.FarSearchRadius);
+        TestWorlds.Tree(sim.World, far, far, 4);
+        int w = Worker(sim, 0, 20, 20);
+        Automate(sim, w);
+        sim.Run(2 * Tps);
+        Assert.Equal(UnitJob.Gather, sim.Units.Job[Index(sim, w)]);
+        Assert.Equal(BlockType.Wood, sim.Units.JobBlock[Index(sim, w)]);
+        RunUntil(sim, () => store.Stock[(int)Good.Wood] > 0, 120 * Tps, "the far wood to reach the storehouse");
+    }
+
+    [Fact]
+    public void ANearGoodStillBeatsAFarOneThatIsNeededMore()
+    {
+        // Within SearchRadius the most needed good wins; past it, the nearest anything does. Wood is
+        // needed more than stone, but the stone is within reach and the tree is not.
+        var sim = Flat(160);
+        Place(sim, 0, "storehouse", 10, 10);
+        sim.World.Set(20 + AutomationSystem.SearchRadius - 5, Ground, 20, BlockType.Stone);
+        sim.World.Set(20 + AutomationSystem.SearchRadius - 5, Ground + 1, 20, BlockType.Stone);
+        TestWorlds.Tree(sim.World, 20 + 2 * AutomationSystem.SearchRadius, 20, 4);
+        int w = Worker(sim, 0, 20, 20);
+        Automate(sim, w);
+        sim.Run(2 * Tps);
+        Assert.Equal(UnitJob.Gather, sim.Units.Job[Index(sim, w)]);
+        Assert.Equal(BlockType.Stone, sim.Units.JobBlock[Index(sim, w)]);
+    }
+
+    [Fact]
     public void AWorkerDropsOffWhatItCarriesFirst()
     {
         var sim = Flat();
