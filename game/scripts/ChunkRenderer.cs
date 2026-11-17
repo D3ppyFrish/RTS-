@@ -320,9 +320,14 @@ public partial class ChunkRenderer : Node3D
         long start = Stopwatch.GetTimestamp();
         double budgetTicks = UploadBudgetMs * Stopwatch.Frequency / 1000.0;
         var eye = _eye();
-        // Chunks whose blocks changed first, and given twice the time: what is on screen for them is wrong.
-        while (Stopwatch.GetTimestamp() - start < budgetTicks * 2 && _urgent.TryDequeue(out var u)) Take(u, eye);
-        while (Stopwatch.GetTimestamp() - start < budgetTicks && _results.TryDequeue(out var r)) Take(r, eye);
+        // Chunks whose blocks changed first: what is on screen for them is wrong. Then the others, one at
+        // least, so that a level of detail is not kept waiting for ever while the land keeps changing.
+        while (Stopwatch.GetTimestamp() - start < budgetTicks && _urgent.TryDequeue(out var u)) Take(u, eye);
+        do
+        {
+            if (!_results.TryDequeue(out var r)) break;
+            Take(r, eye);
+        } while (Stopwatch.GetTimestamp() - start < budgetTicks);
     }
 
     /// <summary>Takes a finished mesh: kept and put on screen if its chunk has not changed since it was sent off.</summary>
@@ -450,13 +455,33 @@ public partial class ChunkRenderer : Node3D
     }
 
     /// <summary>
-    /// How far (metres, 0 or less) the ground drawn at world position <paramref name="p"/> (metres, on the
-    /// ground) lies below where the rules have it (see <see cref="GroundDrop"/>).
+    /// The same for a flat mark lying on the ground round (x, z), a ring say, that reaches
+    /// <paramref name="radius"/> blocks from there: it lies no lower than the highest ground of that level
+    /// under it, so a ring on a lowered step is not half hidden by the whole step beside it.
     /// </summary>
-    public static float GroundDropAt(Vector3 p)
+    public static float GroundDrop(float x, int y, float z, float radius)
+    {
+        if (GroundDrop(x, y, z) == 0f) return 0f;
+        var fine = _current!._fine!;
+        for (int k = 0; k < 8; k++)
+        {
+            float a = k * Mathf.Pi / 4;
+            int fx = Mathf.FloorToInt((x + Mathf.Cos(a) * radius) * 2), fz = Mathf.FloorToInt((z + Mathf.Sin(a) * radius) * 2);
+            // Whole ground of this level: not lower ground, and nothing standing on it.
+            if (BlockInfo.IsSolid(fine.Get(fx, 2 * y - 1, fz)) && !BlockInfo.IsSolid(fine.Get(fx, 2 * y, fz))) return 0f;
+        }
+        return -0.5f;
+    }
+
+    /// <summary>
+    /// How far (metres, 0 or less) the ground drawn at world position <paramref name="p"/> (metres, on the
+    /// ground) lies below where the rules have it (see <see cref="GroundDrop(float, int, float)"/>); with a
+    /// <paramref name="radius"/> (metres), for a flat mark that wide (see <see cref="GroundDrop(float, int, float, float)"/>).
+    /// </summary>
+    public static float GroundDropAt(Vector3 p, float radius = 0f)
     {
         float bs = ChunkMesher.BlockSize;
-        return GroundDrop(p.X / bs, Mathf.RoundToInt(p.Y / bs), p.Z / bs) * bs;
+        return GroundDrop(p.X / bs, Mathf.RoundToInt(p.Y / bs), p.Z / bs, radius / bs) * bs;
     }
 
     private BlockType[] RentBuffer() => _bufferPool.TryTake(out var b) ? b : new BlockType[PaddedLength];

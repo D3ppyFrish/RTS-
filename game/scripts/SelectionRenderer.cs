@@ -26,6 +26,9 @@ public partial class SelectionRenderer : Node3D
     private static readonly Color FormationSpot = new(1f, 1f, 1f);
     private static readonly Color DigMarked = new(0.75f, 0.55f, 0.3f);
 
+    /// <summary>How far (metres) a selection ring, a formation spot and the order marker reach from their middles.</summary>
+    private const float RingRadius = 0.4f, SpotRadius = 0.34f, MarkerRadius = 0.7f;
+
     private const string ShaderCode = @"
 shader_type spatial;
 render_mode unshaded, cull_disabled;
@@ -70,7 +73,7 @@ void fragment() {
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             UseColors = true,
-            Mesh = Ring(0.3f, 0.4f, 32),
+            Mesh = Ring(0.3f, RingRadius, 32),
         };
         var worldBox = new Aabb(new Vector3(-8, -8, -8),
             new Vector3(sim.World.SizeX + 16, sim.World.SizeY + 16, sim.World.SizeZ + 16) * ChunkMesher.BlockSize);
@@ -83,7 +86,7 @@ void fragment() {
             CullMode = BaseMaterial3D.CullModeEnum.Disabled,
             NoDepthTest = true,
         };
-        _marker = new MeshInstance3D { Mesh = Ring(0.55f, 0.7f, 40), MaterialOverride = _markerMaterial, Visible = false };
+        _marker = new MeshInstance3D { Mesh = Ring(0.55f, MarkerRadius, 40), MaterialOverride = _markerMaterial, Visible = false };
         AddChild(_marker);
 
         _frameMaterial = new StandardMaterial3D
@@ -113,7 +116,7 @@ void fragment() {
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             UseColors = true,
-            Mesh = Ring(0.22f, 0.34f, 24),
+            Mesh = Ring(0.22f, SpotRadius, 24),
         };
         AddChild(new MultiMeshInstance3D { Multimesh = _spots, MaterialOverride = _material, CustomAabb = worldBox });
     }
@@ -200,7 +203,7 @@ void fragment() {
             int o = k * FloatsPerInstance;
             var r = _spotBuffer;
             r[o + 0] = 1; r[o + 1] = 0; r[o + 2] = 0; r[o + 3] = p.X * bs;
-            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = (p.Y + ChunkRenderer.GroundDrop(p.X, Mathf.RoundToInt(p.Y), p.Z)) * bs + 0.04f;
+            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = (p.Y + ChunkRenderer.GroundDrop(p.X, Mathf.RoundToInt(p.Y), p.Z, SpotRadius / bs)) * bs + 0.04f;
             r[o + 8] = 0; r[o + 9] = 0; r[o + 10] = 1; r[o + 11] = p.Z * bs;
             r[o + 12] = FormationSpot.R; r[o + 13] = FormationSpot.G; r[o + 14] = FormationSpot.B; r[o + 15] = 1;
         }
@@ -253,7 +256,7 @@ void fragment() {
     /// <summary>Shows the order marker at a world position (metres), on the ground as it is drawn there.</summary>
     public void ShowMarker(Vector3 position, Color color)
     {
-        _marker.Position = position + new Vector3(0, 0.04f + ChunkRenderer.GroundDropAt(position), 0);
+        _marker.Position = position + new Vector3(0, 0.04f + ChunkRenderer.GroundDropAt(position, MarkerRadius), 0);
         _markerMaterial.AlbedoColor = color;
         _markerAge = 0;
         _marker.Visible = true;
@@ -298,7 +301,7 @@ void fragment() {
         float bs = ChunkMesher.BlockSize;
         float x = Mathf.Lerp(u.PrevX[i].ToFloat(), u.X[i].ToFloat(), alpha);
         float z = Mathf.Lerp(u.PrevZ[i].ToFloat(), u.Z[i].ToFloat(), alpha);
-        float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + UnitRenderer.DeckOffset(_sim, i) + ChunkRenderer.GroundDrop(x, u.Y[i], z);
+        float y = Mathf.Lerp(u.PrevY[i], u.Y[i], alpha) + UnitRenderer.DeckOffset(_sim, i) + ChunkRenderer.GroundDrop(x, u.Y[i], z, RingRadius / bs);
         int o = count * FloatsPerInstance;
         var b = _buffer;
         b[o + 0] = 1; b[o + 1] = 0; b[o + 2] = 0; b[o + 3] = x * bs;

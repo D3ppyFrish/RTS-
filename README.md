@@ -250,7 +250,8 @@ the ground is nearer to lower ground than to higher ground, so a hillside climbs
 and the edge of a plateau gets a shoulder. It is a look only. The rules still run on whole blocks: units,
 buildings, digging, pathfinding, maps and replays are unchanged, and what stands or lies on a lowered step
 (units, their bars and icons, blood, order markers, the rally flag, road, dig and formation marks) is
-drawn a quarter of a metre lower. The finer world is a second `VoxelWorld` of 1024x128x1024 blocks made
+drawn a quarter of a metre lower; a ring lies as high as the highest ground of its level under it, so the
+whole step beside a lowered one does not hide half of it. The finer world is a second `VoxelWorld` of 1024x128x1024 blocks made
 at load (53 MB against 8 MB); trees and buildings are drawn from the whole blocks as before.
 `--terrain=blocks` draws whole blocks everywhere instead.
 
