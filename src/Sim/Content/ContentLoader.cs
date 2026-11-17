@@ -509,7 +509,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "upkeep", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood");
+                "bleeds", "tracksBlood", "earthWall");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -543,6 +543,7 @@ public static class ContentLoader
                 Shield = o.Int("shield", 0, 90, 0),
                 Bleeds = !o.Has("bleeds") || o.Bool("bleeds"),
                 TracksBlood = o.Bool("tracksBlood"),
+                EarthWall = o.Bool("earthWall"),
                 Heal = o.Int("heal", 0, 100000, 0),
                 HealTicks = Math.Max(1, (healTime * Tps).RoundToInt()),
                 HealRange = o.Decimal("healRange", Fix64.One, Fix64.FromInt(32), Fix64.FromInt(5), required: false),
@@ -1199,6 +1200,7 @@ public static class ContentLoader
                 h.Add(u.Shield);
                 h.Add(u.Bleeds ? 1 : 0);
                 h.Add(u.TracksBlood ? 1 : 0);
+                h.Add(u.EarthWall ? 1 : 0);
                 h.Add(u.Heal);
                 h.Add(u.HealTicks);
                 h.Add(u.HealRange.Raw);
