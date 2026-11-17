@@ -7,8 +7,11 @@ namespace Rts.Sim.Meshing;
 /// One rectangle of merged fine-voxel faces (see <see cref="StructureDetail"/>), in fine voxels relative to
 /// the chunk's corner. Face numbering and corners as in <see cref="Quad"/>.
 /// </summary>
-public readonly record struct FineQuad(byte Face, byte Colour, int X, int Y, int Z, int W, int H)
+public readonly record struct FineQuad(byte Face, byte Colour, int X, int Y, int Z, int W, int H, byte Ao = Occlusion.Open)
 {
+    /// <summary>How open corner <paramref name="i"/> is (see <see cref="Occlusion"/>).</summary>
+    public int AoAt(int i) => Occlusion.At(Ao, (Face & 1) == 0, i);
+
     /// <summary>Corner <paramref name="i"/> (0..3), counter-clockwise when seen from outside the solid.</summary>
     public (int X, int Y, int Z) Corner(int i) => new Quad(Face, BlockType.Air, X, Y, Z, W, H).Corner(i);
 }
@@ -60,6 +63,17 @@ public static class StructureMesher
         _shapes ??= new byte[S * S * S * StructureDetail.Volume];
         Array.Clear(_shaped ??= new bool[S * S * S]);
         Region(padded, chunkX, chunkY, chunkZ, 0, 0, 0, S, output);
+    }
+
+    /// <summary>Whether the chunk's fine quads carry ambient occlusion (see <see cref="Occlusion"/>).</summary>
+    [ThreadStatic] private static bool _ao;
+
+    /// <summary>As <see cref="Build(ReadOnlySpan{BlockType}, int, int, int, List{FineQuad})"/>, with ambient occlusion if <paramref name="ao"/>.</summary>
+    public static void Build(ReadOnlySpan<BlockType> padded, int chunkX, int chunkY, int chunkZ, List<FineQuad> output, bool ao)
+    {
+        _ao = ao;
+        try { Build(padded, chunkX, chunkY, chunkZ, output); }
+        finally { _ao = false; }
     }
 
     /// <summary>Smallest region (blocks on a side) <see cref="Region"/> splits a chunk into.</summary>
@@ -150,7 +164,7 @@ public static class StructureMesher
             }
         }
 
-        Mesh(grid.AsSpan(0, volume), nx, ny, nz, x0 * F - 1, y0 * F - 1, z0 * F - 1, output);
+        Mesh(grid.AsSpan(0, volume), nx, ny, nz, x0 * F - 1, y0 * F - 1, z0 * F - 1, output, _ao);
     }
 
     /// <summary>The fine voxels of detailed block (bx, by, bz) of the chunk being built, worked out the first time asked.</summary>
@@ -172,15 +186,18 @@ public static class StructureMesher
     /// <summary>
     /// Greedy-meshes a grid of fine voxels (indexed <c>(y * nz + z) * nx + x</c>): faces of coloured voxels
     /// that touch empty space (or the edge of the grid) are merged into rectangles of one colour. Quads are
-    /// offset by (ox, oy, oz).
+    /// offset by (ox, oy, oz). With <paramref name="ao"/> they carry ambient occlusion (one level per face) from the
+    /// voxels around them (see <see cref="Occlusion"/>), and only faces shaded alike merge.
     /// </summary>
-    public static void Mesh(ReadOnlySpan<byte> grid, int nx, int ny, int nz, int ox, int oy, int oz, List<FineQuad> output)
+    public static void Mesh(ReadOnlySpan<byte> grid, int nx, int ny, int nz, int ox, int oy, int oz, List<FineQuad> output,
+        bool ao = false)
     {
         Span<int> dims = stackalloc int[] { nx, ny, nz };
         Span<int> strides = stackalloc int[] { 1, nx * nz, nx };
         Span<int> pos = stackalloc int[3];
         int maxArea = Math.Max(nx * ny, Math.Max(ny * nz, nx * nz));
         byte[] mask = new byte[maxArea];
+        byte[] aoMask = new byte[maxArea];
         // Slices along each axis holding anything to draw: the rest are skipped (trees leave a lot of air).
         var drawn = new bool[nx + ny + nz];
         for (int y = 0; y < ny; y++)
@@ -223,6 +240,8 @@ public static class StructureMesher
                             any = true;
                         }
                         mask[j * du + i] = m;
+                        aoMask[j * du + i] = m != 0 && ao && hasNext
+                            ? FaceAo(grid, at + nextOffset, i, j, du, dv, su, sv) : Occlusion.Open;
                     }
                 }
                 if (!any) continue;
@@ -232,25 +251,47 @@ public static class StructureMesher
                 {
                     byte m = mask[j * du + i];
                     if (m == 0) { i++; continue; }
+                    byte o = aoMask[j * du + i];
+                    bool merge = Occlusion.Uniform(o);
                     int w = 1;
-                    while (i + w < du && mask[j * du + i + w] == m) w++;
+                    while (merge && i + w < du && mask[j * du + i + w] == m && aoMask[j * du + i + w] == o) w++;
                     int h = 1;
-                    while (j + h < dv && RowMatches(mask, (j + h) * du + i, w, m)) h++;
+                    while (merge && j + h < dv && RowMatches(mask, aoMask, (j + h) * du + i, w, m, o)) h++;
                     for (int y = 0; y < h; y++) mask.AsSpan((j + y) * du + i, w).Clear();
 
                     pos[a] = slice + (positive ? 1 : 0);
                     pos[u] = i;
                     pos[v] = j;
-                    output.Add(new FineQuad((byte)face, m, pos[0] + ox, pos[1] + oy, pos[2] + oz, w, h));
+                    output.Add(new FineQuad((byte)face, m, pos[0] + ox, pos[1] + oy, pos[2] + oz, w, h, o));
                     i += w;
                 }
             }
         }
     }
 
-    private static bool RowMatches(ReadOnlySpan<byte> mask, int start, int w, byte m)
+    private static bool RowMatches(ReadOnlySpan<byte> mask, ReadOnlySpan<byte> aoMask, int start, int w, byte m, byte o)
     {
-        for (int k = 0; k < w; k++) if (mask[start + k] != m) return false;
+        for (int k = 0; k < w; k++) if (mask[start + k] != m || aoMask[start + k] != o) return false;
         return true;
+    }
+
+    /// <summary>
+    /// The openness of the face at (i, j) of its slice whose front voxel is grid index <paramref name="front"/>,
+    /// one level for the whole face: shaded where it lies in a nook, with solid voxels on two sides of its front
+    /// or on one side and both corners there (beyond the grid's edge counts as open). Shading a fine face as a
+    /// whole, and only in nooks, keeps most faces of a flat run alike so they still merge: corner by corner
+    /// shading tripled the triangles of a forest, this adds about half.
+    /// </summary>
+    private static byte FaceAo(ReadOnlySpan<byte> grid, int front, int i, int j, int du, int dv, int su, int sv)
+    {
+        const byte E = StructurePalette.Empty;
+        bool hasU0 = i > 0, hasU1 = i + 1 < du, hasV0 = j > 0, hasV1 = j + 1 < dv;
+        int sides = (hasU0 && grid[front - su] != E ? 1 : 0) + (hasU1 && grid[front + su] != E ? 1 : 0)
+            + (hasV0 && grid[front - sv] != E ? 1 : 0) + (hasV1 && grid[front + sv] != E ? 1 : 0);
+        int corners = (hasU0 && hasV0 && grid[front - su - sv] != E ? 1 : 0) + (hasU1 && hasV0 && grid[front + su - sv] != E ? 1 : 0)
+            + (hasU0 && hasV1 && grid[front - su + sv] != E ? 1 : 0) + (hasU1 && hasV1 && grid[front + su + sv] != E ? 1 : 0);
+        int shade = 2 * sides + corners; // 0 open .. 12 at the bottom of a pit
+        int level = shade < 5 ? 3 : 1;
+        return (byte)(level * 0x55);
     }
 }

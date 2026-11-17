@@ -42,6 +42,7 @@ vec3 fogged(vec3 c, vec2 fog) {
 uniform float block_size = 0.5;
 uniform float wind = 0.2;
 uniform float wet = 0.0;
+uniform float night_glow = 0.0;
 varying vec3 v_world;
 bool is_leaf(float mark) { return mark > 0.25 && mark < 0.5; }
 // How far a leaf vertex moves: the same for every face meeting at a point, so the crown stays closed.
@@ -62,16 +63,28 @@ float block_hash(vec3 p) {
 vec3 block_look(vec3 c, float mark) {
     c = linear_of(c);
     if (mark > 0.5 && mark < 0.6) return c * 0.3; // lava: dark under its glow
-    if (mark < 0.95 && (!is_leaf(mark) || mark < 0.34)) return c; // fine leaves (0.3125) have no block grid
+    if (mark > 0.6 && mark < 0.66) return c; // crystal
     vec3 inside = v_world / block_size - v_world_normal * 0.02;
-    c *= 0.9 + 0.17 * block_hash(floor(inside));
+    // Each fine voxel (an eighth of a block) a slightly different shade: the grain of the voxel style.
+    // It fades out far away, where it would shimmer.
+    float px = max(fwidth(inside.x), max(fwidth(inside.y), fwidth(inside.z)));
+    float grain = (block_hash(floor(inside * 8.0) + 0.5) - 0.5) * (1.0 - smoothstep(0.04, 0.12, px));
+    if (mark < 0.95 && (!is_leaf(mark) || mark < 0.34)) return c * (1.0 + 0.2 * grain); // fine voxels have no block grid
+    c *= (0.9 + 0.17 * block_hash(floor(inside))) * (1.0 + 0.22 * grain);
     vec3 f = fract(inside);
     vec3 a = abs(v_world_normal);
     vec2 uv = a.y > 0.5 ? f.xz : a.x > 0.5 ? f.yz : f.xy;
     vec2 e = min(uv, 1.0 - uv);
-    float px = max(fwidth(inside.x), max(fwidth(inside.y), fwidth(inside.z)));
     float edge = (1.0 - smoothstep(0.0, max(0.06, px), min(e.x, e.y))) * (1.0 - smoothstep(0.05, 0.15, px));
     return c * (1.0 - 0.22 * edge);
+}
+// Where a fragment is lit from: the middle of the fine voxel (an eighth of a block) it lies on, lifted just
+// off the face. Shadows and lamplight then fall voxel by voxel, in steps, as in the rest of the voxel look.
+vec3 voxel_light_vertex(mat4 view) {
+    float fine = block_size / 8.0;
+    vec3 cell = (floor(v_world / fine - v_world_normal * 0.01) + 0.5) * fine;
+    vec3 n = normalize(v_world_normal);
+    return (view * vec4(cell + n * fine * 0.5, 1.0)).xyz;
 }
 vec3 block_glow(vec3 c, float mark) {
     if (mark <= 0.5 || mark >= 0.75) return vec3(0.0);
@@ -83,6 +96,8 @@ vec3 block_glow(vec3 c, float mark) {
         float crust = smoothstep(1.1, 1.8, abs(flow));
         return linear_of(c) * mix(0.95, 0.2, crust);
     }
+    // Windows: dark glass by day, warm lamplight from inside by night.
+    if (mark > 0.66) return vec3(1.0, 0.5, 0.17) * 3.2 * night_glow;
     // Crystal pulses slowly.
     float pulse = 0.85 + 0.15 * sin(TIME * 1.4 + v_world.x * 0.7 + v_world.z * 0.5);
     return linear_of(c) * 2.2 * pulse;
@@ -102,6 +117,7 @@ void vertex() {
 }
 void fragment() {
     vec2 fog = fog_at(v_fog_xz);
+    LIGHT_VERTEX = voxel_light_vertex(VIEW_MATRIX);
     float wet_top = wet * smoothstep(0.5, 0.9, v_world_normal.y);
     ALBEDO = fogged(block_look(COLOR.rgb, COLOR.a), fog) * (1.0 - 0.3 * wet_top);
     SPECULAR = (0.3 + 0.3 * wet_top) * fog.x;
@@ -133,6 +149,7 @@ void fragment() {
     if (v_world_y > slice_y + 0.002 || (v_world_y > slice_y - 0.002 && v_normal_y < -0.5)) discard;
     if (FRONT_FACING) {
         vec2 fog = fog_at(v_fog_xz);
+        LIGHT_VERTEX = voxel_light_vertex(VIEW_MATRIX);
         ALBEDO = fogged(block_look(COLOR.rgb, COLOR.a), fog);
         SPECULAR = 0.3 * fog.x;
         ROUGHNESS = 0.9;
@@ -215,6 +232,15 @@ void fragment() {
         Opaque.SetShaderParameter("wet", wet);
     }
 
+    /// <summary>How much windows glow with lamplight (0 by day, 1 at night).</summary>
+    public void SetNight(float glow)
+    {
+        if (Mathf.IsEqualApprox(glow, _night)) return;
+        _night = glow;
+        Opaque.SetShaderParameter("night_glow", glow);
+    }
+
+    private float _night = -1f;
     private float _wind = -1f, _wet = -1f;
     private readonly System.Collections.Generic.List<ShaderMaterial> _tracked = new();
 
@@ -233,6 +259,7 @@ void fragment() {
             Opaque.SetShaderParameter("wind", _wind);
             Opaque.SetShaderParameter("wet", _wet);
         }
+        if (_night >= 0) Opaque.SetShaderParameter("night_glow", _night);
         float y = sliceY ?? 100000f;
         if (sliceY != null) Opaque.SetShaderParameter("slice_y", y);
         Water.SetShaderParameter("slice_y", y);
