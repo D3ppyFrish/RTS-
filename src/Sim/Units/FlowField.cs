@@ -47,6 +47,13 @@ public sealed class FlowField
     internal bool Broken;
     internal long StartedTick = PathService.LongAgo;
     internal int Users;
+    /// <summary>
+    /// A field to the nearest place units could reach to a goal they could not (see
+    /// <see cref="UnitMovement"/>): units that cannot get here either stop instead of looking further.
+    /// </summary>
+    internal bool Fallback;
+    /// <summary>Where units that cannot reach this goal go instead (a node), once one of them has looked; -1 if not yet.</summary>
+    internal int FallbackNode = -1;
 
     internal FlowField(WalkGraph g, int id, int goalX, int goalZ, int goalY, int player)
     {

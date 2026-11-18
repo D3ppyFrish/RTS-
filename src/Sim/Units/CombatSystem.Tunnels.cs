@@ -36,6 +36,67 @@ public sealed partial class CombatSystem
         }
     }
 
+    /// <summary><see cref="UnitStore.JobTarget"/> of a tunnel a trapped worker or sapper digs to get out (see <see cref="DigOut"/>).</summary>
+    public const int DigOutTunnel = 1;
+    /// <summary>How far (columns) a trapped digger looks for open ground to tunnel to.</summary>
+    public const int DigOutReach = 12;
+
+    private readonly HashSet<int> _pocket = new();
+    private readonly HashSet<int> _beyond = new();
+
+    /// <summary>
+    /// Unit i was sent somewhere it cannot walk to from where it stands, and stands in a pocket: a pit, a hole
+    /// it dug, a cave it dropped into, at most <see cref="PathService.PocketLimit"/> places to walk to. A worker
+    /// or sapper digs its way out instead of giving up for good: a tunnel (see <see cref="StepTunnel"/>) to the
+    /// nearest open ground outside the pocket, up or down a level per column, ending as soon as it can walk
+    /// on from where it is. Its job is dropped (an automatic worker gets a new one once it is out). False if
+    /// it cannot dig, is not in a pocket, or has nowhere to dig to.
+    /// </summary>
+    internal bool DigOut(int i)
+    {
+        var u = U;
+        if (Def(i).Role is not (UnitRole.Worker or UnitRole.Sapper) || u.Rout[i] != 0) return false;
+        var g = _sim.Walkable;
+        int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
+        int start = g.Node(x, z, y);
+        if (start < 0 || g.ReachesMoreThan(start, PathService.PocketLimit, _pocket)) return false;
+        // The nearest ground outside the pocket, close enough in height to tunnel to (a level per column), that
+        // is not a pocket of its own. Nearer first, then the smaller climb, then in a fixed order.
+        for (int r = 1; r <= DigOutReach; r++)
+        {
+            int bestNode = -1, bestScore = int.MaxValue;
+            for (int dz = -r; dz <= r; dz++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                if (Math.Max(Math.Abs(dx), Math.Abs(dz)) != r) continue;
+                int cx = x + dx, cz = z + dz;
+                int first = g.NearestNode(cx, cz, -1); // the column's top level; the others follow it
+                if (first < 0) continue;
+                for (int s = 0; s < WalkGraph.MaxLevels; s++)
+                {
+                    int n = first + s;
+                    if (g.Level(n) < 0) break;
+                    int dy = Math.Abs(g.Level(n) - y);
+                    if (dy > r || _pocket.Contains(n)) continue;
+                    int score = dy * 64 + dx * dx + dz * dz;
+                    if (score >= bestScore || !g.ReachesMoreThan(n, PathService.PocketLimit, _beyond)) continue;
+                    bestScore = score;
+                    bestNode = n;
+                }
+            }
+            if (bestNode < 0) continue;
+            u.ClearJob(i);
+            Halt(i);
+            u.Job[i] = UnitJob.Tunnel;
+            u.JobTarget[i] = DigOutTunnel;
+            u.JobX[i] = g.ColumnX(bestNode);
+            u.JobY[i] = g.Level(bestNode);
+            u.JobZ[i] = g.ColumnZ(bestNode);
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>Ticks a sapper takes to dig out a block.</summary>
     public static int DigTicks(BlockType b) => Math.Max(1, Harvest.WorkTicks(b) / SapperDigSpeed);
 
@@ -85,13 +146,21 @@ public sealed partial class CombatSystem
         return false;
     }
 
+    /// <summary>True if a unit digging itself out can walk on from where it stands: it is out of the pocket.</summary>
+    private bool Out(int i)
+    {
+        var g = _sim.Walkable;
+        int n = g.Node(U.X[i].FloorToInt(), U.Z[i].FloorToInt(), U.Y[i]);
+        return n >= 0 && g.ReachesMoreThan(n, PathService.PocketLimit, _beyond);
+    }
+
     private void StepTunnel(int i)
     {
         var u = U;
         if (u.Order[i] != UnitOrder.Idle) return; // stepping into the stretch it just dug
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
         int dx = u.JobX[i] - x, dz = u.JobZ[i] - z;
-        if (dx == 0 && dz == 0)
+        if ((dx == 0 && dz == 0) || (u.JobTarget[i] == DigOutTunnel && Out(i)))
         {
             u.ClearJob(i);
             return;
@@ -131,7 +200,9 @@ public sealed partial class CombatSystem
                 u.ClearJob(i);
                 return;
             }
-            if (++u.JobTimer[i] < Math.Max(1, DigTicks(block) * 100 / Def(i).WorkPercent)) return;
+            // A worker digging itself out digs at its gathering pace, a sapper twice as fast.
+            int ticks = Def(i).Role == UnitRole.Sapper ? DigTicks(block) : Harvest.WorkTicks(block);
+            if (++u.JobTimer[i] < Math.Max(1, ticks * 100 / Def(i).WorkPercent)) return;
             u.JobTimer[i] = 0;
             World.Set(bx, by, bz, BlockType.Air);
             return;

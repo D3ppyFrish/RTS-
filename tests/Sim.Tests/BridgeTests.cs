@@ -124,10 +124,11 @@ public class BridgeTests
         sim.Run(5 * Tps);
         Assert.NotEqual(BlockType.Planks, sim.World.Get(RiverX0, Ground, Z));
 
-        // The enemy, sent back, can no longer get across.
+        // The enemy, sent back, can no longer get across: it gets as far as the bank (where the spearman may
+        // well cut it down).
         sim.Schedule(sim.Tick, new MoveCommand(1, new[] { enemy }, 42, Z));
         sim.Run(20 * Tps);
-        Assert.True(X(sim, enemy) < RiverX0, "the way across is cut");
+        Assert.True(Index(sim, enemy) < 0 || X(sim, enemy) < RiverX0, "the way across is cut");
     }
 
     [Fact]
