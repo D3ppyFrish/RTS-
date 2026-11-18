@@ -67,6 +67,13 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   (64 places to stand or fewer) digs a stair out instead (as a sapper tunnels, at its own digging pace),
   to the nearest ground outside, and stops once it can walk on. An automatic worker then takes up work
   again. Other units stay in the pit.
+- **Formations** (a plain right-click on a group, `FormationMoveCommand`): every unit keeps its place
+  relative to the formation's middle across open ground, at the pace of the slowest. A unit only keeps its
+  place while that also takes it nearer along its own way (#37); where the straight way is blocked, the
+  ground narrows (a gap, a corridor, a bridge) or the path turns sharply, it follows its own path at its own
+  full speed instead and takes its place again once it can. Near the end it walks straight to its place if
+  nothing is in the way, else to the middle first, and stops there if its place still cannot be reached.
+  A formation gets anywhere about as soon as the same units sent with a plain move.
 - **Crowds**: units push each other apart, but a unit with no order is never pushed off a drop of more
   than a level, so a crowd does not shove an idle worker into the hole beside it.
 

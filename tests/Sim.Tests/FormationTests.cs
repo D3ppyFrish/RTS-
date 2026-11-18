@@ -253,4 +253,78 @@ public class FormationTests
         foreach (var row in rows)
             Assert.Equal(new[] { 0, 1, 2, 3 }, row.Select(s => s.X.FloorToInt()).ToArray());
     }
+    /// <summary>
+    /// Ground at 3 on a 128 x 128 world, set up by <paramref name="scenario"/>: a wall across the straight line
+    /// with a gap 2 wide far off to the side, a wall with a gap 1 wide, a zigzag corridor 3 wide, an ice
+    /// bridge 3 wide over a river.
+    /// </summary>
+    private static Simulation Course(string scenario)
+    {
+        var sim = TestWorlds.Sim(TestWorlds.Flat(128, 24, 128, 3));
+        var w = sim.World;
+        switch (scenario)
+        {
+            case "gap off to the side":
+                TestWorlds.Box(w, 0, 4, 60, 127, 6, 61, BlockType.Stone);
+                TestWorlds.Box(w, 100, 4, 60, 101, 6, 61, BlockType.Air);
+                break;
+            case "narrow gap":
+                TestWorlds.Box(w, 0, 4, 60, 127, 6, 61, BlockType.Stone);
+                TestWorlds.Box(w, 64, 4, 60, 64, 5, 61, BlockType.Air);
+                break;
+            case "zigzag":
+                TestWorlds.Box(w, 0, 4, 0, 127, 6, 127, BlockType.Stone);
+                void Clear(int x0, int z0, int x1, int z1) => TestWorlds.Box(w, x0, 4, z0, x1, 6, z1, BlockType.Air);
+                Clear(10, 10, 30, 30);
+                Clear(18, 30, 20, 50); Clear(20, 48, 60, 50); Clear(58, 50, 60, 70);
+                Clear(20, 68, 60, 70); Clear(18, 70, 20, 90); Clear(10, 90, 40, 110);
+                break;
+            case "ice bridge":
+                TestWorlds.Box(w, 0, 1, 50, 127, 3, 62, BlockType.Water);
+                TestWorlds.Box(w, 63, 3, 50, 65, 3, 62, BlockType.Ice);
+                break;
+        }
+        return sim;
+    }
+
+    private static (int Ticks, double Farthest) March(string scenario, bool formation)
+    {
+        var (sx, sz, gx, gz) = scenario switch
+        {
+            "gap off to the side" => (20, 20, 30, 100),
+            "narrow gap" => (50, 20, 70, 100),
+            "zigzag" => (12, 12, 25, 100),
+            _ => (40, 20, 90, 100),
+        };
+        var sim = Course(scenario);
+        var ids = Enumerable.Range(0, 18).Select(k => sim.SpawnUnit(0, "spearman", sx + k % 6, sz + k / 6)).ToArray();
+        sim.Schedule(0, formation
+            ? new FormationMoveCommand(0, ids, gx, gz, gx, gz)
+            : new MoveCommand(0, ids, gx, gz));
+        int t = 0;
+        for (; t < 4000 && !(t > 5 && AllIdle(sim, ids)); t++) sim.Step();
+        double farthest = ids.Max(id =>
+        {
+            var (x, z) = Pos(sim, id);
+            double dx = x.ToFloat() - gx - 0.5, dz = z.ToFloat() - gz - 0.5;
+            return Math.Sqrt(dx * dx + dz * dz);
+        });
+        return (t, farthest);
+    }
+
+    [Theory]
+    [InlineData("gap off to the side")]
+    [InlineData("narrow gap")]
+    [InlineData("zigzag")]
+    [InlineData("ice bridge")]
+    public void AFormationFindsItsWayAsFastAsUnitsSentPlainly(string scenario)
+    {
+        // A long march where the straight way is blocked or narrow (#37): the formation gets there as soon as
+        // the same units sent with a plain move, and stands round the spot clicked.
+        var plain = March(scenario, formation: false);
+        var kept = March(scenario, formation: true);
+        Assert.True(plain.Farthest < 6, $"plain move: farthest {plain.Farthest:F1} from the goal");
+        Assert.True(kept.Farthest < 6, $"formation: farthest {kept.Farthest:F1} from the goal");
+        Assert.True(kept.Ticks <= plain.Ticks * 11 / 10, $"formation took {kept.Ticks} ticks, a plain move {plain.Ticks}");
+    }
 }
