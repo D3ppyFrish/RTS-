@@ -64,6 +64,12 @@
     "damage": 10, "attackTime": 2, "range": 8, "sight": 9, "splash": 1.5,
     "attack": "crush", "earthWall": true, "iceBridge": true,
     "cost": { "food": 50, "stone": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" },
+  { "id": "healer", "name": "Healer", "role": "caster", "speed": 4, "hp": 45, "model": "healer",
+    "description": "Tends the most hurt ally nearby and stems its bleeding; a poor fighter, best kept behind the line.",
+    "damage": 3, "attackTime": 1.5, "range": 1.25, "sight": 8,
+    "attack": "crush", "armor": { "torso": 1 },
+    "heal": 5, "healTime": 2, "healRange": 6,
+    "cost": { "food": 40, "wood": 20 }, "trainTime": 15, "trainedAt": "barracks", "requires": "basic_magic" },
 
   // Settler forms, first tier.
   { "id": "foreman", "name": "Foreman", "evolvesFrom": "worker", "faction": "settlers", "role": "worker",

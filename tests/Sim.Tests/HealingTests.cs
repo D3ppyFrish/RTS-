@@ -116,4 +116,51 @@ public class HealingTests
         sim.Run(6 * Tps);
         Assert.True(Hp(sim, victim) > hp);
     }
+
+    /// <summary>Issue #42: every faction can train healers at the barracks once it knows basic magic.</summary>
+    [Theory]
+    [InlineData(0)] // the Settlers
+    [InlineData(1)] // the Orcs
+    public void TheBarracksTrainsHealersOnceBasicMagicIsKnown(int owner)
+    {
+        var sim = Flat();
+        var hall = Place(sim, owner, "town_hall", 4, 4);
+        foreach (var g in Goods.All) hall.Stock[(int)g] = 500;
+        var barracks = Place(sim, owner, "barracks", 20, 4);
+        var healer = sim.Content.Unit("healer");
+        Assert.True(healer.Heal > 0);
+        Assert.False(healer.IsForm);
+        Assert.Null(healer.Faction);
+
+        sim.Schedule(0, new TrainCommand(owner, barracks.Id, "healer"));
+        sim.Step();
+        Assert.Empty(barracks.Queue); // not before basic magic
+        sim.Economy.Grant(owner, sim.Content.Tech("basic_magic"));
+        sim.Schedule(sim.Tick, new TrainCommand(owner, barracks.Id, "healer"));
+        sim.Run(healer.TrainTicks + 5);
+        Assert.Equal(1, sim.Units.Count);
+        Assert.Equal((healer.Index, owner), (sim.Units.Def[0], sim.Units.Owner[0]));
+    }
+
+    /// <summary>Issue #42: a trained healer gives hit points back to hurt friends near it, never to enemies.</summary>
+    [Fact]
+    public void AHealerHealsHurtFriendsNearItFasterThanTheyHealAlone()
+    {
+        var sim = Flat();
+        var healer = sim.Content.Unit("healer");
+        int max = sim.Content.Unit("spearman").MaxHp;
+        sim.SpawnUnit(0, "healer", 40, 40);
+        int friend = Wounded(sim, 0, "spearman", 43, 40, max / 4);
+        int alone = Wounded(sim, 0, "spearman", 80, 80, max / 4); // far from the healer
+        int enemy = Wounded(sim, 1, "spearman", 40, 40 - (healer.HealRange.FloorToInt() + 6), max / 4); // out of sight, so no fight
+
+        sim.Run(10 * Tps); // still in the fight's delay: only the healer helps
+        Assert.True(Hp(sim, friend) >= max / 4 + healer.Heal * 4, $"healed to {Hp(sim, friend)}");
+        Assert.Equal(max / 4, Hp(sim, alone));
+        Assert.Equal(max / 4, Hp(sim, enemy));
+
+        sim.Run(60 * Tps); // and up to full, never past it
+        Assert.Equal(max, Hp(sim, friend));
+        Assert.True(Hp(sim, alone) < max);
+    }
 }

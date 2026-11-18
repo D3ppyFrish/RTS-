@@ -168,8 +168,12 @@ unit of it carried by a worker or held in a building. A player's stock is what t
 - **Healing**: a unit that has not hit anything or been hit for 10 seconds gets back a quarter of a
   percent of its hit points a second (from half health, full in 3 minutes 20 seconds), or 2% a second
   within 12 columns of a town hall or house of its own (full in 25 seconds), so a wounded army is
-  worth bringing home. Healers such as the battle priest heal on top of this. The numbers are in
-  `data/roles.json`.
+  worth bringing home. Healers heal on top of this. The numbers are in `data/roles.json`.
+- **Healers** (issue #42): every faction trains the healer at the barracks once it knows Basic magic
+  (40 food and 20 wood, 15 seconds). Every 2 seconds it gives 5 hit points back to the most hurt ally
+  within 6 blocks (a bleeding one first, and it stems the bleeding), never to itself or an enemy. It has
+  45 hit points and hits for only 3, so keep it behind the line. The Settlers' battle priest, a spearman's
+  form, heals the same way while it fights in the line.
 - **Buildings** are made of real blocks. Damage knocks out the top block of the column nearest the
   attacker (a sapper knocks out the bottom one, so the whole column falls), and a building that has lost
   half of itself (by block toughness) collapses. Sappers deal full damage to buildings, everyone else a
