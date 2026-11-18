@@ -47,7 +47,7 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 | Map generation | `World/RegionGenerator.cs`, `World/RegionMap.cs` | `RegionGeneratorTests.cs` | none |
 | Building, tree and unit looks | `Meshing/StructureMesher.cs`, `Meshing/StructureDetail.cs`; game: `UnitModels.cs`, `UnitIcons.cs`, `FallingRenderer.cs` (falling ground and trees) | `StructureDetailTests.cs` | `ui-structure-screenshots.sh`, `ui-tree-screenshots.sh`, `ui-lineup-screenshots.sh` |
 | Chunk drawing: levels of detail, and half-size ground (a look only; `--terrain=blocks` turns it off) | `World/FineTerrain.cs` (the world in half-size blocks), `World/FineWorld.cs` (kept exact as blocks change), `Meshing/GreedyMesher.cs` (any cube size), `Meshing/StructureMesher.cs` (`Shrink`: bigger voxels far away), `VoxelWorld.cs` (`Upscaled`, `CopyBoxPadded`); game: `ChunkRenderer.cs` (`ChunkLod`, `Reach`, `GroundDrop`, `GroundVersion`, `ShownFine`, `LoweredWhenTaken`; changed chunks first), `ChunkMesher.cs`, `TerrainMaterials.cs` (`v_scale`; `Piece`, `Chunk` for falling ground), `VoxelRay.cs` (the mouse aimed at the half-size blocks), `FallingRenderer.cs` (pieces in half-size blocks, `Crumble`, `Chunks`) | `FineTerrainTests.cs`, `GreedyMesherTests.cs` | none; `--benchmark` with `--terrain=blocks`, `--lod=off`; any `ui-*.sh` with `RTS_ARGS=--terrain=blocks` |
-| Detail prototype (finer, animated units near the camera; detailed castle scenery) | game: `Detail/FineModel.cs` (grid, mesher, shader), `Detail/DetailedUnits.cs` (drawn from `UnitRenderer.cs`), `Detail/DetailedKeep.cs` (`--keeps`) | none (no tests for `game/`) | none; `--benchmark` with `--detail=off/on`, `--keeps=N` |
+| Detail prototype (finer, animated units near the camera, levels of detail; sculpted orcs, wolves and a golem; detailed castle scenery) | game: `Detail/FineModel.cs` (grid, mesher, shader), `Detail/DetailedUnits.cs` (rigs, levels; drawn from `UnitRenderer.cs`, `Showpieces`), `Detail/Sculpt.cs` (shapes and surface passes in 1/32-block units), `Detail/Sculpted.cs` (the sculpted models), `Detail/DetailedKeep.cs` (`--keeps`); `Main.cs` (`--showcase`, `--golems`) | none (no tests for `game/`) | `ui-sculpt-screenshots.sh`; `--benchmark` with `--detail=off/on`, `--detail-fine=off`, `--golems=N`, `--keeps=N` |
 | UI (HUD, input, camera, selection) | game: `Hud.cs`, `PlayerControl.cs`, `CameraRig.cs`, `SelectionRenderer.cs`, `TechTreePanel.cs`; scripted input: `InputScript.cs` | none (no tests for `game/`) | `ui-screenshots.sh` |
 | Test mode (spawn anything, cheats, scenarios) | `Sandbox/SandboxSystem.cs`, `World/Trees.cs`; game: `TestPanel.cs` | `SandboxTests.cs` | `ui-test-mode-screenshots.sh` |
 | Day, night and weather (rules: sight, aim, lights, lava) | `Conditions.cs` | `ConditionsTests.cs` | `ui-daynight-screenshots.sh` |
@@ -57,7 +57,7 @@ buttons) and `PlayerControl.cs` (keys, clicks, tools).
 Tick order and commands: `Simulation.cs`, `Commands.cs`. Determinism check: `determinism.sh`
 (match runner in `tools/MatchRunner`). CI (`.github/workflows/ci.yml`) runs every `scripts/ui-*.sh` as its own parallel job, found
 automatically; a script with a `# CI: skip` header line is left out (`ui-structure`, `ui-tree`,
-`ui-collapse-detail`, `ui-lineup`).
+`ui-collapse-detail`, `ui-lineup`, `ui-sculpt`).
 
 ## Rules for the simulation core
 

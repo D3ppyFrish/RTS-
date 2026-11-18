@@ -87,6 +87,12 @@ namespace Rts.Game;
 ///   --detail[=off]        detailed, animated units near the camera (on unless =off; F7 toggles it in a match;
 ///                         see Detail/DetailedUnits)
 ///   --detail-distance=M   how near the camera (metres, default 40) units are drawn detailed
+///   --detail-near=M       how near the camera (metres, default 16) sculpted units are drawn in their finest voxels;
+///                         --detail-fine=off draws them no finer than the middle level
+///   --golems=N            N stone golems with orc riders (scenery, not units of the rules) north-east of the
+///                         camera focus, to look at and measure detailed models (--golem-yaw=DEGREES turns them)
+///   --showcase[=X,Z]      a golem, orcs and wolves (scenery, in player 1's colour) at block (X, Z), by default
+///                         six columns east and twelve south of the camera focus (see Detail/Sculpted)
 ///   --keeps=N             N detailed stone castles (scenery, not buildings of the rules) on flat ground round the
 ///                         camera focus, the first one next to it (see Detail/DetailedKeep); --keep-lod=off draws
 ///                         them all at full detail however far away
@@ -352,6 +358,13 @@ public partial class Main : Node3D
         _unitRenderer.Init(_sim, _fog);
         Detail.DetailedUnits.Enabled = !(_args.TryGetValue("detail", out var detail) && detail == "off");
         Detail.DetailedUnits.Distance = ArgFloat(_args, "detail-distance", 40f);
+        Detail.DetailedUnits.NearDistance = ArgFloat(_args, "detail-near", 16f);
+        Detail.DetailedUnits.Fine = !(_args.TryGetValue("detail-fine", out var fine) && fine == "off");
+        GD.Print($"Detailed units built in {Detail.DetailedUnits.BuildMs:F0} ms; triangles (finest/middle/far): " +
+                 string.Join(" ", Detail.DetailedUnits.Triangles.Select(t => $"{t.Key}={t.Value}")));
+        if (_args.TryGetValue("golems", out var golemArg) && int.TryParse(golemArg, out var golems) && golems > 0)
+            PlaceGolems(golems, fx, fz);
+        if (_args.TryGetValue("showcase", out var showArg)) PlaceShowcase(showArg, fx, fz);
         if (_args.TryGetValue("keeps", out var keepArg) && int.TryParse(keepArg, out var keepCount) && keepCount > 0)
         {
             Detail.DetailedKeep.Lod = !(_args.TryGetValue("keep-lod", out var keepLod) && keepLod == "off");
@@ -421,7 +434,8 @@ public partial class Main : Node3D
                 _args.TryGetValue("benchmark-out", out var outPath) ? outPath : "user://benchmark.txt");
             _benchmark.Extra = () => $"{_chunks.Describe()} detail={(Detail.DetailedUnits.Enabled ? "on" : "off")} detailed_units={_unitRenderer.DetailedCount} unit_draw_ms={_unitRenderer.AverageUpdateMs:F2} detail_place_upload_ms={_unitRenderer.DetailSplit} " +
                 $"keeps={_args.GetValueOrDefault("keeps", "0")} keep_tris={Detail.DetailedKeep.Triangles}/{Detail.DetailedKeep.FarTriangles} keep_lod={(Detail.DetailedKeep.Lod ? "on" : "off")} " +
-                $"unit_build_ms={Detail.DetailedUnits.BuildMs:F0} unit_tris={string.Join(",", Detail.DetailedUnits.Triangles.Select(t => $"{t.Key}:{t.Value}"))}";
+                $"unit_build_ms={Detail.DetailedUnits.BuildMs:F0} unit_tris={string.Join(",", Detail.DetailedUnits.Triangles.Select(t => $"{t.Key}:{t.Value}"))} " +
+                $"detail_fine={(Detail.DetailedUnits.Fine ? "on" : "off")} fine_units={_unitRenderer.FineCount} golems={_unitRenderer.Showpieces.Count}";
         }
     }
 
@@ -757,7 +771,7 @@ public partial class Main : Node3D
         _terrain.SetSlice(cut);
         float y = cut ?? 100000f;
         _unitRenderer.Material.SetShaderParameter("slice_y", y);
-        _unitRenderer.DetailMaterial.SetShaderParameter("slice_y", y);
+        _unitRenderer.SetDetailSlice(y);
         _selectionRenderer.Material.SetShaderParameter("slice_y", y);
         _ghostRenderer.SetSlice(y);
         _combatRenderer.Material.SetShaderParameter("slice_y", y);
@@ -774,6 +788,52 @@ public partial class Main : Node3D
     /// without ground, such as deep water, are skipped); they are all on one side so that the walking
     /// benchmark measures walking, not a battle.
     /// </summary>
+    /// <summary>
+    /// --golems=N: N stone golems (see Detail/Sculpted; scenery, not units of the rules) in rows of four, eight
+    /// columns apart, from six columns east and north of block (fx, fz), each on the ground under it, in the
+    /// colour of player 1 (--golem-yaw=DEGREES turns them; 0 faces south, +Z).
+    /// </summary>
+    private void PlaceGolems(int count, int fx, int fz)
+    {
+        float bs = ChunkMesher.BlockSize;
+        float yaw = Mathf.DegToRad(ArgFloat(_args, "golem-yaw", 0f));
+        for (int k = 0; k < count; k++)
+        {
+            int x = Math.Clamp(fx + 6 + k % 4 * 8, 1, WorldX - 2), z = Math.Clamp(fz + 6 + k / 4 * 8, 1, WorldZ - 2);
+            int y = _sim.World.SurfaceHeight(x, z) + 1;
+            _unitRenderer.Showpieces.Add(("golem", new Vector3(x + 0.5f, y, z + 0.5f) * bs, yaw, UnitRenderer.TeamColors[1]));
+        }
+        GD.Print($"Golems: {count} from {fx + 6},{fz + 6}");
+    }
+
+    /// <summary>
+    /// --showcase[=X,Z]: a scene to look at the sculpted models (see Detail/Sculpted), all showpieces in player 1's
+    /// colour rather than units of the rules: a golem with an orc on its back at block (X, Z) (by default six
+    /// columns east and twelve south of the camera focus), an orc spearman and an orc worker in front of it,
+    /// two wolves and a wolf rider about it.
+    /// </summary>
+    private void PlaceShowcase(string at, int fx, int fz)
+    {
+        int cx = fx + 6, cz = fz + 12;
+        var parts = at.Split(',');
+        if (parts.Length == 2 && int.TryParse(parts[0], out var px) && int.TryParse(parts[1], out var pz)) (cx, cz) = (px, pz);
+        float bs = ChunkMesher.BlockSize;
+        var team = UnitRenderer.TeamColors[1];
+        void Put(string model, float dx, float dz, float yawDegrees)
+        {
+            float x = cx + 0.5f + dx, z = cz + 0.5f + dz;
+            int y = _sim.World.SurfaceHeight(Math.Clamp((int)x, 0, WorldX - 1), Math.Clamp((int)z, 0, WorldZ - 1)) + 1;
+            _unitRenderer.Showpieces.Add((model, new Vector3(x, y, z) * bs, Mathf.DegToRad(yawDegrees), team));
+        }
+        Put("golem", 0, 0, 0);
+        Put("orcs/spearman", -2.6f, 4.2f, 15);
+        Put("orcs/worker", 2.8f, 3.6f, -20);
+        Put("wolf", -5.2f, 2, 35);
+        Put("wolf", 5.6f, 5.4f, -50);
+        Put("wolf_rider", 0.4f, 6.4f, 5);
+        GD.Print($"Showcase at {cx},{cz}");
+    }
+
     private void SpawnUnits(int count, int fx, int fz)
     {
         if (count < 0)

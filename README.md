@@ -292,13 +292,29 @@ material; stones, planks, shingles and a shade per voxel are drawn by the shader
   the attack cooldown). Each part is a MultiMesh, so any crowd is 18 draw calls; only units within
   `--detail-distance` (40 m) of the camera are drawn this way, the rest with their usual model. On by
   default; `--detail=off` or F7 turns them off.
+- **Sculpted units** (`Sculpt`, `Sculpted`): the Orcs' spearman and worker, the wolf, the wolf rider, and a
+  stone golem with an orc on its back are modelled in shapes (balls, tapered limbs, boxes with bevelled
+  edges, armour plates with a raised rim and rivets, straps) in units of a thirty-second of a block
+  (1.6 cm), then weathered by passes over the surface (patches of colour, chipped stone, moss on what faces
+  up). Being shapes rather than hand-placed voxels, each is built at three voxel sizes, its levels of
+  detail: 1.6 cm within `--detail-near` (16 m) of the camera, 3.1 cm out to `--detail-distance` (40 m), and
+  beyond that the usual plain model (the golem, which has none, at 6.25 cm). The finest level casts its
+  shadow from the middle one. `--detail-fine=off` stops at the middle level, to measure what the finest
+  costs. Faces in nooks are shaded darker (ambient occlusion baked into the mesh).
+- **Showpieces**: `--showcase[=X,Z]` stands a golem, an orc spearman and worker, two wolves and a wolf rider
+  together (player 1's colour); `--golems=N` puts N golems in rows near the camera focus, for the benchmark.
+  They are scenery, not units of the rules. `scripts/ui-sculpt-screenshots.sh` shoots the showcase from
+  far to close, with detail on and off.
 - **Castle** (`DetailedKeep`): `--keeps=N` puts N stone castles (curtain wall, round towers, gatehouse,
   keep, banners in your colour) on flat ground round the camera focus. They are scenery, not buildings of
   the rules: units walk through them. Past 60 m each is drawn with a mesh a quarter as fine
   (`--keep-lod=off` turns that off).
 - The benchmark line adds `avg_tris`, `avg_draws`, `detailed_units`, `unit_draw_ms` (time to place every
-  unit, plain and detailed, per frame) and the triangle counts of the detailed models, so
+  unit, plain and detailed, per frame), `fine_units` and the triangle counts of the detailed models (per
+  level, finest first), so
   `RTS.exe -- --benchmark --units=2000 --detail=off` and the same with `--detail=on` (or `--keeps=30`)
-  compare the cost on real hardware.
+  compare the cost on real hardware. Detailed units only show near the camera, so bring it in:
+  `--player=1 --cam-distance=10 --cam-pitch=35` (Orcs, so the crowd has sculpted units), with
+  `--detail=off`, `--detail-fine=off` and nothing, and `--golems=8`.
 
 To open in the editor, open `game/project.godot` with Godot 4.7.2 (.NET edition).

@@ -166,13 +166,15 @@ public static class FineModel
 
     /// <summary>
     /// Meshes <paramref name="g"/> with voxels <paramref name="voxelSize"/> metres across; voxel (0, 0, 0)'s
-    /// corner lands at the origin. Returns the mesh and how many triangles it has.
+    /// corner lands at the origin. Returns the mesh and how many triangles it has. With <paramref name="ao"/>,
+    /// faces in nooks (between a leg and the body, under a plate's rim) are shaded darker
+    /// (<see cref="StructureMesher.Mesh"/>'s ambient occlusion), which reads as depth in small voxels.
     /// </summary>
-    public static (ArrayMesh Mesh, int Triangles) Build(FineGrid g, float voxelSize)
+    public static (ArrayMesh Mesh, int Triangles) Build(FineGrid g, float voxelSize, bool ao = false)
     {
         // StructureMesher.Mesh draws faces against the grid's edge, so the model needs no padding.
         var quads = new List<FineQuad>();
-        StructureMesher.Mesh(g.Cells, g.NX, g.NY, g.NZ, g.X0, g.Y0, g.Z0, quads);
+        StructureMesher.Mesh(g.Cells, g.NX, g.NY, g.NZ, g.X0, g.Y0, g.Z0, quads, ao);
         var verts = new Vector3[quads.Count * 4];
         var normals = new Vector3[quads.Count * 4];
         var colours = new Color[quads.Count * 4];
@@ -182,7 +184,7 @@ public static class FineModel
         {
             var quad = quads[q];
             var m = g.Palette[quad.Colour];
-            float s = Shade[quad.Face];
+            float s = Shade[quad.Face] * (ao ? 0.62f + 0.38f * quad.AoAt(0) / 3f : 1f);
             var c = m.Colour.A < 0.5f ? new Color(m.Colour.R * s, 0, 0, 0) : new Color(m.Colour.R * s, m.Colour.G * s, m.Colour.B * s, 1);
             for (int k = 0; k < 4; k++)
             {
