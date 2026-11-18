@@ -27,6 +27,20 @@ public sealed partial class CombatSystem
         if (!BlockInfo.IsSolid(World.Get(x, y, z))) _changed.Add(Key(x, y, z));
     }
 
+    /// <summary>
+    /// The building has just been put up again whole, bigger, in place of what stood there (see
+    /// <see cref="UpgradeCommand"/>): the blocks cleared for it this tick were not knocked
+    /// out of it, and nothing falls for their going.
+    /// </summary>
+    internal void Rebuilt(Building b)
+    {
+        _changed.RemoveAll(key =>
+        {
+            int x = (int)(key & 0xFFFFF), z = (int)((key >> 20) & 0xFFFFF), y = (int)(key >> 40);
+            return b.Covers(x, z) && y >= b.Y - 1 && y <= b.Y + b.Def.Height;
+        });
+    }
+
     private static long Key(int x, int y, int z) => ((long)y << 40) | ((long)z << 20) | (long)x;
 
     /// <summary>

@@ -7,9 +7,11 @@
 // and roof are building materials: planks, thatch, roof_tile, stone_brick, palisade (a barrier's stakes),
 // rampart (dressed stone drawn with battlements) or trestle (a watchtower's timber frame under a railed
 // deck); chimney adds a stone chimney.
-// Walls and gates come in tiers. upgrade (optional, walls, gates and towers) names the building this one is
+// Buildings come in tiers. upgrade (optional; not lights, totems or bridges) names the building this one is
 // turned into where it stands, for that building's cost and buildTime: a building named as an upgrade is never
-// laid as it is, only reached by upgrading. facing (optional, an upgrade one column across) names the building
+// laid as it is, only reached by upgrading. An upgrade is of the same kind and at least as tall; a wall, gate
+// or tower keeps its size, and anything else may be bigger: it grows from its middle onto free, level ground
+// round it. speed (optional, 100 if not given) is how fast it trains units and smelts, in percent. facing (optional, an upgrade one column across) names the building
 // that goes up on each free side of this one when its upgrade is finished, so the wall is three columns thick:
 // the upgrade's cost covers it, and a facing's own cost is what it takes to put a lost one back. A facing is
 // of the same kind and height, and is never laid as it is. sturdy (optional, 1 if not given) is how many times
@@ -35,21 +37,48 @@
 [
   { "id": "town_hall", "name": "Town hall", "kind": "town_hall", "size": [7, 7], "wallHeight": 4,
     "wall": "planks", "footing": "stone_brick", "roof": "roof_tile",
-    "cost": { "wood": 200, "stone": 100 }, "buildTime": 120, "housing": 25, "storage": true, "sight": 10, "light": 4 },
+    "cost": { "wood": 200, "stone": 100 }, "buildTime": 120, "housing": 25, "storage": true, "sight": 10, "light": 4,
+    "upgrade": "great_hall" },
+  { "id": "great_hall", "name": "Great hall", "kind": "town_hall", "size": [9, 9], "wallHeight": 6,
+    "wall": "planks", "footing": "stone_brick", "roof": "roof_tile", "chimney": true, "icon": "town_hall",
+    "cost": { "wood": 150, "stone": 150 }, "buildTime": 90, "housing": 40, "storage": true, "sight": 12, "light": 5,
+    "speed": 150, "upgrade": "castle_keep" },
+  { "id": "castle_keep", "name": "Castle keep", "kind": "town_hall", "size": [11, 11], "wallHeight": 8,
+    "wall": "stone_brick", "roof": "roof_tile", "chimney": true, "icon": "town_hall", "requires": "masonry",
+    "cost": { "stone": 300, "wood": 100, "iron": 10 }, "buildTime": 150, "housing": 60, "storage": true, "sight": 15,
+    "light": 6, "sturdy": 2, "speed": 200 },
   { "id": "storehouse", "name": "Storehouse", "kind": "storehouse", "size": [5, 5], "wallHeight": 3,
     "wall": "planks", "roof": "roof_tile",
-    "cost": { "wood": 40 }, "buildTime": 20, "storage": true, "raidable": true, "light": 3 },
+    "cost": { "wood": 40 }, "buildTime": 20, "storage": true, "raidable": true, "light": 3, "upgrade": "warehouse" },
+  { "id": "warehouse", "name": "Warehouse", "kind": "storehouse", "size": [7, 7], "wallHeight": 4,
+    "wall": "planks", "footing": "stone_brick", "roof": "roof_tile", "icon": "storehouse",
+    "cost": { "wood": 50, "stone": 40 }, "buildTime": 30, "storage": true, "sturdy": 2, "light": 4 },
   { "id": "house", "name": "House", "kind": "house", "size": [4, 4], "wallHeight": 3,
     "wall": "planks", "roof": "thatch",
-    "cost": { "wood": 30 }, "buildTime": 15, "housing": 5, "light": 3 },
+    "cost": { "wood": 30 }, "buildTime": 15, "housing": 5, "light": 3, "upgrade": "large_house" },
+  { "id": "large_house", "name": "Large house", "kind": "house", "size": [6, 6], "wallHeight": 4,
+    "wall": "planks", "footing": "stone_brick", "roof": "thatch", "chimney": true, "icon": "house",
+    "cost": { "wood": 45, "stone": 10 }, "buildTime": 25, "housing": 12, "light": 3, "upgrade": "manor" },
+  { "id": "manor", "name": "Manor", "kind": "house", "size": [8, 8], "wallHeight": 5,
+    "wall": "planks", "footing": "stone_brick", "roof": "roof_tile", "chimney": true, "icon": "house", "requires": "masonry",
+    "cost": { "wood": 60, "stone": 60 }, "buildTime": 45, "housing": 25, "light": 4, "sturdy": 2 },
   { "id": "farm", "name": "Farm", "kind": "farm", "size": [6, 6],
-    "cost": { "wood": 20 }, "buildTime": 10, "workerSlots": 2, "requires": "farming" },
+    "cost": { "wood": 20 }, "buildTime": 10, "workerSlots": 2, "requires": "farming", "upgrade": "large_farm" },
+  { "id": "large_farm", "name": "Large farm", "kind": "farm", "size": [9, 9], "icon": "farm",
+    "cost": { "wood": 30 }, "buildTime": 15, "workerSlots": 4 },
   { "id": "barracks", "name": "Barracks", "kind": "barracks", "size": [6, 5], "wallHeight": 3,
     "wall": "planks", "footing": "stone_brick", "roof": "roof_tile",
-    "cost": { "wood": 80, "stone": 20 }, "buildTime": 30, "light": 3 },
+    "cost": { "wood": 80, "stone": 20 }, "buildTime": 30, "light": 3, "upgrade": "great_barracks" },
+  { "id": "great_barracks", "name": "Great barracks", "kind": "barracks", "size": [8, 7], "wallHeight": 4,
+    "wall": "planks", "footing": "stone_brick", "roof": "roof_tile", "icon": "barracks",
+    "cost": { "wood": 80, "stone": 60 }, "buildTime": 40, "light": 4, "sturdy": 2, "speed": 175 },
   { "id": "smelter", "name": "Smelter", "kind": "smelter", "size": [3, 3], "wallHeight": 3,
     "wall": "stone_brick", "roof": "stone_brick", "chimney": true,
-    "cost": { "stone": 30, "wood": 10 }, "buildTime": 20, "workerSlots": 1, "requires": "smelting", "light": 3 },
+    "cost": { "stone": 30, "wood": 10 }, "buildTime": 20, "workerSlots": 1, "requires": "smelting", "light": 3,
+    "upgrade": "foundry" },
+  { "id": "foundry", "name": "Foundry", "kind": "smelter", "size": [5, 5], "wallHeight": 4,
+    "wall": "stone_brick", "roof": "stone_brick", "chimney": true, "icon": "smelter",
+    "cost": { "stone": 60, "wood": 20 }, "buildTime": 30, "workerSlots": 2, "light": 4, "sturdy": 2, "speed": 200 },
   { "id": "barrier", "name": "Wooden barrier", "kind": "wall", "size": [1, 1], "wallHeight": 2, "wall": "palisade",
     "cost": { "wood": 1 }, "buildTime": 1, "sight": 2, "sturdy": 2, "icon": "wall", "upgrade": "wooden_wall" },
   { "id": "wooden_wall", "name": "Wooden wall", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "planks",

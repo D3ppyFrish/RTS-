@@ -364,9 +364,11 @@ public sealed partial class EconomySystem
         foreach (var b in Buildings.All)
         {
             if (b == ignore) continue;
-            // Walls, gates and towers join up with each other; everything else keeps a gap of a column.
+            // Walls, gates and towers join up with each other; everything else keeps a gap of a column (from the
+            // ground a building being upgraded grows onto, too).
             int gap = def.IsRampart && b.Def.IsRampart ? 0 : 1;
-            if (x > b.MaxX + gap || x1 < b.X - gap || z > b.MaxZ + gap || z1 < b.Z - gap) continue;
+            var (bx0, bz0, bx1, bz1) = b.Claim;
+            if (x > bx1 + gap || x1 < bx0 - gap || z > bz1 + gap || z1 < bz0 - gap) continue;
             if (!TakesPlaceOf(player, def, x, z, b)) return PlaceResult.Crowded;
             (taken ??= new List<Building>()).Add(b);
         }
@@ -589,16 +591,24 @@ public sealed partial class EconomySystem
     /// The standable column next to the building (within 3 columns) nearest to (x, z), within
     /// <paramref name="levels"/> of the level the building stands at.
     /// </summary>
-    internal bool SpotBeside(Building b, int x, int z, out int sx, out int sz, out int sy, int levels = 2)
+    internal bool SpotBeside(Building b, int x, int z, out int sx, out int sz, out int sy, int levels = 2) =>
+        SpotBeside(b.X, b.Z, b.MaxX, b.MaxZ, b.Y, x, z, out sx, out sz, out sy, levels);
+
+    /// <summary>
+    /// The standable column next to the footprint [x0, x1] by [z0, z1] (within 3 columns) nearest to (x, z),
+    /// within <paramref name="levels"/> of level <paramref name="baseY"/>, not under a building.
+    /// </summary>
+    private bool SpotBeside(int x0, int z0, int x1, int z1, int baseY, int x, int z, out int sx, out int sz, out int sy, int levels = 2)
     {
         sx = sz = sy = -1;
         long best = long.MaxValue;
         for (int d = 1; d <= 3 && best == long.MaxValue; d++)
-        for (int cz = b.Z - d; cz <= b.MaxZ + d; cz++)
-        for (int cx = b.X - d; cx <= b.MaxX + d; cx++)
+        for (int cz = z0 - d; cz <= z1 + d; cz++)
+        for (int cx = x0 - d; cx <= x1 + d; cx++)
         {
-            if (b.ColumnDistance(cx, cz) != d) continue;
-            int y = Walk.NearestStandLevel(World, cx, cz, b.Y, levels);
+            int ddx = cx < x0 ? x0 - cx : cx > x1 ? cx - x1 : 0, ddz = cz < z0 ? z0 - cz : cz > z1 ? cz - z1 : 0;
+            if (Math.Max(ddx, ddz) != d) continue;
+            int y = Walk.NearestStandLevel(World, cx, cz, baseY, levels);
             if (y < 0 || Buildings.AtColumn(cx, cz) != null) continue;
             long dx = cx - x, dz = cz - z, score = dx * dx + dz * dz;
             if (score >= best) continue;
@@ -633,9 +643,19 @@ public sealed partial class EconomySystem
         return Math.Abs(U.Y[i] - b.Y) <= 2;
     }
 
+    /// <summary>
+    /// Ticks of training or smelting the building gets through this tick: its <see cref="BuildingDef.Speed"/>
+    /// in hundredths, spread evenly over the ticks (1 every tick at 100, 1 and 2 by turns at 150).
+    /// </summary>
+    private int Steps(Building b)
+    {
+        long t = _sim.Tick, s = b.Def.Speed;
+        return (int)((t + 1) * s / 100 - t * s / 100);
+    }
+
     private void StepSmelter(Building b)
     {
-        if (b.SmeltTicks > 0 && --b.SmeltTicks == 0) b.Stock[(int)Good.Iron]++;
+        if (b.SmeltTicks > 0 && (b.SmeltTicks = Math.Max(0, b.SmeltTicks - Steps(b))) == 0) b.Stock[(int)Good.Iron]++;
         if (b.SmeltTicks == 0 && b.Stock[(int)Good.IronOre] >= OrePerIngot && b.Stock[(int)Good.Coal] >= CoalPerIngot)
         {
             b.Stock[(int)Good.IronOre] -= OrePerIngot;
@@ -653,7 +673,7 @@ public sealed partial class EconomySystem
         int owner = b.Owner;
         if (Starving(owner) || _population[owner] >= Housing(owner)) return;
         var def = _sim.Content.Units[b.Queue[0]];
-        if (b.TrainTicks < def.TrainTicks) b.TrainTicks++;
+        if (b.TrainTicks < def.TrainTicks) b.TrainTicks = Math.Min(b.TrainTicks + Steps(b), def.TrainTicks);
         if (b.TrainTicks < def.TrainTicks || !AccessSpot(b, out int x, out int z, out int y)) return;
         int id = U.Spawn(owner, def.Index, Fix64.FromInt(x) + Fix64.Half, y, Fix64.FromInt(z) + Fix64.Half, MaxHp(owner, def));
         if (def.Role == UnitRole.Worker) U.Auto[U.IndexOf(id)] = Player(owner).AutoWorkers;

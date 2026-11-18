@@ -354,6 +354,10 @@ public partial class PlayerControl : Node
             case Key.Apostrophe: ToggleBridge(); break;
             case Key.U:
                 if (_sim.Buildings.Get(SelectedBuilding) is { Def.IsWall: true }) UpgradeSelected(stretch: !key.ShiftPressed);
+                // Any other building with a bigger one to become: Ctrl+U, or U alone when it trains nothing.
+                else if (_sim.Buildings.Get(SelectedBuilding) is { Def.Upgrade: not null } grows && !key.ShiftPressed
+                         && (key.CtrlPressed || grows.Def.Trains.Length == 0))
+                    UpgradeSelected(stretch: false);
                 else if (key.ShiftPressed && _sim.Buildings.Get(SelectedBuilding) is { Def.Kind: BuildingKind.TownHall } hall)
                     SetGovernor((GovernorFocus)(((int)hall.Governor + 1) % Enum.GetValues<GovernorFocus>().Length));
                 else TrainAtSelected(null);

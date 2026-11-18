@@ -104,6 +104,9 @@ public sealed partial class EconomySystem
 
     // --- Upgrades ----------------------------------------------------------------------------------
 
+    // Any building with an upgrade in the data can be upgraded: walls, gates and towers keep their footprint and
+    // grow up (see the wall tiers above); houses, halls and the rest grow outward too (see RoomToGrow).
+
     /// <summary>Most walls and gates one upgrade command starts on.</summary>
     public const int MaxUpgrade = 256;
 
@@ -128,9 +131,13 @@ public sealed partial class EconomySystem
         return CanAfford(b.Owner, to.Cost) ? PlaceResult.Ok : PlaceResult.CannotAfford;
     }
 
-    /// <summary>True if the blocks of <paramref name="to"/> above what the building is now have room: air or leaves (units step up).</summary>
+    /// <summary>
+    /// True if the blocks of <paramref name="to"/> above what the building is now have room: air or leaves (units
+    /// step up). A building that grows needs the ground round it too (see <see cref="RoomToGrow"/>).
+    /// </summary>
     private bool RoomFor(Building b, BuildingDef to)
     {
+        if (Grows(b.Def, to)) return RoomToGrow(b, to);
         int top = b.Y + Math.Max(b.Def.Height, 1);
         if (b.Y + to.Height + Walk.Clearance >= World.SizeY) return false;
         foreach (var t in to.Blocks)
@@ -143,10 +150,85 @@ public sealed partial class EconomySystem
         return true;
     }
 
+    /// <summary>True if <paramref name="to"/> has a bigger footprint than <paramref name="from"/>.</summary>
+    private static bool Grows(BuildingDef from, BuildingDef to) => to.SizeX != from.SizeX || to.SizeZ != from.SizeZ;
+
+    /// <summary>
+    /// Longest a finished upgrade that grows waits for units to step off the ground it takes (idle ones are sent
+    /// off it) before it goes up anyway.
+    /// </summary>
+    public const int UpgradeWaitTicks = 10 * Tps;
+
+    /// <summary>
+    /// True if there is room for the building to grow into <paramref name="to"/> where it stands (see
+    /// <see cref="Building.CornerOf"/>): the new footprint is on the map, keeps a column's gap from every other
+    /// building (and the ground their own upgrades grow onto) and from city-states, the new ground is within a
+    /// block of the building's level with nothing solid over it, and nothing solid is over the building either.
+    /// The same as putting the bigger building down there, but at the building's own level.
+    /// </summary>
+    private bool RoomToGrow(Building b, BuildingDef to)
+    {
+        var w = World;
+        var (x0, z0) = b.CornerOf(to);
+        int x1 = x0 + to.SizeX - 1, z1 = z0 + to.SizeZ - 1, baseY = b.Y;
+        if (x0 < 1 || z0 < 1 || x1 > w.SizeX - 2 || z1 > w.SizeZ - 2) return false;
+        int clear = Math.Max(to.Height, Walk.Clearance);
+        if (baseY < 2 || baseY + clear >= w.SizeY) return false;
+        foreach (var o in Buildings.All)
+        {
+            if (o == b) continue;
+            var (ox0, oz0, ox1, oz1) = o.Claim;
+            if (x0 <= ox1 + 1 && x1 >= ox0 - 1 && z0 <= oz1 + 1 && z1 >= oz0 - 1) return false;
+        }
+        if (_sim.Cities.Crowds(x0, z0, x1, z1)) return false;
+        int top = b.Y + Math.Max(b.Def.Height, 1);
+        for (int cz = z0; cz <= z1; cz++)
+        for (int cx = x0; cx <= x1; cx++)
+        {
+            int from;
+            if (b.Covers(cx, cz)) from = top;
+            else
+            {
+                int g = Walk.GroundLevel(w, cx, cz);
+                if (g < baseY - 1 || g > baseY + 1) return false;
+                // A high column is cut down: its top block must be plain ground with solid ground under it.
+                if (g == baseY + 1 && (!BlockInfo.IsGround(w.Get(cx, baseY, cz)) || !BlockInfo.IsSolid(w.Get(cx, baseY - 1, cz))))
+                    return false;
+                from = Math.Max(g, baseY);
+            }
+            for (int y = from; y < baseY + clear; y++)
+                if (w.Get(cx, y, cz) is var c && c != BlockType.Air && !BlockInfo.IsLeaves(c)) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// True if units stand on the ground the building grows onto as <paramref name="to"/>, from just under its
+    /// level to the new roof. The idle ones (and its own builders, whose work is done) are sent beside the new
+    /// footprint.
+    /// </summary>
+    private bool InTheWay(Building b, BuildingDef to, int x0, int z0)
+    {
+        int x1 = x0 + to.SizeX - 1, z1 = z0 + to.SizeZ - 1;
+        bool any = false;
+        var u = U;
+        for (int i = 0; i < u.Count; i++)
+        {
+            int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
+            if (x < x0 || x > x1 || z < z0 || z > z1 || u.Y[i] < b.Y - 1 || u.Y[i] > b.Y + to.Height) continue;
+            any = true;
+            if (u.Order[i] != UnitOrder.Idle) continue;
+            if (u.Job[i] == UnitJob.Build && u.JobTarget[i] == b.Id) EndJob(i);
+            else if (u.Job[i] != UnitJob.None) continue;
+            if (SpotBeside(x0, z0, x1, z1, b.Y, x, z, out int sx, out int sz, out int sy)) _sim.SendUnit(i, sx, sz, sy);
+        }
+        return any;
+    }
+
     internal void Apply(UpgradeCommand c)
     {
         var first = Buildings.Get(c.Building);
-        if (first == null || first.Owner != c.PlayerId || !first.Def.IsRampart || first.Planned) return;
+        if (first == null || first.Owner != c.PlayerId || first.Planned) return;
         var started = new List<Building>();
         foreach (var b in c.Stretch && first.Def.IsWall ? Stretch(first) : new List<Building> { first })
         {
@@ -217,7 +299,34 @@ public sealed partial class EconomySystem
     {
         var to = b.Upgrade!;
         if (!RoomFor(b, to)) return;
+        if (Grows(b.Def, to))
+        {
+            // A bigger building: it waits a while for units to step off its new ground, then the old one comes
+            // down and the new one stands on the levelled ground in its place, its middle where the old one's was.
+            var (x0, z0) = b.CornerOf(to);
+            if (!to.Walkable && b.UpgradeWait < UpgradeWaitTicks && InTheWay(b, to, x0, z0))
+            {
+                b.UpgradeWait++;
+                return;
+            }
+            var old = b.Def.Blocks;
+            for (int k = 0; k < b.Placed && k < old.Count; k++)
+            {
+                var t = old[k];
+                int x = b.X + t.X, y = b.Y + t.Y, z = b.Z + t.Z;
+                if (t.Y >= 0 && World.Get(x, y, z) == t.Block) World.Set(x, y, z, BlockType.Air);
+            }
+            Level(b.Owner, to, x0, z0, b.Y);
+            b.X = x0;
+            b.Z = z0;
+        }
+        b.UpgradeWait = 0;
         foreach (var t in to.Blocks) World.Set(b.X + t.X, b.Y + t.Y, b.Z + t.Z, t.Block);
+        if (Grows(b.Def, to))
+        {
+            b.Def = to;
+            _sim.Combat.Rebuilt(b);
+        }
         b.Def = to;
         b.Placed = to.Blocks.Count;
         b.Work = to.BuildTicks;

@@ -128,7 +128,8 @@ public sealed class BuildingDef
     public bool Walkway { get; init; }
     /// <summary>
     /// What it can be turned into where it stands (see <see cref="UpgradeCommand"/>), for that building's cost and
-    /// building time; null if nothing. Walls and gates only.
+    /// building time; null if nothing. A wall, gate or tower keeps its footprint; any other building may grow,
+    /// outward from its middle on every side, onto free ground round it.
     /// </summary>
     public BuildingDef? Upgrade { get; internal set; }
     /// <summary>
@@ -151,6 +152,11 @@ public sealed class BuildingDef
     /// that land after all, and a fifth as many points of their odds moved to the head; a tower's.
     /// </summary>
     public int Aim { get; init; }
+    /// <summary>
+    /// How fast it trains units and smelts, in percent of the usual pace (100 unless given): what makes a great
+    /// hall or a foundry better at its work than the building it was upgraded from.
+    /// </summary>
+    public int Speed { get; init; } = 100;
 
     /// <summary>Units stand on it rather than next to it.</summary>
     public bool Walkable => Kind == BuildingKind.Farm;

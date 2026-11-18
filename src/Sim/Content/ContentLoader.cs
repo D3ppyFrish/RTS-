@@ -415,7 +415,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "walkway", "upgrade", "facing", "aim");
+                "sturdy", "walkway", "upgrade", "facing", "aim", "speed");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -461,6 +461,7 @@ public static class ContentLoader
                 Sturdy = o.Int("sturdy", 1, 1000, 1),
                 Walkway = o.Bool("walkway"),
                 Aim = o.Int("aim", 0, 100, 0),
+                Speed = o.Int("speed", 100, 1000, 100),
             };
             bool wall = kind is BuildingKind.Wall or BuildingKind.Gate, tower = kind == BuildingKind.Tower;
             if (def.Walkway && !wall && !tower) o.Error("only a wall, gate or tower has a \"walkway\"");
@@ -476,7 +477,9 @@ public static class ContentLoader
             var faction = o.Str("faction", false);
             var requires = o.Ids("requires");
             var upgrade = o.Str("upgrade", false);
-            if (upgrade != null && !wall && !tower) o.Error("only a wall, gate or tower has an \"upgrade\"");
+            // What is laid a column at a time, a city-state's totem and what is built on a den have no upgrade.
+            bool upgradable = kind is not (BuildingKind.Light or BuildingKind.Bridge or BuildingKind.Totem);
+            if (upgrade != null && !upgradable) o.Error($"a {SnakeName(kind)} has no \"upgrade\"");
             var facing = o.Str("facing", false);
             if (facing != null && (!wall || sizeX != 1 || sizeZ != 1)) o.Error("only a wall or gate one column across has a \"facing\"");
             _resolve.Add(() =>
@@ -497,17 +500,20 @@ public static class ContentLoader
                         face.FacingOf = def;
                     }
                 }
-                if (upgrade == null || (!wall && !tower)) return;
+                if (upgrade == null || !upgradable) return;
                 if (!_db.TryGetBuilding(upgrade, out var to))
                 {
                     o.Error($"\"upgrade\": there is no building \"{upgrade}\"");
                     return;
                 }
-                // An upgrade takes the place of what stands there: the same kind and footprint, at least as tall,
-                // and each building is the upgrade of one other at most, so every wall has one way up.
+                // An upgrade takes the place of what stands there: the same kind, at least as tall, and each building
+                // is the upgrade of one other at most, so every building has one way up. A wall, gate or tower keeps
+                // its footprint; anything else may grow, but never shrink.
                 if (to == def) o.Error("\"upgrade\": a building is not its own upgrade");
-                else if (to.Kind != def.Kind || to.SizeX != def.SizeX || to.SizeZ != def.SizeZ)
+                else if (to.Kind != def.Kind || ((wall || tower) && (to.SizeX != def.SizeX || to.SizeZ != def.SizeZ)))
                     o.Error($"\"upgrade\": \"{upgrade}\" must be of the same kind and size");
+                else if (to.SizeX < def.SizeX || to.SizeZ < def.SizeZ)
+                    o.Error($"\"upgrade\": \"{upgrade}\" must be of the same kind and at least as big");
                 else if (to.WallHeight < def.WallHeight) o.Error($"\"upgrade\": \"{upgrade}\" must be at least as tall");
                 else if (to.UpgradeOf != null) o.Error($"\"upgrade\": \"{upgrade}\" is already the upgrade of \"{to.UpgradeOf.Id}\"");
                 else if (to.FromDen || def.FromDen) o.Error("\"upgrade\": not for a building put up on a den");
@@ -1094,8 +1100,11 @@ public static class ContentLoader
             foreach (var b in _db.Buildings)
             {
                 var trains = new List<string>();
+                // An upgrade trains what the building it was upgraded from trains.
+                var root = b;
+                for (int k = 0; root.UpgradeOf != null && k < _db.Buildings.Count; k++) root = root.UpgradeOf;
                 foreach (var u in _db.Units)
-                    if (u.TrainedAt == b) trains.Add(u.Id);
+                    if (u.TrainedAt == root) trains.Add(u.Id);
                 b.Trains = trains.ToArray();
             }
             var bases = new List<UnitDef>();
@@ -1198,6 +1207,7 @@ public static class ContentLoader
                 h.Add(b.Faction?.Index ?? -1);
                 h.Add(b.Sturdy);
                 h.Add(b.Walkway ? 1 : 0);
+                h.Add(b.Speed);
                 h.Add(b.Upgrade?.Index ?? -1);
                 h.Add(b.Facing?.Index ?? -1);
                 h.Add(b.Aim);

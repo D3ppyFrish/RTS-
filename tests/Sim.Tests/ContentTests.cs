@@ -38,7 +38,7 @@ public class ContentTests
     {
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs" }, db.Factions.Select(f => f.Id));
-        Assert.Equal(new[] { "town_hall", "storehouse", "house", "farm", "barracks", "smelter", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "goblin_totem", "ogre_idol", "bridge" }, db.Buildings.Select(b => b.Id));
+        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "barracks", "great_barracks", "smelter", "foundry", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "goblin_totem", "ogre_idol", "bridge" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "healer" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "militia", "knight", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
@@ -264,11 +264,11 @@ public class ContentTests
         Assert.Equal(BlockType.Planks, db.Building("wooden_wall").Blocks[0].Block);
         Assert.Equal(BlockType.Rampart, db.Building("stone_wall").Blocks[0].Block);
         Assert.Equal(BlockInfo.Toughness(BlockType.Planks) * db.Building("wooden_wall").Sturdy, db.Building("wooden_wall").BlockToughness(0));
-        Assert.Null(db.Building("house").Upgrade);
+        Assert.Null(db.Building("manor").Upgrade);
         Assert.Equal(1, db.Building("house").Sturdy);
     }
 
-    /// <summary>An upgrade has to take the place of what stands there, and only walls have them or walkways.</summary>
+    /// <summary>An upgrade has to take the place of what stands there (a wall's of the same size, anything else's at least as big), and only walls have walkways.</summary>
     [Theory]
     [InlineData("\"upgrade\": \"wooden_wall\"", "\"upgrade\": \"wooden_wal\"", "building 'barrier': \"upgrade\": there is no building \"wooden_wal\"")]
     [InlineData("\"upgrade\": \"wooden_wall\"", "\"upgrade\": \"barrier\"", "building 'barrier': \"upgrade\": a building is not its own upgrade")]
@@ -278,7 +278,11 @@ public class ContentTests
     [InlineData("\"wallHeight\": 4, \"wall\": \"planks\",\n    \"cost\": { \"wood\": 5 }, \"buildTime\": 4, \"sight\": 2, \"sturdy\": 4, \"walkway\": true, \"icon\": \"gate\", \"upgrade\": \"stone_gate\"",
         "\"wallHeight\": 3, \"wall\": \"planks\", \"cost\": { \"wood\": 5 }, \"buildTime\": 4, \"icon\": \"gate\", \"upgrade\": \"barrier_gate\"",
         "building 'barrier_gate' is its own upgrade, by way of 'wooden_gate'")]
-    [InlineData("\"light\": 7", "\"light\": 7, \"upgrade\": \"campfire\"", "building 'torch': only a wall, gate or tower has an \"upgrade\"")]
+    [InlineData("\"light\": 7", "\"light\": 7, \"upgrade\": \"campfire\"", "building 'torch': a light has no \"upgrade\"")]
+    [InlineData("\"upgrade\": \"large_house\"", "\"upgrade\": \"barracks\"", "building 'house': \"upgrade\": \"barracks\" must be of the same kind and size")]
+    [InlineData("\"size\": [6, 6], \"wallHeight\": 4,\n    \"wall\": \"planks\", \"footing\": \"stone_brick\", \"roof\": \"thatch\"",
+        "\"size\": [3, 6], \"wallHeight\": 4,\n    \"wall\": \"planks\", \"footing\": \"stone_brick\", \"roof\": \"thatch\"",
+        "building 'house': \"upgrade\": \"large_house\" must be of the same kind and at least as big")]
     [InlineData("\"light\": 7", "\"light\": 7, \"walkway\": true", "building 'torch': only a wall, gate or tower has a \"walkway\"")]
     [InlineData("\"sturdy\": 2, \"icon\": \"wall\"", "\"sturdy\": 2, \"walkway\": true, \"icon\": \"wall\"",
         "building 'barrier': a \"walkway\" needs \"wallHeight\" of 3 or more, or blows from the ground reach the units on it")]
