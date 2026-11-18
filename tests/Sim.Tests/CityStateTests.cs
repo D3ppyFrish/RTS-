@@ -259,6 +259,60 @@ public class CityStateTests
         Assert.NotEqual(town.X - 30, sim.Units.OrderX[Index(sim, guard)]);
     }
 
+    /// <summary>
+    /// Issue #44: hurt units near a goblin town their owner holds heal there as at home (the home rate, wounds
+    /// bound), once out of the fight. Before the town is taken, other players' units there, and the holder's units
+    /// past the town's healing reach, heal only at the slow rate.
+    /// </summary>
+    [Fact]
+    public void UnitsHealFastAtAGoblinTownTheirOwnerHolds()
+    {
+        var sim = Flat();
+        Hall(sim, Settlers);
+        Hall(sim, Orcs, HallX, 20);
+        var town = PlaceTown(sim);
+        var rules = sim.Content.Combat;
+        int reach = town.Def.HealRange;
+        Assert.Equal(6, reach);
+        int edge = town.X - CityStateSystem.TownRadius - reach; // the last column the healing reaches, west of the square
+
+        int Hp(int id) => sim.Units.Hp[Index(sim, id)];
+        int[] Hurt(params (int owner, int x, int z)[] spots)
+        {
+            var ids = spots.Select(s => sim.SpawnUnit(s.owner, "worker", s.x, s.z)).ToArray();
+            foreach (int id in ids) sim.Units.Hp[Index(sim, id)] = sim.Content.Unit("worker").MaxHp / 2;
+            return ids;
+        }
+        int Gained(int[] ids, int seconds, out int[] after)
+        {
+            var before = ids.Select(Hp).ToArray();
+            sim.Run(rules.RecoveryDelayTicks + seconds * Tps);
+            after = ids.Select(Hp).ToArray();
+            return after[0] - before[0];
+        }
+
+        // Neutral: nobody heals fast at the town.
+        Assert.Null(sim.Cities.HealingTown(Settlers, town.X, town.Z));
+        var neutral = Hurt((Settlers, town.X - 3, town.Z + 3));
+        int slow = Gained(neutral, 10, out _);
+        foreach (int id in neutral) sim.Units.Remove(id);
+
+        Conquer(sim, town, Settlers);
+        Assert.Same(town, sim.Cities.HealingTown(Settlers, edge, town.Z));
+        Assert.Null(sim.Cities.HealingTown(Settlers, edge - 1, town.Z));
+        Assert.Null(sim.Cities.HealingTown(Orcs, town.X, town.Z));
+
+        // The holder's units in the town and at the edge of its reach, the holder's one step past it, and an Orc's.
+        var units = Hurt((Settlers, town.X - 3, town.Z + 3), (Settlers, edge, town.Z + 2), (Settlers, edge - 2, town.Z - 2), (Orcs, town.X + 3, town.Z - 3));
+        int fast = Gained(units, 10, out var hp);
+        int half = sim.Content.Unit("worker").MaxHp / 2;
+        Assert.True(fast > slow * 3, $"in the held town it gained {fast}, neutral {slow}");
+        Assert.True(hp[1] - half > (hp[2] - half) * 3, $"at the edge {hp[1] - half}, past it {hp[2] - half}");
+        Assert.True(hp[0] - half > (hp[3] - half) * 3, $"the holder's {hp[0] - half}, the Orcs' {hp[3] - half}");
+        Assert.True(sim.Combat.Healing(Index(sim, units[2]), out bool past) && !past);
+        Assert.True(sim.Combat.Healing(Index(sim, units[0]), out bool there) && there);
+    }
+
     /// <summary>A fallen guard is replaced, one at a time, every 45 seconds, for whoever holds the town.</summary>
     [Fact]
     public void FallenGuardsAreReplaced()
@@ -542,6 +596,7 @@ public class CityStateTests
         Assert.False(new Simulation(1, 32, 16, 32).Economy.Unlocked(0, goblins.Totem));
         Assert.Equal(new[] { "goblin_cutthroat", "goblin_slinger" }, goblins.Mercenaries.Select(u => u.Id));
         Assert.Equal((6, 30 * Tps), (goblins.Pool, goblins.RefillTicks));
+        Assert.Equal(6, goblins.HealRange);
         Assert.Same(db.Unit("wolf"), goblins.Lair);
         Assert.Equal((BlockType.StoneBrick, BlockType.Thatch), (goblins.Wall, goblins.Roof));
 
@@ -607,6 +662,7 @@ public class CityStateTests
         Assert.NotEqual(original, Hash("citystates.json", "\"amount\": 15", "\"amount\": 16"));
         Assert.NotEqual(original, Hash("citystates.json", "\"goblin_slinger\"]", "\"goblin_cutthroat\"]"));
         Assert.NotEqual(original, Hash("citystates.json", "\"holderBonus\": 50", "\"holderBonus\": 51"));
+        Assert.NotEqual(original, Hash("citystates.json", "\"heal\": { \"range\": 6 }", "\"heal\": { \"range\": 7 }"));
         Assert.NotEqual(original, Hash("citystates.json", "\"roof\": \"thatch\"", "\"roof\": \"roof_tile\""));
         Assert.Equal(original, Hash("citystates.json", "Goblin traders", "Goblin merchants")); // descriptions do not count
     }

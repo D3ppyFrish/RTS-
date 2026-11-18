@@ -1394,7 +1394,9 @@ public partial class Hud : CanvasLayer
             string rule = def.Role == UnitRole.Worker
                 ? (u.Auto[i] ? (u.Held[i] ? "    automatic, waiting for orders" : "    automatic") : "")
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
-            string heals = !_sim.Combat.Healing(i, out bool home) ? "" : home ? " (healing fast, at home)" : " (healing)";
+            string heals = !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
+                : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Z[i].FloorToInt()) is { } camp
+                    ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
             string staff = _sim.DuskTree.HasStaff(i) ? " with the Dusk Staff" : "";
             int tend = _sim.DuskTree.TendProgress(u.Id[i]);
             if (tend > 0)
@@ -1634,7 +1636,8 @@ public partial class Hud : CanvasLayer
         string guards = $"{town.Guards.Count()} of {def.Guards.Count} guards" +
                         (town.Guards.Count() < def.Guards.Count ? $", the next in {Seconds(def.GuardRefillTicks - town.GuardTimer)}" : "");
         string take = town.Holder == player
-            ? "Its guards fight your enemies' soldiers in the town; anyone who breaks the totem takes it from you"
+            ? "Its guards fight your enemies' soldiers in the town; anyone who breaks the totem takes it from you" +
+              (def.HealRange >= 0 ? $"\nYour hurt units within {def.HealRange} blocks of the town heal fast there, as at home" : "")
             : town.Holder >= 0
                 ? $"Break {PlayerName(town.Holder)}'s totem to take the town: its guards fight your soldiers there"
                 : "Break the totem to make them your vassals: the guards fight soldiers that come in, never workers or caravans";

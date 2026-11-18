@@ -167,7 +167,7 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   army has at most 50.
 - **Healing**: a unit that has not hit anything or been hit for 10 seconds gets back a quarter of a
   percent of its hit points a second (from half health, full in 3 minutes 20 seconds), or 2% a second
-  within 12 columns of a town hall or house of its own (full in 25 seconds), so a wounded army is
+  within 12 columns of a town hall or house of its own, or near a goblin town it holds (full in 25 seconds), so a wounded army is
   worth bringing home. Healers heal on top of this. The numbers are in `data/roles.json`.
 - **Healers** (issue #42): every faction trains the healer at the barracks once it knows Basic magic
   (40 food and 20 wood, 15 seconds); matches start without any. Every 2 seconds it gives 5 hit points back to the most hurt ally
@@ -547,6 +547,10 @@ and are won by force. There is one so far, the goblins (`data/citystates.json`).
   (quick blades) and slingers, paid for in goods, at most 6 ready at a time and one more every 30
   seconds, stepping out at the market and needing room in your housing; and your caravans earn 50% more
   there.
+- **Healing at the town** (issue #44): while you hold the town, your hurt units within 6 columns of its
+  square heal there as at home once out of the fight 10 seconds: 2% of their hit points a second, with
+  their wounds bound (`"heal": { "range": 6 }` in `citystates.json`). Other players' units heal there only
+  at the usual slow rate.
 - **Caravans** (`TradeCommand`): town halls train them (20 food, 40 wood). Right-click a town (or its
   totem) with caravans selected and each fetches 20 food from your storage nearest the town, walks it to
   the market, sells it for 5 iron per 100 blocks between that storage and the town, takes the iron to your

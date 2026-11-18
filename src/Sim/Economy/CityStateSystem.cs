@@ -656,6 +656,17 @@ public sealed class CityStateSystem
     }
 
     /// <summary>Where tribute goes: the player's first finished town hall (the lowest id), or null if they have none.</summary>
+    /// <summary>
+    /// The town held by <paramref name="player"/> whose healing reach (<see cref="CityStateDef.HealRange"/> columns
+    /// beyond its square) takes in column (x, z), or null if none does. Its holder's units there heal as at home.
+    /// </summary>
+    public CityState? HealingTown(int player, int x, int z)
+    {
+        foreach (var town in _towns)
+            if (town.Holder == player && town.Def.HealRange >= 0 && town.ColumnDistance(x, z) <= town.Def.HealRange) return town;
+        return null;
+    }
+
     public Building? Capital(int player)
     {
         foreach (var b in _sim.Buildings.All)
