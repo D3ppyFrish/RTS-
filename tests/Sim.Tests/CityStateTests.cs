@@ -660,7 +660,8 @@ public class CityStateTests
             Assert.True(u.Regen > 0);
             Assert.Equal(3, u.Upkeep);
         });
-        Assert.All(db.Units.Where(u => u.HiredFrom != ogres), u => Assert.Equal(0, u.Regen));
+        // Only the ogres and the swamp's bog horrors, which heal in the muck, regenerate.
+        Assert.All(db.Units.Where(u => u.HiredFrom != ogres && u.Id != "bog_horror"), u => Assert.Equal(0, u.Regen));
     }
 
     /// <summary>

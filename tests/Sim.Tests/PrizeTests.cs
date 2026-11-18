@@ -143,6 +143,70 @@ public class PrizeTests
         }
     }
 
+    /// <summary>
+    /// The swamp's bog horrors heal in the muck and track blood; both factions take up the same prize, a bog
+    /// lantern, which sharpens its bearer's hits (an Orc spearman's here).
+    /// </summary>
+    [Fact]
+    public void BogHorrorsGiveBothFactionsTheirLantern()
+    {
+        var sim = Flat();
+        var db = sim.Content;
+        var horror = db.Unit("bog_horror");
+        Assert.Equal(World.Biome.Swamp, horror.Lair!.Biome);
+        Assert.True(horror.Regen > 0 && horror.TracksBlood);
+        var lantern = db.Relic("bog_lantern");
+        Assert.Same(lantern, horror.Lair.PrizeFor(db.Faction("orcs"))!.Relic);
+        Assert.Same(lantern, horror.Lair.PrizeFor(db.Faction("settlers"))!.Relic);
+
+        var lair = ClearedLair(sim, "bog_horror");
+        int orc = sim.SpawnUnit(Orcs, "spearman", DenX + 1, DenZ);
+        var spearman = db.Unit("spearman");
+        Assert.Equal(spearman.Damage, sim.Combat.AttackOf(Index(sim, orc), spearman));
+        sim.Schedule(sim.Tick, new DenCommand(Orcs, new[] { orc }, lair.Id));
+        sim.Step();
+        Assert.Same(lantern, sim.RelicOf(Index(sim, orc)));
+        Assert.Equal(spearman.Damage + lantern.Damage, sim.Combat.AttackOf(Index(sim, orc), spearman));
+    }
+
+    /// <summary>
+    /// Giant crabs on the beaches are shelled hard all over. Their prizes differ: the Settlers' fighting unit takes
+    /// up a crab shell shield (armour everywhere), the Orcs put up crab pots that bring in food.
+    /// </summary>
+    [Fact]
+    public void GiantCrabsGiveShellsToSettlersAndPotsToOrcs()
+    {
+        var db = ContentDb.Default;
+        var crab = db.Unit("giant_crab");
+        Assert.Equal(World.Biome.Beach, crab.Lair!.Biome);
+        Assert.True(crab.ArmourOn(BodyPart.Torso) > db.Unit("stone_giant").ArmourOn(BodyPart.Torso));
+        var shell = db.Relic("crab_shell");
+        Assert.Same(shell, crab.Lair.PrizeFor(db.Faction("settlers"))!.Relic);
+        var pots = crab.Lair.PrizeFor(db.Faction("orcs"))!.Building!;
+        Assert.Equal("crab_pots", pots.Id);
+        Assert.Same(db.Faction("orcs"), pots.Faction);
+        Assert.NotEmpty(pots.Yield);
+
+        var sim = Flat();
+        var lair = ClearedLair(sim, "giant_crab");
+        int archer = sim.SpawnUnit(Settlers, "archer", DenX + 1, DenZ);
+        int armour = sim.Combat.Armour(Index(sim, archer), BodyPart.Head);
+        sim.Schedule(sim.Tick, new DenCommand(Settlers, new[] { archer }, lair.Id));
+        sim.Step();
+        Assert.Same(shell, sim.RelicOf(Index(sim, archer)));
+        Assert.Equal(armour + shell.Armour, sim.Combat.Armour(Index(sim, archer), BodyPart.Head));
+
+        sim = Flat();
+        var hall = sim.Economy.PlaceFinished(Orcs, sim.Content.Building("town_hall"), 10, 10)!;
+        hall.Stock[(int)Good.Wood] = 100;
+        lair = ClearedLair(sim, "giant_crab");
+        int worker = sim.SpawnUnit(Orcs, "worker", DenX + 1, DenZ);
+        sim.Schedule(sim.Tick, new DenCommand(Orcs, new[] { worker }, lair.Id));
+        sim.Run(40 * Tps);
+        Assert.Equal("crab_pots", sim.Buildings.Get(lair.Building)!.Def.Id);
+        Assert.True(sim.Buildings.Get(lair.Building)!.Active);
+    }
+
     [Fact]
     public void PrizeAndRelicDataIsChecked()
     {

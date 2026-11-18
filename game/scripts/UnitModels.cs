@@ -46,6 +46,13 @@ public static class UnitModels
     private static readonly Color Bone = new(0.92f, 0.88f, 0.74f);
     private static readonly Color Hide = new(0.36f, 0.27f, 0.2f);
     private static readonly Color Boar = new(0.3f, 0.22f, 0.17f);
+    private static readonly Color BogMud = new(0.27f, 0.25f, 0.2f);
+    private static readonly Color BogSlime = new(0.38f, 0.3f, 0.42f);
+    private static readonly Color Reed = new(0.45f, 0.5f, 0.25f);
+    private static readonly Color BogLight = new(0.55f, 1f, 0.45f);
+    private static readonly Color CrabShell = new(0.75f, 0.3f, 0.18f);
+    private static readonly Color CrabDark = new(0.5f, 0.17f, 0.1f);
+    private static readonly Color CrabBelly = new(0.9f, 0.75f, 0.55f);
     private static readonly Color Bristle = new(0.17f, 0.13f, 0.1f);
     private static readonly Color Iron = new(0.38f, 0.38f, 0.4f);
     private static readonly Color Toxic = new(0.55f, 1f, 0.3f);
@@ -386,6 +393,35 @@ public static class UnitModels
             .Box(-4, 33, 2, 3, 40, 9, Rock)                                                     // head, thrust forward
             .Box(-4, 38, 9, 3, 39, 9, DarkRock)                                                 // brow
             .Box(-3, 36, 10, -2, 36, 10, Fire).Box(1, 36, 10, 2, 36, 10, Fire),                 // eyes
+        // A bog horror: a hunched heap of mud and violet slime taller than a man, reeds growing from its back,
+        // long dragging arms with hooked claws, and a cold green lure of light hanging before its face.
+        "bog_horror" => new Builder()
+            .Box(-4, 0, -2, -2, 6, 1, BogMud).Box(1, 0, -2, 3, 6, 1, BogMud)                    // stumpy legs
+            .Box(-5, 6, -4, 4, 15, 3, BogMud)                                                   // a heap of a body
+            .Box(-4, 8, 3, 3, 13, 3, BogSlime).Box(-5, 14, -5, 4, 17, 1, BogSlime)              // slime on the front, a hunched back
+            .Box(-6, 2, -1, -6, 14, 1, BogMud).Box(5, 2, -1, 5, 14, 1, BogMud)                  // long arms
+            .Box(-7, 1, 0, -6, 2, 3, Dark).Box(5, 1, 0, 6, 2, 3, Dark)                          // hooked claws
+            .Box(-3, 14, 1, 2, 18, 5, BogMud).Box(-3, 14, 5, 2, 14, 6, BogSlime)                // head, thrust forward, and a dripping jaw
+            .Box(-2, 17, 5, -2, 17, 5, BogLight).Box(1, 17, 5, 1, 17, 5, BogLight)              // eyes
+            .Box(-1, 19, 4, 0, 19, 7, Reed).Box(0, 15, 8, 0, 18, 8, Reed).Box(0, 14, 8, 0, 14, 8, BogLight) // the lure
+            .Box(-4, 18, -4, -4, 23, -4, Reed).Box(-1, 18, -5, -1, 24, -5, Reed).Box(3, 18, -3, 3, 22, -3, Reed) // reeds
+            .Box(-2, 7, -4, 1, 8, -4, TeamDark),                                                // a band, once it is someone's
+        // A giant crab: a wide, low shell as big as a cart, red above and pale below, two great claws held up
+        // in front and eyes on stalks.
+        "giant_crab" => new Builder()
+            .Box(-8, 4, -6, 7, 8, 5, CrabShell).Box(-6, 9, -5, 5, 10, 4, CrabShell)             // the shell
+            .Box(-7, 3, -5, 6, 3, 4, CrabBelly)                                                 // its pale underside
+            .Box(-5, 10, -3, -4, 10, 2, CrabDark).Box(3, 10, -3, 4, 10, 2, CrabDark)            // ridges
+            .Box(-11, 0, -4, -9, 4, -3, CrabDark).Box(-11, 0, 0, -9, 4, 1, CrabDark)            // legs
+            .Box(8, 0, -4, 10, 4, -3, CrabDark).Box(8, 0, 0, 10, 4, 1, CrabDark)
+            .Box(-10, 0, 3, -9, 3, 3, CrabDark).Box(8, 0, 3, 9, 3, 3, CrabDark)
+            .Box(-8, 5, 6, -6, 7, 9, CrabShell).Box(-9, 5, 10, -5, 9, 13, CrabShell)            // claws
+            .Box(-9, 10, 12, -8, 11, 14, CrabDark)
+            .Box(5, 5, 6, 7, 7, 9, CrabShell).Box(4, 5, 10, 8, 9, 13, CrabShell)
+            .Box(7, 10, 12, 8, 11, 14, CrabDark)
+            .Box(-3, 9, 5, -3, 12, 5, CrabDark).Box(2, 9, 5, 2, 12, 5, CrabDark)               // eye stalks
+            .Box(-3, 13, 5, -3, 13, 5, Dark).Box(2, 13, 5, 2, 13, 5, Dark)
+            .Box(-6, 8, -6, 5, 8, -6, TeamDark),                                                // a band, once it is someone's
         "wolf_rider" => new Builder().Wolf(DarkFur, Fur, big: true)
             .Box(-3, 6, -4, 2, 9, 1, TeamDark)                                           // saddle cloth down the flanks
             .Orc(lift: 4, legs: false)

@@ -132,8 +132,8 @@ public class WildsTests
 
     /// <summary>
     /// Besides the starts' wolf lairs, the dusk tree's warden and the goblins' wolves, the default map has lairs
-    /// spread across it: herds of boar in the forests, stone giants in the hills and more wolf packs in the
-    /// grassland, as many as the data's count for each 512 by 512 blocks of map, each well away from the starts,
+    /// spread across it: herds of boar in the forests, stone giants in the hills, more wolf packs in the
+    /// grassland, bog horrors in the swamp and giant crabs on the beaches, as many as the data's count for each 512 by 512 blocks of map, each well away from the starts,
     /// the towns and every other lair, and the same for the same seed.
     /// </summary>
     [Fact]
@@ -143,7 +143,7 @@ public class WildsTests
         var fixedLairs = 2 + 1 + sim.Cities.Towns.Count(t => t.LairId > 0);
         var wild = sim.Monsters.Lairs.Skip(fixedLairs).ToList();
         long area = (long)sim.World.SizeX * sim.World.SizeZ;
-        foreach (var id in new[] { "boar", "stone_giant", "wolf" })
+        foreach (var id in new[] { "boar", "stone_giant", "wolf", "bog_horror", "giant_crab" })
         {
             var def = sim.Content.Unit(id).Lair!;
             int want = (int)(def.Count * area / (512 * 512));
@@ -213,7 +213,7 @@ public class WildsTests
         Assert.True(db.Unit("wolf").Lair!.Den);
         Assert.False(db.Unit("dusk_warden").Lair!.Den);
         Assert.Equal(new[] { "wolf" }, db.LairMonsters.Select(u => u.Id));
-        Assert.Equal(new[] { "wolf", "boar", "stone_giant" }, db.WildMonsters.Select(u => u.Id));
+        Assert.Equal(new[] { "wolf", "boar", "stone_giant", "bog_horror", "giant_crab" }, db.WildMonsters.Select(u => u.Id));
 
         var hall = sim.Economy.PlaceFinished(Settlers, db.Building("town_hall"), 10, 40)!;
         var lair = sim.Monsters.Place(db.Unit("stone_giant"), 60, 48)!;

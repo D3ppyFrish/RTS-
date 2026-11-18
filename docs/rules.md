@@ -465,11 +465,15 @@ areas, and Orcs who beat a wolf keep it.
   earns no experience and pays no upkeep.
 - **Across the map** (issue #45): more lairs are spread over the map by biome, for each 512 by 512 blocks
   of it: a wolf pack in the grassland, two herds of **wild boar** in the forests and a **stone giant** in the
-  hills (on the default 768 map, twice that, rounded down: 2, 4 and 2). Each den is at least 100 blocks from
+  hills, two pairs of **bog horrors** in the swamp and two pairs of **giant crabs** on the beaches (on the
+  default 768 map, twice that, rounded down: 2, 4, 2, 4 and 4). Each den is at least 100 blocks from
   every start and 40 from any other lair or town. A boar herd is three boars (80 hit points, quick, tusks
   that pierce) that pay 200 food; Orcs who beat a boar can ride it, and the spearman becomes a rider (the
   Orcs' own rider sits on a war boar). A stone giant stands alone: 450 hit points, slow, heavy armour and
-  crushing blows, and pays 200 stone and 60 iron; Orcs can recruit it. Each leaves a den with its own
+  crushing blows, and pays 200 stone and 60 iron; Orcs can recruit it. A bog horror (140 hit points,
+  slashing claws) heals 2% of its hit points a second even in a fight and follows a fresh blood trail
+  well past its leash; a pair pays 120 food. A giant crab (160 hit points, slow, crushing claws) is
+  shelled hard all over (head 3, body 5, legs 2); a pair pays 150 food. Each leaves a den with its own
   prizes (see "Cleared dens"). In the data, `biome` and `count` in a `lair` spread it, and `atStarts` keeps
   it at the starts too.
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
@@ -504,6 +508,8 @@ The den is gone from the map either way.
 | Wolf | a spearman becomes a Wolfheart | a wolf lodge |
 | Wild boar | a boar pen | a boar pen |
 | Stone giant | a fighting unit takes up the giant's heart | none: they keep the beaten giant itself |
+| Bog horror | a fighting unit takes up the bog lantern | the same: the bog lantern |
+| Giant crab | a fighting unit takes up a crab shell shield | crab pots |
 | Dusk Warden | the Dusk Staff, by healing the tree (see "Dusk tree") | the beaten warden itself |
 
 
@@ -525,7 +531,10 @@ The den is gone from the map either way.
   one-of-a-kind thing a unit takes up: the selected fighting unit (not a worker) nearest the den that bears
   no relic yet takes it up at once. The giant's heart gives its bearer 60 more hit points (it gets them
   at once too) and 2 more armour on every part. A unit bears one relic at most, keeps it when it evolves,
-  and it is gone with the bearer (dropping relics is a follow-up). A relic can also add `damage` to each hit.
+  and it is gone with the bearer (dropping relics is a follow-up). The bog lantern adds 4 damage to each
+  hit, and the crab shell shield 3 armour on every part.
+- **Orcs: crab pots.** At a cleared crab den the Orcs' workers set crab pots (20 wood, 10 seconds): they
+  house 2 and bring in 6 food every 15 seconds.
 - **Stays as it was:** the Settlers still get a lair's reward for clearing it.
 - **In the game**: with your units selected near a cleared den, the selection panel has a button for
   it ("Make the wolf den a wolf lodge", greyed out while you cannot pay, "Make a spearman a
