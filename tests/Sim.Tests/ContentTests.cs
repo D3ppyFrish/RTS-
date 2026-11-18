@@ -38,7 +38,7 @@ public class ContentTests
     {
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs" }, db.Factions.Select(f => f.Id));
-        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "barracks", "great_barracks", "smelter", "foundry", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "goblin_totem", "ogre_idol", "bridge" }, db.Buildings.Select(b => b.Id));
+        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "barracks", "great_barracks", "smelter", "foundry", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "boar_pen", "crab_pots", "goblin_totem", "ogre_idol", "bridge" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "healer" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "militia", "knight", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
@@ -508,7 +508,13 @@ public class ContentTests
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'orc_war_drums': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains(e.Errors, m => m.StartsWith("units.json: unit 'wolf_rider': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'wolf_lodge': \"faction\" is \"orcs\", which is not a faction"));
-        Assert.Equal(9, e.Errors.Count);
+        // And the wolf's and the boar's prizes name it.
+        Assert.Contains("units.json: unit 'wolf', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
+        Assert.Contains("units.json: unit 'boar', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
+        Assert.Contains("units.json: unit 'bog_horror', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
+        Assert.Contains("units.json: unit 'giant_crab', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
+        Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'crab_pots': \"faction\" is \"orcs\", which is not a faction"));
+        Assert.Equal(14, e.Errors.Count);
     }
 
     [Fact]
@@ -517,7 +523,7 @@ public class ContentTests
         var files = Files();
         Edit(files, "factions.json", "\"name\": \"Orcs\",", "\"name\": \"Orcs\"");
         var e = Fails(files);
-        Assert.StartsWith("factions.json line 28: ", e.Errors[0]); // the line of the Orcs in the file
+        Assert.StartsWith("factions.json line 25: ", e.Errors[0]); // the line of the Orcs in the file
 
         files = Files();
         files["units.json"] = "{ \"id\": \"worker\" }";

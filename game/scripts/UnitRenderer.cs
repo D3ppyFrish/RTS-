@@ -228,7 +228,7 @@ void fragment() {
         float bs = ChunkMesher.BlockSize;
         foreach (var lair in sim.Monsters.Lairs)
         {
-            if (!lair.Monster.Lair!.Den) continue; // no den: the warden's lair is the dusk tree itself, and giants and boars keep none
+            if (!lair.Monster.Lair!.Den) continue; // no den: the warden's lair is the dusk tree itself, and a monster no faction has a prize for leaves none
             var node = new MeshInstance3D { Mesh = den, MaterialOverride = _material, Position = new Vector3(lair.X + 0.5f, lair.Y, lair.Z + 0.5f) * bs };
             AddChild(node);
             _dens.Add((node, lair));

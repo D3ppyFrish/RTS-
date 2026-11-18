@@ -23,8 +23,6 @@ public sealed class FactionDef
     /// for clearing it.
     /// </summary>
     public bool TamesMonsters { get; init; }
-    /// <summary>What its players can make of a monster den once the lair is cleared (see <see cref="DenUse"/>); null for nothing.</summary>
-    public DenUse? Den { get; internal set; }
     /// <summary>What its players can do to the dusk tree once its warden is gone (see <see cref="Units.DuskTreeSystem"/>).</summary>
     public DuskTreeUse DuskTree { get; init; }
     /// <summary>How a computer player plays it (see <see cref="AI.AiPlayer"/>).</summary>
@@ -58,8 +56,9 @@ public enum DuskTreeUse : byte
 }
 
 /// <summary>
-/// What a faction makes of a cleared monster den (see <see cref="Units.MonsterSystem"/>): the den is used up
-/// either way. Exactly one of the two is set.
+/// What a faction makes of a cleared monster den, its prize for beating that monster (a lair's
+/// <see cref="Units.LairDef.Prizes"/>, see <see cref="Units.MonsterSystem"/>): the den is used up either way.
+/// Exactly one of the three is set.
 /// </summary>
 public sealed class DenUse
 {
@@ -67,6 +66,8 @@ public sealed class DenUse
     public Economy.BuildingDef? Building { get; init; }
     /// <summary>A form one of the player's units near the den takes at once, a form it can get no other way (a <see cref="Units.UnitDef.FromDen"/> form).</summary>
     public Units.UnitDef? Form { get; init; }
+    /// <summary>A relic the nearest of the player's fighting units without one takes up.</summary>
+    public RelicDef? Relic { get; init; }
 }
 
 /// <summary>

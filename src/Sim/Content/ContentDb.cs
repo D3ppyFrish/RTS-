@@ -6,7 +6,7 @@ using Rts.Sim.Units;
 namespace Rts.Sim.Content;
 
 /// <summary>
-/// All content definitions (factions, techs, buildings, units and city-states, and the combat role table), each list in
+/// All content definitions (factions, techs, buildings, units, city-states and relics, and the combat role table), each list in
 /// data file order, which gives every definition its stable index. Loaded from the JSON files in <c>data/</c> by
 /// <see cref="ContentLoader"/>, which checks them first; read-only once loaded.
 /// </summary>
@@ -24,6 +24,8 @@ public sealed class ContentDb
     private readonly Dictionary<string, FactionDef> _factionsById = new(StringComparer.Ordinal);
     private readonly List<CityStateDef> _cityStates = new();
     private readonly Dictionary<string, CityStateDef> _cityStatesById = new(StringComparer.Ordinal);
+    private readonly List<RelicDef> _relics = new();
+    private readonly Dictionary<string, RelicDef> _relicsById = new(StringComparer.Ordinal);
 
     internal ContentDb() { }
 
@@ -52,6 +54,8 @@ public sealed class ContentDb
     public IReadOnlyList<FactionDef> Factions => _factions;
     /// <summary>The city-states every match has a town of (see <see cref="Economy.CityStateSystem"/>).</summary>
     public IReadOnlyList<CityStateDef> CityStates => _cityStates;
+    /// <summary>The relics units can take up as monster lairs' prizes (see <see cref="RelicDef"/>).</summary>
+    public IReadOnlyList<RelicDef> Relics => _relics;
 
     /// <summary>
     /// The side of the wild monsters (<see cref="Simulation.WildPlayer"/>): not a playable faction and not in
@@ -95,6 +99,11 @@ public sealed class ContentDb
         _cityStatesById.TryGetValue(id, out var d) ? d : throw new KeyNotFoundException($"Unknown city-state '{id}'");
 
     public bool TryGetCityState(string id, out CityStateDef def) => _cityStatesById.TryGetValue(id, out def!);
+
+    public RelicDef Relic(string id) =>
+        _relicsById.TryGetValue(id, out var d) ? d : throw new KeyNotFoundException($"Unknown relic '{id}'");
+
+    public bool TryGetRelic(string id, out RelicDef def) => _relicsById.TryGetValue(id, out def!);
 
     /// <summary>The units and buildings a tech unlocks (those that require it), units first, in data order.</summary>
     public List<string> UnlockedBy(TechDef tech)
@@ -157,5 +166,12 @@ public sealed class ContentDb
         def.Index = _cityStates.Count;
         _cityStatesById.Add(def.Id, def);
         _cityStates.Add(def);
+    }
+
+    internal void Add(RelicDef def)
+    {
+        def.Index = _relics.Count;
+        _relicsById.Add(def.Id, def);
+        _relics.Add(def);
     }
 }

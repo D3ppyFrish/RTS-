@@ -1205,7 +1205,7 @@ public partial class PlayerControl : Node
     public Lair? UsableDen()
     {
         var own = OwnSelected();
-        if (own.Count == 0 || _sim.Monsters.DenUse(LocalPlayer) == null) return null;
+        if (own.Count == 0 || !_sim.Monsters.HasPrizes(LocalPlayer)) return null;
         var indexes = new List<int>(own.Count);
         foreach (int id in own) indexes.Add(_sim.Units.IndexOf(id));
         foreach (var lair in _sim.Monsters.Lairs)
@@ -1213,7 +1213,7 @@ public partial class PlayerControl : Node
         return null;
     }
 
-    /// <summary>Your selected units use the den near them, as your faction does (the Orcs put up a wolf lodge on it).</summary>
+    /// <summary>Your selected units use the den near them for your faction's prize there (the Orcs put up a wolf lodge on a wolf den).</summary>
     public void UseDen()
     {
         if (UsableDen() is not { } lair) return;
@@ -1793,7 +1793,7 @@ public partial class PlayerControl : Node
         var soldiers = OwnSoldiers();
         string stance = soldiers.Count > 0 ? u.Stance[u.IndexOf(soldiers[0])].ToString() : "none";
         var evolution = _sim.Evolution;
-        int canEvolve = 0, evolved = 0, denForms = 0;
+        int canEvolve = 0, evolved = 0, denForms = 0, relics = 0;
         foreach (int id in own)
             if (evolution.CanEvolve(u.IndexOf(id))) canEvolve++;
         for (int i = 0; i < u.Count; i++)
@@ -1802,6 +1802,7 @@ public partial class PlayerControl : Node
             var unitDef = _sim.Content.Units[u.Def[i]];
             if (unitDef.IsForm) evolved++;
             if (unitDef.FromDen) denForms++;
+            if (u.Relic[i] != 0) relics++;
         }
         var autoForms = new List<string>();
         foreach (var def in _sim.Content.Units)
@@ -1899,7 +1900,7 @@ public partial class PlayerControl : Node
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +
                $"beaten={beaten} monsters={monsters} riders={riders} wild={wild} lairs={lairs} " +
-               $"den_usable={(UsableDen() != null ? 1 : 0)} dens_used={densUsed} den_buildings={lodges} den_forms={denForms} " +
+               $"den_usable={(UsableDen() != null ? 1 : 0)} dens_used={densUsed} den_buildings={lodges} den_forms={denForms} relics={relics} " +
                $"city={(_sim.Cities.Get(SelectedCity)?.Def.Id ?? "none")} holder={town?.Holder ?? -1} " +
                $"totem_owner={(town != null ? _sim.Cities.Totem(town)?.Owner ?? -1 : -1)} guards={town?.Guards.Count() ?? 0} " +
                $"guards_owner={(town != null && town.Guards.Any() ? u.Owner[u.IndexOf(town.Guards.First())] : -1)} tribute={town?.Caravans.Count ?? 0} " +

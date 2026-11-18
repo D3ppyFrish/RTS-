@@ -132,8 +132,8 @@ public class WildsTests
 
     /// <summary>
     /// Besides the starts' wolf lairs, the dusk tree's warden and the goblins' wolves, the default map has lairs
-    /// spread across it: herds of boar in the forests, stone giants in the hills and more wolf packs in the
-    /// grassland, as many as the data's count for each 512 by 512 blocks of map, each well away from the starts,
+    /// spread across it: herds of boar in the forests, stone giants in the hills, more wolf packs in the
+    /// grassland, bog horrors in the swamp and giant crabs on the beaches, as many as the data's count for each 512 by 512 blocks of map, each well away from the starts,
     /// the towns and every other lair, and the same for the same seed.
     /// </summary>
     [Fact]
@@ -143,7 +143,7 @@ public class WildsTests
         var fixedLairs = 2 + 1 + sim.Cities.Towns.Count(t => t.LairId > 0);
         var wild = sim.Monsters.Lairs.Skip(fixedLairs).ToList();
         long area = (long)sim.World.SizeX * sim.World.SizeZ;
-        foreach (var id in new[] { "boar", "stone_giant", "wolf" })
+        foreach (var id in new[] { "boar", "stone_giant", "wolf", "bog_horror", "giant_crab" })
         {
             var def = sim.Content.Unit(id).Lair!;
             int want = (int)(def.Count * area / (512 * 512));
@@ -200,19 +200,20 @@ public class WildsTests
 
     /// <summary>
     /// A stone giant guards its ground alone, hits hard and is hard to hurt; beaten, it pays stone and iron.
-    /// Neither a giant's nor a boar herd's lair leaves a den to use, unlike a wolf lair.
+    /// Every wild monster's lair leaves a den with a prize (see PrizeTests).
     /// </summary>
     [Fact]
-    public void StoneGiantsPayStoneAndIronAndLeaveNoDen()
+    public void StoneGiantsPayStoneAndIron()
     {
         var sim = Flat(96);
         var db = sim.Content;
         Assert.True(db.Unit("stone_giant").MaxHp > 4 * db.Unit("wolf").MaxHp);
-        Assert.False(db.Unit("stone_giant").Lair!.Den);
-        Assert.False(db.Unit("boar").Lair!.Den);
+        Assert.True(db.Unit("stone_giant").Lair!.Den);
+        Assert.True(db.Unit("boar").Lair!.Den);
         Assert.True(db.Unit("wolf").Lair!.Den);
+        Assert.False(db.Unit("dusk_warden").Lair!.Den);
         Assert.Equal(new[] { "wolf" }, db.LairMonsters.Select(u => u.Id));
-        Assert.Equal(new[] { "wolf", "boar", "stone_giant" }, db.WildMonsters.Select(u => u.Id));
+        Assert.Equal(new[] { "wolf", "boar", "stone_giant", "bog_horror", "giant_crab" }, db.WildMonsters.Select(u => u.Id));
 
         var hall = sim.Economy.PlaceFinished(Settlers, db.Building("town_hall"), 10, 40)!;
         var lair = sim.Monsters.Place(db.Unit("stone_giant"), 60, 48)!;
@@ -223,8 +224,6 @@ public class WildsTests
         RunUntil(sim, () => lair.Cleared, 10 * Tps, "the archer fells the giant");
         sim.Step();
         Assert.Equal((200, 60), (hall.Stock[(int)Good.Stone], hall.Stock[(int)Good.Iron]));
-        int spearman = sim.SpawnUnit(Settlers, "spearman", 60, 46);
-        Assert.False(sim.Monsters.CanUseDen(Settlers, lair, new[] { Index(sim, spearman) }));
     }
 
     // --- Data ---------------------------------------------------------------------------------------

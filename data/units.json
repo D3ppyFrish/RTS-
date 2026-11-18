@@ -29,7 +29,7 @@
 // "experience" in factions.json): it is not trained, and a form of a form needs one level more. Each
 // form gives something and takes something: here every form has one drawback, more upkeep, less speed
 // or a weakness (weakTo). A form with fromDen (optional) is not reached through experience: a unit takes it
-// only at a cleared monster den, for a faction whose "den" in factions.json names it.
+// only at a cleared monster den, for a faction whose prize there names it ("prizes" in a lair, below).
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -39,8 +39,13 @@
 // docs/rules.md): it is not placed at the starts and leaves no den.
 // biome and count (optional) spread count lairs of the monster over that biome (grassland, forest, hills,
 // swamp or beach) for each 512 by 512 blocks of map, well away from the starts, the towns and each other;
-// such a monster has no lair at the starts unless atStarts is true. den: false means a cleared lair leaves
-// no den to use.
+// such a monster has no lair at the starts unless atStarts is true.
+// prizes (optional): what each faction gets for beating the monster, by faction id. A cleared lair leaves
+// a den that one player of a faction with a prize can use, once: { "building": id } puts that building (one
+// with "fromDen" in buildings.json) up on the den as a site to build, { "form": id } has the nearest unit
+// near the den that can take that form (one with "fromDen") take it, and { "relic": id } has the nearest
+// fighting unit near it without a relic take up that relic (relics.json). Two factions can share a prize.
+// Without prizes, a cleared lair leaves no den.
 // ride (optional) says which unit can climb on a beaten monster (rider) and what it becomes (becomes); a
 // recruited monster fights for its new owner as it is. tracksBlood (optional)
 // makes a wild monster follow a fresh blood trail it finds to the bleeding unit, well past its leash.
@@ -156,19 +161,34 @@
     "speed": 7, "hp": 60, "model": "wolf", "damage": 7, "attackTime": 1, "range": 1.25, "sight": 9,
     "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true,
     "lair": { "pack": 4, "guard": 12, "leash": 20, "reward": { "food": 150, "iron": 20 },
-      "biome": "grassland", "count": 1, "atStarts": true },
+      "biome": "grassland", "count": 1, "atStarts": true,
+      "prizes": { "orcs": { "building": "wolf_lodge" }, "settlers": { "form": "wolfheart" } } },
     "ride": { "rider": "spearman", "becomes": "wolf_rider" } },
   { "id": "boar", "name": "Wild boar", "role": "monster",
-    "description": "Roots in the forests in small herds and charges anyone who comes near. Orcs who beat one can ride it to war.",
+    "description": "Roots in the forests in small herds and charges anyone who comes near. Orcs who beat one can ride it to war, and anyone who clears a herd can pen boars at its wallow.",
     "speed": 6, "hp": 80, "model": "boar", "damage": 9, "attackTime": 1.25, "range": 1.25, "sight": 8,
     "attack": "pierce", "body": "beast", "armor": { "body": 2 },
-    "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 200 }, "biome": "forest", "count": 2, "den": false },
+    "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 200 }, "biome": "forest", "count": 2,
+      "prizes": { "orcs": { "building": "boar_pen" }, "settlers": { "building": "boar_pen" } } },
     "ride": { "rider": "spearman", "becomes": "rider" } },
   { "id": "stone_giant", "name": "Stone giant", "role": "monster",
-    "description": "A hulk of living rock that guards a pass in the hills. Slow, but each blow crushes; it leaves stone and iron behind.",
+    "description": "A hulk of living rock that guards a pass in the hills. Slow, but each blow crushes; it leaves stone and iron behind. Orcs who beat one keep it; Settlers take up its glowing heart.",
     "speed": 3, "hp": 450, "model": "stone_giant", "damage": 22, "attackTime": 1.75, "range": 1.75, "sight": 10,
     "attack": "crush", "armor": { "head": 3, "torso": 4, "arms": 3, "legs": 3 },
-    "lair": { "pack": 1, "guard": 10, "leash": 14, "reward": { "stone": 200, "iron": 60 }, "biome": "hills", "count": 1, "den": false } },
+    "lair": { "pack": 1, "guard": 10, "leash": 14, "reward": { "stone": 200, "iron": 60 }, "biome": "hills", "count": 1,
+      "prizes": { "settlers": { "relic": "giant_heart" } } } },
+  { "id": "bog_horror", "name": "Bog horror", "role": "monster",
+    "description": "A hunched thing of mud and reeds that lurks in the swamp in pairs, heals in the muck and follows the smell of blood. Whoever clears a pair takes up its bog lantern.",
+    "speed": 4, "hp": 140, "model": "bog_horror", "damage": 12, "attackTime": 1.25, "range": 1.5, "sight": 9,
+    "attack": "slash", "armor": { "torso": 1 }, "regen": 2, "tracksBlood": true,
+    "lair": { "pack": 2, "guard": 9, "leash": 14, "reward": { "food": 120 }, "biome": "swamp", "count": 2,
+      "prizes": { "orcs": { "relic": "bog_lantern" }, "settlers": { "relic": "bog_lantern" } } } },
+  { "id": "giant_crab", "name": "Giant crab", "role": "monster",
+    "description": "A shore crab the size of a cart, in pairs on the beaches: slow, shelled hard all over, with claws that crush. Settlers make shields of its shell; Orcs set crab pots where it lived.",
+    "speed": 3.5, "hp": 160, "model": "giant_crab", "damage": 10, "attackTime": 1.25, "range": 1.25, "sight": 7,
+    "attack": "crush", "body": "beast", "armor": { "head": 3, "body": 5, "legs": 2 },
+    "lair": { "pack": 2, "guard": 8, "leash": 12, "reward": { "food": 150 }, "biome": "beach", "count": 2,
+      "prizes": { "orcs": { "building": "crab_pots" }, "settlers": { "relic": "crab_shell" } } } },
   { "id": "dusk_warden", "name": "Dusk Warden", "role": "monster",
     "description": "A hulking husk of bark and bone that guards the dusk tree. Only once it falls can a battle priest heal the tree.",
     "speed": 3.5, "hp": 500, "model": "dusk_warden", "damage": 18, "attackTime": 1.5, "range": 1.75, "sight": 10,

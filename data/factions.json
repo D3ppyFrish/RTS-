@@ -9,11 +9,8 @@
 // planks), stone (castle brick) or crystal (dark slate); see game/scripts/UiStyle.cs. Only for looks.
 // tamesMonsters (optional): the faction's units beat wild monsters instead of killing them, and the
 // player then has each one ridden or recruited (see "lair" and "ride" in units.json). Other factions get
-// a lair's reward for clearing it.
-// den (optional): what the faction's players can make of a monster den once its lair is cleared, using it
-// up: { "building": id } puts that building (one with "fromDen" in buildings.json) up on the den as a site
-// to build, or { "form": id } has the nearest unit near the den that can take that form (one with "fromDen"
-// in units.json) take it. Without it, the faction's players leave dens be.
+// a lair's reward for clearing it. What each faction makes of a cleared lair's den is the lair's
+// "prizes" in units.json.
 // duskTree (optional): what the faction's players can do to the map's dusk tree once its warden is gone:
 // heal (a unit that heals tends it, grows its canopy and takes up the Dusk Staff) or raze (any of their
 // fighting units hack it down, so nobody gets the staff). See "Dusk tree" in docs/rules.md.
@@ -24,7 +21,7 @@
 [
   { "id": "settlers", "name": "Settlers", "uiLook": "stone", "description": "Humans who grow their units into new forms through experience.",
     "experience": { "levels": [150], "perDamage": 1, "perKill": 10, "perBuildSecond": 1, "perMinute": 5 },
-    "den": { "form": "wolfheart" }, "duskTree": "heal", "aiStyle": "balanced" },
+    "duskTree": "heal", "aiStyle": "balanced" },
   { "id": "orcs", "name": "Orcs", "uiLook": "timber", "description": "Clans who tame and ride the monsters they defeat.", "tamesMonsters": true,
-    "den": { "building": "wolf_lodge" }, "duskTree": "raze", "aiStyle": "waves" }
+    "duskTree": "raze", "aiStyle": "waves" }
 ]

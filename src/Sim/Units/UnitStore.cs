@@ -269,6 +269,8 @@ public sealed class UnitStore
     /// until they have it ridden or recruited.
     /// </summary>
     public bool[] Subdued = Array.Empty<bool>();
+    /// <summary>The relic the unit bears (its index in <see cref="Content.ContentDb.Relics"/> plus one), or 0 for none.</summary>
+    public short[] Relic = Array.Empty<short>();
 
     // City-states (see Economy.CityStateSystem).
     /// <summary>
@@ -371,6 +373,7 @@ public sealed class UnitStore
         Priorities[i] = 0;
         Xp[i] = 0;
         Subdued[i] = false;
+        Relic[i] = 0;
         Town[i] = 0;
         Array.Clear(Wounds, i * Body.Parts, Body.Parts);
         Array.Clear(ExtraArmour, i * Body.Parts, Body.Parts);
@@ -466,7 +469,7 @@ public sealed class UnitStore
             Mix(Cooldown[i]); Mix(Morale[i]); Mix(Rout[i]); Mix(ChaseRetry[i]); Mix(CombatWait[i]); Mix(HitBy[i]); Mix(BreachFor[i]);
             Mix(LosBlocked[i] ? 1 : 0); Mix((int)Stance[i]); Mix(LastFight[i]); Mix(Mending[i].Raw);
             Mix(Auto[i] ? 1 : 0); Mix(Held[i] ? 1 : 0); Mix((long)Priorities[i]);
-            Mix(Xp[i]); Mix(Subdued[i] ? 1 : 0); Mix(Town[i]);
+            Mix(Xp[i]); Mix(Subdued[i] ? 1 : 0); Mix(Town[i]); Mix(Relic[i]);
             for (int p = 0; p < Body.Parts; p++)
                 Mix(Wounds[i * Body.Parts + p] | ExtraArmour[i * Body.Parts + p] << 8 | BleedLeft[i * Body.Parts + p] << 16);
             Mix(Bleeding[i]); Mix(Grievous[i]); Mix(Cutter[i]);
@@ -496,7 +499,7 @@ public sealed class UnitStore
         ChaseRetry[to] = ChaseRetry[from]; CombatWait[to] = CombatWait[from]; HitBy[to] = HitBy[from]; BreachFor[to] = BreachFor[from];
         LosBlocked[to] = LosBlocked[from]; Stance[to] = Stance[from]; LastFight[to] = LastFight[from]; Mending[to] = Mending[from];
         Auto[to] = Auto[from]; Held[to] = Held[from]; Priorities[to] = Priorities[from];
-        Xp[to] = Xp[from]; Subdued[to] = Subdued[from]; Town[to] = Town[from];
+        Xp[to] = Xp[from]; Subdued[to] = Subdued[from]; Town[to] = Town[from]; Relic[to] = Relic[from];
         Array.Copy(Wounds, from * Body.Parts, Wounds, to * Body.Parts, Body.Parts);
         Array.Copy(ExtraArmour, from * Body.Parts, ExtraArmour, to * Body.Parts, Body.Parts);
         Bleeding[to] = Bleeding[from]; Grievous[to] = Grievous[from]; Cutter[to] = Cutter[from];
@@ -530,6 +533,7 @@ public sealed class UnitStore
         Array.Resize(ref LastFight, capacity); Array.Resize(ref Mending, capacity);
         Array.Resize(ref Auto, capacity); Array.Resize(ref Held, capacity); Array.Resize(ref Priorities, capacity);
         Array.Resize(ref Xp, capacity); Array.Resize(ref Subdued, capacity); Array.Resize(ref Town, capacity);
+        Array.Resize(ref Relic, capacity);
         Array.Resize(ref Wounds, capacity * Body.Parts); Array.Resize(ref ExtraArmour, capacity * Body.Parts);
         Array.Resize(ref Bleeding, capacity); Array.Resize(ref BleedLeft, capacity * Body.Parts);
         Array.Resize(ref Cutter, capacity); Array.Resize(ref Grievous, capacity);

@@ -1214,7 +1214,7 @@ public partial class Hud : CanvasLayer
     {
         int player = PlayerControl.LocalPlayer;
         var lair = _control.UsableDen();
-        var use = _sim.Monsters.DenUse(player);
+        var use = lair != null ? _sim.Monsters.DenUse(player, lair) : null;
         _denButton.Visible = lair != null && use != null;
         if (lair == null || use == null) return;
         string den = $"{lair.Monster.Name.ToLowerInvariant()} den";
@@ -1238,6 +1238,24 @@ public partial class Hud : CanvasLayer
                                      $"{form.Name.ToLowerInvariant()}, a form it can get nowhere else. The den is gone.\n{form.Description}";
             _denButton.Disabled = false;
         }
+        else if (use.Relic is { } relic)
+        {
+            _denButton.Text = $"Take up the {relic.Name.ToLowerInvariant()} at the {den}";
+            _denButton.Icon = UiIcons.Get(relic.Icon);
+            _denButton.TooltipText = $"The selected fighting unit nearest the den, without a relic already, takes up the {relic.Name.ToLowerInvariant()}" +
+                                     $"{RelicText(relic)}. It keeps it until it dies. The den is gone.\n{relic.Description}";
+            _denButton.Disabled = false;
+        }
+    }
+
+    /// <summary>What a relic gives its bearer, as ": +60 hit points, +2 armour", or "" for nothing.</summary>
+    private static string RelicText(Rts.Sim.Content.RelicDef relic)
+    {
+        var parts = new List<string>();
+        if (relic.Hp > 0) parts.Add($"+{relic.Hp} hit points");
+        if (relic.Damage > 0) parts.Add($"+{relic.Damage} damage");
+        if (relic.Armour > 0) parts.Add($"+{relic.Armour} armour");
+        return parts.Count > 0 ? ": " + string.Join(", ", parts) : "";
     }
 
     /// <summary>
@@ -1436,6 +1454,7 @@ public partial class Hud : CanvasLayer
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
             if (hurt > 0) heals += hurt >= Rts.Sim.World.HazardSystem.LavaDamage ? " (scorched by lava)" : " (poisoned by the bog)";
             string staff = _sim.DuskTree.HasStaff(i) ? " with the Dusk Staff" : "";
+            if (_sim.RelicOf(i) is { } relic) staff += $" with the {relic.Name}";
             int tend = _sim.DuskTree.TendProgress(u.Id[i]);
             if (tend > 0)
                 heals += _sim.DuskTree.Razing(u.Id[i])
