@@ -1136,7 +1136,9 @@ public partial class Hud : CanvasLayer
         _earthWallButton.TooltipText = $"A mage raises a wall of earth {SpellSystem.Height} blocks high along a line of up to " +
                                        $"{SpellSystem.MaxLength} columns, within {SpellSystem.CastRange} blocks of it. " +
                                        $"It crumbles after {SpellSystem.LastsTicks / Simulation.TicksPerSecond} s; workers can dig through it before then. " +
-                                       $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s.";
+                                       $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s. " +
+                                       $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage makes the wall " +
+                                       $"a column thicker and {SpellSystem.WallPerHelper} columns longer.";
         _earthWallButton.Disabled = ready == 0 && !tool;
     }
 
@@ -1156,7 +1158,9 @@ public partial class Hud : CanvasLayer
                                        $"and {SpellSystem.IceWidth} wide, within {SpellSystem.CastRange} blocks of it, that anyone can walk on, slipping and sliding. " +
                                        $"It cracks, then melts after {SpellSystem.IceLastsTicks / Simulation.TicksPerSecond} s: " +
                                        "whoever is still on it falls, and drowns in deep water. " +
-                                       $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s before its next spell.";
+                                       $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s before its next spell. " +
+                                       $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage makes the bridge " +
+                                       $"{SpellSystem.IceWidthPerHelper} columns wider.";
         _iceBridgeButton.Disabled = ready == 0 && !tool;
     }
 
@@ -1307,7 +1311,8 @@ public partial class Hud : CanvasLayer
                     if (c.Ok) ok++;
                 return (_control.WallStarted
                            ? $"Earth Wall: let go to raise earth on {ok} columns" + (ok < preview.Count ? $" ({preview.Count - ok} have a unit, a building or water on them)" : "")
-                           : $"Earth Wall: drag a line of up to {SpellSystem.MaxLength} columns for a mage to raise earth along") +
+                           : $"Earth Wall: drag a line of up to {SpellSystem.WallLength(_control.GroupCasters())} columns for a mage to raise earth along") +
+                       (_control.GroupCasters() > 1 ? $"   ({_control.GroupCasters()} mages together: {SpellSystem.WallThickness(_control.GroupCasters())} thick)" : "") +
                        (_control.OwnCasters().Count == 0 ? "   (select a mage first)"
                            : _control.ReadyCaster() == 0 ? "   (no selected mage is ready)" : "") +
                        "\nRight click or Esc to stop";
@@ -1319,7 +1324,8 @@ public partial class Hud : CanvasLayer
                 foreach (var c in preview)
                     if (c.Ok) ok++;
                 return (!_control.WallStarted
-                           ? $"Ice Bridge: drag from bank to bank, across water, for a mage to freeze a way over (up to {SpellSystem.IceLength} columns)"
+                           ? $"Ice Bridge: drag from bank to bank, across water, for a mage to freeze a way over (up to {SpellSystem.IceLength} columns)" +
+                             (_control.GroupCasters(Spell.IceBridge) > 1 ? $"   ({_control.GroupCasters(Spell.IceBridge)} mages together: {SpellSystem.IceWidthFor(_control.GroupCasters(Spell.IceBridge))} wide)" : "")
                            : preview.Count == 0
                                ? "Ice Bridge: both ends must be ground about level with each other, with water between"
                                : $"Ice Bridge: let go to freeze {ok} columns of ice" + (ok < preview.Count ? $" ({preview.Count - ok} have something in the way)" : "")) +

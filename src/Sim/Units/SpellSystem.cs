@@ -54,8 +54,13 @@ public enum Spell
 /// the caster freezes the water into a level deck of ice from bank to bank, like a bridge, up to
 /// <see cref="IceLength"/> columns long and <see cref="IceWidth"/> wide, that anyone can walk on. It melts after
 /// <see cref="IceLastsTicks"/>; a unit still on it then falls, and drowns where only deep water is under it.</para>
-/// A caster that cast either spell waits <see cref="CooldownTicks"/> before it casts again. All numbers are
-/// starting guesses to be tuned in playtests.
+/// A caster that cast either spell waits <see cref="CooldownTicks"/> before it casts again.
+/// <para><b>Group spells</b>: every ready caster among the command's units (up to <see cref="MaxGroup"/>) casts
+/// together. The ones out of range walk up while the others wait, and the spell goes off once all of them are in
+/// range. Each helper beyond the first makes an earth wall one column thicker and <see cref="WallPerHelper"/>
+/// columns longer (<see cref="WallLength"/>, <see cref="WallThickness"/>), and an ice bridge
+/// <see cref="IceWidthPerHelper"/> columns wider (<see cref="IceWidthFor"/>). Every caster in the group then
+/// waits. All numbers are starting guesses to be tuned in playtests.</para>
 /// </summary>
 public sealed class SpellSystem
 {
@@ -77,6 +82,24 @@ public sealed class SpellSystem
     public const int IceLastsTicks = 30 * Simulation.TicksPerSecond;
     /// <summary>Ticks before it thaws that an ice bridge shows cracks: the last 5 seconds.</summary>
     public const int CrackTicks = 5 * Simulation.TicksPerSecond;
+    /// <summary>Most casters that join one group spell.</summary>
+    public const int MaxGroup = 3;
+    /// <summary>Columns each caster beyond the first adds to an earth wall's length.</summary>
+    public const int WallPerHelper = 4;
+    /// <summary>Columns each caster beyond the first adds to an ice bridge's width (one on each side).</summary>
+    public const int IceWidthPerHelper = 2;
+
+    /// <summary>Casters that count for a group spell of <paramref name="casters"/>: 1 to <see cref="MaxGroup"/>.</summary>
+    public static int GroupSize(int casters) => Math.Clamp(casters, 1, MaxGroup);
+
+    /// <summary>Most columns along its line an earth wall raised by <paramref name="casters"/> together covers.</summary>
+    public static int WallLength(int casters) => MaxLength + WallPerHelper * (GroupSize(casters) - 1);
+
+    /// <summary>Columns thick an earth wall raised by <paramref name="casters"/> together is: one per caster.</summary>
+    public static int WallThickness(int casters) => GroupSize(casters);
+
+    /// <summary>Columns across an ice bridge frozen by <paramref name="casters"/> together.</summary>
+    public static int IceWidthFor(int casters) => IceWidth + IceWidthPerHelper * (GroupSize(casters) - 1);
 
     private readonly Simulation _sim;
     // Casters (unit id) and the tick each can cast again; sorted, so the hash is the same everywhere.
@@ -89,6 +112,10 @@ public sealed class SpellSystem
     private sealed class Pending
     {
         public int Id;
+        // The group it casts with: the id of the group's first caster.
+        public int Group;
+        // In range, waiting for the rest of its group.
+        public bool Waiting;
         public Spell Spell;
         public int X1, Z1, X2, Z2;
         // Where it walks to: the line's middle.
@@ -146,20 +173,33 @@ public sealed class SpellSystem
     }
 
     /// <summary>
-    /// The columns an earth wall from (x1, z1) to (x2, z2) covers (the line a wall is laid along, at most
-    /// <see cref="MaxLength"/>), each with its ground level and whether earth can rise there. The game previews
-    /// the same plan.
+    /// The columns an earth wall from (x1, z1) to (x2, z2) covers, raised by <paramref name="casters"/> together:
+    /// the line a wall is laid along, at most <see cref="WallLength"/> columns, and as many columns thick as
+    /// <see cref="WallThickness"/> (the line, then one on each side in turn, across the line's longer axis). Each
+    /// column has its ground level and whether earth can rise there. The game previews the same plan.
     /// </summary>
-    public void Plan(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns)
+    public void Plan(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1)
     {
         columns.Clear();
-        foreach (var (x, z) in Economy.EconomySystem.WallLine(x1, z1, x2, z2))
+        int length = WallLength(casters), thick = WallThickness(casters), n = 0;
+        bool alongX = Math.Abs(x2 - x1) >= Math.Abs(z2 - z1);
+        var seen = new HashSet<long>();
+        foreach (var (lx, lz) in Economy.EconomySystem.WallLine(x1, z1, x2, z2))
         {
-            if (columns.Count == MaxLength) break;
-            int g = World.InBounds(x, 1, z) ? Walk.GroundLevel(World, x, z) : -1;
-            columns.Add((x, z, g, Room(x, z, g)));
+            if (n++ == length) break;
+            for (int s = 0; s < thick; s++)
+            {
+                int side = Side(s);
+                int x = alongX ? lx : lx + side, z = alongX ? lz + side : lz;
+                if (!seen.Add(((long)x << 32) | (uint)z)) continue;
+                int g = World.InBounds(x, 1, z) ? Walk.GroundLevel(World, x, z) : -1;
+                columns.Add((x, z, g, Room(x, z, g)));
+            }
         }
     }
+
+    /// <summary>The s-th row of a spell across its line: the line itself, then one side, then the other, and so on out.</summary>
+    private static int Side(int s) => s == 0 ? 0 : s % 2 == 1 ? -(s + 1) / 2 : s / 2;
 
     private bool Room(int x, int z, int g)
     {
@@ -181,16 +221,17 @@ public sealed class SpellSystem
     private static bool Fits(BlockType b) => b == BlockType.Air || BlockInfo.IsLeaves(b);
 
     /// <summary>
-    /// Plans an ice bridge from column (x1, z1) to (x2, z2) into <paramref name="columns"/>, as the bridge tool
-    /// plans a deck: both ends must be ground to stand on, at most a climb apart, and the ice runs level at the
-    /// higher end's standing level, one block under it. It covers the line (at most <see cref="IceLength"/>
-    /// columns that need ice) and the column on each side (across the line's longer axis): a column gets ice
+    /// Plans an ice bridge from column (x1, z1) to (x2, z2), frozen by <paramref name="casters"/> together, into
+    /// <paramref name="columns"/>, as the bridge tool plans a deck: both ends must be ground to stand on, at most
+    /// a climb apart, and the ice runs level at the higher end's standing level, one block under it. It covers the
+    /// line (at most <see cref="IceLength"/> columns that need ice) and columns on each side (across the line's
+    /// longer axis), <see cref="IceWidthFor"/> in all: a column gets ice
     /// where its ground is lower than the deck. Each column has the level units would stand at on the ice and
     /// whether ice forms there (open air or water where the ice goes and above it, no building or city-state's
     /// town). Returns that level, or -1 (and no columns) if the ends are not ground, too far apart in height, or
     /// no column of the line has water under it: the ice is frozen out of water. The game previews the same plan.
     /// </summary>
-    public int PlanIce(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns)
+    public int PlanIce(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1)
     {
         columns.Clear();
         var w = World;
@@ -208,9 +249,9 @@ public sealed class SpellSystem
             if (!Needs(lx, lz, stand)) continue;
             if (n++ == IceLength) break;
             if (OverWater(lx, lz, deckY)) water = true;
-            for (int s = 0; s < IceWidth; s++)
+            for (int s = 0, width = IceWidthFor(casters); s < width; s++)
             {
-                int side = s == 0 ? 0 : s % 2 == 1 ? -(s + 1) / 2 : s / 2;
+                int side = Side(s);
                 int x = alongX ? lx : lx + side, z = alongX ? lz + side : lz;
                 if (!seen.Add(((long)x << 32) | (uint)z) || !Needs(x, z, stand)) continue;
                 columns.Add((x, z, stand, IceRoom(x, z, deckY)));
@@ -252,41 +293,56 @@ public sealed class SpellSystem
     }
 
     /// <summary>
-    /// The first of the player's units that can raise an earth wall now (one already in range first) raises
-    /// it on the command's line, or walks into range and then raises it.
+    /// The player's units that can raise an earth wall now (up to <see cref="MaxGroup"/>, ones already in range
+    /// first) raise it together on the command's line, walking into range first where they are not.
     /// </summary>
     internal void Apply(EarthWallCommand c) => Order(c, Spell.EarthWall, c.X1, c.Z1, c.X2, c.Z2);
 
     /// <summary>
-    /// The first of the player's units that can freeze an ice bridge now (one already in range first) freezes
-    /// the water along the command's line, or walks into range and then freezes it.
+    /// The player's units that can freeze an ice bridge now (up to <see cref="MaxGroup"/>, ones already in range
+    /// first) freeze the water along the command's line together, walking into range first where they are not.
     /// </summary>
     internal void Apply(IceBridgeCommand c) => Order(c, Spell.IceBridge, c.X1, c.Z1, c.X2, c.Z2);
 
     private void Order(UnitsCommand c, Spell spell, int x1, int z1, int x2, int z2)
     {
         int mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
-        int far = -1;
+        var near = new List<int>();
+        var far = new List<int>();
         foreach (int i in _sim.OwnedUnits(c))
         {
             if (!CanCast(i, spell) || Casting(U.Id[i])) continue;
-            if (InRange(i, mx, mz))
-            {
-                U.Order[i] = UnitOrder.Idle;
-                Cast(i, spell, x1, z1, x2, z2);
-                return;
-            }
-            if (far < 0) far = i;
+            (InRange(i, mx, mz) ? near : far).Add(i);
         }
-        if (far < 0 || !World.InBounds(mx, 1, mz)) return;
+        var group = new List<int>(near);
+        group.AddRange(far);
+        if (group.Count > MaxGroup) group.RemoveRange(MaxGroup, group.Count - MaxGroup);
+        if (group.Count == 0) return;
+        if (far.Count == 0 || group.Count == near.Count)
+        {
+            foreach (int i in group) U.Order[i] = UnitOrder.Idle;
+            Cast(group, spell, x1, z1, x2, z2);
+            return;
+        }
+        if (!World.InBounds(mx, 1, mz)) return;
         // Walk to the line's middle, or (over water) to the nearest ground beside it.
         int gy = Walk.GroundLevel(World, mx, mz), gx = mx, gz = mz;
         if ((gy < 0 || World.Get(mx, gy, mz) == BlockType.Water) && !Shore(mx, mz, out gx, out gy, out gz)) return;
-        U.ClearJob(far);
-        U.ClearCombat(far);
-        U.ClearFormation(far);
-        _pending.Add(new Pending { Id = U.Id[far], Spell = spell, X1 = x1, Z1 = z1, X2 = x2, Z2 = z2, GoX = gx, GoY = gy, GoZ = gz });
-        _sim.SendUnit(far, gx, gz, gy);
+        int lead = U.Id[group[0]];
+        foreach (int i in group)
+        {
+            bool waiting = InRange(i, mx, mz);
+            U.ClearJob(i);
+            U.ClearCombat(i);
+            U.ClearFormation(i);
+            if (waiting) U.Order[i] = UnitOrder.Idle;
+            _pending.Add(new Pending
+            {
+                Id = U.Id[i], Group = lead, Waiting = waiting, Spell = spell, X1 = x1, Z1 = z1, X2 = x2, Z2 = z2,
+                GoX = gx, GoY = gy, GoZ = gz,
+            });
+            if (!waiting) _sim.SendUnit(i, gx, gz, gy);
+        }
     }
 
     /// <summary>The nearest column to (x, z), within cast range, with ground to stand on out of the water.</summary>
@@ -307,7 +363,7 @@ public sealed class SpellSystem
         return false;
     }
 
-    /// <summary>The player's units among the command's stop walking to raise a wall (they were given another order).</summary>
+    /// <summary>The player's units among the command's stop walking to (or waiting to) cast (they were given another order).</summary>
     internal void Release(UnitsCommand c)
     {
         if (_pending.Count == 0) return;
@@ -323,20 +379,22 @@ public sealed class SpellSystem
         return dx * dx + dz * dz <= r * r;
     }
 
-    private void Cast(int i, Spell spell, int x1, int z1, int x2, int z2)
+    /// <summary>The casters (unit indices, the first leading) cast the spell together; each then waits.</summary>
+    private void Cast(List<int> casters, Spell spell, int x1, int z1, int x2, int z2)
     {
+        int i = casters[0], n = casters.Count;
         // A plan that spans nothing (no ground at its ends, no water between) freezes nothing and costs nothing.
-        if (spell == Spell.IceBridge && !Freeze(i, x1, z1, x2, z2)) return;
-        if (spell == Spell.EarthWall) Raise(i, x1, z1, x2, z2);
-        _ready[U.Id[i]] = _sim.Tick + CooldownTicks;
+        if (spell == Spell.IceBridge && !Freeze(i, n, x1, z1, x2, z2)) return;
+        if (spell == Spell.EarthWall) Raise(i, n, x1, z1, x2, z2);
+        foreach (int k in casters) _ready[U.Id[k]] = _sim.Tick + CooldownTicks;
     }
 
-    private void Raise(int i, int x1, int z1, int x2, int z2)
+    private void Raise(int i, int casters, int x1, int z1, int x2, int z2)
     {
         var w = World;
         var wall = new EarthWall { Owner = U.Owner[i], Raised = _sim.Tick, Crumbles = _sim.Tick + LastsTicks };
         var plan = new List<(int X, int Z, int Y, bool Room)>();
-        Plan(x1, z1, x2, z2, plan);
+        Plan(x1, z1, x2, z2, plan, casters);
         foreach (var (x, z, g, room) in plan)
         {
             if (!room) continue;
@@ -353,10 +411,10 @@ public sealed class SpellSystem
     private readonly List<(int X, int Z, int Y, bool Room)> _icePlan = new();
 
     /// <summary>Ice forms in each column of the plan with room, level with the deck; leaves in the way are pushed aside.</summary>
-    private bool Freeze(int i, int x1, int z1, int x2, int z2)
+    private bool Freeze(int i, int casters, int x1, int z1, int x2, int z2)
     {
         var w = World;
-        int stand = PlanIce(x1, z1, x2, z2, _icePlan);
+        int stand = PlanIce(x1, z1, x2, z2, _icePlan, casters);
         if (stand < 0) return false;
         LastFreeze = _sim.Tick;
         var ice = new IceBridge { Owner = U.Owner[i], Frozen = _sim.Tick, Thaws = _sim.Tick + IceLastsTicks };
@@ -375,8 +433,9 @@ public sealed class SpellSystem
     }
 
     /// <summary>
-    /// After the dusk tree: casters walking into range raise their wall once in range (one that was given
-    /// another order, stopped short or can no longer cast gives up), and walls whose time is up crumble.
+    /// After the dusk tree: casters walking into range stop and wait there (one that was given another order,
+    /// stopped short or can no longer cast drops out of its group), a group whose casters are all in range casts,
+    /// and walls and ice whose time is up crumble and thaw.
     /// </summary>
     public void Step()
     {
@@ -385,20 +444,39 @@ public sealed class SpellSystem
         {
             var p = _pending[k];
             int i = u.IndexOf(p.Id);
-            bool walking = i >= 0 && u.Order[i] == UnitOrder.Move && u.OrderX[i] == p.GoX && u.OrderZ[i] == p.GoZ;
             if (i < 0 || !CanCast(i, p.Spell) || u.Target[i] != 0 || u.Job[i] != UnitJob.None)
             {
                 _pending.RemoveAt(k--);
                 continue;
             }
-            int mx = (p.X1 + p.X2) / 2, mz = (p.Z1 + p.Z2) / 2;
-            if (InRange(i, mx, mz))
+            if (p.Waiting) continue;
+            bool walking = u.Order[i] == UnitOrder.Move && u.OrderX[i] == p.GoX && u.OrderZ[i] == p.GoZ;
+            if (InRange(i, (p.X1 + p.X2) / 2, (p.Z1 + p.Z2) / 2))
             {
-                _pending.RemoveAt(k--);
+                p.Waiting = true;
                 u.Order[i] = UnitOrder.Idle;
-                Cast(i, p.Spell, p.X1, p.Z1, p.X2, p.Z2);
             }
             else if (!walking) _pending.RemoveAt(k--);
+        }
+        // Groups whose casters are all in range cast, in the order they were told.
+        for (int k = 0; k < _pending.Count; k++)
+        {
+            int group = _pending[k].Group;
+            bool first = true, ready = true;
+            for (int j = 0; j < _pending.Count; j++)
+            {
+                if (_pending[j].Group != group) continue;
+                if (j < k) first = false;
+                if (!_pending[j].Waiting) ready = false;
+            }
+            if (!first || !ready) continue;
+            var p = _pending[k];
+            var casters = new List<int>();
+            foreach (var q in _pending)
+                if (q.Group == group) casters.Add(u.IndexOf(q.Id));
+            _pending.RemoveAll(q => q.Group == group);
+            Cast(casters, p.Spell, p.X1, p.Z1, p.X2, p.Z2);
+            k = -1;
         }
         for (int k = 0; k < _walls.Count; k++)
         {
@@ -481,7 +559,7 @@ public sealed class SpellSystem
         Mix(_pending.Count);
         foreach (var p in _pending)
         {
-            Mix(p.Id); Mix((int)p.Spell); Mix(p.X1); Mix(p.Z1); Mix(p.X2); Mix(p.Z2); Mix(p.GoX); Mix(p.GoY); Mix(p.GoZ);
+            Mix(p.Id); Mix(p.Group); Mix(p.Waiting ? 1 : 0); Mix((int)p.Spell); Mix(p.X1); Mix(p.Z1); Mix(p.X2); Mix(p.Z2); Mix(p.GoX); Mix(p.GoY); Mix(p.GoZ);
         }
         Mix(_walls.Count);
         foreach (var wall in _walls)

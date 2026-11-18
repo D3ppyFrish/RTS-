@@ -15,7 +15,8 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # Seed 1234: at row z 230 the river runs from x 270 to 278, two blocks deep, between banks that step up to
 # flat ground where units stand at level 22 (x 264..267 and x 281 on). With --battle=16 at x 273 your army
 # stands at x 266..267, the enemy's at x 279..280 on the far bank's slope. The ice is drawn from x 265 to 283:
-# 13 columns need it (x 268 to 280), three wide.
+# 13 columns need it (x 268 to 280). The army's three mages freeze it together (group spells, issue #39):
+# seven wide: 89 columns, where the ground is lower than the deck.
 STEPS="
 wait 20
 camera 273,230 300 50 26
@@ -64,12 +65,12 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 # The army is selected, with mages among it that can freeze water, ready.
 [ "$(field "${UI[0]}" own)" -ge 12 ] || fail "the army is not selected: ${UI[0]}"
 [ "$(field "${UI[0]}" ice_casters)" -ge 2 ] && [ "$(field "${UI[0]}" caster_ready)" -eq 1 ] || fail "no ready mages selected: ${UI[0]}"
-# Dragging the tool from bank to bank previews 13 columns of ice, three wide; nothing is frozen yet.
+# Dragging the tool from bank to bank previews 13 columns of ice, seven wide; nothing is frozen yet.
 [ "$(field "${UI[1]}" tool)" = IceBridge ] || fail "the Ice Bridge tool is not on: ${UI[1]}"
-[ "$(field "${UI[1]}" wall_preview)" -eq 39 ] || fail "the preview does not span the river: ${UI[1]}"
+[ "$(field "${UI[1]}" wall_preview)" -eq 89 ] || fail "the preview does not span the river: ${UI[1]}"
 [ "$(field "${UI[1]}" ice_bridges)" -eq 0 ] || fail "ice formed before letting go: ${UI[1]}"
 # Letting go freezes the way across, and the tool is put away.
-[ "$(field "${UI[2]}" ice_bridges)" -eq 1 ] && [ "$(field "${UI[2]}" ice_blocks)" -eq 39 ] || fail "the ice did not form: ${UI[2]}"
+[ "$(field "${UI[2]}" ice_bridges)" -eq 1 ] && [ "$(field "${UI[2]}" ice_blocks)" -eq 89 ] || fail "the ice did not form: ${UI[2]}"
 [ "$(field "${UI[2]}" tool)" = Select ] || fail "the tool stayed on: ${UI[2]}"
 # In its last seconds it cracks, then it melts.
 [ "$(field "${UI[3]}" ice_bridges)" -eq 1 ] && [ "$(field "${UI[3]}" ice_cracking)" -eq 1 ] || fail "the ice is not cracking: ${UI[3]}"

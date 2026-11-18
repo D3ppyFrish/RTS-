@@ -1584,6 +1584,18 @@ public partial class PlayerControl : Node
         return best;
     }
 
+    /// <summary>
+    /// How many of the selected casters would cast the spell together now (see <see cref="SpellSystem.GroupSize"/>):
+    /// the ready ones, at most <see cref="SpellSystem.MaxGroup"/>, or 1 while none is ready (for the preview).
+    /// </summary>
+    public int GroupCasters(Spell spell = Spell.EarthWall)
+    {
+        int n = 0;
+        foreach (int id in OwnCasters(spell))
+            if (_sim.Spells.CanCast(_sim.Units.IndexOf(id), spell)) n++;
+        return SpellSystem.GroupSize(n);
+    }
+
     /// <summary>Pressing the button down on the ground starts the wall (or bridge) there.</summary>
     private void WallStart(Vector2 screen)
     {
@@ -1655,8 +1667,8 @@ public partial class PlayerControl : Node
     private void UpdateEarthWallPreview()
     {
         if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
-        if (Tool == ToolMode.IceBridge) _sim.Spells.PlanIce(_wallX, _wallZ, x2, z2, _earthPlan); // empty if it cannot span
-        else _sim.Spells.Plan(_wallX, _wallZ, x2, z2, _earthPlan);
+        if (Tool == ToolMode.IceBridge) _sim.Spells.PlanIce(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.IceBridge)); // empty if it cannot span
+        else _sim.Spells.Plan(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters());
         foreach (var (x, z, y, room) in _earthPlan)
             if (y >= 1) _wallPreview.Add((x, y, z, room));
     }
