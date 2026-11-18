@@ -3,8 +3,9 @@
 # its totem in plain wood and six wild guards round it). The starting units clear the wolf lair on the
 # road east, then march on the goblin town and break its totem: the town is yours, its guards change sides
 # and the totem stands again in your colour. A goblin of each kind is hired at its market, and a caravan is
-# trained at the town hall and sent to trade at the town, while tribute comes in. Saves PNGs to OUT_DIR and
-# fails if the UI state is not as expected.
+# trained at the town hall and sent to trade at the town, while tribute comes in. Last the ogres' hold
+# (issue #46) is picked from the top bar: neutral, its stone idol plain and four ogre guards round it. Saves
+# PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-citystate-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/ui}")"
@@ -17,6 +18,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # 84..90 x 253..259 with the starting units in rows just south of it, and the wolf lair 40 blocks east
 # (den at 127,256), which a lone caravan would not get past. --goods gives enough for the hires and the
 # caravan; --houses makes room for them behind the hall (the start has more people than its hall houses).
+# The ogres' hold has its market at 261,456.
 STEPS="
 wait 20
 clickui city_goblins
@@ -77,6 +79,15 @@ print
 camera 261,204 20 50 30
 wait 5
 shot $OUT/ui-caravan-trade.png
+clickui city_ogres
+wait 5
+print
+camera 261,456 20 40 26
+wait 5
+shot $OUT/ui-ogres.png
+camera 262,457 -30 40 11
+wait 5
+shot $OUT/ui-ogres-close.png
 "
 LOG="$OUT/ui-citystate.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -87,7 +98,7 @@ fail() { echo "UI city-state test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 7 ] || fail "expected 7 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 8 ] || fail "expected 8 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" city)" = goblins ] && [ "$(field "${UI[0]}" holder)" -eq -1 ] && [ "$(field "${UI[0]}" totem_owner)" -eq 7 ] \
   && [ "$(field "${UI[0]}" guards)" -eq 6 ] && [ "$(field "${UI[0]}" guards_owner)" -eq 7 ] \
   || fail "the goblin town is not selected, or it is not neutral with its totem and guards: ${UI[0]}"
@@ -100,5 +111,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[5]}" trading)" -eq 1 ] || fail "the caravan is not trading: ${UI[5]}"
 [ "$(field "${UI[6]}" holder)" -eq 0 ] && [ "$(field "${UI[6]}" caravans)" -eq 1 ] && [ "$(field "${UI[6]}" iron)" -gt "$(field "${UI[5]}" iron)" ] \
   || fail "no tribute or trade came in from the goblins: ${UI[6]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 5 ] || fail "missing screenshots"
+[ "$(field "${UI[7]}" city)" = ogres ] && [ "$(field "${UI[7]}" holder)" -eq -1 ] && [ "$(field "${UI[7]}" totem_owner)" -eq 7 ] \
+  && [ "$(field "${UI[7]}" guards)" -eq 4 ] || fail "the ogres' hold is not selected, or it is not neutral with its idol and guards: ${UI[7]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 7 ] || fail "missing screenshots"
 echo "UI city-state screenshot test OK: $OUT"

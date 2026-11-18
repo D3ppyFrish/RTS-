@@ -546,14 +546,19 @@ large bare tree in the hills about halfway between the starts, and a monster gua
 ## City-states
 
 `src/Sim/Economy/CityStateSystem.cs`: towns of other races, too small to win, that trade with everyone
-and are won by force. There is one so far, the goblins (`data/citystates.json`).
+and are won by force. There are two, the goblins and the ogres (`data/citystates.json`); everything below
+holds for both, with the goblins' numbers unless the ogres' section says otherwise.
 
 - **The town**: at match start each city-state gets a town about as far from every start area as from
   the others (on a 512 map about 96 blocks from their middle, where the ground allows): a levelled
   15×15 square with four stone huts around a market, and the goblins' totem on the market (a 3×3 stone
   plinth with a carved pole, 7 high). Nobody can build on the square, though its blocks can be dug like
   any others. Its own wolf lair lies 24 to 36 blocks further out, so the start areas reach the town
-  before its lair.
+  before its lair. Each further town is placed the same way, but also kept about one and a half times
+  that distance (144 blocks on a 512 map) from the towns placed before it, so the towns spread round the
+  middle, and never nearer a start than that; it may lie up to two and a half times that distance from the
+  middle of the starts, as the fair ground nearer in may be taken, and where the ground allows no fair spot
+  it lies somewhat nearer one start. No town goes within 36 blocks of the dusk tree's warden.
 - **The totem** (`goblin_totem` in `buildings.json`): attacked like any building (right-click it with
   soldiers). Whoever breaks it holds the town, and it stands again 5 seconds later in their colour.
   Breaking a held town's totem takes the town over. Your own units do not attack your totem.
@@ -587,6 +592,22 @@ and are won by force. There is one so far, the goblins (`data/citystates.json`).
 - **Computer players** (from Easy up) send a party of 6 soldiers from 6 minutes on, once they have 8
   at home and no wave out: it fights the guards, then breaks the totem, and is tried again 3 minutes
   later if it fails. Holding a town, they hire its goblins when they can.
+
+- **The ogres' hold** (issue #46): a second city-state, placed after the goblins and away from them. Its
+  huts are stone with red tile roofs, and its totem is an ogre idol (`ogre_idol`: a stone pillar 8 high on
+  a 3×3 plinth, carved with a horned ogre face, painted in the holder's colour). It is guarded by two ogre
+  brutes and two ogre hurlers (a fallen one is replaced every 60 seconds), and a stone giant's lair lies
+  beyond it.
+  Its holder gets 30 stone every minute as tribute, caravans bring back stone there (10 per 100 blocks of
+  route) instead of iron, and its holder hires ogres, at most 3 ready at a time and one more every 60
+  seconds:
+  - **Ogre brute**: 260 hit points, speed 3.5, a club that crushes (18 damage every 1.6 seconds); 120 food
+    and 30 iron.
+  - **Ogre hurler**: 160 hit points, throws boulders 9 columns that crush (16 damage every 3 seconds, a
+    little splash); 120 food and 60 stone.
+  - Both **regenerate**: they heal 1% of their hit points every second even in a fight (`"regen"` in
+    `units.json`), and out of the fight at that rate or the usual one, whichever is faster. Each eats 3
+    food a minute.
 
 This replaced the earlier influence alliance (gifts, influence from trade and lairs, raiding caravans
 for influence), which is gone. `CityStateTests` has the issue's checks: breaking the totem makes the

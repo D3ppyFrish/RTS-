@@ -524,7 +524,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
-                "upkeep", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
+                "upkeep", "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
                 "bleeds", "tracksBlood", "earthWall", "iceBridge", "start");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
@@ -565,6 +565,7 @@ public static class ContentLoader
                 HealTicks = Math.Max(1, (healTime * Tps).RoundToInt()),
                 HealRange = o.Decimal("healRange", Fix64.One, Fix64.FromInt(32), Fix64.FromInt(5), required: false),
                 Upkeep = o.Int("upkeep", 0, 100, 1),
+                Regen = o.Int("regen", 0, 100, 0),
                 WorkPercent = o.Int("work", 10, 1000, 100),
                 Lair = Lair(o),
                 FromDen = o.Bool("fromDen"),
@@ -1231,6 +1232,7 @@ public static class ContentLoader
                 h.Add(u.HealTicks);
                 h.Add(u.HealRange.Raw);
                 h.Add(u.Upkeep);
+                h.Add(u.Regen);
                 h.Add(u.WorkPercent);
                 h.Add(u.EvolvesFrom?.Index ?? -1);
                 h.Add(u.FromDen ? 1 : 0);

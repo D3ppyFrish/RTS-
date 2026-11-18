@@ -88,6 +88,12 @@ public sealed class UnitDef
     public int HealTicks { get; init; } = 2 * Simulation.TicksPerSecond;
     public Fix64 HealRange { get; init; } = Fix64.FromInt(5);
 
+    /// <summary>
+    /// Percent of its hit points it heals each second even in a fight (ogres shrug off wounds); 0 for none.
+    /// Out of the fight it heals at this rate or the usual one, whichever is faster (see <c>CombatSystem.StepRecovery</c>).
+    /// </summary>
+    public int Regen { get; init; }
+
     /// <summary>Food it eats each minute (see <see cref="Economy.EconomySystem.UpkeepInterval"/>).</summary>
     public int Upkeep { get; init; } = 1;
     /// <summary>How fast it gathers, builds, farms and digs tunnels, in percent of the usual.</summary>

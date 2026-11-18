@@ -22,7 +22,9 @@
 // start (optional, default true): false keeps a trained unit out of the units matches start with, so it is
 // only ever trained (the healer).
 // upkeep (optional, default 1) is the food it eats a minute; work (optional, default 100) is how fast
-// it gathers, builds, farms and digs tunnels, in percent.
+// it gathers, builds, farms and digs tunnels, in percent. regen (optional, default 0) is the percent of its
+// hit points it heals each second even in a fight (the ogres); out of the fight it heals at this rate or the
+// usual one, whichever is faster.
 // Evolution: a unit with evolvesFrom is a form that unit can take once it has the experience (see
 // "experience" in factions.json): it is not trained, and a form of a form needs one level more. Each
 // form gives something and takes something: here every form has one drawback, more upkeep, less speed
@@ -197,5 +199,17 @@
     "description": "Slings rocks and scrap from behind the line.",
     "speed": 4.5, "hp": 35, "model": "goblin_slinger", "damage": 5, "attackTime": 1.2, "range": 7, "sight": 10,
     "attack": "crush",
-    "cost": { "food": 40, "wood": 20 } }
+    "cost": { "food": 40, "wood": 20 } },
+
+  // Ogre mercenaries, hired at the ogres' hold by its holder: big, slow and costly, and they heal even in a fight.
+  { "id": "ogre_brute", "name": "Ogre brute", "role": "line_infantry", "hiredFrom": "ogres",
+    "description": "Twice a man's height with a tree-trunk club: slow, but each blow crushes, and its wounds close as it fights.",
+    "speed": 3.5, "hp": 260, "model": "ogre_brute", "damage": 18, "attackTime": 1.6, "range": 1.5, "sight": 9,
+    "attack": "crush", "armor": { "head": 1, "torso": 2, "arms": 1, "legs": 1 }, "regen": 1, "upkeep": 3,
+    "cost": { "food": 120, "iron": 30 } },
+  { "id": "ogre_hurler", "name": "Ogre hurler", "role": "ranged", "hiredFrom": "ogres",
+    "description": "Heaves boulders over the line: slow to throw, hard on walls and on anyone standing near where it lands.",
+    "speed": 3.5, "hp": 160, "model": "ogre_hurler", "damage": 16, "attackTime": 3, "range": 9, "sight": 11,
+    "attack": "crush", "splash": 1, "armor": { "torso": 1 }, "regen": 1, "upkeep": 3,
+    "cost": { "food": 120, "stone": 60 } }
 ]

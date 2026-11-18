@@ -1252,10 +1252,15 @@ public sealed partial class CombatSystem
         _homesFound = false;
         for (int i = 0; i < u.Count; i++)
         {
-            if ((tick + u.Id[i]) % Tps != 0 || u.Subdued[i] || tick - u.LastFight[i] < rules.RecoveryDelayTicks) continue;
+            if ((tick + u.Id[i]) % Tps != 0 || u.Subdued[i]) continue;
+            int regen = Def(i).Regen;
+            bool resting = tick - u.LastFight[i] >= rules.RecoveryDelayTicks;
+            if (!resting && regen == 0) continue;
             int max = _sim.MaxHpOf(i);
             if (u.Hp[i] >= max) continue;
-            var percent = AtHome(i) ? rules.HomeRecoveryPercent : rules.RecoveryPercent;
+            // Regenerating units (ogres) heal even in a fight, at their own rate or the resting one if faster.
+            var percent = Fix64.FromInt(regen);
+            if (resting) percent = Fix64.Max(percent, AtHome(i) ? rules.HomeRecoveryPercent : rules.RecoveryPercent);
             // In hundredths of a hit point, so whole percentages of whole hit points add up exactly.
             var mending = u.Mending[i] + Fix64.FromInt(max) * percent;
             int whole = (mending / 100).FloorToInt();
