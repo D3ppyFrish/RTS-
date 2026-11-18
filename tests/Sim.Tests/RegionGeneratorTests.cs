@@ -12,6 +12,9 @@ public class RegionGeneratorTests
     private static readonly ulong[] Seeds = { 1, 7, 1234 };
     private static readonly Lazy<RegionMap>[] Maps =
         Seeds.Select(s => new Lazy<RegionMap>(() => RegionGenerator.Generate(s, 512, 64, 512))).ToArray();
+    /// <summary>The same regions with the first, smaller trees (--trees=1), whose shapes the tree tests check.</summary>
+    private static readonly Lazy<RegionMap>[] FirstTreeMaps =
+        Seeds.Select(s => new Lazy<RegionMap>(() => RegionGenerator.Generate(s, 512, 64, 512, treeScale: 1))).ToArray();
 
     public static TheoryData<int> MapIndexes => new() { 0, 1, 2 };
 
@@ -110,7 +113,7 @@ public class RegionGeneratorTests
     [Theory, MemberData(nameof(MapIndexes))]
     public void TreesVaryALittleButStayAboutTheSameSize(int m)
     {
-        var map = Maps[m].Value;
+        var map = FirstTreeMaps[m].Value;
         var w = map.World;
         var heights = new int[12];
         var kinds = new int[5];

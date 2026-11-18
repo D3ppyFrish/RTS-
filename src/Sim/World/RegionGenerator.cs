@@ -25,7 +25,13 @@ public static class RegionGenerator
     /// </summary>
     public const int DefaultSize = 768, DefaultHeight = 64;
 
-    public static RegionMap Generate(ulong seed, int sizeX, int sizeY, int sizeZ, int treeScale = 1) =>
+    /// <summary>
+    /// How many times bigger than the first trees a generated map's trees grow (see
+    /// <see cref="VoxelWorld.TreeScale"/>): twice, so the world's trees tower over its people.
+    /// </summary>
+    public const int DefaultTreeScale = 2;
+
+    public static RegionMap Generate(ulong seed, int sizeX, int sizeY, int sizeZ, int treeScale = DefaultTreeScale) =>
         new Builder(seed, new VoxelWorld(sizeX, sizeY, sizeZ) { TreeScale = Math.Clamp(treeScale, 1, Trees.MaxScale) }).Build();
 
     /// <summary>Fills an existing empty world. The map's biomes and starts are returned.</summary>
@@ -522,14 +528,14 @@ public static class RegionGenerator
 
         private void PlantTrees()
         {
-            // Bigger trees (see VoxelWorld.TreeScale) stand as much further apart, on their own grid.
-            const int cell = 5;
-            int ts = _w.TreeScale;
+            // Bigger trees (see VoxelWorld.TreeScale) stand further apart, on their own grid: a cell of 4 such
+            // squares rather than 5 blocks, so a forest keeps most of its wood with fewer trees.
+            int ts = _w.TreeScale, cell = ts > 1 ? 4 : 5;
             for (int gz = 0; gz * cell * ts < _sz; gz++)
             for (int gx = 0; gx * cell * ts < _sx; gx++)
             {
                 uint h = DeterministicRandom.Hash(gx, gz, _seed + 30);
-                int x = (gx * cell + (int)(h % cell)) * ts, z = (gz * cell + (int)(h / cell % cell)) * ts;
+                int x = (gx * cell + (int)(h % (uint)cell)) * ts, z = (gz * cell + (int)(h / (uint)cell % (uint)cell)) * ts;
                 // Random vegetation stays out of the start areas so both players get the same mirrored layout.
                 if (x >= _sx || z >= _sz || NearStart(x, z, Sx(StartResourceRadius + 4))) continue;
                 int chance = _map.BiomeAt(x, z) switch

@@ -75,7 +75,7 @@ public sealed class Simulation
     private bool _testMode;
 
     /// <summary>Starts a match on a freshly generated region, with the game's own data unless given other content.</summary>
-    public Simulation(ulong seed, int sizeX, int sizeY, int sizeZ, ContentDb? content = null, int treeScale = 1)
+    public Simulation(ulong seed, int sizeX, int sizeY, int sizeZ, ContentDb? content = null, int treeScale = RegionGenerator.DefaultTreeScale)
         : this(RegionGenerator.Generate(seed, sizeX, sizeY, sizeZ, treeScale), content) { }
 
     /// <summary>Starts a match on a generated or loaded map. The simulation takes ownership of it.</summary>

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Rts.Sim.Tests;
 
-/// <summary>The bigger-trees experiment: <see cref="VoxelWorld.TreeScale"/> grows every tree that many times bigger.</summary>
+/// <summary>Bigger trees: <see cref="VoxelWorld.TreeScale"/> grows every tree that many times bigger (generated maps: 2).</summary>
 public class BigTreeTests
 {
     private const int Ground = 3;
@@ -49,7 +49,7 @@ public class BigTreeTests
     }
 
     [Fact]
-    public void FellingABigTreeTakesItsWholeTrunkAndCrownAndLaysALogForEveryBlock()
+    public void FellingABigTreeTakesItsWholeTrunkAndCrownAndLaysTwiceAUsualTreesLogs()
     {
         var w = TestWorlds.Flat(64, 40, 64, Ground);
         w.TreeScale = 2;
@@ -61,13 +61,13 @@ public class BigTreeTests
         Assert.Equal(0, Count(w, BlockInfo.IsTrunk));
         Assert.Equal(0, Count(w, BlockInfo.IsLeaves));
         sim.Run(PhysicsSystem.TreeFallTicks + 1);
-        Assert.Equal(trunk, Count(w, b => b == BlockType.TreeRubble));
+        Assert.Equal(trunk / 4, Count(w, b => b == BlockType.TreeRubble)); // a log for every four blocks: twice a usual tree's wood
     }
 
     [Fact]
-    public void AMapOfBigTreesHasEveryTrunkOnItsOwnSquareAndTheUsualMapIsUnchanged()
+    public void AGeneratedMapGrowsBigTreesEachOnItsOwnSquareAndTreesOneGrowsTheFirstOnes()
     {
-        var big = RegionGenerator.Generate(7, 128, 48, 128, treeScale: 2).World;
+        var big = RegionGenerator.Generate(7, 128, 48, 128).World; // generated maps grow trees twice the size
         Assert.Equal(2, big.TreeScale);
         int trees = 0;
         for (int z = 0; z < big.SizeZ; z++)
@@ -83,7 +83,23 @@ public class BigTreeTests
                 Assert.True(BlockInfo.IsTrunk(big.Get(x0 + i, y + 3, z0 + k)), $"trunk square at {x0},{z0}");
         }
         Assert.True(trees > 5, $"only {trees} big trees");
-        Assert.Equal(RegionGenerator.Generate(7, 128, 48, 128).World.ComputeHash(),
-            RegionGenerator.Generate(7, 128, 48, 128, treeScale: 1).World.ComputeHash());
+        // --trees=1 still grows the first trees, as a world left at the first size does.
+        var usual = new VoxelWorld(128, 48, 128);
+        RegionGenerator.Generate(usual, 7);
+        Assert.Equal(usual.ComputeHash(), RegionGenerator.Generate(7, 128, 48, 128, treeScale: 1).World.ComputeHash());
+    }
+
+    [Fact]
+    public void AMatchLogKeepsItsTreeSizeAndAnOlderLogReplaysWithTheFirstTrees()
+    {
+        var log = Replay.CommandLog.UsualStart(5, 64, 32, 64);
+        Assert.Equal(RegionGenerator.DefaultTreeScale, log.TreeScale);
+        string text = log.ToString();
+        Assert.Contains("trees 2\n", text);
+        Assert.Equal(2, Replay.CommandLog.Parse(text).TreeScale);
+        Assert.Equal(2, log.CreateSimulation().World.TreeScale);
+        var older = Replay.CommandLog.Parse(text.Replace("trees 2\n", ""));
+        Assert.Equal(1, older.TreeScale);
+        Assert.Equal(1, older.CreateSimulation().World.TreeScale);
     }
 }

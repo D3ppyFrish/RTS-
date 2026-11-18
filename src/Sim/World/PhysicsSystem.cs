@@ -329,8 +329,10 @@ public sealed class PhysicsSystem
         if (s == 1) Harvest.LayFelled(_w, t.X, t.BaseY, t.Z, t.Logs, t.DirX, t.DirZ, _laid);
         else
         {
-            // A bigger tree's trunk (see VoxelWorld.TreeScale) lies down as a log from each of its columns.
-            int each = t.Logs / (s * s), rest = t.Logs % (s * s);
+            // A bigger tree's trunk (see VoxelWorld.TreeScale) lies down as a log from each of its columns, a log
+            // block for every s * s of trunk: a tree of scale 2, twice as tall, gives twice the wood.
+            int logs = Math.Max(1, t.Logs / (s * s));
+            int each = logs / (s * s), rest = logs % (s * s);
             for (int k = 0; k < s; k++)
             for (int i = 0; i < s; i++)
                 Harvest.LayFelled(_w, x0 + i, t.BaseY, z0 + k, each + (rest-- > 0 ? 1 : 0), t.DirX, t.DirZ, _laid);
