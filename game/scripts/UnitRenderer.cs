@@ -64,7 +64,9 @@ public partial class UnitRenderer : Node3D
     /// <summary>The batch each player's units of each type are drawn in: [owner][def].</summary>
     private Batch[][] _batchByOwnerDef = Array.Empty<Batch[]>();
     private Batch _loads = null!;
-    private Batch _bands = null!, _heads = null!, _staff = null!;
+    private Batch _staff = null!;
+    /// <summary>Each kind of totem's carved bands and head, by the totem building's id (models "&lt;id&gt;_band" and "&lt;id&gt;_head").</summary>
+    private readonly Dictionary<string, (Batch Bands, Batch Head)> _totems = new();
     /// <summary>A totem's paint while nobody holds its town.</summary>
     private static readonly Color Neutral = new(0.86f, 0.84f, 0.78f);
     private float[] _yawById = new float[1024];
@@ -89,8 +91,9 @@ public partial class UnitRenderer : Node3D
     private ShaderMaterial _material = null!;
 
     /// <summary>
-    /// The town's totem as carved wood over its pole: a band for each block of the pole still standing (from
-    /// the plinth up), the top one a head, all painted in the holder's colour. Nothing while it is down.
+    /// The town's totem carved over its pole (a goblin's wooden pole, an ogre's stone idol): a band for each
+    /// block of the pole still standing (from the plinth up), the top one a head, all painted in the holder's
+    /// colour. Nothing while it is down.
     /// </summary>
     private void WriteTotem(CityState town, float bs)
     {
@@ -102,8 +105,9 @@ public partial class UnitRenderer : Node3D
         if (top == 0) return;
         var colour = town.Holder >= 0 ? TeamColors[town.Holder & 7] : Neutral;
         float px = (x + 0.5f) * bs, pz = (z + 0.5f) * bs;
-        for (int y = 1; y < top; y++) Write(_bands, 1, 0, px, (totem.Y + y) * bs, pz, colour);
-        Write(_heads, 1, 0, px, (totem.Y + top) * bs, pz, colour);
+        var (bands, head) = _totems[def.Id];
+        for (int y = 1; y < top; y++) Write(bands, 1, 0, px, (totem.Y + y) * bs, pz, colour);
+        Write(head, 1, 0, px, (totem.Y + top) * bs, pz, colour);
     }
 
     public static readonly string ShaderCode = @"
@@ -216,8 +220,8 @@ void fragment() {
             return batch;
         }
         _staff = Totem("dusk_staff_bearer");
-        _bands = Totem("totem_band");
-        _heads = Totem("totem_head");
+        foreach (var city in sim.Content.CityStates)
+            if (city.Totem is { } t && !_totems.ContainsKey(t.Id)) _totems[t.Id] = (Totem(t.Id + "_band"), Totem(t.Id + "_head"));
 
         // The dens of the lairs, which stay where they are until a player uses one.
         var den = UnitModels.Build("den");
@@ -244,8 +248,13 @@ void fragment() {
         }
         foreach (var piece in Showpieces)
             if (_batches.TryGetValue(piece.Model, out var plain)) plain.Count++;
-        _heads.Count = _sim.Cities.Towns.Count;
-        foreach (var town in _sim.Cities.Towns) _bands.Count += town.Def.Totem?.Height ?? 0;
+        foreach (var town in _sim.Cities.Towns)
+        {
+            if (town.Def.Totem is not { } t) continue;
+            var (bands, head) = _totems[t.Id];
+            head.Count++;
+            bands.Count += t.Height;
+        }
         foreach (var b in _batches.Values)
         {
             int needed = Math.Max(16, b.Count);

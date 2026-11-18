@@ -28,5 +28,15 @@
     "mercenaries": { "pool": 6, "refill": 30 },
     "heal": { "range": 6 },
     "lair": "wolf",
-    "wall": "stone_brick", "roof": "thatch" }
+    "wall": "stone_brick", "roof": "thatch" },
+  { "id": "ogres", "name": "Ogre hold",
+    "description": "Huge, slow ogres who quarry the hills and fight for whoever beats them. Break their idol and they bow to you: they send you stone, guard their hold against your enemies and sell you brutes and boulder hurlers that heal even in a fight.",
+    "totem": { "building": "ogre_idol", "respawn": 5 },
+    "guards": { "units": ["ogre_brute", "ogre_brute", "ogre_hurler", "ogre_hurler"], "reach": 4, "refill": 60 },
+    "tribute": { "caravan": "caravan", "good": "stone", "amount": 30, "every": 60 },
+    "trade": { "buys": "food", "load": 20, "sells": "stone", "price": 10, "holderBonus": 50 },
+    "mercenaries": { "pool": 3, "refill": 60 },
+    "heal": { "range": 6 },
+    "lair": "boar",
+    "wall": "stone_brick", "roof": "roof_tile" }
 ]

@@ -39,6 +39,8 @@ public static class UnitModels
     private static readonly Color Mule = new(0.48f, 0.4f, 0.33f);
     private static readonly Color GoblinSkin = new(0.42f, 0.62f, 0.25f);
     private static readonly Color GoblinEye = new(1f, 0.85f, 0.2f);
+    private static readonly Color OgreSkin = new(0.62f, 0.55f, 0.4f);
+    private static readonly Color OgreSkinDark = new(0.48f, 0.42f, 0.3f);
     private static readonly Color OrcSkin = new(0.36f, 0.5f, 0.24f);
     private static readonly Color OrcEye = new(0.95f, 0.25f, 0.12f);
     private static readonly Color Bone = new(0.92f, 0.88f, 0.74f);
@@ -129,6 +131,27 @@ public static class UnitModels
             .Box(-4, 10, -1, -3, 11, -1, GoblinSkin).Box(2, 10, -1, 3, 11, -1, GoblinSkin) // ears
             .Box(-1, 10, 1, -1, 10, 1, GoblinEye).Box(0, 10, 1, 0, 10, 1, GoblinEye)     // eyes
             .Box(-1, 9, 2, 0, 9, 2, GoblinSkin);                                         // nose
+
+        /// <summary>
+        /// An ogre: half again a person's height and twice as broad, sallow and pot-bellied, with a small head
+        /// thrust forward, tusks, long arms and a loincloth and shoulder pad in its owner's colour.
+        /// </summary>
+        public Builder Ogre() =>
+            Box(-4, 0, -2, -1, 7, 1, OgreSkinDark).Box(1, 0, -2, 4, 7, 1, OgreSkinDark)  // legs
+            .Box(-5, 0, -2, -1, 1, 2, Leather).Box(1, 0, -2, 5, 1, 2, Leather)          // wrapped feet
+            .Box(-5, 8, -3, 5, 17, 2, OgreSkin)                                         // body
+            .Box(-4, 9, 3, 4, 14, 3, OgreSkin)                                          // pot belly
+            .Box(-5, 6, -3, 5, 9, 3, Team).Box(-5, 9, -3, 5, 9, 3, Leather)             // loincloth and belt
+            .Box(-2, 4, 2, 2, 6, 2, TeamDark)                                           // its front flap
+            .Box(-8, 7, -2, -6, 17, 1, OgreSkin).Box(6, 7, -2, 8, 17, 1, OgreSkin)      // long arms
+            .Box(-8, 5, -2, -6, 6, 1, OgreSkinDark).Box(6, 5, -2, 8, 6, 1, OgreSkinDark) // fists
+            .Box(-8, 16, -3, -4, 19, 2, TeamDark).Box(-8, 19, -2, -5, 19, 1, Iron)      // shoulder pad
+            .Box(-3, 16, -1, 2, 21, 4, OgreSkin)                                        // head, low and forward
+            .Box(-3, 20, 4, 2, 20, 4, OgreSkinDark)                                     // heavy brow
+            .Box(-2, 19, 4, -2, 19, 4, Dark).Box(1, 19, 4, 1, 19, 4, Dark)              // eyes
+            .Box(-2, 16, 5, -2, 17, 5, Bone).Box(1, 16, 5, 1, 17, 5, Bone)              // tusks
+            .Box(-1, 17, 5, 0, 18, 5, OgreSkinDark)                                     // nose
+            .Box(-1, 22, 0, 0, 22, 2, Hair);                                            // a tuft of hair
 
         /// <summary>The gold belt every form wears.</summary>
         public Builder Rank(int lift = 0) => Box(-2, lift + 5, -1, 1, lift + 5, 0, Gold);
@@ -438,14 +461,23 @@ public static class UnitModels
             .Box(3, 4, 0, 3, 9, 0, Leather).Box(3, 10, -1, 3, 10, 1, Rock)               // sling and stone
             .Box(-2, 5, 1, -1, 6, 1, Leather),                                           // pouch of stones
 
+        "ogre_brute" => new Builder().Ogre()
+            .Box(7, 3, 2, 8, 16, 3, Wood)                                                // a tree-trunk club
+            .Box(6, 16, 1, 9, 23, 4, Wood).Box(6, 19, 1, 9, 19, 4, Leather)             // its knotted head
+            .Box(5, 22, 2, 5, 22, 2, Iron).Box(10, 18, 3, 10, 18, 3, Iron),             // and nails in it
+        "ogre_hurler" => new Builder().Ogre()
+            .Box(-3, 9, 4, 2, 14, 8, Rock).Box(-2, 10, 9, 1, 13, 9, DarkRock)           // a boulder held to its belly
+            .Box(-4, 9, -6, 3, 16, -4, Leather)                                         // a sack on its back
+            .Box(-3, 16, -6, -1, 18, -4, Rock).Box(1, 16, -6, 2, 17, -5, DarkRock),     // full of more rocks
+
         // A city-state's banner, at its market: a pole on a stone foot with a flag in its ally's colour.
         // A city-state's totem, drawn over the pole of its totem building a block at a time (see
         // UnitRenderer): carved bands with a stripe of the holder's colour, and on top a goblin head with
         // yellow eyes, a toothy mouth, long ears painted in the holder's colour and bone horns.
-        "totem_band" => new Builder()
+        "goblin_totem_band" => new Builder()
             .Box(-5, 0, -5, 4, 7, 4, Wood).Box(-5, 3, -5, 4, 4, 4, Team)
             .Box(-5, 1, -5, 4, 1, 4, Leather).Box(-5, 6, -5, 4, 6, 4, Leather),
-        "totem_head" => new Builder()
+        "goblin_totem_head" => new Builder()
             .Box(-5, 0, -5, 4, 7, 4, Wood).Box(-5, 0, -5, 4, 0, 4, Leather)
             .Box(-3, 4, 5, -2, 5, 5, GoblinEye).Box(1, 4, 5, 2, 5, 5, GoblinEye).Box(-1, 3, 5, 0, 4, 5, Leather)   // eyes, nose
             .Box(-3, 1, 5, 2, 2, 5, Dark).Box(-3, 2, 5, -3, 2, 5, Bone).Box(-1, 2, 5, -1, 2, 5, Bone).Box(1, 2, 5, 1, 2, 5, Bone)
@@ -453,6 +485,23 @@ public static class UnitModels
             .Box(-9, 4, -1, -6, 6, 0, Team).Box(-8, 6, -1, -7, 7, 0, TeamDark)                                    // ears
             .Box(5, 4, -1, 8, 6, 0, Team).Box(6, 6, -1, 7, 7, 0, TeamDark)
             .Box(-4, 8, -1, -3, 10, 0, Bone).Box(2, 8, -1, 3, 10, 0, Bone).Box(-4, 11, -1, -4, 11, 0, Bone).Box(3, 11, -1, 3, 11, 0, Bone),
+
+        // The ogres' idol, over its pole of stone: rough stone bands with a painted stripe, and on top a broad
+        // ogre face with a heavy brow, glaring eyes, an underbite of tusks, a brow band in the holder's colour
+        // and a pair of horns.
+        "ogre_idol_band" => new Builder()
+            .Box(-5, 0, -5, 4, 7, 4, Rock).Box(-5, 2, -5, 4, 2, 4, DarkRock).Box(-5, 5, -5, 4, 5, 4, DarkRock)
+            .Box(-5, 3, -5, 4, 4, 4, Team).Box(-6, 0, -1, -6, 7, 0, DarkRock).Box(5, 0, -1, 5, 7, 0, DarkRock),
+        "ogre_idol_head" => new Builder()
+            .Box(-6, 0, -6, 5, 9, 5, Rock).Box(-6, 0, -6, 5, 0, 5, DarkRock)
+            .Box(-6, 7, -6, 5, 8, 5, Team)                                                                        // brow band
+            .Box(-5, 6, 6, 4, 6, 6, DarkRock)                                                                     // heavy brow
+            .Box(-4, 4, 6, -2, 5, 6, Fire).Box(1, 4, 6, 3, 5, 6, Fire)                                            // glaring eyes
+            .Box(-1, 3, 6, 0, 4, 7, DarkRock)                                                                     // nose
+            .Box(-4, 1, 6, 3, 1, 6, Dark).Box(-4, 2, 6, -4, 3, 7, Bone).Box(3, 2, 6, 3, 3, 7, Bone)               // mouth and tusks
+            .Box(-4, 4, -7, -2, 5, -7, Fire).Box(1, 4, -7, 3, 5, -7, Fire).Box(-4, 1, -7, 3, 1, -7, Dark)         // the back face
+            .Box(-9, 8, -1, -7, 9, 0, Bone).Box(-10, 10, -1, -9, 13, 0, Bone)                                     // horns
+            .Box(6, 8, -1, 8, 9, 0, Bone).Box(8, 10, -1, 9, 13, 0, Bone),
 
         "banner" => new Builder()
             .Box(-2, 0, -2, 2, 1, 2, Rock).Box(0, 2, 0, 0, 44, 0, Wood)

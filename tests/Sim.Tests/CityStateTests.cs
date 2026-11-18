@@ -455,6 +455,8 @@ public class CityStateTests
     /// <summary>
     /// Every match has a goblin town about as far from one start as the other: a levelled square with a hut at
     /// each corner, its door toward the open market, and a wolf lair just beyond it. No building may go on it.
+    /// The ogres' hold (issue #46) is placed the same way, but well away from the goblins, with a boar lair
+    /// beyond it.
     /// </summary>
     [Fact]
     public void EveryMatchHasATownForEachCityStateWithItsLair()
@@ -464,7 +466,8 @@ public class CityStateTests
         sim.SpawnStartingUnits(24);
         var startLairs = sim.SpawnLairs();
         var towns = sim.SpawnCities();
-        var town = Assert.Single(towns);
+        Assert.Equal(new[] { "goblins", "ogres" }, towns.Select(t => t.Def.Id));
+        var town = towns[0];
         Assert.Same(town, sim.Cities.Get(town.Id));
         Assert.Equal("goblins", town.Def.Id);
         var d = sim.Map.Starts.Select(s => IntMath.Distance(s.X, s.Z, town.X, town.Z)).ToArray();
@@ -497,9 +500,9 @@ public class CityStateTests
 
         var lair = sim.Monsters.GetLair(town.LairId);
         Assert.NotNull(lair);
-        // The two start lairs, the dusk tree's warden and the town's, then those spread across the map (placed last).
+        // The two start lairs, the dusk tree's warden and the towns', then those spread across the map (placed last).
         Assert.Same(lair, sim.Monsters.Lairs[3]);
-        Assert.All(sim.Monsters.Lairs.Skip(4), l => Assert.NotNull(l.Monster.Lair!.Biome));
+        Assert.All(sim.Monsters.Lairs.Skip(5), l => Assert.NotNull(l.Monster.Lair!.Biome));
         Assert.DoesNotContain(lair, startLairs);
         Assert.InRange(IntMath.Distance(town.X, town.Z, lair!.X, lair.Z), CityStateSystem.LairNear, CityStateSystem.LairFar);
         Assert.Equal(4, lair.Pack.Count);
@@ -511,6 +514,20 @@ public class CityStateTests
         Assert.Equal(PlaceResult.Crowded, sim.Economy.CanPlace(0, house, town.X - 1, town.Z - 1, out _, checkPlayer: false));
         Assert.Equal(PlaceResult.Crowded, sim.Economy.CanPlace(0, house, town.X + r + 1, town.Z, out _, checkPlayer: false));
         Assert.False(sim.Cities.SiteFits(town.X, town.Z));
+
+        // The ogres' hold: out from the starts like the goblins, but well apart from them, its idol on the market,
+        // four guards and a boar lair just beyond it.
+        var hold = towns[1];
+        var o = sim.Map.Starts.Select(s => IntMath.Distance(s.X, s.Z, hold.X, hold.Z)).ToArray();
+        Assert.All(o, d => Assert.InRange(d, 150, 260)); // about as far out as the goblins, where the ground allows
+        Assert.True(IntMath.Distance(town.X, town.Z, hold.X, hold.Z) > 120, $"the towns are {IntMath.Distance(town.X, town.Z, hold.X, hold.Z)} blocks apart");
+        Assert.Equal("ogre_idol", sim.Cities.Totem(hold)!.Def.Id);
+        Assert.Equal(4, hold.Guards.Count());
+        var den = sim.Monsters.GetLair(hold.LairId);
+        Assert.NotNull(den);
+        Assert.Same(den, sim.Monsters.Lairs[4]);
+        Assert.Equal("boar", den!.Monster.Id);
+        Assert.InRange(IntMath.Distance(hold.X, hold.Z, den.X, den.Z), CityStateSystem.LairNear, CityStateSystem.LairFar);
     }
 
     /// <summary>A town needs flat, dry ground without trees, away from buildings and dens.</summary>
@@ -568,14 +585,14 @@ public class CityStateTests
         for (int run = 0; run < 2; run++)
         {
             var sim = log.CreateSimulation();
-            var town = Assert.Single(sim.Cities.Towns);
-            totemAttacks = log.Commands.Count(c => c.Command is AttackBuildingCommand a && a.Building == town.TotemId);
+            Assert.Equal(2, sim.Cities.Towns.Count);
+            totemAttacks = log.Commands.Count(c => c.Command is AttackBuildingCommand a && sim.Cities.Towns.Any(t => t.TotemId == a.Building));
             foreach (var c in log.Commands) sim.Schedule(c.Tick, c.Command);
             sim.Run((int)log.Ticks);
             hashes[run] = sim.StateHash();
         }
         Assert.Equal(hashes[0], hashes[1]);
-        Assert.True(totemAttacks > 0, "no player went for the goblins' totem");
+        Assert.True(totemAttacks > 0, "no player went for a town's totem");
     }
 
     // --- The data ----------------------------------------------------------------------------------
@@ -584,7 +601,8 @@ public class CityStateTests
     public void TheGoblinsAreData()
     {
         var db = ContentDb.Default;
-        var goblins = Assert.Single(db.CityStates);
+        Assert.Equal(2, db.CityStates.Count);
+        var goblins = db.CityStates[0];
         Assert.Same(goblins, db.CityState("goblins"));
         Assert.Same(db.Building("goblin_totem"), goblins.Totem);
         Assert.Equal(BuildingKind.Totem, goblins.Totem!.Kind);
@@ -609,6 +627,85 @@ public class CityStateTests
         Assert.DoesNotContain(caravan, db.BaseUnits);
         Assert.All(goblins.Mercenaries, u => Assert.Same(goblins, u.HiredFrom));
         Assert.DoesNotContain(db.BaseUnits, u => u.HiredFrom != null);
+    }
+
+    /// <summary>Issue #46: the ogres' hold is data like the goblins' town, with its own idol, guards, tribute and mercenaries.</summary>
+    [Fact]
+    public void TheOgresAreData()
+    {
+        var db = ContentDb.Default;
+        var ogres = db.CityState("ogres");
+        Assert.Equal(1, ogres.Index);
+        Assert.Same(db.Building("ogre_idol"), ogres.Totem);
+        Assert.Equal(BuildingKind.Totem, ogres.Totem!.Kind);
+        Assert.Equal(new[] { "ogre_brute", "ogre_brute", "ogre_hurler", "ogre_hurler" }, ogres.Guards.Select(u => u.Id));
+        Assert.Equal((Good.Stone, 30), (ogres.TributeGood, ogres.TributeAmount));
+        Assert.Equal((Good.Food, Good.Stone), (ogres.Buys, ogres.Sells));
+        Assert.Equal(new[] { "ogre_brute", "ogre_hurler" }, ogres.Mercenaries.Select(u => u.Id));
+        Assert.Equal((3, 60 * Tps), (ogres.Pool, ogres.RefillTicks));
+        Assert.Same(db.Unit("boar"), ogres.Lair);
+        Assert.Equal((BlockType.StoneBrick, BlockType.RoofTile), (ogres.Wall, ogres.Roof));
+        // Big, slow and costly, and they heal even in a fight.
+        var spearman = db.Unit("spearman");
+        Assert.All(ogres.Mercenaries, u =>
+        {
+            Assert.Same(ogres, u.HiredFrom);
+            Assert.True(u.MaxHp > 3 * spearman.MaxHp / 2);
+            Assert.True(u.Speed < spearman.Speed);
+            Assert.True(u.Regen > 0);
+            Assert.Equal(3, u.Upkeep);
+        });
+        Assert.All(db.Units.Where(u => u.HiredFrom != ogres), u => Assert.Equal(0, u.Regen));
+    }
+
+    /// <summary>
+    /// Issue #46: the ogres' hold is won like the goblins' town. Soldiers break the idol past its guards, and
+    /// then the holder hires an ogre brute at the market and gets tribute in stone.
+    /// </summary>
+    [Fact]
+    public void BreakingTheIdolMakesTheOgresYourVassals()
+    {
+        var sim = Flat();
+        var hall = Hall(sim, Settlers, food: 1000, iron: 100);
+        var hold = sim.Cities.Place(sim.Content.CityState("ogres"), TownX, TownZ)!;
+        Assert.Equal(new[] { "ogre_brute", "ogre_brute", "ogre_hurler", "ogre_hurler" }, hold.Guards.Select(id => DefOf(sim, id).Id));
+        Conquer(sim, hold, Settlers, spearmen: 24);
+        Assert.Equal(Settlers, Totem(sim, hold).Owner);
+        Assert.All(hold.Guards, id => Assert.Equal(Settlers, sim.Units.Owner[Index(sim, id)]));
+
+        Do(sim, new HireCommand(Settlers, hold.Id, "goblin_cutthroat")); // not one of the ogres'
+        Assert.Empty(UnitsOf(sim, Settlers, "goblin_cutthroat"));
+        int ready = hold.Ready;
+        Do(sim, new HireCommand(Settlers, hold.Id, "ogre_brute"));
+        Assert.Single(UnitsOf(sim, Settlers, "ogre_brute").Where(id => sim.Units.Town[Index(sim, id)] == 0));
+        Assert.Equal(ready - 1, hold.Ready);
+        Assert.Equal(1000 - 120, hall.Stock[(int)Good.Food]);
+
+        RunUntil(sim, () => hall.Stock[(int)Good.Stone] == 30, hold.Def.TributeTicks + 120 * Tps, "the ogres' stone reaches the town hall");
+    }
+
+    /// <summary>Issue #46: an ogre heals a percent of its hit points each second even in a fight; a spearman does not.</summary>
+    [Fact]
+    public void OgresHealEvenInAFight()
+    {
+        var sim = Flat(64);
+        int ogre = sim.SpawnUnit(Settlers, "ogre_brute", 20, 20);
+        int spear = sim.SpawnUnit(Settlers, "spearman", 30, 20);
+        var u = sim.Units;
+        u.Hp[Index(sim, ogre)] = 100;
+        u.Hp[Index(sim, spear)] = 20;
+        for (int t = 0; t < 10 * Tps; t++)
+        {
+            u.LastFight[Index(sim, ogre)] = u.LastFight[Index(sim, spear)] = sim.Tick; // still fighting
+            sim.Step();
+        }
+        // 1% of 260 a second is 2.6: 26 hit points in ten seconds, give or take a second's worth.
+        Assert.InRange(u.Hp[Index(sim, ogre)], 100 + 23, 100 + 27);
+        Assert.Equal(20, u.Hp[Index(sim, spear)]);
+        // Out of the fight it heals at the faster of its own rate and the usual one.
+        int was = u.Hp[Index(sim, ogre)];
+        for (int t = 0; t < 20 * Tps; t++) sim.Step();
+        Assert.True(u.Hp[Index(sim, ogre)] >= was + 50);
     }
 
     [Fact]

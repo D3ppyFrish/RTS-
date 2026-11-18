@@ -1834,8 +1834,9 @@ public partial class PlayerControl : Node
             }
             if (def.HiredFrom != null) mercs++;
         }
+        // The selected town, else the first (the goblins'), for the city-state fields.
         var towns = _sim.Cities.Towns;
-        var town = towns.Count > 0 ? towns[0] : null;
+        var town = _sim.Cities.Get(SelectedCity) ?? (towns.Count > 0 ? towns[0] : null);
         int first = _selected.Count > 0 ? u.IndexOf(_selected[0]) : -1;
         var stock = _sim.Economy.Stockpile(LocalPlayer);
         int techs = 0;

@@ -219,10 +219,10 @@ public sealed class CityStateSystem
             cx = (int)(sx / starts.Count);
             cz = (int)(sz / starts.Count);
         }
-        var sites = Sites(cx, cz);
+        var scored = Scored(cx, cz, out int want);
         foreach (var def in defs)
         {
-            foreach (var (x, z) in sites)
+            foreach (var (x, z) in Spread(scored, want))
             {
                 if (!SiteFits(x, z)) continue;
                 var town = Place(def, x, z)!;
@@ -235,15 +235,15 @@ public sealed class CityStateSystem
     }
 
     /// <summary>
-    /// Columns a town could go at, every fourth column out from (cx, cz), best first: by how much further it
-    /// is from the furthest start than from the nearest, counted four times, plus how far off the wanted
-    /// distance from (cx, cz) it is; ties to the lower z, then x.
+    /// Columns a town could go at, every fourth column out from (cx, cz), each scored (lower is better) by how
+    /// much further it is from the furthest start than from the nearest, counted four times, plus how far off
+    /// the wanted distance from (cx, cz) it is (<paramref name="want"/>, about 3/16 of the map's width).
     /// </summary>
-    private List<(int X, int Z)> Sites(int cx, int cz)
+    private List<(long Score, int X, int Z)> Scored(int cx, int cz, out int want)
     {
         var w = World;
         var starts = _sim.Map.Starts;
-        int want = Math.Max(TownRadius + 1, Math.Min(w.SizeX, w.SizeZ) * 3 / 16);
+        want = Math.Max(TownRadius + 1, Math.Min(w.SizeX, w.SizeZ) * 3 / 16);
         int edge = TownMargin + TownRadius;
         var scored = new List<(long Score, int X, int Z)>();
         for (int z = cz - (cz - edge) / 4 * 4; z < w.SizeZ - edge; z += 4)
@@ -262,15 +262,33 @@ public sealed class CityStateSystem
             int unfair = starts.Count > 1 ? far - near : 0;
             scored.Add((4L * unfair + Math.Abs(r - want), x, z));
         }
-        scored.Sort((a, b) =>
+        return scored;
+    }
+
+    /// <summary>
+    /// The scored sites best first for the next town: each also counts how much nearer it is than one and a
+    /// half times <paramref name="want"/> to the nearest town already placed, so the towns spread round the middle
+    /// rather than bunch (the first town is not moved by this); ties to the lower z, then x.
+    /// </summary>
+    private List<(int X, int Z)> Spread(List<(long Score, int X, int Z)> scored, int want)
+    {
+        var ranked = new List<(long Score, int X, int Z)>(scored.Count);
+        foreach (var (score, x, z) in scored)
+        {
+            int nearest = int.MaxValue;
+            foreach (var town in _towns) nearest = Math.Min(nearest, IntMath.Distance(town.X, town.Z, x, z));
+            long crowd = nearest == int.MaxValue ? 0 : Math.Max(0, want * 3 / 2 - nearest);
+            ranked.Add((score + crowd, x, z));
+        }
+        ranked.Sort((a, b) =>
         {
             int c = a.Score.CompareTo(b.Score);
             if (c != 0) return c;
             c = a.Z.CompareTo(b.Z);
             return c != 0 ? c : a.X.CompareTo(b.X);
         });
-        var sites = new List<(int X, int Z)>(scored.Count);
-        foreach (var s in scored) sites.Add((s.X, s.Z));
+        var sites = new List<(int X, int Z)>(ranked.Count);
+        foreach (var s in ranked) sites.Add((s.X, s.Z));
         return sites;
     }
 
