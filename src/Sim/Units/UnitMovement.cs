@@ -121,15 +121,16 @@ public sealed class UnitMovement
     /// </summary>
     private void Steer(UnitStore u, int i, ref Fix64 vx, ref Fix64 vz)
     {
-        var speed = _sim.Economy.SpeedPerTick(u.Owner[i], _sim.Content.Units[u.Def[i]]);
+        var full = _sim.Economy.SpeedPerTick(u.Owner[i], _sim.Content.Units[u.Def[i]]);
+        var speed = full;
         bool formation = u.Formation[i] && u.Order[i] == UnitOrder.Move;
         if (formation && u.SpeedCap[i] > Fix64.Zero) speed = Fix64.Min(speed, u.SpeedCap[i]);
         var underfoot = _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] - 1, u.Z[i].FloorToInt());
-        if (underfoot == BlockType.Road) speed *= 2;
-        else if (BlockInfo.IsRubble(underfoot)) speed /= 2; // picking a way over a heap of rubble
+        if (underfoot == BlockType.Road) { speed *= 2; full *= 2; }
+        else if (BlockInfo.IsRubble(underfoot)) { speed /= 2; full /= 2; } // picking a way over a heap of rubble
         if (formation)
         {
-            SteerFormation(u, i, speed, ref vx, ref vz);
+            SteerFormation(u, i, speed, full, ref vx, ref vz);
             return;
         }
         bool chase = u.Order[i] == UnitOrder.Chase;
@@ -239,13 +240,15 @@ public sealed class UnitMovement
     /// A unit on a formation move. All the formation's units share a flow field to the formation's middle
     /// (the order's column); each keeps its place relative to the middle by stepping the way the field leads
     /// from the point that place is offset from: it moves as if it were the middle, so the formation keeps
-    /// its shape across open ground. Once that point is (nearly) at the middle, or the unit is close to its
-    /// place, it walks straight to its place. Where keeping its place would walk it into a wall or off a
-    /// ledge the middle's way avoids (that point is off the ground, on another level, or the unit got
-    /// stuck), it follows the field from where it stands instead, until it is about as close to the middle
-    /// as its place is.
+    /// its shape across open ground, at the pace of its slowest unit. It only does so while that step also
+    /// takes it nearer the middle along its own way (#37): where keeping its place would lead it into a wall,
+    /// round the wrong side of a gap or back the way it came, it follows the field from where it stands
+    /// instead, at its own full speed so it catches up, and takes its place again once it can. Near the end
+    /// (that point at the middle, or the unit about as near the middle as its place is) it walks straight to
+    /// its place if the way there is clear; if not, it walks on to the middle first, and stops there if its
+    /// place still cannot be reached straight from it.
     /// </summary>
-    private void SteerFormation(UnitStore u, int i, Fix64 speed, ref Fix64 vx, ref Fix64 vz)
+    private void SteerFormation(UnitStore u, int i, Fix64 speed, Fix64 fullSpeed, ref Fix64 vx, ref Fix64 vz)
     {
         Fix64 sx = u.SlotX[i] - u.X[i], sz = u.SlotZ[i] - u.Z[i];
         Fix64 toSlot = Fix64.Sqrt(sx * sx + sz * sz);
@@ -254,86 +257,130 @@ public sealed class UnitMovement
             EndOrder(u, i);
             return;
         }
-        if (toSlot > FormationClose)
+        if (u.Field[i] != _cachedFieldId)
         {
-            if (u.Field[i] != _cachedFieldId)
+            _cachedFieldId = u.Field[i];
+            _cachedField = _sim.Paths.Get(_cachedFieldId);
+        }
+        if (toSlot <= FormationClose && ClearTo(u, i, u.SlotX[i], u.SlotZ[i])) goto straight;
+        if (_cachedField is not { Ready: true } field) goto straight; // no way known yet: head for its place
+        {
+            var g = _sim.Walkable;
+            int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
+            int node = g.Node(x, z, u.Y[i]);
+            int pathDist = node < 0 ? FlowField.Unknown : field.Distance(node);
+            if (pathDist >= FlowField.Unreachable)
             {
-                _cachedFieldId = u.Field[i];
-                _cachedField = _sim.Paths.Get(_cachedFieldId);
+                if (node < 0) goto straight; // between levels for a moment (falling): carry on
+                if (pathDist == FlowField.Unreachable || (field.Complete && !field.Dirty))
+                {
+                    GiveUp(u, i);
+                    return;
+                }
+                field.WantsMore = true;
+                goto straight;
             }
-            if (_cachedField is { Ready: true } field)
+            Fix64 ox = u.SlotX[i] - Fix64.FromInt(u.OrderX[i]) - Fix64.Half;
+            Fix64 oz = u.SlotZ[i] - Fix64.FromInt(u.OrderZ[i]) - Fix64.Half;
+            bool nearEnd = Fix64.FromInt(pathDist) / 10 <= Fix64.Sqrt(ox * ox + oz * oz) + Fix64.FromInt(2);
+            // Its own way: the next column on its path to the middle.
+            int dir = field.NextDirection(node, x, z, out int via);
+            if (via != pathDist && field.Dirty) field.Broken = true;
+            // Keep its place: step the way the field leads from where the middle would be, if that step is
+            // also on its own way.
+            if (u.Loose[i] == 0 && toSlot > FormationClose && !nearEnd)
             {
-                var g = _sim.Walkable;
-                Fix64 ox = u.SlotX[i] - Fix64.FromInt(u.OrderX[i]) - Fix64.Half;
-                Fix64 oz = u.SlotZ[i] - Fix64.FromInt(u.OrderZ[i]) - Fix64.Half;
-                // Keep its place: step the way the field leads from where the middle would be.
-                if (u.Loose[i] == 0)
+                Fix64 px = u.X[i] - ox, pz = u.Z[i] - oz;
+                int mx = px.FloorToInt(), mz = pz.FloorToInt();
+                int m = g.NearestNode(mx, mz, u.Y[i]);
+                if (m >= 0 && Math.Abs(g.Level(m) - u.Y[i]) <= 1)
                 {
-                    Fix64 px = u.X[i] - ox, pz = u.Z[i] - oz;
-                    int mx = px.FloorToInt(), mz = pz.FloorToInt();
-                    int m = g.NearestNode(mx, mz, u.Y[i]);
-                    if (m >= 0 && Math.Abs(g.Level(m) - u.Y[i]) <= 1)
+                    int md = field.Distance(m);
+                    if (md <= 10)
                     {
-                        int md = field.Distance(m);
-                        if (md < FlowField.Unreachable)
+                        nearEnd = true; // the middle is there: time to take its place
+                    }
+                    else if (md < FlowField.Unreachable)
+                    {
+                        int d = field.NextDirection(m, mx, mz, out _);
+                        int own = d < 0 ? -1 : g.Step(node, d);
+                        Fix64 nx = Fix64.Zero, nz = Fix64.Zero;
+                        if (d >= 0)
                         {
-                            if (md <= 10) goto straight; // the middle is there: take its place
-                            int d = field.NextDirection(m, mx, mz, out _);
-                            if (d >= 0)
-                            {
-                                Fix64 nx = Fix64.FromInt(mx + WalkGraph.Dirs[d].X) + Fix64.Half - px;
-                                Fix64 nz = Fix64.FromInt(mz + WalkGraph.Dirs[d].Z) + Fix64.Half - pz;
-                                Fix64 len = Fix64.Sqrt(nx * nx + nz * nz);
-                                if (len > Fix64.Zero)
-                                {
-                                    vx += nx * speed / len;
-                                    vz += nz * speed / len;
-                                    _waypoint[i] = NoDrop;
-                                    _keepingPlace[i] = true;
-                                    return;
-                                }
-                            }
+                            nx = Fix64.FromInt(mx + WalkGraph.Dirs[d].X) + Fix64.Half - px;
+                            nz = Fix64.FromInt(mz + WalkGraph.Dirs[d].Z) + Fix64.Half - pz;
                         }
-                    }
-                }
-                // Its own way to the middle, until it is about as near the middle as its place is.
-                int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
-                int node = g.Node(x, z, u.Y[i]);
-                int pathDist = node < 0 ? FlowField.Unknown : field.Distance(node);
-                if (pathDist >= FlowField.Unreachable && node >= 0)
-                {
-                    if (pathDist == FlowField.Unreachable || (field.Complete && !field.Dirty))
-                    {
-                        GiveUp(u, i);
-                        return;
-                    }
-                    field.WantsMore = true;
-                }
-                else if (pathDist < FlowField.Unreachable && Fix64.FromInt(pathDist) / 10 > Fix64.Sqrt(ox * ox + oz * oz) + Fix64.FromInt(2))
-                {
-                    int d = field.NextDirection(node, x, z, out int via);
-                    if (via != pathDist && field.Dirty) field.Broken = true;
-                    if (d >= 0)
-                    {
-                        _waypoint[i] = (z + WalkGraph.Dirs[d].Z) * g.SizeX + x + WalkGraph.Dirs[d].X;
-                        Fix64 nx = Fix64.FromInt(x + WalkGraph.Dirs[d].X) + Fix64.Half - u.X[i];
-                        Fix64 nz = Fix64.FromInt(z + WalkGraph.Dirs[d].Z) + Fix64.Half - u.Z[i];
                         Fix64 len = Fix64.Sqrt(nx * nx + nz * nz);
-                        if (len > Fix64.Zero)
+                        // On its own way too: a step nearer the middle along its own path, no more than a
+                        // right angle off the way its path goes from here.
+                        if (own >= 0 && field.Distance(own) < pathDist && len > Fix64.Zero && dir >= 0
+                            && WalkGraph.Dirs[d].X * WalkGraph.Dirs[dir].X + WalkGraph.Dirs[d].Z * WalkGraph.Dirs[dir].Z >= 0)
                         {
                             vx += nx * speed / len;
                             vz += nz * speed / len;
+                            _waypoint[i] = g.Column(own); // a drop on its way down is fine; nowhere else
+                            _keepingPlace[i] = true;
+                            return;
                         }
-                        return;
+                        // Keeping its place leads it off its way here: it goes its own way for a while rather than
+                        // swinging between the two.
+                        u.Loose[i] = LooseTicks;
                     }
                 }
             }
+            if (nearEnd && ClearTo(u, i, u.SlotX[i], u.SlotZ[i])) goto straight;
+            if (pathDist == 0)
+            {
+                // At the middle, and no clear way from here to its place: it stops here.
+                EndOrder(u, i);
+                return;
+            }
+            // Its own way to the middle, at its own speed.
+            if (dir < 0) goto straight;
+            _waypoint[i] = (z + WalkGraph.Dirs[dir].Z) * g.SizeX + x + WalkGraph.Dirs[dir].X;
+            Fix64 wx = Fix64.FromInt(x + WalkGraph.Dirs[dir].X) + Fix64.Half - u.X[i];
+            Fix64 wz = Fix64.FromInt(z + WalkGraph.Dirs[dir].Z) + Fix64.Half - u.Z[i];
+            Fix64 wl = Fix64.Sqrt(wx * wx + wz * wz);
+            if (wl > Fix64.Zero)
+            {
+                vx += wx * fullSpeed / wl;
+                vz += wz * fullSpeed / wl;
+            }
+            return;
         }
         straight:
-        // Straight to its place: close to it, or no usable field here.
+        // Straight to its place.
         Fix64 step = Fix64.Min(speed, toSlot);
         vx += sx * step / toSlot;
         vz += sz * step / toSlot;
+    }
+
+    /// <summary>Longest straight walk (blocks) <see cref="ClearTo"/> checks.</summary>
+    public const int ClearReach = 24;
+
+    /// <summary>
+    /// True if unit i can walk in a straight line from where it stands to (tx, tz): every column the line
+    /// crosses is a step it can take (up one, or down one; corners as <see cref="TryMove"/> takes them), and
+    /// none is shut to it. False past <see cref="ClearReach"/> blocks.
+    /// </summary>
+    private bool ClearTo(UnitStore u, int i, Fix64 tx, Fix64 tz)
+    {
+        var w = _sim.World;
+        Fix64 dx = tx - u.X[i], dz = tz - u.Z[i];
+        int steps = (int)((Fix64.Abs(dx) + Fix64.Abs(dz)) * 4).FloorToInt() + 1;
+        if (steps > ClearReach * 8) return false;
+        int cx = u.X[i].FloorToInt(), cz = u.Z[i].FloorToInt(), cy = u.Y[i];
+        for (int k = 1; k <= steps; k++)
+        {
+            int nx = (u.X[i] + dx * k / steps).FloorToInt(), nz = (u.Z[i] + dz * k / steps).FloorToInt();
+            if (nx == cx && nz == cz) continue;
+            if (nx != cx && nz != cz
+                && (!Walk.TryStep(w, cx, cz, cy, nx, cz, out _) || !Walk.TryStep(w, cx, cz, cy, cx, nz, out _)))
+                return false;
+            if (!Walk.TryStep(w, cx, cz, cy, nx, nz, out int ny) || ny < cy - 1 || Shut(w, u.Owner[i], nx, ny, nz)) return false;
+            (cx, cz, cy) = (nx, nz, ny);
+        }
+        return true;
     }
 
     /// <summary>How close (blocks) a chaser comes to the middle of its goal, or to the unit it chases.</summary>
@@ -398,6 +445,13 @@ public sealed class UnitMovement
         if (Fix64.Sqrt(dx * dx + dz * dz) <= u.ArriveRadius[i] + Fix64.One) return; // already about as near as it gets
         var near = _sim.Paths.Request(x, z, g.Level(n), u.Owner[i]);
         near.Fallback = true;
+        // A formation that cannot get to its places gathers there as a crowd does (see Simulation.ApplyMove).
+        if (u.Formation[i])
+        {
+            u.ClearFormation(i);
+            var crowd = Fix64.FromRatio(3, 10) + (Fix64.Sqrt(Fix64.FromInt(Math.Max(1, field.Users))) - Fix64.One) * Fix64.FromRatio(55, 100);
+            u.ArriveRadius[i] = Fix64.Max(u.ArriveRadius[i], crowd);
+        }
         u.Order[i] = UnitOrder.Move;
         u.OrderX[i] = x;
         u.OrderZ[i] = z;
