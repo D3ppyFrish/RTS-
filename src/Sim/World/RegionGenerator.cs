@@ -56,9 +56,18 @@ public static class RegionGenerator
             if (w.InBounds(wx, wy, wz) && w.Get(wx, wy, wz) == BlockType.Air) w.Set(wx, wy, wz, t);
         }
         for (int y = 1; y <= trunk; y++) Wood(x, g + y, z, BlockType.DuskWood);
-        // Roots and a buttress at its foot.
-        foreach (var (dx, dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) }) Wood(x + dx, g + 1, z + dz, BlockType.DuskWood);
-        Wood(x + 1, g + 2, z, BlockType.DuskWood);
+        // A wide, flared foot: roots all round the trunk, buttresses up its four sides, and two that reach higher.
+        // All of it within a column of the trunk, so the columns two off it stay open to stand in.
+        foreach (var (dx, dz) in Compass) Wood(x + dx, g + 1, z + dz, BlockType.DuskWood);
+        foreach (var (dx, dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) }) Wood(x + dx, g + 2, z + dz, BlockType.DuskWood);
+        uint fh = DeterministicRandom.Hash(x, z, seed + 32);
+        int side = (int)(fh % 4) * 2;
+        var (ax, az) = Compass[side];
+        var (bx2, bz2) = Compass[(side + 4 + (int)(fh >> 2 & 1) * 2) % 8];
+        var (cx, cz) = Compass[(int)(fh >> 3 & 3) * 2 + 1];
+        Wood(x + ax, g + 3, z + az, BlockType.DuskWood);
+        Wood(x + bx2, g + 3, z + bz2, BlockType.DuskWood);
+        Wood(x + cx, g + 2, z + cz, BlockType.DuskWood);
         // A crooked top.
         Wood(x + 1, g + trunk + 1, z);
         Wood(x + 1, g + trunk + 2, z + 1);

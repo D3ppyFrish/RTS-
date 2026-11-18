@@ -351,24 +351,43 @@ public static class UnitModels
             .Box(-2, 19, -1, 1, 19, 2, Iron).Box(-3, 19, 0, -3, 21, 0, Bone).Box(2, 19, 0, 2, 21, 0, Bone) // horned helm
             .Box(3, 7, 1, 3, 24, 1, Wood).Box(3, 25, 1, 3, 27, 1, Bone),                 // and bone-tipped spear
 
-        // The dusk tree's guardian: a hulking husk of grey bark half again a person's height, cyan light in
-        // its cracks and eye sockets, a skull for a face under antler-like branches, and long bark claws.
+        // The dusk tree's guardian: a hulking husk of grey bark taller than a house's door, cyan light in its
+        // cracks, a glowing heart behind bone ribs, a stag's skull for a face under branching antlers, and long
+        // claws of root. Drawn here at the size of its sculpt (Detail/Sculpted.Warden), which is what shows
+        // unless detailed units are off.
         "dusk_warden" => new Builder()
-            .Box(-4, 0, -2, -2, 7, 1, DuskBark).Box(1, 0, -2, 3, 7, 1, DuskBark)            // legs
-            .Box(-4, 0, 2, -2, 0, 3, DuskBarkDark).Box(1, 0, 2, 3, 0, 3, DuskBarkDark)      // root toes
-            .Box(-5, 8, -3, 4, 17, 2, DuskBark)                                             // trunk of a body
-            .Box(-5, 8, -3, 4, 8, 2, DuskBarkDark).Box(-1, 10, 3, 0, 16, 3, DuskVein)       // a glowing crack down the chest
-            .Box(-3, 12, 3, -3, 14, 3, DuskVein).Box(2, 9, 3, 2, 11, 3, DuskVein)
-            .Box(-7, 12, -2, -6, 17, 1, DuskBarkDark).Box(5, 12, -2, 6, 17, 1, DuskBarkDark) // hunched shoulders
-            .Box(-8, 4, -1, -7, 15, 0, DuskBark).Box(6, 4, -1, 7, 15, 0, DuskBark)          // long arms
-            .Box(-8, 1, 0, -8, 3, 2, DuskBarkDark).Box(7, 1, 0, 7, 3, 2, DuskBarkDark)      // claws
-            .Box(-8, 2, 2, -8, 2, 3, Bone).Box(7, 2, 2, 7, 2, 3, Bone)
-            .Box(-3, 18, -2, 2, 22, 2, Bone)                                                // skull
-            .Box(-2, 20, 3, -2, 20, 3, DuskVein).Box(1, 20, 3, 1, 20, 3, DuskVein)          // eyes
-            .Box(-2, 18, 3, 1, 18, 3, Dark).Box(-1, 19, 3, 0, 19, 3, Dark)                  // teeth and nose
-            .Box(-4, 22, 0, -4, 26, 0, DuskBarkDark).Box(-6, 25, 0, -5, 25, 0, DuskBarkDark).Box(-5, 27, 0, -5, 28, 0, DuskBarkDark) // antlers
-            .Box(3, 22, 0, 3, 26, 0, DuskBarkDark).Box(4, 25, 0, 5, 25, 0, DuskBarkDark).Box(4, 27, 0, 4, 28, 0, DuskBarkDark)
-            .Box(-5, 15, -3, 4, 15, -3, TeamDark),                                          // a sash, once it is someone's
+            .Box(-8, 0, -2, -5, 17, 2, DuskBark).Box(4, 0, -2, 7, 17, 2, DuskBark)                // legs
+            .Box(-9, 0, -2, -4, 3, 3, DuskBark).Box(3, 0, -2, 8, 3, 3, DuskBark)                  // stumps
+            .Box(-8, 0, 4, -6, 0, 7, DuskBarkDark).Box(5, 0, 4, 7, 0, 7, DuskBarkDark)            // root toes
+            .Box(-11, 0, 0, -10, 0, 1, DuskBarkDark).Box(9, 0, 0, 10, 0, 1, DuskBarkDark)
+            .Box(-7, 0, -6, -6, 0, -3, DuskBarkDark).Box(5, 0, -6, 6, 0, -3, DuskBarkDark)
+            .Box(-7, 10, 3, -7, 13, 3, DuskVein).Box(6, 6, 3, 6, 9, 3, DuskVein)                  // cracks in the legs
+            .Box(-7, 16, -5, 6, 23, 5, DuskBark)                                                  // hips
+            .Box(-8, 24, -6, 7, 33, 7, DuskBark)                                                  // a barrel of a body
+            .Box(-9, 30, -8, 8, 37, 4, DuskBark).Box(-6, 33, -9, 5, 37, -9, DuskBarkDark)         // hunched back
+            .Box(-3, 25, 7, 2, 31, 7, DuskBarkDark).Box(-1, 27, 7, 0, 29, 7, DuskVein)            // the wound and its heart
+            .Box(-3, 26, 8, 2, 26, 8, Bone).Box(-3, 28, 8, -2, 28, 8, Bone).Box(1, 28, 8, 2, 28, 8, Bone)
+            .Box(-3, 30, 8, 2, 30, 8, Bone)                                                       // ribs
+            .Box(-5, 32, 7, -4, 34, 7, DuskVein).Box(3, 21, 6, 3, 24, 6, DuskVein)
+            .Box(-2, 31, -10, -2, 35, -10, DuskVein)
+            .Box(-7, 21, -6, 6, 22, 6, TeamDark)                                                  // a sash, once it is someone's
+            .Box(-11, 35, -4, -6, 38, 3, DuskLeaf).Box(5, 35, -4, 10, 38, 3, DuskLeaf)            // violet moss on the shoulders
+            .Box(-10, 29, 2, -10, 34, 2, DuskLeaf).Box(9, 28, 2, 9, 34, 2, DuskLeaf)              // and vines
+            .Box(-14, 22, -3, -11, 36, 3, DuskBark).Box(10, 22, -3, 13, 36, 3, DuskBark)          // upper arms
+            .Box(-15, 12, -1, -12, 23, 5, DuskBark).Box(11, 12, -1, 14, 23, 5, DuskBark)          // forearms
+            .Box(-15, 6, 2, -15, 11, 6, DuskBarkDark).Box(-13, 6, 2, -13, 11, 6, DuskBarkDark)     // claws
+            .Box(14, 6, 2, 14, 11, 6, DuskBarkDark).Box(12, 6, 2, 12, 11, 6, DuskBarkDark)
+            .Box(-15, 5, 6, -12, 5, 7, Bone).Box(11, 5, 6, 14, 5, 7, Bone)
+            .Box(-4, 35, 3, 3, 42, 8, DuskBark)                                                   // hood
+            .Box(-3, 36, 8, 2, 42, 11, Bone).Box(-2, 34, 10, 1, 37, 14, Bone)                     // skull and snout
+            .Box(-2, 39, 11, -2, 39, 11, DuskVein).Box(1, 39, 11, 1, 39, 11, DuskVein)            // eyes
+            .Box(-1, 35, 14, 0, 35, 14, Dark)
+            .Box(-3, 43, 6, -3, 46, 6, DuskBarkDark).Box(-7, 46, 5, -4, 47, 5, DuskBarkDark)      // antlers
+            .Box(-8, 48, 4, -8, 51, 4, DuskBarkDark).Box(-5, 48, 7, -5, 50, 8, DuskBarkDark)
+            .Box(2, 43, 6, 2, 46, 6, DuskBarkDark).Box(3, 46, 5, 6, 47, 5, DuskBarkDark)
+            .Box(7, 48, 4, 7, 51, 4, DuskBarkDark).Box(4, 48, 7, 4, 50, 8, DuskBarkDark)
+            .Box(-9, 52, 3, -8, 53, 4, DuskLeaf).Box(7, 52, 3, 8, 53, 4, DuskLeaf)
+            .Box(-6, 51, 8, -5, 51, 9, DuskLeaf).Box(4, 51, 8, 5, 51, 9, DuskLeaf),
         // A battle priest who healed the dusk tree: the Dusk Staff in hand, a gnarled grey staff crowned with
         // violet leaves round a cyan light, instead of the mace.
         "dusk_staff_bearer" => new Builder().Humanoid().Rank()

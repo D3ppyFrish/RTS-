@@ -528,4 +528,32 @@ public class StructureDetailTests
             w.Set(20 + dx, 8, 20 + dz, BlockType.DuskLeaves);
         Assert.Contains(Shape(w, 20, 8, 20), v => v is StructurePalette.DuskA or StructurePalette.DuskB);
     }
+
+    [Fact]
+    public void TheDuskTreesFootFlaresOutAndCarriesTheSkull()
+    {
+        var w = new VoxelWorld(40, 40, 40);
+        for (int z = 0; z < 40; z++)
+        for (int x = 0; x < 40; x++)
+            w.Set(x, 3, z, BlockType.Stone);
+        Rts.Sim.World.RegionGenerator.GrowDuskTree(w, 20, 3, 20, 5);
+        static int Filled(byte[] shape, int y)
+        {
+            int n = 0;
+            for (int z = 0; z < StructureDetail.Size; z++)
+            for (int x = 0; x < StructureDetail.Size; x++)
+                if (shape[StructureDetail.VoxelIndex(x, y, z)] != StructurePalette.Empty) n++;
+            return n;
+        }
+        const int all = StructureDetail.Size * StructureDetail.Size;
+        // At the ground the trunk and every root round it are solid wood, so the foot is three blocks across.
+        for (int dz = -1; dz <= 1; dz++)
+        for (int dx = -1; dx <= 1; dx++)
+            Assert.Equal(all, Filled(Shape(w, 20 + dx, 4, 20 + dz), 0));
+        // Higher up the trunk is a lumpy column, well short of filling its block.
+        Assert.True(Filled(Shape(w, 20, 9, 20), 0) < all * 3 / 4);
+        // The skull sits on the west root, facing out.
+        Assert.Contains(StructurePalette.Bone, Shape(w, 19, 4, 20));
+        Assert.DoesNotContain(StructurePalette.Bone, Shape(w, 20, 4, 20));
+    }
 }

@@ -851,27 +851,51 @@ public static class StructureDetail
         // --- The dusk tree -------------------------------------------------------------------------------
 
         /// <summary>
-        /// The dusk tree's trunk and roots: a lumpy column of grey bark, wider at the foot, with limbs reaching to
-        /// the wood beside it, cyan glowing cracks, and at the trunk's foot a skull half sunk in its roots with
-        /// red sap running down over it.
+        /// The dusk tree's trunk and roots: a lumpy column of grey bark that flares out at its foot into a mound
+        /// of roots and buttresses three blocks across (each block of it filled more the lower it sits, tapering up
+        /// to the trunk), with limbs reaching to the wood beside it, cyan glowing cracks, and on the west root a
+        /// skull half sunk in the bark with red sap running down over it.
         /// </summary>
         private byte DuskTrunk(int x, int y, int z)
         {
             int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
             bool column = Linked(0, 1, 0) || Linked(0, -1, 0);
             bool foot = !BlockInfo.IsDuskTree(_ny);
-            if (foot && column && Linked(1, 0, 0) && Linked(-1, 0, 0) && Skull(x, y, z) is var bone && bone != 0) return bone;
-            int dx = 2 * x - 7, dz = 2 * z - 7, d2 = dx * dx + dz * dz;
+            // The skull's block: the root west of the trunk (the trunk east of it, roots north and south, nothing
+            // further west), or the trunk itself if nothing grew west of it.
+            bool skull = foot && Linked(1, 0, 0) && !Linked(-1, 0, 0) && (Linked(0, 0, 1) && Linked(0, 0, -1) || column);
+            if (skull && Skull(x, y, z) is var bone && bone != 0) return bone;
+            // How far the foot flares here: fully filled at the ground, less with each voxel up; and somewhat on the
+            // block over the roots (wood under it on three sides or more).
+            int below = 0;
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+                if (Linked(dx, -1, dz)) below++;
+            int flare = foot ? 150 - 11 * y : below >= 3 ? 76 - 5 * y : 0;
+            bool topless = !Linked(0, 1, 0) && !AnyAbove();
+            int dx2 = 2 * x - 7, dz2 = 2 * z - 7, d2 = dx2 * dx2 + dz2 * dz2;
             // Lumps: the bark bulges out a little or sinks back in each eighth round the trunk, every two voxels up.
-            int octant = (dx >= 0 ? 4 : 0) + (dz >= 0 ? 2 : 0) + (Math.Abs(dx) >= Math.Abs(dz) ? 1 : 0);
+            int octant = (dx2 >= 0 ? 4 : 0) + (dz2 >= 0 ? 2 : 0) + (Math.Abs(dx2) >= Math.Abs(dz2) ? 1 : 0);
             int reach = 34 + 10 * (Hash(gy >> 1, octant, _wx * 31 + _wz) % 3);
-            if (foot && y < 3) reach = Math.Max(reach, 120 - 28 * y);
+            // A buttress's top (nothing over it) rounds off rather than ending flat.
+            if (topless && !foot) reach -= 5 * y;
+            reach = Math.Max(reach, flare);
             bool inside = column && d2 <= reach;
             int edge = inside ? reach - d2 : -1;
-            // Limbs out to the wood beside it (roots, the buttress, the first block of each branch).
-            if (!inside && Limbs(x, y, z, BlockInfo.IsDuskTree(_self) && !column ? 36 : 20, out int le)) (inside, edge) = (true, le);
+            // Limbs out to the wood beside it (roots, the buttresses, the first block of each branch).
+            int limb = column ? 20 : 36;
+            if (Limbs(x, y, z, Math.Max(limb, flare), out int le) && le > edge) (inside, edge) = (true, le);
             if (!inside) return StructurePalette.Empty;
-            return DuskBark(gx, gy, gz, edge, foot && x < 3 && Math.Abs(z - 3) <= 1 && y < 8);
+            if (skull && x <= 1 && Math.Abs(z - 3) <= 1 && y >= 5 && y < 9 && (y < 7 || x == 0)) return StructurePalette.Sap;
+            return DuskBark(gx, gy, gz, edge, false);
+        }
+
+        private bool AnyAbove()
+        {
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+                if (Linked(dx, 1, dz)) return true;
+            return false;
         }
 
         /// <summary>A branch or twig of the dusk tree: limbs two voxels thick reaching to the wood beside it.</summary>
