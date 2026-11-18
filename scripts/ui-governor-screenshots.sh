@@ -12,7 +12,9 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
 # Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it. --goods=600
-# pays for the barracks, the towers and the soldiers without waiting on the gatherers.
+# pays for the barracks, the towers and the soldiers without waiting on the gatherers. The towers get 6000 ticks
+# in two steps: one step gives up after 600 frames (about 4800 ticks at 4x), and the fourth tower can finish just
+# after that (it did once the map had lairs spread across it).
 STEPS="
 wait 20
 camera 87,256 46 55 34
@@ -28,7 +30,8 @@ key plus*2
 ticks 2400
 print
 shot $OUT/ui-governor-building.png
-ticks 6000
+ticks 3000
+ticks 3000
 print
 shot $OUT/ui-governor-towers.png
 key shift+u
