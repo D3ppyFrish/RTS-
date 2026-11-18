@@ -74,7 +74,7 @@ Controls:
 | X | tunnel tool: the selected sappers dig to the block clicked, a level up or down each column; click a building to dig just under it so that part of it falls in (Shift+click digs another; right click or Esc stops) |
 | Z | dig tool (also the Dig an area button): drag out an area for the selected workers and sappers to dig out, [ and ] for how many levels deep (below the ground where the drag starts); Shift keeps the tool for another area; right click or Esc stops |
 
-The HUD shows the goods in your storage and your population over housing (each beside its picture; hover for its name), the game clock, the tech
+The HUD shows the goods in your storage and your population over housing (each beside its picture; hover for its name), food a minute beside the food (the food gathered in the last minute less what your people eat each minute; green when it grows, red when it shrinks), the game clock, the tech
 being researched, the tech tree, automatic workers and speed buttons, the Idle workers button and alerts under the top bar on the left (see [Alerts and idle workers](rules.md#alerts-and-idle-workers)), build buttons on the left (a building you lack the
 tech for says which tech it needs), the height slice slider and what is selected: a unit's hit points,
 what it is doing, its load and morale, its level and experience and what its type is about, or a
