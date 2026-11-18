@@ -103,6 +103,9 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   full speed instead and takes its place again once it can. Near the end it walks straight to its place if
   nothing is in the way, else to the middle first, and stops there if its place still cannot be reached.
   A formation gets anywhere about as soon as the same units sent with a plain move.
+- **Hazards** (#66): a step onto ground that hurts or traps (poison bog, beside lava, a sinkhole's crust)
+  costs eight times plain ground, so a unit on a move order walks up to seven blocks out of its way for
+  each such block it keeps off, and crosses when there is no other way.
 - **Crowds**: units push each other apart, but a unit with no order is never pushed off a drop of more
   than a level, so a crowd does not shove an idle worker into the hole beside it.
 
@@ -611,7 +614,8 @@ large bare tree in the hills about halfway between the starts, and a monster gua
 
 ## Natural hazards
 
-`src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, issue #45): ground that hurts the units on or near it.
+`src/Sim/World/HazardSystem.cs` (tests in `WildsTests` and `HazardTests`, issues #45 and #66): ground that
+hurts the units on or near it.
 
 - **Poison bog**: patches of violet sludge (`BlockType.Bog`) on the swamp's dry mud, never near a start.
   Units walk on it, but each second on it costs 3 hit points. Workers dig it away like mud, which makes the
@@ -621,6 +625,14 @@ large bare tree in the hills about halfway between the starts, and a monster gua
 - Both land like falling ground does, by no one: armour does not help and nobody gets the kill. Wild
   monsters are hurt the same. A unit's panel says "(poisoned by the bog)" or "(scorched by lava)" while it
   is. The numbers are first guesses for playtesting.
+- **Sinkholes** (#66): round lids of pale, cracked crust (`BlockType.Crust`, five columns across) over a
+  hollow, on flat grassland, forest and hill ground away from the starts, 12 per 512 by 512 blocks of map.
+  The tick a unit stands on one the whole lid gives way: the units on it drop in and lose 20 hit points
+  (by no one). The hole is a block deep at its edge and two in its middle, so they climb back out. Workers
+  can dig the crust away (it gives nothing); monster lairs are not put on it.
+- **Keeping off**: move orders path around all three where there is another way (see Moving).
+- **Alert**: a unit of yours killed by the ground alone raises an alert, "Your worker died in the poison
+  bog", "burned beside the lava" or "fell into a sinkhole" (`GameEventKind.UnitLostToHazard`).
 
 ## City-states
 
@@ -1060,7 +1072,8 @@ cannot change a normal match, a computer players' match or the determinism check
 `src/Sim/EventLog.cs`: the simulation keeps a log of what each player should hear about, filled as it
 happens the same way on every machine: your units or a building of yours hit by another side (or a
 capture or burning of it begun), a building site finished, research done, a unit trained, your town hall
-destroyed or captured, and an enemy town hall you last hit destroyed, or one you captured. Under attack
+destroyed or captured, an enemy town hall you last hit destroyed, or one you captured, and a unit of
+yours killed by a natural hazard. Under attack
 events are kept to one per place (within 16 columns) every 5 seconds per player. The log keeps the
 newest 256 events, each with a sequence number that only grows, so the game asks for those after the
 last one it saw. Nothing in the simulation reads it, so it is not part of the state hash.

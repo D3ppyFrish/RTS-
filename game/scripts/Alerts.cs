@@ -164,8 +164,18 @@ public partial class Alerts : VBoxContainer
             GameEventKind.TownConquered => ($"The {Lower(content.CityStates[e.Def].Name)} is yours", GoodColour),
             GameEventKind.TownLost => ($"Your {Lower(content.CityStates[e.Def].Name)} was taken", AttackColour),
             GameEventKind.TributeSent => ($"Tribute is on its way from the {Lower(content.CityStates[e.Def].Name)}", Hud.PlainColour),
+            GameEventKind.UnitLostToHazard => ($"Your {Lower(content.Units[e.Def].Name)} {HazardDeath(e)}", AttackColour),
             _ => (null, Hud.PlainColour),
         };
+    }
+
+    /// <summary>What the ground did, read from where the unit died: the crust gone means a sinkhole.</summary>
+    private string HazardDeath(GameEvent e)
+    {
+        var below = _sim.World.Get(e.X, e.Y - 1, e.Z);
+        if (below == BlockType.Bog) return "died in the poison bog";
+        if (Rts.Sim.World.HazardSystem.DamageAt(_sim.World, e.X, e.Y, e.Z) >= Rts.Sim.World.HazardSystem.LavaDamage) return "burned beside the lava";
+        return "fell into a sinkhole";
     }
 
     private static string Lower(string name) => name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name[1..];

@@ -182,9 +182,9 @@ public sealed class PathService
     /// <summary>A start tick old enough that a recomputation is due (and subtracting it cannot overflow).</summary>
     internal const long LongAgo = -1_000_000;
 
-    // Larger than the most a queue key can grow in one step: the dearest step (a wading diagonal costs 28)
-    // plus as much again for moving away from the units.
-    private const int BucketCount = 64;
+    // Larger than the most a queue key can grow in one step: the dearest step (a diagonal onto a hazard)
+    // plus a diagonal's worth for moving away from the units. A power of two.
+    private const int BucketCount = 256;
     // Bucket entries pack a node's column and slot: x | z << 10 | slot << 20.
     private const int CoordBits = 10;
     private const int CoordMask = (1 << CoordBits) - 1;
