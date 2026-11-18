@@ -32,8 +32,8 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   out of. As the block is taken it checks again, since others may have dug nearby meanwhile: a block
   whose digging would leave it, or anyone standing close by, in a hole with no way out is left, and
   the worker moves on (#37).
-- **Buildings** (`BuildCommand`, from `data/buildings.json`): town hall, storehouse, house, farm, barracks
-  and smelter. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
+- **Buildings** (`BuildCommand`, from `data/buildings.json`): town hall, storehouse, house, farm, barracks,
+  smelter, quarry and mine. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
   A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column
   gap from other buildings, and its cost; its voxel blocks go up layer by layer as workers build it.
 - **Building upgrades** (`UpgradeCommand`, `"upgrade"` and `"speed"` in `data/buildings.json`, #47): a
@@ -62,6 +62,14 @@ unit of it carried by a worker or held in a building. A player's stock is what t
 - **Farms and the smelter** (`WorkCommand`): two farmers each bring 5 food every 15 seconds. The
   smelter's worker keeps it supplied with ore and coal from storage and carries its ingots back
   (2 ore + 1 coal = 1 iron in 10 seconds).
+- **Quarries and mines** (`WorkCommand`, kind `quarry` in `data/buildings.json`, #50): buildings workers work, like
+  a farm, for goods that never run out, wherever they stand. A quarry (5 by 5, 60 wood) takes three workers, each
+  bringing 5 stone every 12 seconds of work; a mine (5 by 5, 60 wood and 40 stone, needs Smelting) takes two, each
+  round of 15 seconds giving 4 iron ore and then 2 coal, in turn, which is what a smelter uses. Each load goes to
+  the nearest storage, like any gathered goods. Gathering techs (Better tools) make the rounds quicker, and a
+  worker's work speed counts. Automatic workers work one when the good it gives is the one the player needs most
+  and it has a free place (a mine's ore and coal, like dug ore and coal, only once there is a smelter); otherwise
+  they gather block by block as before.
 - **Population**: the town hall houses 25 (every town hall, including one built later) and each house 5; the town hall trains workers for 30 food
   and the barracks trains soldiers (`TrainCommand`) while there is room. A building that trains units can have a
   rally point (`RallyCommand`, snapped to ground a unit can stand on): each unit it trains walks there

@@ -406,6 +406,10 @@ public partial class Hud : CanvasLayer
             if (def.Kind == BuildingKind.Light)
                 b.TooltipText = $"Lights the ground {def.Light} columns around it from dusk to dawn: what stands there is seen from " +
                                 "as far as by day and shot at as by day. A storm puts its open flame out until it passes.";
+            if (def.IsQuarry)
+                b.TooltipText = $"Right click it with workers: up to {def.WorkerSlots} work it, each round of " +
+                                $"{def.WorkTicks / Simulation.TicksPerSecond} seconds giving {string.Join(", then ", def.Works.Select(w => $"{w.Amount} {Goods.Name(w.Good).ToLowerInvariant()}"))}, " +
+                                "which they carry to storage. It never runs out, wherever it stands. Automatic workers work it when its goods are needed.";
             if (def.IsTower)
                 b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +
@@ -969,7 +973,7 @@ public partial class Hud : CanvasLayer
             if (def != null)
             {
                 needs = Needs(def.Requires, def.Faction);
-                button.Text = $"{def.Name}  [{KeyText(key)}]\n{needs ?? CostText(def.Cost)}";
+                button.Text = $"{def.Name}{(key == Key.None ? "" : $"  [{KeyText(key)}]")}\n{needs ?? CostText(def.Cost)}";
                 // What you cannot afford yet can still be placed, as a plan.
                 button.Disabled = needs != null;
             }
@@ -1580,7 +1584,7 @@ public partial class Hud : CanvasLayer
             if (housing > 0) parts.Add($"Houses {housing}");
             if (b.Def.WorkerSlots > 0)
             {
-                var job = b.Def.Kind == BuildingKind.Farm ? UnitJob.Farm : UnitJob.Haul;
+                var job = EconomySystem.JobAt(b.Def);
                 int n = 0;
                 for (int i = 0; i < u.Count; i++)
                     if (u.Job[i] == job && u.JobTarget[i] == b.Id) n++;
@@ -1804,7 +1808,7 @@ public partial class Hud : CanvasLayer
     };
 
     /// <summary>What a unit's job has it doing, or null if it has none.</summary>
-    private static string? DescribeJob(UnitStore u, int i) => u.Job[i] switch
+    private string? DescribeJob(UnitStore u, int i) => u.Job[i] switch
     {
         UnitJob.Gather => u.JobBlock[i] switch
         {
@@ -1817,6 +1821,7 @@ public partial class Hud : CanvasLayer
         },
         UnitJob.Build => "building",
         UnitJob.Farm => "farming",
+        UnitJob.Quarry => _sim.Buildings.Get(u.JobTarget[i]) is { } q ? $"working the {q.Def.Name.ToLowerInvariant()}" : "quarrying",
         UnitJob.Haul => "supplying the smelter",
         UnitJob.Supply => u.Phase[i] switch
         {

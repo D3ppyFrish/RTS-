@@ -101,6 +101,12 @@ public enum UnitJob : byte
     /// in <see cref="UnitStore.JobX"/>) and carry it there, again and again. Workers.
     /// </summary>
     Supply,
+    /// <summary>
+    /// Work the quarry or mine <see cref="UnitStore.JobTarget"/> (see <see cref="Economy.BuildingKind.Quarry"/>) and
+    /// carry what each round gives to storage; <see cref="UnitStore.JobX"/> counts its rounds there, which says
+    /// which of the building's goods the next round gives.
+    /// </summary>
+    Quarry,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

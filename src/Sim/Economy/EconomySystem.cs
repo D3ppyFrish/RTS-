@@ -956,13 +956,15 @@ public sealed partial class EconomySystem
             {
                 StartJob(i, UnitJob.Build, b.Id);
             }
-            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter)
+            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry)
             {
-                var job = b.Def.Kind == BuildingKind.Farm ? UnitJob.Farm : UnitJob.Haul;
+                var job = JobAt(b.Def);
                 if (U.Job[i] == job && U.JobTarget[i] == b.Id) continue;
                 if (WorkersAt(b, job) >= b.Def.WorkerSlots) continue;
                 StartJob(i, job, b.Id);
                 if (job == UnitJob.Farm && U.CarryAmount[i] > 0 && U.Carry[i] != Good.Food) GoToStorage(i);
+                // A quarry or mine worker unloads what it carries first, so the first round's goods are not mixed in.
+                if (job == UnitJob.Quarry && U.CarryAmount[i] > 0) GoToStorage(i);
             }
             else if (b.Def.Storage && b.Active && U.CarryAmount[i] > 0)
             {
@@ -1071,6 +1073,14 @@ public sealed partial class EconomySystem
         result.RemoveAll(i => _sim.Content.Units[U.Def[i]].Role != UnitRole.Worker);
         return result;
     }
+
+    /// <summary>The job of a worker working a building of this kind: farming, hauling for a smelter, or quarrying.</summary>
+    public static UnitJob JobAt(BuildingDef def) => def.Kind switch
+    {
+        BuildingKind.Farm => UnitJob.Farm,
+        BuildingKind.Quarry => UnitJob.Quarry,
+        _ => UnitJob.Haul,
+    };
 
     private int WorkersAt(Building b, UnitJob job)
     {

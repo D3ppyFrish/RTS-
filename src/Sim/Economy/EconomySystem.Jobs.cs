@@ -36,6 +36,7 @@ public sealed partial class EconomySystem
             case UnitJob.Clean: StepClean(i); break;
             case UnitJob.Post: StepPost(i); break;
             case UnitJob.Supply: StepSupply(i); break;
+            case UnitJob.Quarry: StepQuarry(i); break;
         }
     }
 
@@ -270,6 +271,42 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>
+    /// A worker at a quarry or mine: a round of work there, at its work speed and with its player's gathering techs,
+    /// gives the next good of the building's list (see <see cref="BuildingDef.Works"/>), which it carries to storage.
+    /// </summary>
+    private void StepQuarry(int i)
+    {
+        var u = U;
+        var quarry = Buildings.Get(u.JobTarget[i]);
+        if (quarry == null || quarry.Owner != u.Owner[i] || !quarry.Active || !quarry.Def.IsQuarry)
+        {
+            EndJob(i);
+            return;
+        }
+        switch (u.Phase[i])
+        {
+            case JobPhase.ToStore:
+                if (StepToStore(i)) AfterUnload(i);
+                return;
+            case JobPhase.Wait:
+                if (--u.JobTimer[i] <= 0) Resume(i);
+                return;
+        }
+        if (WalkToBuilding(i, quarry, out bool there)) return;
+        if (!there)
+        {
+            SetPhase(i, JobPhase.ToWork);
+            return;
+        }
+        if (++u.JobTimer[i] < ByWork(i, QuarryTicks(u.Owner[i], quarry.Def))) return;
+        var works = quarry.Def.Works;
+        var next = works[u.JobX[i] % works.Length];
+        u.JobX[i] = (u.JobX[i] + 1) % works.Length;
+        AddCarry(i, next.Good, next.Amount);
+        GoToStorage(i);
+    }
+
+    /// <summary>
     /// A smelter's hauler: brings its iron to storage, and keeps it supplied with ore and coal from storage
     /// (enough for two ingots), one load at a time.
     /// </summary>
@@ -492,6 +529,7 @@ public sealed partial class EconomySystem
                 else EndJob(i);
                 return;
             case UnitJob.Farm:
+            case UnitJob.Quarry:
                 SetPhase(i, JobPhase.ToWork);
                 return;
             case UnitJob.Dig:
