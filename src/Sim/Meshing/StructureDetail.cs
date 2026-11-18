@@ -79,7 +79,8 @@ public static class StructureDetail
     /// <summary>Building blocks, drawn with fine detail instead of as plain blocks.</summary>
     public static bool IsStructure(BlockType t) =>
         t is BlockType.Planks or BlockType.Thatch or BlockType.RoofTile or BlockType.StoneBrick
-            or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle;
+            or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle
+            or BlockType.Floor;
 
     /// <summary>
     /// Blocks drawn as fine voxels: building blocks, and the rubble collapses leave, drawn as heaps of lumps.
@@ -276,6 +277,7 @@ public static class StructureDetail
             BlockType.StoneBrick => Stone(x, y, z),
             BlockType.Rampart => Rampart(x, y, z),
             BlockType.Trestle => Trestle(x, y, z),
+            BlockType.Floor => Floorboards(x, y, z),
             BlockType.TreeRubble => Log(x, y, z),
             BlockType.DuskWood => DuskTrunk(x, y, z),
             BlockType.DuskBranch => DuskBranch(x, y, z),
@@ -286,6 +288,23 @@ public static class StructureDetail
             _ when BlockInfo.IsRubble(_self) => Rubble(x, y, z),
             _ => StructurePalette.PlankA,
         };
+
+        /// <summary>
+        /// A building's floor (<see cref="BlockType.Floor"/>), seen once its walls are knocked open: boards two
+        /// voxels wide running along x, in turns of shade, each laid a little differently, on joists.
+        /// </summary>
+        private byte Floorboards(int x, int y, int z)
+        {
+            int board = (_wz * Size + z) >> 1;
+            if (y < Size - 2) return (z & 1) == 0 && x % 4 == 0 ? StructurePalette.TimberDark : StructurePalette.Timber;
+            if (((_wx * Size + x + Hash(board, _wy) % 7) % 11) == 0) return StructurePalette.TimberDark; // butt joints
+            return (Hash(board, _wy, _wx) % 3) switch
+            {
+                0 => StructurePalette.PlankA,
+                1 => StructurePalette.PlankB,
+                _ => StructurePalette.PlankC,
+            };
+        }
 
         // --- Timber walls ------------------------------------------------------------------------------
 

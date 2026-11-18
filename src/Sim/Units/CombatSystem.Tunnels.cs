@@ -123,7 +123,15 @@ public sealed partial class CombatSystem
         var b = Buildings.At(nx, roof + 1, nz);
         if (b == null || b.Def.Walkable || !BlockInfo.IsBuilt(World.Get(nx, roof + 1, nz))) return;
         int h = 0;
-        for (int y = roof + 1; y < World.SizeY && BlockInfo.IsBuilt(World.Get(nx, y, nz)) && Buildings.At(nx, y, nz) == b; y++) h++;
+        // All of the building's blocks that fall with the column: up through its room to the roof (see Fall).
+        int top = b.Y + b.Def.Height;
+        for (int y = roof + 1; y < World.SizeY; y++)
+        {
+            var t = World.Get(nx, y, nz);
+            if (t == BlockType.Air && y < top) continue;
+            if (!BlockInfo.IsBuilt(t) || Buildings.At(nx, y, nz) != b) break;
+            h++;
+        }
         // The heap fills the column from the sump's floor up; it must top out low enough that nothing slides
         // off it into the sapper's column (a step of two or more), whose floor is at its feet.
         // It stops short at anything it cannot dig (bedrock, water).

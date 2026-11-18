@@ -27,6 +27,13 @@ public sealed class FallingSection
     /// (see <see cref="PhysicsSystem.Release"/>), so a gap in a wall is not filled as high as the wall was.
     /// </summary>
     public bool Spreads { get; internal set; }
+    /// <summary>
+    /// For a piece of a building caving in (see <see cref="PhysicsSystem.Crumble"/>), the building's middle in
+    /// half blocks (doubled coordinates); otherwise <see cref="int.MinValue"/>. Its rubble only slides off a heap
+    /// toward there, so it stays on the building's ground.
+    /// </summary>
+    public int InX { get; internal set; } = int.MinValue;
+    public int InZ { get; internal set; } = int.MinValue;
 
     /// <summary>Whole blocks moved, along x, y (up) and z.</summary>
     public int OffX { get; internal set; }
@@ -124,8 +131,8 @@ public readonly record struct Landing(int Section, int X, int Y, int Z, int Bloc
 /// <para><b>Rubble.</b> Where a piece settles each block drops down its column and slides off any step of
 /// two or more, so it ends up as a heap, and turns to rubble that remembers what it was made of (see
 /// <see cref="BlockInfo.RubbleOf"/>): workers clear it for that. Units walk over rubble at half speed. Units
-/// a piece moves into, or settles on, are hurt (<see cref="CrushDamage"/>); a unit buried climbs out to the
-/// nearest open ground, and one with nowhere to go dies.</para>
+/// a piece moves into, or comes straight down on, are hurt (<see cref="CrushDamage"/>); rubble sliding off a heap
+/// only buries them. A unit buried climbs out to the nearest open ground, and one with nowhere to go dies.</para>
 ///
 /// <para><b>Felled trees.</b> A tree a worker fells leaves the world and topples over, away from the
 /// worker, for <see cref="TreeFallTicks"/> ticks; then it lands as a line of tree rubble along the ground,
@@ -186,7 +193,8 @@ public sealed class PhysicsSystem
     private readonly HashSet<long> _seen = new();
     private readonly List<long> _found = new();
     private readonly Stack<long> _stack = new();
-    private readonly List<(int X, int Y, int Z, BlockType Block)> _placed = new();
+    // Where the last piece to settle put its blocks, and whether each slid there off a heap.
+    private readonly List<(int X, int Y, int Z, bool Slid)> _placed = new();
 
     /// <summary>The sections moving now, oldest first.</summary>
     public IReadOnlyList<FallingSection> Falling => _falling;
@@ -334,7 +342,14 @@ public sealed class PhysicsSystem
     /// Places that hold nothing solid are skipped. With <paramref name="spread"/> the pieces' rubble spreads
     /// out when it settles (see <see cref="FallingSection.Spreads"/>).
     /// </summary>
-    public void Release(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX, int fromZ, int push, bool spread = false)
+    public void Release(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX, int fromZ, int push, bool spread = false) =>
+        ReleaseFrom(cells, fromX * 2 + 1, fromZ * 2 + 1, push, spread);
+
+    /// <summary>
+    /// <see cref="Release"/>, pushed from a point given in half blocks (doubled coordinates, so it can lie
+    /// between blocks: the middle of block x is 2x + 1).
+    /// </summary>
+    private void ReleaseFrom(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX2, int fromZ2, int push, bool spread, bool caveIn = false)
     {
         _seen.Clear();
         foreach (var c in cells)
@@ -360,9 +375,10 @@ public sealed class PhysicsSystem
             }
             var s = Start(0);
             s.Spreads = spread;
+            if (caveIn) (s.InX, s.InZ) = (fromX2, fromZ2);
             long cx = 0, cz = 0;
             foreach (var b in s._blocks) { cx += b.X; cz += b.Z; }
-            (s.VelX, s.VelZ) = Away((int)(cx * 2 / s._blocks.Count) + 1 - fromX * 2 - 1, (int)(cz * 2 / s._blocks.Count) + 1 - fromZ * 2 - 1, push);
+            (s.VelX, s.VelZ) = Away((int)((cx * 2 + s._blocks.Count) / s._blocks.Count) - fromX2, (int)((cz * 2 + s._blocks.Count) / s._blocks.Count) - fromZ2, push);
         }
     }
 
@@ -371,8 +387,10 @@ public sealed class PhysicsSystem
 
     /// <summary>
     /// What is left of a building that is destroyed comes apart: its blocks break into chunks (3 x 2 x 3
-    /// blocks of the building's plan, split further where they are not joined) that are pushed outwards from
-    /// its middle and fall, so the roof drops in, the walls tip out and it all comes down as heaps of rubble.
+    /// blocks of the building's plan, split further where they are not joined) that are pulled in toward its
+    /// middle and fall, so it caves in: the roof drops into the room, the walls tip in after it and it comes
+    /// down as heaps of rubble on its own ground, not on whoever stands round it. A wall's or gate's pieces are
+    /// pushed out and spread instead (see <see cref="FallingSection.Spreads"/>).
     /// A field's blocks under the ground turn to soil.
     /// </summary>
     public void Crumble(Building b)
@@ -393,8 +411,11 @@ public sealed class PhysicsSystem
             if (!chunks.TryGetValue(chunk, out var list)) chunks[chunk] = list = new List<(int, int, int)>();
             list.Add((x, y, z));
         }
-        int cx = b.X + b.Def.SizeX / 2, cz = b.Z + b.Def.SizeZ / 2;
-        foreach (var list in chunks.Values) Release(list, cx, cz, CrumbleSpeed, b.Def.IsWall);
+        // Its middle in half blocks; the chunks are pushed toward it (a negative push), so it caves in. A wall's
+        // or gate's pieces are pushed out instead, and spread, so the gap it leaves can be walked through.
+        int mx = b.X * 2 + b.Def.SizeX, mz = b.Z * 2 + b.Def.SizeZ;
+        bool wall = b.Def.IsWall;
+        foreach (var list in chunks.Values) ReleaseFrom(list, mx, mz, wall ? CrumbleSpeed : -CrumbleSpeed, wall, caveIn: !wall);
     }
 
     /// <summary>A velocity of about <paramref name="speed"/> in the direction (dx, dz); none if that is zero.</summary>
@@ -698,7 +719,7 @@ public sealed class PhysicsSystem
                 gx += b.X; gz += b.Z;
             }
             blocks.Sort((a, c) => Key(a.X, a.Y, a.Z).CompareTo(Key(c.X, c.Y, c.Z)));
-            var f = new FallingSection(_nextSection++, _sim.Tick, s.Generation + 1, blocks) { Spreads = s.Spreads };
+            var f = new FallingSection(_nextSection++, _sim.Tick, s.Generation + 1, blocks) { Spreads = s.Spreads, InX = s.InX, InZ = s.InZ };
             var (vx, vz) = Away((int)(gx * 2 / group.Count) - mx, (int)(gz * 2 / group.Count) - mz, spread);
             f.VelX = Math.Clamp(vx + rng.Range(-spread / 3, spread / 3 + 1), -MaxSpeed, MaxSpeed);
             f.VelZ = Math.Clamp(vz + rng.Range(-spread / 3, spread / 3 + 1), -MaxSpeed, MaxSpeed);
@@ -728,6 +749,7 @@ public sealed class PhysicsSystem
             while (y < _w.SizeY - 1 && BlockInfo.IsSolid(_w.Get(x, y, z))) y++; // something moved in
             y = Floor(x, y, z);
             int step = s.Spreads ? 1 : 2;
+            bool slid = false;
             for (int slide = 0; slide < MaxSlides; slide++)
             {
                 int bestX = x, bestZ = z, bestY = y;
@@ -735,6 +757,8 @@ public sealed class PhysicsSystem
                 for (int f = 1; f <= 4; f++)
                 {
                     int nx = x + Faces[f].X, nz = z + Faces[f].Z;
+                    if (s.InX != int.MinValue && (Math.Abs(nx * 2 + 1 - s.InX) > Math.Abs(x * 2 + 1 - s.InX)
+                        || Math.Abs(nz * 2 + 1 - s.InZ) > Math.Abs(z * 2 + 1 - s.InZ))) continue; // caving in: only inwards
                     if (!_w.InBounds(nx, y, nz) || BlockInfo.IsSolid(_w.Get(nx, y, nz))) continue;
                     int ny = Floor(nx, y, nz);
                     if (ny > y - step) continue;
@@ -743,11 +767,12 @@ public sealed class PhysicsSystem
                 }
                 if (bestY == y) break;
                 (x, y, z) = (bestX, bestY, bestZ);
+                slid = true;
             }
             if (_w.Get(x, y, z) == BlockType.Water) splash = true;
             var rubble = BlockInfo.RubbleOf(b.Block);
             _w.Set(x, y, z, rubble);
-            _placed.Add((x, y, z, rubble));
+            _placed.Add((x, y, z, slid));
             sx += x; sy += y; sz += z;
         }
         int n = order.Count;
@@ -763,9 +788,11 @@ public sealed class PhysicsSystem
     }
 
     /// <summary>
-    /// Units whose body a piece's rubble settled in are hurt (unless the piece already hit them). Not by a
-    /// wall's rubble as it spreads over the ground (see <see cref="FallingSection.Spreads"/>): that slides
-    /// round their feet, and they climb out of it (see <see cref="FreeUnits"/>).
+    /// Units whose body a piece's rubble came straight down on are hurt (unless the piece already hit them).
+    /// Not by rubble that slid off a heap onto them, nor by a wall's rubble as it spreads over the ground (see
+    /// <see cref="FallingSection.Spreads"/>): that slides round their feet, and they climb out of it (see
+    /// <see cref="FreeUnits"/>). So what is under a falling piece is crushed, and what stands beside the heap
+    /// it makes is not.
     /// </summary>
     private void CrushSettled(FallingSection s)
     {
@@ -777,7 +804,7 @@ public sealed class PhysicsSystem
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
             foreach (var p in _placed)
             {
-                if (p.X != x || p.Z != z || p.Y < y || p.Y > y + 1) continue;
+                if (p.Slid || p.X != x || p.Z != z || p.Y < y || p.Y > y + 1) continue;
                 s.Hit.Add(u.Id[i]);
                 _sim.Combat.Crush(i, CrushDamage);
                 break;
@@ -882,7 +909,7 @@ public sealed class PhysicsSystem
 
         void MixSection(FallingSection s)
         {
-            Mix(s.Id); Mix(s.Generation); Mix(s.Spreads ? 1 : 0); Mix(s.PosX); Mix(s.PosY); Mix(s.PosZ);
+            Mix(s.Id); Mix(s.Generation); Mix(s.Spreads ? 1 : 0); Mix(s.InX); Mix(s.InZ); Mix(s.PosX); Mix(s.PosY); Mix(s.PosZ);
             Mix(s.VelX); Mix(s.VelY); Mix(s.VelZ); Mix(s._blocks.Count);
             foreach (var b in s._blocks) Mix(Key(b.X, b.Y, b.Z) * 31 + (long)b.Block);
             foreach (int id in s.Hit) Mix(id);

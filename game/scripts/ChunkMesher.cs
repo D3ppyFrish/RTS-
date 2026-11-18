@@ -370,6 +370,7 @@ public static class ChunkMesher
         BlockType.Trestle => new Color(0.5f, 0.35f, 0.2f),
         BlockType.Lava => new Color(1f, 0.3f, 0f),
         BlockType.Ice => new Color(0.74f, 0.88f, 0.96f),
+        BlockType.Floor => new Color(0.55f, 0.4f, 0.24f),
         BlockType.Farmland => new Color(0.37f, 0.26f, 0.14f),
         BlockType.Road => new Color(0.6f, 0.54f, 0.43f),
         BlockType.Rubble => new Color(0.4f, 0.31f, 0.22f),

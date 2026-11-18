@@ -512,7 +512,7 @@ public class CombatTests
         RunUntil(sim, () => house.Lost > 0, 20 * Tps, "the first block to come out");
         Assert.False(BlockInfo.IsBuilt(sim.World.Get(20, y + 3, 21))); // the roof over the nearest column
         Assert.Equal(BlockType.Planks, sim.World.Get(20, y + 2, 21)); // the wall under it still stands
-        Assert.Equal(BlockInfo.Toughness(BlockType.Thatch), house.Lost);
+        Assert.Equal(house.Def.BlockToughness(house.Def.BlockAt(0, 3, 1)), house.Lost); // a block of thatch
 
         RunUntil(sim, () => !BlockInfo.IsBuilt(sim.World.Get(20, y, 21)), 60 * Tps, "the column to be worn down");
         for (int k = 0; k <= 3; k++) Assert.False(BlockInfo.IsBuilt(sim.World.Get(20, y + k, 21)));
@@ -531,7 +531,9 @@ public class CombatTests
         sim.Schedule(0, new AttackBuildingCommand(1, new[] { sapper }, house.Id));
         RunUntil(sim, () => house.Lost > 0, 20 * Tps, "the first block to come out");
         for (int k = 0; k <= 3; k++) Assert.Equal(BlockType.Air, sim.World.Get(20, y + k, 21));
-        Assert.Equal(3 * BlockInfo.Toughness(BlockType.Planks) + BlockInfo.Toughness(BlockType.Thatch), house.Lost);
+        int column = 0;
+        for (int k = 0; k <= 3; k++) column += house.Def.BlockToughness(house.Def.BlockAt(0, k, 1));
+        Assert.Equal(column, house.Lost); // three of planks and one of thatch
         Assert.Equal(BlockType.Planks, sim.World.Get(20, y, 22));
     }
 
@@ -611,9 +613,11 @@ public class CombatTests
         for (int x = 30; x <= 33; x++)
         {
             for (int k = 0; k <= house.Def.Height; k++) Assert.False(BlockInfo.IsBuilt(sim.World.Get(x, y + k, 31)));
-            Assert.True(BlockInfo.IsRubble(sim.World.Get(x, y - 3, 31)));
+            // The house is hollow: its side walls (x 30 and 33) fell into sumps; inside them only the floor and
+            // the roof above it came down, little enough to land in the tunnel, where the sapper dug through it.
+            if (x is 30 or 33) Assert.True(BlockInfo.IsRubble(sim.World.Get(x, y - 3, 31)));
             Assert.Equal(BlockType.Planks, sim.World.Get(x, y, 30));
-            Assert.Equal(BlockType.Planks, sim.World.Get(x, y, 32));
+            Assert.Equal(x is 30 or 33 ? BlockType.Planks : BlockType.Floor, sim.World.Get(x, y, 32));
         }
         Assert.Same(house, sim.Buildings.Get(house.Id));
         Assert.True(house.Lost > 0);
