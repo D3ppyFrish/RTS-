@@ -514,7 +514,8 @@ public class ContentTests
         Assert.Contains("units.json: unit 'bog_horror', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains("units.json: unit 'giant_crab', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'crab_pots': \"faction\" is \"orcs\", which is not a faction"));
-        Assert.Equal(14, e.Errors.Count);
+        Assert.Contains("units.json: unit 'cave_wyrm', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
+        Assert.Equal(15, e.Errors.Count);
     }
 
     [Fact]

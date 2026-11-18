@@ -360,7 +360,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -371,11 +371,21 @@ public static class ContentLoader
                 if (Enum.TryParse<Biome>(name, ignoreCase: true, out var b) && b is not (Biome.Ocean or Biome.River)) biome = b;
                 else o.Error($"\"biome\" is \"{name}\": it should be grassland, forest, hills, swamp or beach");
             }
-            int count = o.Int("count", 0, 64, biome != null ? 1 : 0);
-            if (count > 0 && biome == null) o.Error("\"count\" needs a \"biome\" to spread the lairs over");
-            bool atStarts = !dusk && (e.TryGetProperty("atStarts", out _) ? o.Bool("atStarts") : biome == null);
-            if (dusk && (biome != null || o.Bool("atStarts") || e.TryGetProperty("prizes", out _)))
-                o.Error("a lair with \"duskTree\" guards the dusk tree only: no \"biome\", \"atStarts\" or \"prizes\"");
+            var cavern = CavernSpot.None;
+            if (o.Str("cavern", false) is { } spot)
+            {
+                if (spot == "along") cavern = CavernSpot.Along;
+                else if (spot == "deepest") cavern = CavernSpot.Deepest;
+                else o.Error($"\"cavern\" is \"{spot}\": it should be along (spread along the cavern) or deepest (its far end)");
+            }
+            if (cavern != CavernSpot.None && biome != null) o.Error("a lair is in the cavern or in a \"biome\", not both");
+            int count = o.Int("count", 0, 64, biome != null || cavern != CavernSpot.None ? 1 : 0);
+            if (count > 0 && biome == null && cavern == CavernSpot.None) o.Error("\"count\" needs a \"biome\" or \"cavern\" to spread the lairs over");
+            int roam = o.Int("roam", 0, 128, 0);
+            if (roam > 0 && biome == null) o.Error("\"roam\" needs a \"biome\": only the lairs spread across the map roam");
+            bool atStarts = !dusk && (e.TryGetProperty("atStarts", out _) ? o.Bool("atStarts") : biome == null && cavern == CavernSpot.None);
+            if (dusk && (biome != null || cavern != CavernSpot.None || o.Bool("atStarts") || e.TryGetProperty("prizes", out _)))
+                o.Error("a lair with \"duskTree\" guards the dusk tree only: no \"biome\", \"cavern\", \"atStarts\" or \"prizes\"");
             var def = new LairDef
             {
                 Pack = o.Int("pack", 1, 50, 4, required: true),
@@ -384,8 +394,10 @@ public static class ContentLoader
                 Reward = o.Cost("reward"),
                 DuskTree = dusk,
                 Biome = biome,
-                Count = biome != null ? count : 0,
+                Count = biome != null || cavern != CavernSpot.None ? count : 0,
                 AtStarts = atStarts,
+                Cavern = cavern,
+                Roam = biome != null ? roam : 0,
             };
             if (!dusk) Prizes(o, def);
             return def;
@@ -1165,6 +1177,7 @@ public static class ContentLoader
             var bases = new List<UnitDef>();
             var monsters = new List<UnitDef>();
             var wild = new List<UnitDef>();
+            var cavern = new List<UnitDef>();
             foreach (var u in _db.Units)
             {
                 var forms = new List<UnitDef>();
@@ -1173,13 +1186,15 @@ public static class ContentLoader
                 u.Forms = forms.ToArray();
                 if (u.TrainedAt != null && !u.IsTrader) bases.Add(u);
                 if (u.Lair is { DuskTree: false, AtStarts: true }) monsters.Add(u);
-                if (u.Lair is { DuskTree: false, Count: > 0 }) wild.Add(u);
+                if (u.Lair is { DuskTree: false, Count: > 0, Cavern: CavernSpot.None }) wild.Add(u);
+                if (u.Lair is { DuskTree: false, Count: > 0, Cavern: not CavernSpot.None }) cavern.Add(u);
                 if (u.Lair is { DuskTree: true }) _db.DuskWarden = u;
             }
             _db.BaseUnits = bases.ToArray();
             _db.StartUnits = bases.FindAll(u => u.InStart).ToArray();
             _db.LairMonsters = monsters.ToArray();
             _db.WildMonsters = wild.ToArray();
+            _db.CavernMonsters = cavern.ToArray();
             foreach (var c in _db.CityStates)
             {
                 var hired = new List<UnitDef>();
@@ -1312,6 +1327,8 @@ public static class ContentLoader
                     h.Add(lair.Biome is { } b ? (int)b : -1);
                     h.Add(lair.Count);
                     h.Add(lair.AtStarts ? 1 : 0);
+                    h.Add((int)lair.Cavern);
+                    h.Add(lair.Roam);
                     h.Add(lair.Prizes.Count);
                     foreach (var p in lair.Prizes)
                     {

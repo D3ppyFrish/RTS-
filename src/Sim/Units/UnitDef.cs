@@ -175,6 +175,17 @@ public sealed class LairDef
     /// <summary>A lair of this monster lies on the way from every start (see <see cref="MonsterSystem.PlaceAtStarts"/>).</summary>
     public bool AtStarts { get; init; } = true;
     /// <summary>
+    /// Where in the map's cavern lairs of this monster lie (see <see cref="MonsterSystem.PlaceCavern"/>), <see cref="Count"/>
+    /// of them (one map has one cavern): <see cref="CavernSpot.None"/> for none.
+    /// </summary>
+    public CavernSpot Cavern { get; init; }
+    /// <summary>
+    /// How far from its den (blocks) a pack spread across the map roams (see <see cref="MonsterSystem.PlaceWild"/>):
+    /// it wanders the land round its den and goes after whoever comes near it, workers too; 0 for a pack that stays home.
+    /// The starts' lairs and the city-states' never roam.
+    /// </summary>
+    public int Roam { get; init; }
+    /// <summary>
     /// What each faction gets for beating this monster: what it makes of the den a cleared lair leaves (see
     /// <see cref="MonsterSystem"/>), in data order. Two factions can share a prize; one not listed gets none.
     /// </summary>
@@ -189,6 +200,17 @@ public sealed class LairDef
             if (p.Faction == faction) return p.Use;
         return null;
     }
+}
+
+/// <summary>Where in the map's cavern a monster's lairs lie (see <see cref="LairDef.Cavern"/>).</summary>
+public enum CavernSpot : byte
+{
+    /// <summary>Not in the cavern.</summary>
+    None,
+    /// <summary>Spread along the cavern, from near the way in to near its far end.</summary>
+    Along,
+    /// <summary>In the chamber furthest from the way in (a boss).</summary>
+    Deepest,
 }
 
 /// <summary>One faction's prize for beating a lair's monster (see <see cref="LairDef.Prizes"/>).</summary>

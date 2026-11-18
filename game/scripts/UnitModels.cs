@@ -60,6 +60,11 @@ public static class UnitModels
     private static readonly Color DuskBarkDark = new(0.18f, 0.17f, 0.22f);
     private static readonly Color DuskVein = new(0.3f, 0.9f, 0.95f);
     private static readonly Color DuskLeaf = new(0.55f, 0.33f, 0.7f);
+    private static readonly Color Chitin = new(0.78f, 0.76f, 0.7f);
+    private static readonly Color ChitinDark = new(0.5f, 0.48f, 0.44f);
+    private static readonly Color WyrmHide = new(0.3f, 0.29f, 0.34f);
+    private static readonly Color WyrmBelly = new(0.55f, 0.52f, 0.5f);
+    private static readonly Color Crystal = new(0.7f, 0.45f, 1f);
     private static readonly Color Team = new(1f, 0f, 0f, 0f);      // full-strength team colour
     private static readonly Color TeamDark = new(0.7f, 0f, 0f, 0f); // shaded team colour
 
@@ -422,6 +427,35 @@ public static class UnitModels
             .Box(-3, 9, 5, -3, 12, 5, CrabDark).Box(2, 9, 5, 2, 12, 5, CrabDark)               // eye stalks
             .Box(-3, 13, 5, -3, 13, 5, Dark).Box(2, 13, 5, 2, 13, 5, Dark)
             .Box(-6, 8, -6, 5, 8, -6, TeamDark),                                                // a band, once it is someone's
+        // A cave crawler: a pale, segmented thing the size of a dog, low to the ground on six legs, with
+        // feelers, pincer jaws and small glowing eyes.
+        "cave_crawler" => new Builder()
+            .Box(-3, 2, -6, 2, 4, -2, Chitin).Box(-3, 2, -1, 2, 5, 3, Chitin)                   // two body segments
+            .Box(-2, 5, -5, 1, 5, -3, ChitinDark).Box(-2, 6, 0, 1, 6, 2, ChitinDark)            // plates on the back
+            .Box(-2, 2, 4, 1, 4, 6, Chitin)                                                     // head
+            .Box(-2, 1, 7, -2, 2, 8, ChitinDark).Box(1, 1, 7, 1, 2, 8, ChitinDark)              // pincer jaws
+            .Box(-2, 4, 7, -2, 4, 7, Glow).Box(1, 4, 7, 1, 4, 7, Glow)                          // eyes
+            .Box(-3, 5, 6, -3, 5, 9, ChitinDark).Box(2, 5, 6, 2, 5, 9, ChitinDark)              // feelers
+            .Box(-5, 0, -5, -4, 3, -5, ChitinDark).Box(3, 0, -5, 4, 3, -5, ChitinDark)          // six legs
+            .Box(-5, 0, -1, -4, 3, -1, ChitinDark).Box(3, 0, -1, 4, 3, -1, ChitinDark)
+            .Box(-5, 0, 3, -4, 3, 3, ChitinDark).Box(3, 0, 3, 4, 3, 3, ChitinDark)
+            .Box(-1, 2, -7, 0, 3, -7, ChitinDark)                                               // tail stub
+            .Box(-3, 3, -2, 2, 3, -2, TeamDark),                                                // a band, once it is someone's
+        // A cave wyrm: a long, blind serpent as big as a house, grey hide with crystals growing out of its back,
+        // a wedge of a head with a jaw full of teeth and a crystal set in its skull.
+        "cave_wyrm" => new Builder()
+            .Box(-2, 0, -26, 1, 3, -21, WyrmHide)                                               // tail
+            .Box(-4, 0, -21, 3, 6, -14, WyrmHide).Box(-5, 0, -14, 4, 9, -5, WyrmHide)           // coils, thickening
+            .Box(-6, 0, -5, 5, 11, 5, WyrmHide)                                                 // the thickest part
+            .Box(-5, 2, 5, 4, 12, 11, WyrmHide)                                                 // neck, rearing up
+            .Box(-5, 0, -14, 4, 1, 11, WyrmBelly)                                               // pale belly
+            .Box(-5, 9, 10, 4, 16, 18, WyrmHide)                                                // head
+            .Box(-4, 8, 14, 3, 9, 19, WyrmBelly)                                                // lower jaw
+            .Box(-4, 10, 18, -4, 11, 18, Bone).Box(-1, 10, 19, 0, 11, 19, Bone).Box(3, 10, 18, 3, 11, 18, Bone) // teeth
+            .Box(-1, 17, 12, 0, 18, 14, Crystal)                                                // the crystal in its skull
+            .Box(-1, 12, 0, 0, 15, 2, Crystal).Box(-3, 10, -6, -2, 13, -4, Crystal)             // crystals down its back
+            .Box(1, 9, -10, 2, 12, -8, Crystal).Box(-1, 7, -17, 0, 9, -16, Crystal)
+            .Box(-6, 6, -2, 5, 6, 2, TeamDark),                                                 // a band, once it is someone's
         "wolf_rider" => new Builder().Wolf(DarkFur, Fur, big: true)
             .Box(-3, 6, -4, 2, 9, 1, TeamDark)                                           // saddle cloth down the flanks
             .Orc(lift: 4, legs: false)

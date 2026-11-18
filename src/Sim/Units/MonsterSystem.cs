@@ -14,6 +14,9 @@ public sealed class Lair
         X = x;
         Y = y;
         Z = z;
+        HomeX = x;
+        HomeY = y;
+        HomeZ = z;
     }
 
     public int Id { get; }
@@ -36,6 +39,21 @@ public sealed class Lair
     public int UsedBy { get; internal set; } = -1;
     /// <summary>The building put up on the den when it was used, or 0.</summary>
     public int Building { get; internal set; }
+
+    /// <summary>
+    /// How far from the den (blocks) the pack roams (see <see cref="LairDef.Roam"/>), or 0 if it stays home: only
+    /// the lairs spread across the map roam.
+    /// </summary>
+    public int Roam { get; internal set; }
+    /// <summary>
+    /// Where the pack is at home now: the den, or for a pack that roams the spot it wandered to last. It guards
+    /// round here, and its leash is measured from here.
+    /// </summary>
+    public int HomeX { get; internal set; }
+    public int HomeY { get; internal set; }
+    public int HomeZ { get; internal set; }
+    // The tick a roaming pack next moves on, if it is not fighting.
+    internal long NextRoam;
 
     internal readonly List<int> PackIds = new();
     /// <summary>The pack's monsters (ids) following a blood trail, in the order they picked it up.</summary>
@@ -142,6 +160,7 @@ public sealed class MonsterSystem
             Mix(lair.Id); Mix(lair.Monster.Index); Mix(lair.X); Mix(lair.Y); Mix(lair.Z);
             Mix(lair.Cleared ? 1 : 0); Mix(lair.ClearedBy); Mix(lair.LastBeatenBy);
             Mix(lair.Used ? 1 : 0); Mix(lair.UsedBy); Mix(lair.Building);
+            Mix(lair.Roam); Mix(lair.HomeX); Mix(lair.HomeY); Mix(lair.HomeZ); Mix(lair.NextRoam);
             Mix(lair.PackIds.Count);
             foreach (int id in lair.PackIds) Mix(id);
             Mix(lair.TrackerIds.Count);
@@ -216,11 +235,93 @@ public sealed class MonsterSystem
             {
                 int x = rng.Range(0, World.SizeX), z = rng.Range(0, World.SizeZ);
                 if (_sim.Map.BiomeAt(x, z) != def.Biome || !WildSiteFits(x, z)) continue;
-                if (Place(monster, x, z) is { } lair) placed.Add(lair);
+                if (Place(monster, x, z) is { } lair)
+                {
+                    placed.Add(lair);
+                    if (def.Roam > 0) StartRoaming(lair);
+                }
                 break;
             }
         }
         return placed;
+    }
+
+    /// <summary>The smallest map (blocks across) whose cavern has monsters in it.</summary>
+    public const int CavernMapSize = 384;
+    /// <summary>The furthest a cavern lair is from the cavern's way in, walking (columns), and the most cells looked at.</summary>
+    private const int CavernReach = 160, CavernCells = 200_000;
+
+    /// <summary>
+    /// Match setup: the lairs in the map's cavern (issue #65), for each monster with a <see cref="LairDef.Cavern"/>
+    /// in data order, <see cref="LairDef.Count"/> of them. The cavern's floor is walked from its first chamber (where
+    /// the way in from the surface comes down) under the roof only; a monster that lives along the cavern has its
+    /// dens spread out along the walk, at (n + 1) / (count + 1) of the way to the cell furthest in, and a boss (deepest)
+    /// is at that furthest cell. The den and pack stand on the cave floor. No cavern, or a map smaller than
+    /// <see cref="CavernMapSize"/> across (test and scripted maps), no lairs. Returns the lairs placed.
+    /// </summary>
+    public List<Lair> PlaceCavern()
+    {
+        var placed = new List<Lair>();
+        var monsters = _sim.Content.CavernMonsters;
+        if (monsters.Count == 0 || _sim.Map.Cavern is not { } cave) return placed;
+        if (World.SizeX < CavernMapSize || World.SizeZ < CavernMapSize) return placed;
+        var floor = CavernFloor(cave.X, cave.Y, cave.Z);
+        _groundCache = null;
+        if (floor.Count == 0) return placed;
+        int deepest = floor[^1].Steps;
+        foreach (var monster in monsters)
+        {
+            var def = monster.Lair!;
+            for (int n = 0; n < def.Count; n++)
+            {
+                int want = def.Cavern == CavernSpot.Deepest ? deepest : deepest * (n + 1) / (def.Count + 1);
+                // The first cell that far in (the floor is in walking order).
+                int k = floor.FindIndex(c => c.Steps >= want);
+                var (x, y, z, _) = floor[k < 0 ? floor.Count - 1 : k];
+                if (Place(monster, x, z, near: y) is { } lair) placed.Add(lair);
+            }
+        }
+        return placed;
+    }
+
+    /// <summary>
+    /// The cave floor reachable on foot from the cavern's first chamber, staying under the roof (a solid block
+    /// above, so not up the way in), in walking order: each cell with its steps from the start.
+    /// </summary>
+    public List<(int X, int Y, int Z, int Steps)> CavernFloor(int cx, int cy, int cz)
+    {
+        var cells = new List<(int X, int Y, int Z, int Steps)>();
+        int sy = Walk.NearestStandLevel(World, cx, cz, cy, GuardHeight * 2);
+        if (sy < 0 || !Roofed(cx, sy, cz)) return cells;
+        var seen = new HashSet<long>();
+        long Key(int x, int y, int z) => ((long)x * World.SizeY + y) * World.SizeZ + z;
+        cells.Add((cx, sy, cz, 0));
+        seen.Add(Key(cx, sy, cz));
+        for (int head = 0; head < cells.Count && cells.Count < CavernCells; head++)
+        {
+            var (x, y, z, steps) = cells[head];
+            if (steps >= CavernReach) continue;
+            foreach (var (dx, dz) in Steps4)
+            {
+                int nx = x + dx, nz = z + dz;
+                if (!World.InBounds(nx, 0, nz) || !Walk.TryStep(World, x, z, y, nx, nz, out int ny)) continue;
+                if (!Roofed(nx, ny, nz) || !seen.Add(Key(nx, ny, nz))) continue;
+                cells.Add((nx, ny, nz, steps + 1));
+            }
+        }
+        return cells;
+    }
+
+    private static readonly (int X, int Z)[] Steps4 = { (1, 0), (0, 1), (-1, 0), (0, -1) };
+
+    // Underground: the column's ground (not counting tree tops) is well above a unit standing with its feet at y.
+    private int[]? _groundCache;
+    private bool Roofed(int x, int y, int z)
+    {
+        _groundCache ??= Array.ConvertAll(new int[World.SizeX * World.SizeZ], _ => int.MinValue);
+        ref int g = ref _groundCache[x * World.SizeZ + z];
+        if (g == int.MinValue) g = Walk.GroundLevel(World, x, z);
+        return g > y + 2;
     }
 
     private bool WildSiteFits(int x, int z)
@@ -345,13 +446,15 @@ public sealed class MonsterSystem
         Fix64 leash = Fix64.FromInt(def.Leash), home = Fix64.FromInt(HomeRadius);
         Fix64 trackLeash = Fix64.FromInt(Math.Max(def.Leash, TrackRange));
         int intruder = -2; // not looked for yet
+        bool fighting = false;
         _home.Clear();
         foreach (int id in lair.PackIds)
         {
             int i = u.IndexOf(id);
             Fix64 d2 = Distance2(i, lair);
             bool goingHome = u.Order[i] == UnitOrder.Move && !u.FightsOnTheWay(i)
-                && u.OrderX[i] == lair.X && u.OrderZ[i] == lair.Z;
+                && u.OrderX[i] == lair.HomeX && u.OrderZ[i] == lair.HomeZ;
+            if (u.Target[i] != 0) fighting = true;
             Fix64 reach = lair.TrackerIds.Contains(id) ? trackLeash : leash;
             if (d2 > reach * reach)
             {
@@ -370,7 +473,52 @@ public sealed class MonsterSystem
             }
             else if (!goingHome && d2 > home * home) _home.Add(id);
         }
-        if (_home.Count > 0) _sim.Issue(new MoveCommand(Simulation.WildPlayer, _home.ToArray(), lair.X, lair.Z, lair.Y));
+        if (lair.Roam > 0 && !fighting && intruder < 0 && _sim.Tick >= lair.NextRoam && MoveOn(lair))
+        {
+            // The pack wanders on together: all of it heads for the new spot.
+            _home.Clear();
+            _home.AddRange(lair.PackIds);
+        }
+        if (_home.Count > 0) _sim.Issue(new MoveCommand(Simulation.WildPlayer, _home.ToArray(), lair.HomeX, lair.HomeZ, lair.HomeY));
+    }
+
+    // --- Roaming -----------------------------------------------------------------------------------
+
+    /// <summary>Seconds a roaming pack stays at a spot before it wanders on, unless it is fighting.</summary>
+    public const int RoamSeconds = 20;
+    /// <summary>Spots tried each time a roaming pack wanders on; with none that fits it stays where it is.</summary>
+    private const int RoamTries = 8;
+
+    /// <summary>The lair's pack roams from now on, as far as its monster's <see cref="LairDef.Roam"/> from the den.</summary>
+    public void StartRoaming(Lair lair)
+    {
+        lair.Roam = lair.Monster.Lair!.Roam;
+        lair.NextRoam = _sim.Tick + RoamSeconds * Simulation.TicksPerSecond + lair.Id % GuardInterval;
+    }
+
+    /// <summary>
+    /// A roaming pack picks the next spot it wanders to: a column within its roam of the den, on dry ground no
+    /// further than <see cref="GuardHeight"/> levels from the den and away from buildings, picked from the map's
+    /// seed, the lair and the tick. False if none of <see cref="RoamTries"/> fits (it tries again later).
+    /// </summary>
+    private bool MoveOn(Lair lair)
+    {
+        lair.NextRoam = _sim.Tick + RoamSeconds * Simulation.TicksPerSecond;
+        int r = lair.Roam;
+        for (int t = 0; t < RoamTries; t++)
+        {
+            uint h = DeterministicRandom.Hash(lair.Id * RoamTries + t, (int)(_sim.Tick & 0x7FFFFFFF), _sim.Seed ^ 0x2B0A3F17UL);
+            int x = lair.X + (int)(h % (uint)(2 * r + 1)) - r, z = lair.Z + (int)(h / (uint)(2 * r + 1) % (uint)(2 * r + 1)) - r;
+            if (IntMath.Distance(x, z, lair.X, lair.Z) > r || !SiteFits(x, z)) continue;
+            int y = Walk.GroundLevel(World, x, z);
+            if (Math.Abs(y - lair.Y) > GuardHeight * 3) continue;
+            if (World.Get(x, y - 1, z) is BlockType.Water or BlockType.Lava or BlockType.Bog) continue;
+            lair.HomeX = x;
+            lair.HomeY = y;
+            lair.HomeZ = z;
+            return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -402,7 +550,7 @@ public sealed class MonsterSystem
         Fix64 bestD = Fix64.MaxValue;
         for (int j = 0; j < u.Count; j++)
         {
-            if (IsWild(j) || u.Subdued[j] || Math.Abs(u.Y[j] - lair.Y) > GuardHeight) continue;
+            if (IsWild(j) || u.Subdued[j] || Math.Abs(u.Y[j] - lair.HomeY) > GuardHeight) continue;
             Fix64 d = Distance2(j, lair);
             if (d > r2) continue;
             if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
@@ -426,7 +574,15 @@ public sealed class MonsterSystem
         u.Field[i] = 0;
     }
 
+    /// <summary>Squared distance from unit i to where the lair's pack is at home now (the den, unless it roams).</summary>
     private Fix64 Distance2(int i, Lair lair)
+    {
+        Fix64 dx = U.X[i] - (Fix64.FromInt(lair.HomeX) + Fix64.Half), dz = U.Z[i] - (Fix64.FromInt(lair.HomeZ) + Fix64.Half);
+        return dx * dx + dz * dz;
+    }
+
+    /// <summary>Squared distance from unit i to the lair's den itself.</summary>
+    private Fix64 DenDistance2(int i, Lair lair)
     {
         Fix64 dx = U.X[i] - (Fix64.FromInt(lair.X) + Fix64.Half), dz = U.Z[i] - (Fix64.FromInt(lair.Z) + Fix64.Half);
         return dx * dx + dz * dz;
@@ -579,7 +735,7 @@ public sealed class MonsterSystem
             if (use.Form is { } form && form.EvolvesFrom != Def(j)) continue;
             if (use.Relic != null && (u.Relic[j] != 0 || Def(j).Damage <= 0 || Def(j).Role == UnitRole.Worker)) continue;
             if (Math.Abs(u.Y[j] - lair.Y) > GuardHeight) continue;
-            Fix64 d = Distance2(j, lair);
+            Fix64 d = DenDistance2(j, lair);
             if (d > r2) continue;
             if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
             {

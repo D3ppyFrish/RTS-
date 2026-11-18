@@ -502,7 +502,8 @@ public class CityStateTests
         Assert.NotNull(lair);
         // The two start lairs, the dusk tree's warden and the towns', then those spread across the map (placed last).
         Assert.Same(lair, sim.Monsters.Lairs[3]);
-        Assert.All(sim.Monsters.Lairs.Skip(5), l => Assert.NotNull(l.Monster.Lair!.Biome));
+        // (and the cavern's last of all).
+        Assert.All(sim.Monsters.Lairs.Skip(5), l => Assert.True(l.Monster.Lair!.Biome != null || l.Monster.Lair.Cavern != CavernSpot.None));
         Assert.DoesNotContain(lair, startLairs);
         Assert.InRange(IntMath.Distance(town.X, town.Z, lair!.X, lair.Z), CityStateSystem.LairNear, CityStateSystem.LairFar);
         Assert.Equal(4, lair.Pack.Count);

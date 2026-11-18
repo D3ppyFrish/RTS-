@@ -14,5 +14,8 @@
     "damage": 4 },
   { "id": "crab_shell", "name": "Crab shell shield", "icon": "crab_shell",
     "description": "A giant crab's back made into a shield. Its bearer turns aside blows from every side.",
-    "armor": 3 }
+    "armor": 3 },
+  { "id": "wyrm_crystal", "name": "Wyrm crystal", "icon": "wyrm_crystal",
+    "description": "The crystal that grew in a cave wyrm's skull, still humming. Its bearer is harder to fell and hits harder.",
+    "hp": 40, "damage": 6, "armor": 1 }
 ]

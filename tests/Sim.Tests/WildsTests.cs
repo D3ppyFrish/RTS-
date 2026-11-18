@@ -141,7 +141,8 @@ public class WildsTests
     {
         var sim = DefaultMatch();
         var fixedLairs = 2 + 1 + sim.Cities.Towns.Count(t => t.LairId > 0);
-        var wild = sim.Monsters.Lairs.Skip(fixedLairs).ToList();
+        // Then those spread across the map; the cavern's come last, underground (see CavernTests).
+        var wild = sim.Monsters.Lairs.Skip(fixedLairs).Where(l => l.Monster.Lair!.Cavern == CavernSpot.None).ToList();
         long area = (long)sim.World.SizeX * sim.World.SizeZ;
         foreach (var id in new[] { "boar", "stone_giant", "wolf", "bog_horror", "giant_crab" })
         {
@@ -158,7 +159,7 @@ public class WildsTests
             foreach (var s in sim.Map.Starts)
                 Assert.True(IntMath.Distance(lair.X, lair.Z, s.X, s.Z) >= MonsterSystem.WildStartGap, $"{lair.Monster.Id} lair near a start");
             foreach (var other in sim.Monsters.Lairs)
-                if (other != lair) Assert.True(IntMath.Distance(lair.X, lair.Z, other.X, other.Z) >= MonsterSystem.WildGap, $"{lair.Monster.Id} lair crowds another");
+                if (other != lair && other.Monster.Lair!.Cavern == CavernSpot.None) Assert.True(IntMath.Distance(lair.X, lair.Z, other.X, other.Z) >= MonsterSystem.WildGap, $"{lair.Monster.Id} lair crowds another");
             foreach (var town in sim.Cities.Towns)
                 Assert.True(IntMath.Distance(lair.X, lair.Z, town.X, town.Z) >= MonsterSystem.WildGap);
         }
