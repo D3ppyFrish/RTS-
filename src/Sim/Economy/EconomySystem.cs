@@ -53,6 +53,11 @@ public sealed class PlayerEconomy
     public int[] Spent { get; } = new int[Goods.Count];
     /// <summary>Food eaten as upkeep (only food, but kept per good for symmetry).</summary>
     public int[] Eaten { get; } = new int[Goods.Count];
+    /// <summary>Food gathered in the last minute (see <see cref="EconomySystem.FoodPerMinute"/>).</summary>
+    public int FoodGathered { get; internal set; }
+
+    // Gathered food as it stood at each of the last 60 whole seconds, the oldest overwritten each second.
+    internal readonly int[] FoodSamples = new int[60];
 
     // Research: techs had (by index), the one being researched (-1 for none) and the ticks spent on it.
     internal readonly bool[] Researched;
@@ -179,6 +184,13 @@ public sealed partial class EconomySystem
 
     public bool Starving(int player) => player < _players.Count && _players[player].Starving;
 
+    /// <summary>
+    /// How much food the player gains (or, below zero, loses) a minute: the food gathered in the last
+    /// minute less what their people eat each minute (<see cref="Upkeep"/>).
+    /// </summary>
+    public int FoodPerMinute(int player) =>
+        (player >= 0 && player < _players.Count ? _players[player].FoodGathered : 0) - Upkeep(player);
+
     /// <summary>True if the player's workers are all automatic, those they train included (see <see cref="AutomateAllCommand"/>).</summary>
     public bool AutoWorkers(int player) => player >= 0 && player < _players.Count && _players[player].AutoWorkers;
 
@@ -276,6 +288,7 @@ public sealed partial class EconomySystem
 
         StepResearch();
         if (_sim.Tick > 0 && _sim.Tick % UpkeepInterval == 0) PayUpkeep();
+        if (_sim.Tick % Tps == 0) SampleFood();
     }
 
     private void CountPopulation()
@@ -302,6 +315,18 @@ public sealed partial class EconomySystem
 
     /// <summary>The food the player's units eat each minute, as of the start of this tick.</summary>
     public int Upkeep(int player) => player >= 0 && player < _upkeep.Length ? _upkeep[player] : 0;
+
+    /// <summary>Once a second: what each player gathered in food since the same second a minute ago.</summary>
+    private void SampleFood()
+    {
+        int slot = (int)(_sim.Tick / Tps % 60);
+        foreach (var p in _players)
+        {
+            int now = p.Gathered[(int)Good.Food];
+            p.FoodGathered = now - p.FoodSamples[slot];
+            p.FoodSamples[slot] = now;
+        }
+    }
 
     private void PayUpkeep()
     {

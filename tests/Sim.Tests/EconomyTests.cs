@@ -408,6 +408,30 @@ public class EconomyTests
     }
 
     [Fact]
+    public void FoodPerMinuteIsTheLastMinutesFoodLessUpkeep()
+    {
+        var sim = Flat();
+        Place(sim, 0, "storehouse", 10, 10);
+        var farm = Place(sim, 0, "farm", 24, 10);
+        var ids = new[] { Worker(sim, 0, 18, 20), Worker(sim, 0, 19, 20) };
+        sim.Step();
+        int upkeep = sim.Economy.Upkeep(0);
+        Assert.True(upkeep > 0);
+        // Nothing gathered yet: only what the people eat.
+        Assert.Equal(-upkeep, sim.Economy.FoodPerMinute(0));
+
+        sim.Schedule(sim.Tick, new WorkCommand(0, ids, farm.Id));
+        sim.Run(2 * 60 * Tps); // farmers working for a while
+        while (sim.Tick % Tps != 1) sim.Step(); // just past a whole second, when the minute is counted
+        var p = sim.Economy.Player(0);
+        int before = p.Gathered[(int)Good.Food];
+        sim.Run(60 * Tps);
+        int gained = p.Gathered[(int)Good.Food] - before;
+        Assert.True(gained > 0, "the farm brings food in");
+        Assert.Equal(gained - sim.Economy.Upkeep(0), sim.Economy.FoodPerMinute(0));
+    }
+
+    [Fact]
     public void WorkersBuildAHouseLayerByLayerAndItRaisesHousing()
     {
         var sim = Flat();

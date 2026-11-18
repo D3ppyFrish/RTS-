@@ -1859,7 +1859,7 @@ public partial class PlayerControl : Node
                $"ghost={(Ghost.Visible ? Ghost.Result.ToString() : "none")} road={_roadPreview.Count} " +
                $"plans={plans} plans_ready={ready} plan_mode={(PlanMode ? 1 : 0)} " +
                $"supply={(supply.Count > 0 ? string.Join(',', supply) : "none")} on_supply={onSupply} " +
-               $"food={stock[(int)Good.Food]} wood={stock[(int)Good.Wood]} stone={stock[(int)Good.Stone]} iron={stock[(int)Good.Iron]} " +
+               $"food={stock[(int)Good.Food]} food_rate={_sim.Economy.FoodPerMinute(LocalPlayer)} wood={stock[(int)Good.Wood]} stone={stock[(int)Good.Stone]} iron={stock[(int)Good.Iron]} " +
                $"techtree={(TechTreeOpen ? 1 : 0)} priorities_menu={(PrioritiesOpen ? 1 : 0)} " +
                $"default_priorities={WorkPriorities.ToLog(_sim.Automation.DefaultPriorities(LocalPlayer))} " +
                $"priorities={(first >= 0 && _sim.Content.Units[u.Def[first]].Role == UnitRole.Worker ? WorkPriorities.ToLog(u.Priorities[first]) : "none")} " +

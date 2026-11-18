@@ -74,5 +74,6 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[4]}" techs)" -eq 1 ] && [ "$(field "${UI[4]}" research)" = none ] || fail "roads not researched: ${UI[4]}"
 [ "$(field "${UI[5]}" building)" = town_hall ] && [ "$(field "${UI[5]}" queue)" -eq 1 ] || fail "no worker queued at the town hall: ${UI[5]}"
 [ "$(field "${UI[6]}" stone)" -lt "$(field "${UI[5]}" stone)" ] || fail "no road laid: ${UI[6]}"
+[ "$(field "${UI[0]}" food_rate)" -lt 0 ] || fail "food a minute should be the upkeep with no food coming in: ${UI[0]}"
 [ "$(grep -c '^Saved screenshot' "$LOG")" -eq 5 ] || fail "missing screenshots"
 echo "UI economy screenshot test OK: $OUT"

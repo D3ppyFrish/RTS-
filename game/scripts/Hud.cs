@@ -34,6 +34,7 @@ public partial class Hud : CanvasLayer
 
     private readonly Label[] _stockLabels = new Label[Goods.Count];
     private Label _popLabel = null!;
+    private Label _foodRateLabel = null!;
     private Label _hungryLabel = null!;
     private Label _clockLabel = null!;
     private WorldLighting _lighting = null!;
@@ -171,7 +172,16 @@ public partial class Hud : CanvasLayer
         bar.AddChild(row);
 
         foreach (var good in Goods.All)
+        {
             _stockLabels[(int)good] = Stat(row, UiIcons.For(good), Goods.Name(good));
+            if (good != Good.Food) continue;
+            // Beside the food stock: food gained or lost a minute.
+            _foodRateLabel = MakeLabel("", 16);
+            _foodRateLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            _foodRateLabel.TooltipText = "Food a minute: what was gathered in the last minute less what your people eat each minute";
+            _foodRateLabel.MouseFilter = Control.MouseFilterEnum.Pass;
+            _stockLabels[(int)good].GetParent().AddChild(_foodRateLabel);
+        }
         _popLabel = Stat(row, UiIcons.Get("people"), "People over housing");
         _hungryLabel = MakeLabel("hungry", 18);
         _hungryLabel.AddThemeColorOverride("font_color", new Color(1f, 0.45f, 0.35f));
@@ -1739,6 +1749,10 @@ public partial class Hud : CanvasLayer
         var stock = econ.Stockpile(player);
         foreach (var good in Goods.All) _stockLabels[(int)good].Text = stock[(int)good].ToString(CultureInfo.InvariantCulture);
         _popLabel.Text = $"{econ.Population(player)} / {econ.Housing(player)}";
+        int rate = econ.FoodPerMinute(player);
+        _foodRateLabel.Text = (rate > 0 ? "+" : "") + rate.ToString(CultureInfo.InvariantCulture) + "/min";
+        _foodRateLabel.AddThemeColorOverride("font_color",
+            rate < 0 ? new Color(1f, 0.45f, 0.35f) : rate > 0 ? new Color(0.55f, 0.9f, 0.45f) : new Color(0.8f, 0.8f, 0.75f));
         _hungryLabel.Visible = econ.Starving(player);
     }
 
