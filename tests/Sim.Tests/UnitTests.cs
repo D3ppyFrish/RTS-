@@ -210,8 +210,8 @@ public class UnitTests
         {
             var mine = ids.Where(id => sim.Units.Owner[sim.Units.IndexOf(id)] == start.Player).ToArray();
             Assert.Equal(30, mine.Length);
-            // Every unit type that is trained is represented (forms are not), and everyone stands on solid ground near the start.
-            Assert.Equal(sim.Content.BaseUnits.Count, mine.Select(id => sim.Units.Def[sim.Units.IndexOf(id)]).Distinct().Count());
+            // Every unit type matches start with is represented (forms are not), and everyone stands on solid ground near the start.
+            Assert.Equal(sim.Content.StartUnits.Count, mine.Select(id => sim.Units.Def[sim.Units.IndexOf(id)]).Distinct().Count());
             Assert.DoesNotContain(mine, id => sim.Content.Units[sim.Units.Def[sim.Units.IndexOf(id)]].IsForm);
             foreach (int id in mine)
             {

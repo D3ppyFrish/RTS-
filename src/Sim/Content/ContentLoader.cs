@@ -509,7 +509,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "upkeep", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "earthWall", "iceBridge");
+                "bleeds", "tracksBlood", "earthWall", "iceBridge", "start");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -552,6 +552,7 @@ public static class ContentLoader
                 WorkPercent = o.Int("work", 10, 1000, 100),
                 Lair = Lair(o),
                 FromDen = o.Bool("fromDen"),
+                InStart = !o.Has("start") || o.Bool("start"),
             };
             if (def.Heal == 0 && (o.Has("healTime") || o.Has("healRange")))
                 o.Error("has \"healTime\" or \"healRange\" but no \"heal\"");
@@ -1090,6 +1091,7 @@ public static class ContentLoader
                 if (u.Lair is { DuskTree: true }) _db.DuskWarden = u;
             }
             _db.BaseUnits = bases.ToArray();
+            _db.StartUnits = bases.FindAll(u => u.InStart).ToArray();
             _db.LairMonsters = monsters.ToArray();
             foreach (var c in _db.CityStates)
             {
@@ -1210,6 +1212,7 @@ public static class ContentLoader
                 h.Add(u.WorkPercent);
                 h.Add(u.EvolvesFrom?.Index ?? -1);
                 h.Add(u.FromDen ? 1 : 0);
+                h.Add(u.InStart ? 1 : 0);
                 if (u.Lair is { } lair)
                 {
                     h.Add(lair.Pack);

@@ -121,6 +121,9 @@ public sealed class UnitDef
 
     public bool CanAttack => Damage > 0;
 
+    /// <summary>Whether matches start with some (<c>"start"</c> in the data, default true; see <see cref="Content.ContentDb.StartUnits"/>).</summary>
+    public bool InStart { get; init; } = true;
+
     /// <summary>A caravan, which trades with city-states (role <see cref="UnitRole.Trader"/>).</summary>
     public bool IsTrader => Role == UnitRole.Trader;
 

@@ -19,6 +19,8 @@
 // percent chance a hit from in front of the unit is stopped whole. bleeds (optional, default true) says
 // whether its slash and pierce wounds bleed (see "bleeding" in roles.json); set it false for a body with no
 // blood in it.
+// start (optional, default true): false keeps a trained unit out of the units matches start with, so it is
+// only ever trained (the healer).
 // upkeep (optional, default 1) is the food it eats a minute; work (optional, default 100) is how fast
 // it gathers, builds, farms and digs tunnels, in percent.
 // Evolution: a unit with evolvesFrom is a form that unit can take once it has the experience (see
@@ -69,7 +71,7 @@
     "damage": 3, "attackTime": 1.5, "range": 1.25, "sight": 8,
     "attack": "crush", "armor": { "torso": 1 },
     "heal": 5, "healTime": 2, "healRange": 6,
-    "cost": { "food": 40, "wood": 20 }, "trainTime": 15, "trainedAt": "barracks", "requires": "basic_magic" },
+    "cost": { "food": 40, "wood": 20 }, "trainTime": 15, "trainedAt": "barracks", "requires": "basic_magic", "start": false },
 
   // Settler forms, first tier.
   { "id": "foreman", "name": "Foreman", "evolvesFrom": "worker", "faction": "settlers", "role": "worker",

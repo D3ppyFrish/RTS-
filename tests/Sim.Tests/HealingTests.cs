@@ -1,5 +1,8 @@
 using System;
+using System.Linq;
+using Rts.Sim.Content;
 using Rts.Sim.Economy;
+using Rts.Sim.World;
 using Xunit;
 
 namespace Rts.Sim.Tests;
@@ -162,5 +165,21 @@ public class HealingTests
         sim.Run(60 * Tps); // and up to full, never past it
         Assert.Equal(max, Hp(sim, friend));
         Assert.True(Hp(sim, alone) < max);
+    }
+
+    /// <summary>Issue #42: healers are only trained; matches start with four of every other trained type, as before.</summary>
+    [Fact]
+    public void MatchesDoNotStartWithHealers()
+    {
+        var db = ContentDb.Default;
+        Assert.False(db.Unit("healer").InStart);
+        Assert.DoesNotContain(db.Unit("healer"), db.StartUnits);
+        Assert.Equal(24, Simulation.UsualStartUnits(db));
+
+        var sim = Flat();
+        sim.Map.Starts.Add(new StartArea(0, 48, Ground + 1, 30));
+        var ids = sim.SpawnStartingUnits(Simulation.UsualStartUnits(db));
+        Assert.Equal(24, ids.Count);
+        foreach (int id in ids) Assert.NotEqual(db.Unit("healer").Index, sim.Units.Def[sim.Units.IndexOf(id)]);
     }
 }

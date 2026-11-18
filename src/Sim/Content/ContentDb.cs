@@ -32,10 +32,15 @@ public sealed class ContentDb
 
     public IReadOnlyList<UnitDef> Units => _units;
     /// <summary>
-    /// The unit types that are trained at a building, except caravans, in data order: what matches start with.
+    /// The unit types that are trained at a building, except caravans, in data order.
     /// Not forms units evolve into, monsters, mercenaries, or other units that only come about in play.
     /// </summary>
     public IReadOnlyList<UnitDef> BaseUnits { get; internal set; } = Array.Empty<UnitDef>();
+    /// <summary>
+    /// The base units matches start with, in data order: <see cref="BaseUnits"/> but those marked
+    /// <c>"start": false</c> (the healer, issue #42), which are only trained.
+    /// </summary>
+    public IReadOnlyList<UnitDef> StartUnits { get; internal set; } = Array.Empty<UnitDef>();
     /// <summary>The monsters that keep lairs (<see cref="UnitDef.Lair"/>), in data order.</summary>
     public IReadOnlyList<UnitDef> LairMonsters { get; internal set; } = Array.Empty<UnitDef>();
     /// <summary>The monster that guards the map's dusk tree (a lair with <c>duskTree</c>), or null if none does.</summary>

@@ -170,7 +170,7 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   within 12 columns of a town hall or house of its own (full in 25 seconds), so a wounded army is
   worth bringing home. Healers heal on top of this. The numbers are in `data/roles.json`.
 - **Healers** (issue #42): every faction trains the healer at the barracks once it knows Basic magic
-  (40 food and 20 wood, 15 seconds). Every 2 seconds it gives 5 hit points back to the most hurt ally
+  (40 food and 20 wood, 15 seconds); matches start without any. Every 2 seconds it gives 5 hit points back to the most hurt ally
   within 6 blocks (a bleeding one first, and it stems the bleeding), never to itself or an enemy. It has
   45 hit points and hits for only 3, so keep it behind the line. The Settlers' battle priest, a spearman's
   form, heals the same way while it fights in the line.
