@@ -48,6 +48,15 @@ public partial class UnitRenderer : Node3D
         public int Count;
     }
 
+    /// <summary>
+    /// Models drawn where they stand that are not units of the rules (--golems=N, --showcase): scenery for looking
+    /// at the detail and measuring what it costs. Positions in metres.
+    /// </summary>
+    public readonly List<(string Model, Vector3 At, float Yaw, Color Team)> Showpieces = new();
+
+    /// <summary>Units drawn detailed last frame in their finest voxels.</summary>
+    public int FineCount => _detail.DrawnFine;
+
     private Simulation _sim = null!;
     private FogOfWar _fog = null!;
     private readonly List<(MeshInstance3D Node, Lair Lair)> _dens = new();
@@ -119,7 +128,8 @@ void fragment() {
 ";
 
     public ShaderMaterial Material => _material;
-    public ShaderMaterial DetailMaterial => _detail.Material;
+    /// <summary>Hides detailed units above <paramref name="y"/> metres, as the height slice does.</summary>
+    public void SetDetailSlice(float y) => _detail.SetSlice(y);
 
     /// <summary>F7 turns detailed units on and off, to compare the looks and the frame time.</summary>
     public override void _UnhandledKeyInput(InputEvent e)
@@ -232,6 +242,8 @@ void fragment() {
             BatchOf(i).Count++;
             if (u.CarryAmount[i] > 0) _loads.Count++;
         }
+        foreach (var piece in Showpieces)
+            if (_batches.TryGetValue(piece.Model, out var plain)) plain.Count++;
         _heads.Count = _sim.Cities.Towns.Count;
         foreach (var town in _sim.Cities.Towns) _bands.Count += town.Def.Totem?.Height ?? 0;
         foreach (var b in _batches.Values)
@@ -253,7 +265,6 @@ void fragment() {
         bool detailed = DetailedUnits.Enabled;
         var camera = GetViewport()?.GetCamera3D();
         var eye = camera?.GlobalPosition ?? Vector3.Zero;
-        float near2 = DetailedUnits.Distance * DetailedUnits.Distance;
         var defs = _sim.Content.Units;
         for (int i = 0; i < u.Count; i++)
         {
@@ -283,7 +294,9 @@ void fragment() {
 
             if (u.CarryAmount[i] > 0) Write(_loads, c, s, x * bs, y * bs, z * bs, LoadColor(u.Carry[i]));
             var at = new Vector3(x * bs, y * bs, z * bs);
-            if (detailed && camera != null && at.DistanceSquaredTo(eye) < near2 && !_sim.DuskTree.HasStaff(i))
+            string model = _modelByOwnerDef[u.Owner[i] & 7][u.Def[i]];
+            float d2 = at.DistanceSquaredTo(eye);
+            if (detailed && camera != null && !_sim.DuskTree.HasStaff(i) && _detail.Covers(model, d2))
             {
                 if (id >= _phaseById.Length)
                 {
@@ -293,17 +306,25 @@ void fragment() {
                 // Walk cycle: one stride every 1.6 blocks walked; the stride eases in and out.
                 float speed = Mathf.Sqrt(dx * dx + dz * dz) * Simulation.TicksPerSecond;
                 _strideById[id] = Mathf.Lerp(_strideById[id], speed > 0.05f ? 1f : 0f, Math.Min(1f, delta * 8f));
-                _phaseById[id] = Mathf.PosMod(_phaseById[id] + speed * delta * Mathf.Tau / 1.6f, Mathf.Tau);
+                _phaseById[id] = Mathf.PosMod(_phaseById[id] + speed * delta * Mathf.Tau / _detail.StrideBlocks(model), Mathf.Tau);
                 var def = defs[u.Def[i]];
                 float strike = u.Target[i] != 0 && u.Cooldown[i] > 0 && def.AttackTicks > 0
                     ? 1f - Math.Clamp((u.Cooldown[i] - alpha) / def.AttackTicks, 0f, 1f) : -1f;
-                if (_detail.Add(_modelByOwnerDef[u.Owner[i] & 7][u.Def[i]], at, yaw, team, _phaseById[id], _strideById[id], strike, _time, id))
+                if (_detail.Add(model, at, d2, yaw, team, _phaseById[id], _strideById[id], strike, _time, id))
                     continue;
             }
             Write(b, c, s, x * bs, y * bs, z * bs, team);
         }
         foreach (var town in _sim.Cities.Towns)
             if (_fog.HasSeen(town.X, town.Z)) WriteTotem(town, bs);
+        // Showpieces (--golems, --showcase): models that are not units of the rules, standing still and breathing;
+        // plain where they would be, if they have a plain model.
+        for (int k = 0; k < Showpieces.Count; k++)
+        {
+            var (model, at, yaw, team) = Showpieces[k];
+            if (detailed && camera != null && _detail.Add(model, at, at.DistanceSquaredTo(eye), yaw, team, 0, 0, -1, _time, -1 - k)) continue;
+            if (_batches.TryGetValue(model, out var plain)) Write(plain, Mathf.Cos(yaw), Mathf.Sin(yaw), at.X, at.Y, at.Z, team);
+        }
         foreach (var (node, lair) in _dens) node.Visible = !lair.Used && _fog.HasSeen(lair.X, lair.Z); // a used den is gone
 
         _detail.EndFrame();

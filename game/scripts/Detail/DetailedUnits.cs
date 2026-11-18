@@ -4,14 +4,58 @@ using Godot;
 
 namespace Rts.Game.Detail;
 
+/// <summary>What a part of a detailed model does as the unit moves.</summary>
+public enum Role
+{
+    /// <summary>A leg swinging forward as the walk cycle starts (left leg; a four-legged beast's front left and hind right).</summary>
+    LegA,
+    /// <summary>A leg swinging the other way.</summary>
+    LegB,
+    /// <summary>The body: bobs as it walks and leans into the stride or the blow. Exactly one per model.</summary>
+    Body,
+    /// <summary>The head: carried by the body, nodding against its lean; it bites when the model has no weapon arm.</summary>
+    Head,
+    /// <summary>The free arm, swinging against the legs.</summary>
+    ArmA,
+    /// <summary>The weapon arm: swings as it walks, strikes as it fights.</summary>
+    ArmB,
+    /// <summary>Carried by the body without moving of its own: a tail, a rider.</summary>
+    Fixed,
+}
+
 /// <summary>
-/// Prototype of detailed, animated units: voxels a sixteenth of a block across (3.1 cm, half the size of
-/// <see cref="UnitModels"/>' voxels), split into six rigid parts (two legs, body, head, two arms) that swing
-/// as the unit walks or fights. Each part of each model is one MultiMesh, so a crowd of any size is still a
-/// handful of draw calls; animating is only writing a transform per part per unit each frame.
+/// A detailed model: its parts, what each does and the point it turns about (sculpt units, see
+/// <see cref="Sculpt"/>), how it walks, and how to build its parts at a given voxel size.
+/// </summary>
+public sealed class RigDef
+{
+    public required Role[] Roles;
+    public required Vector3[] Pivots;
+    /// <summary>The parts' voxels at a step (sculpt units per voxel: 1, 2 or 4).</summary>
+    public required Func<int, FineGrid[]> Build;
+    /// <summary>Blocks walked per stride.</summary>
+    public float StrideBlocks = 1.6f;
+    public float LegSwing = 0.6f, ArmSwing = 0.35f, Lean = 1f;
+    /// <summary>How far (sculpt units) the body bobs at each step.</summary>
+    public float Bob = 2.4f;
+    /// <summary>How hard the weapon arm (or the head) swings in a blow.</summary>
+    public float Blow = 1f;
+    /// <summary>Whether far out it is drawn in voxels four units across, for a model with no plain one (<see cref="UnitModels"/>).</summary>
+    public bool Far;
+}
+
+/// <summary>
+/// Detailed, animated units, built from sculpts (<see cref="Sculpt"/>) split into rigid parts (legs, body,
+/// head, arms; a tail, a rider) that swing as the unit walks or fights. Each part of each model at each level
+/// of detail is one MultiMesh, so a crowd of any size is still a handful of draw calls; animating is only
+/// writing a transform per part per unit each frame.
 ///
-/// Only units near the camera are drawn this way (<see cref="Distance"/>); further out they keep their
-/// plain model (<see cref="UnitRenderer"/>), which looks the same from there and is far cheaper.
+/// Levels of detail, by distance from the camera: within <see cref="NearDistance"/> voxels a thirty-second of a
+/// block across (1.6 cm); within <see cref="Distance"/> voxels twice that size, which look the same from
+/// there; further out the plain model (<see cref="UnitRenderer"/>, an eighth of a block, not animated), or for
+/// a model that has none, its own sculpt in voxels four times the finest size. The first detailed Settlers
+/// (worker, spearman, archer) were drawn by hand in voxels a sixteenth of a block across and have only that
+/// level, out to <see cref="Distance"/>.
 /// </summary>
 public partial class DetailedUnits : Node3D
 {
@@ -24,16 +68,20 @@ public partial class DetailedUnits : Node3D
     /// <summary>How far from the camera (metres) units are drawn detailed.</summary>
     public static float Distance = 40f;
 
+    /// <summary>How far from the camera (metres) sculpted units are drawn in their finest voxels (--detail-near=M).</summary>
+    public static float NearDistance = 16f;
+
+    /// <summary>Sculpted models are drawn only at the middle level (--detail-fine=off), to measure what the finest costs.</summary>
+    public static bool Fine = true;
+
     private const int FloatsPerInstance = 20;
 
-    private enum Part { LegL, LegR, Body, Head, ArmL, ArmR }
-    private const int Parts = 6;
-
-    // Pivots (voxels): hips, waist, neck and shoulders.
-    private static readonly Vector3[] Pivot =
+    // The hand-drawn Settlers' pivots (their voxels): hips, waist, neck and shoulders.
+    private static readonly Vector3[] PersonPivot =
     {
         new(-2, 11, 0), new(2, 11, 0), new(0, 11, 0), new(0, 21, 0), new(-6.5f, 20, 0), new(6.5f, 20, 0),
     };
+    private static readonly Role[] PersonRoles = { Role.LegA, Role.LegB, Role.Body, Role.Head, Role.ArmA, Role.ArmB };
 
     private sealed class Batch
     {
@@ -42,91 +90,219 @@ public partial class DetailedUnits : Node3D
         public int Count;
     }
 
-    private readonly Dictionary<string, Batch[]> _rigs = new();
+    /// <summary>One level of detail of a model: a batch per part, and the furthest it is drawn (metres; infinity for the last).</summary>
+    private sealed class Level
+    {
+        public required Batch[] Parts;
+        public required ArrayMesh[] Meshes;
+        /// <summary>
+        /// For the finest level: the same parts at the middle level, drawn only into shadows. Shadows are drawn
+        /// several times a frame (once per cascade), and from the middle level they look the same at a quarter of
+        /// the triangles.
+        /// </summary>
+        public Batch[]? Shadow;
+        public float Reach;
+        public bool Near;
+    }
+
+    private sealed class Rig
+    {
+        public required Role[] Roles;
+        /// <summary>Pivots in metres.</summary>
+        public required Vector3[] Pivots;
+        public required Level[] Levels;
+        public int Body;
+        public bool HasWeaponArm;
+        public float StrideMetres, LegSwing, ArmSwing, Lean, Bob, Blow;
+    }
+
+    private readonly Dictionary<string, Rig?> _rigs = new();
     private ShaderMaterial _material = null!;
     private Aabb _box;
 
-    /// <summary>Triangles of one detailed unit of each model, for the benchmark report.</summary>
-    public static readonly Dictionary<string, int> Triangles = new();
+    /// <summary>Triangles of one detailed unit of each model (at each level, finest first), for the benchmark report.</summary>
+    public static readonly Dictionary<string, string> Triangles = new();
 
-    /// <summary>Units drawn detailed this frame.</summary>
+    /// <summary>Units drawn detailed this frame, and of those, how many in the finest voxels.</summary>
     public int Drawn { get; private set; }
+    public int DrawnFine { get; private set; }
 
     public ShaderMaterial Material => _material;
 
-    public static bool Has(string model) => Array.IndexOf(Models, model) >= 0;
+    public static bool Has(string model) => Array.IndexOf(Models, model) >= 0 || Sculpted.Rigs.ContainsKey(model);
 
     public void Init(Aabb worldBox)
     {
         _box = worldBox;
-        _material = DetailShader.Make(PerBlock / ChunkMesher.BlockSize);
+        _material = MaterialFor(VoxelSize);
         // Build every detailed model now, while the match loads, rather than on the frame one first shows.
         var timer = System.Diagnostics.Stopwatch.StartNew();
-        foreach (var model in Models) BatchesOf(model);
+        foreach (var model in Models) RigOf(model);
+        foreach (var model in Sculpted.Rigs.Keys) RigOf(model);
         BuildMs = timer.Elapsed.TotalMilliseconds;
     }
 
-    /// <summary>The models that have a detailed version.</summary>
+    /// <summary>The hand-drawn models that have a detailed version (more come from <see cref="Sculpted"/>).</summary>
     public static readonly string[] Models = { "worker", "spearman", "archer" };
 
     /// <summary>How long building the detailed models took.</summary>
     public static double BuildMs { get; private set; }
 
-    private Batch[]? BatchesOf(string model)
+    // One material per voxel size: the shader shades each voxel a little on its own, so it has to know their size.
+    private readonly Dictionary<float, ShaderMaterial> _materials = new();
+
+    private ShaderMaterial MaterialFor(float voxelSize)
     {
-        if (_rigs.TryGetValue(model, out var b)) return b;
-        var grids = Rig(model);
-        if (grids == null)
+        if (!_materials.TryGetValue(voxelSize, out var m))
+            _materials[voxelSize] = m = DetailShader.Make(1f / voxelSize);
+        return m;
+    }
+
+    /// <summary>Hides everything above <paramref name="y"/> metres, as the height slice does.</summary>
+    public void SetSlice(float y)
+    {
+        foreach (var m in _materials.Values) m.SetShaderParameter("slice_y", y);
+    }
+
+    private MultiMeshInstance3D Instance(ArrayMesh mesh, ShaderMaterial material, out MultiMesh mm,
+        GeometryInstance3D.ShadowCastingSetting shadows = GeometryInstance3D.ShadowCastingSetting.On)
+    {
+        mm = new MultiMesh
         {
-            _rigs[model] = null!;
-            return null;
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            UseColors = true,
+            UseCustomData = true,
+            Mesh = mesh,
+            InstanceCount = 16,
+        };
+        var node = new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = material, CustomAabb = _box, CastShadow = shadows };
+        AddChild(node);
+        return node;
+    }
+
+    private Level MakeLevel(FineGrid[] grids, float voxelSize, float reach, bool near, List<int> tris)
+    {
+        var parts = new Batch[grids.Length];
+        var meshes = new ArrayMesh[grids.Length];
+        int t = 0;
+        for (int p = 0; p < grids.Length; p++)
+        {
+            var (mesh, n) = FineModel.Build(grids[p], voxelSize, ao: true);
+            t += n;
+            meshes[p] = mesh;
+            // The finest level casts its shadows from the middle level's parts (see Level.Shadow).
+            Instance(mesh, MaterialFor(voxelSize), out var mm, near ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On);
+            parts[p] = new Batch { Mesh = mm };
         }
-        b = new Batch[Parts];
-        int tris = 0;
-        for (int p = 0; p < Parts; p++)
+        tris.Add(t);
+        return new Level { Parts = parts, Meshes = meshes, Reach = reach, Near = near };
+    }
+
+    /// <summary>Batches drawing <paramref name="from"/>'s parts into shadows only.</summary>
+    private Batch[] ShadowsOf(Level from, float voxelSize)
+    {
+        var parts = new Batch[from.Meshes.Length];
+        for (int p = 0; p < parts.Length; p++)
         {
-            var (mesh, t) = FineModel.Build(grids[p], VoxelSize);
-            tris += t;
-            var mm = new MultiMesh
+            Instance(from.Meshes[p], MaterialFor(voxelSize), out var mm, GeometryInstance3D.ShadowCastingSetting.ShadowsOnly);
+            parts[p] = new Batch { Mesh = mm };
+        }
+        return parts;
+    }
+
+    private Rig? RigOf(string model)
+    {
+        if (_rigs.TryGetValue(model, out var rig)) return rig;
+        var tris = new List<int>();
+        if (Sculpted.Rigs.TryGetValue(model, out var def))
+        {
+            var levels = new List<Level>
             {
-                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                UseColors = true,
-                UseCustomData = true,
-                Mesh = mesh,
-                InstanceCount = 16,
+                MakeLevel(def.Build(1), Sculpt.UnitSize, float.NaN, true, tris),
+                MakeLevel(def.Build(2), Sculpt.UnitSize * 2, float.NaN, false, tris),
             };
-            AddChild(new MultiMeshInstance3D { Multimesh = mm, MaterialOverride = _material, CustomAabb = _box });
-            b[p] = new Batch { Mesh = mm };
+            levels[0].Shadow = ShadowsOf(levels[1], Sculpt.UnitSize * 2);
+            if (def.Far) levels.Add(MakeLevel(def.Build(4), Sculpt.UnitSize * 4, float.PositiveInfinity, false, tris));
+            var pivots = new Vector3[def.Pivots.Length];
+            for (int p = 0; p < pivots.Length; p++) pivots[p] = def.Pivots[p] * Sculpt.UnitSize;
+            rig = new Rig
+            {
+                Roles = def.Roles, Pivots = pivots, Levels = levels.ToArray(),
+                StrideMetres = def.StrideBlocks * ChunkMesher.BlockSize, LegSwing = def.LegSwing, ArmSwing = def.ArmSwing,
+                Lean = def.Lean, Bob = def.Bob * Sculpt.UnitSize, Blow = def.Blow,
+            };
         }
-        Triangles[model] = tris;
-        return _rigs[model] = b;
+        else if (Hand(model) is { } grids)
+        {
+            var pivots = new Vector3[PersonPivot.Length];
+            for (int p = 0; p < pivots.Length; p++) pivots[p] = PersonPivot[p] * VoxelSize;
+            rig = new Rig
+            {
+                Roles = PersonRoles, Pivots = pivots, Levels = new[] { MakeLevel(grids, VoxelSize, float.NaN, false, tris) },
+                StrideMetres = 1.6f * ChunkMesher.BlockSize, LegSwing = 0.6f, ArmSwing = 0.35f, Lean = 1f, Bob = VoxelSize, Blow = 1f,
+            };
+        }
+        if (rig != null)
+        {
+            rig.Body = Array.IndexOf(rig.Roles, Role.Body);
+            rig.HasWeaponArm = Array.IndexOf(rig.Roles, Role.ArmB) >= 0;
+            Triangles[model] = string.Join("/", tris);
+        }
+        return _rigs[model] = rig;
+    }
+
+    /// <summary>
+    /// Whether a unit of <paramref name="model"/> this far (squared, metres) from the camera is drawn detailed:
+    /// the plain model is drawn otherwise.
+    /// </summary>
+    public bool Covers(string model, float distanceSquared) =>
+        RigOf(model) is { } rig && LevelAt(rig, distanceSquared) != null;
+
+    private static Level? LevelAt(Rig rig, float d2)
+    {
+        foreach (var level in rig.Levels)
+        {
+            if (level.Near && !Fine) continue;
+            float reach = float.IsNaN(level.Reach) ? (level.Near ? NearDistance : Distance) : level.Reach;
+            if (d2 <= reach * reach) return level;
+        }
+        return null;
     }
 
     public void BeginFrame()
     {
         Drawn = 0;
+        DrawnFine = 0;
         foreach (var rig in _rigs.Values)
             if (rig != null)
-                foreach (var b in rig) b.Count = 0;
+                foreach (var level in rig.Levels)
+                {
+                    foreach (var b in level.Parts) b.Count = 0;
+                    if (level.Shadow != null)
+                        foreach (var b in level.Shadow) b.Count = 0;
+                }
     }
+
+    /// <summary>Blocks walked per stride by a model (for the walk cycle), or the usual 1.6.</summary>
+    public float StrideBlocks(string model) => RigOf(model) is { } rig ? rig.StrideMetres / ChunkMesher.BlockSize : 1.6f;
 
     /// <summary>
     /// Draws one unit of <paramref name="model"/> standing at <paramref name="pos"/> (metres) facing
-    /// <paramref name="yaw"/>. <paramref name="walk"/> is the walk cycle's phase (radians) and
-    /// <paramref name="stride"/> how much of a stride it takes (0 standing, 1 walking);
-    /// <paramref name="strike"/> is how far it is from one blow to the next (0..1, the hit landing at 0;
-    /// negative when not fighting).
+    /// <paramref name="yaw"/>, <paramref name="distanceSquared"/> (metres, squared) from the camera.
+    /// <paramref name="walk"/> is the walk cycle's phase (radians) and <paramref name="stride"/> how much of a
+    /// stride it takes (0 standing, 1 walking); <paramref name="strike"/> is how far it is from one blow to the
+    /// next (0..1, the hit landing at 0; negative when not fighting).
     /// <paramref name="time"/> drives breathing so a crowd standing still is not frozen.
-    /// Returns false if the model has no detailed version.
+    /// Returns false if the model has no detailed version at that distance.
     /// </summary>
-    public bool Add(string model, Vector3 pos, float yaw, Color team, float walk, float stride, float strike, float time, int id)
+    public bool Add(string model, Vector3 pos, float distanceSquared, float yaw, Color team, float walk, float stride, float strike, float time, int id)
     {
-        var rig = BatchesOf(model);
-        if (rig == null) return false;
+        if (RigOf(model) is not { } rig || LevelAt(rig, distanceSquared) is not { } level) return false;
         long started = System.Diagnostics.Stopwatch.GetTimestamp();
         Drawn++;
+        if (level.Near) DrawnFine++;
         float swing = Mathf.Sin(walk) * stride;
-        float bob = Mathf.Abs(Mathf.Cos(walk)) * stride * 1.2f + Mathf.Sin(time * 2.1f + id * 1.3f) * 0.25f * (1 - stride);
+        float bob = (Mathf.Abs(Mathf.Cos(walk)) * stride * 1.2f + Mathf.Sin(time * 2.1f + id * 1.3f) * 0.25f * (1 - stride)) * rig.Bob;
         // A blow, timed by the unit's attack cooldown: a quick thrust as the hit lands, then the arm comes
         // back to rest and winds up for the next one. strike < 0: not fighting.
         float blow = 0;
@@ -135,33 +311,39 @@ public partial class DetailedUnits : Node3D
             if (strike < 0.3f) blow = 0.5f - 1.9f * Mathf.Sin(strike / 0.3f * Mathf.Pi);
             else if (strike < 0.6f) blow = 0.5f * (1 - Mathf.SmoothStep(0.3f, 0.6f, strike));
             else blow = 0.5f * Mathf.SmoothStep(0.6f, 1f, strike);
+            blow *= rig.Blow;
         }
-        float lean = strike < 0 ? stride * 0.08f : -blow * 0.06f;
+        float lean = (strike < 0 ? stride * 0.08f : -blow * 0.06f) * rig.Lean;
         float cy = Mathf.Cos(yaw), sy = Mathf.Sin(yaw);
-        Span<float> angle = stackalloc float[Parts];
-        angle[(int)Part.LegL] = swing * 0.6f;
-        angle[(int)Part.LegR] = -swing * 0.6f;
-        angle[(int)Part.Body] = lean;
-        angle[(int)Part.Head] = lean * -0.5f;
-        angle[(int)Part.ArmL] = -swing * 0.35f;
-        angle[(int)Part.ArmR] = strike >= 0 ? blow : swing * 0.35f;
         // Every joint turns about the X axis, so each part is one turn about X (its own angle, plus the body's
-        // lean for the head and arms) and an offset in the Y-Z plane, then the unit's yaw and position.
+        // lean for what the body carries) and an offset in the Y-Z plane, then the unit's yaw and position.
         // Worked out by hand: Godot's Transform3D maths is slow enough to matter for thousands of parts.
-        float wy = Pivot[(int)Part.Body].Y * VoxelSize, wz = Pivot[(int)Part.Body].Z * VoxelSize;
+        var waist = rig.Pivots[rig.Body];
+        float wy = waist.Y, wz = waist.Z;
         float cl = Mathf.Cos(lean), sl = Mathf.Sin(lean);
-        for (int p = 0; p < Parts; p++)
+        for (int p = 0; p < rig.Roles.Length; p++)
         {
-            float py = Pivot[p].Y * VoxelSize, pz = Pivot[p].Z * VoxelSize;
-            float ca = Mathf.Cos(angle[p]), sa = Mathf.Sin(angle[p]);
+            var role = rig.Roles[p];
+            float angle = role switch
+            {
+                Role.LegA => swing * rig.LegSwing,
+                Role.LegB => -swing * rig.LegSwing,
+                Role.Body => lean,
+                Role.Head => rig.HasWeaponArm ? lean * -0.5f : lean * -0.5f + blow * 0.35f,
+                Role.ArmA => -swing * rig.ArmSwing,
+                Role.ArmB => strike >= 0 ? blow : swing * rig.ArmSwing,
+                _ => 0f,
+            };
+            float py = rig.Pivots[p].Y, pz = rig.Pivots[p].Z;
+            float ca = Mathf.Cos(angle), sa = Mathf.Sin(angle);
             // Turn about the pivot: v -> Ra (v - P) + P, so the offset is P - Ra P.
             float oy = py - (ca * py - sa * pz), oz = pz - (sa * py + ca * pz);
-            float theta = angle[p];
-            if (p >= (int)Part.Body)
+            float theta = angle;
+            if (role is not (Role.LegA or Role.LegB))
             {
-                // Everything above the hips bobs; the head and arms also lean with the body round the waist.
-                oy += bob * VoxelSize;
-                if (p != (int)Part.Body)
+                // Everything above the legs bobs; what the body carries also leans with it round the waist.
+                oy += bob;
+                if (role != Role.Body)
                 {
                     float ry = oy - wy, rz = oz - wz;
                     oy = cl * ry - sl * rz + wy;
@@ -171,7 +353,11 @@ public partial class DetailedUnits : Node3D
             }
             float c = Mathf.Cos(theta), s = Mathf.Sin(theta);
             // Basis = Ryaw * Rx(theta); origin = Ryaw * (0, oy, oz) + pos.
-            Write(rig[p], cy, sy * s, sy * c, sy * oz + pos.X,
+            Write(level.Parts[p], cy, sy * s, sy * c, sy * oz + pos.X,
+                          0, c, -s, oy + pos.Y,
+                          -sy, cy * s, cy * c, cy * oz + pos.Z, team);
+            if (level.Shadow != null)
+                Write(level.Shadow[p], cy, sy * s, sy * c, sy * oz + pos.X,
                           0, c, -s, oy + pos.Y,
                           -sy, cy * s, cy * c, cy * oz + pos.Z, team);
         }
@@ -190,13 +376,24 @@ public partial class DetailedUnits : Node3D
         foreach (var rig in _rigs.Values)
         {
             if (rig == null) continue;
-            foreach (var b in rig)
+            foreach (var level in rig.Levels)
             {
-                RenderingServer.MultimeshSetBuffer(b.Mesh.GetRid(), b.Buffer);
-                b.Mesh.VisibleInstanceCount = b.Count;
+                Upload(level.Parts);
+                if (level.Shadow != null) Upload(level.Shadow);
             }
         }
         UploadMs += (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+    }
+
+    private static void Upload(Batch[] parts)
+    {
+        foreach (var b in parts)
+        {
+            // Only hand over what changed: a level nobody is drawn at stays empty.
+            if (b.Count == 0 && b.Mesh.VisibleInstanceCount == 0) continue;
+            RenderingServer.MultimeshSetBuffer(b.Mesh.GetRid(), b.Buffer);
+            b.Mesh.VisibleInstanceCount = b.Count;
+        }
     }
 
     private static void Write(Batch b, float m00, float m01, float m02, float ox, float m10, float m11, float m12, float oy,
@@ -237,13 +434,17 @@ public partial class DetailedUnits : Node3D
     private static readonly FineMaterial Team = new(new Color(1f, 0, 0, 0)), TeamDark = new(new Color(0.68f, 0, 0, 0)), TeamDeep = new(new Color(0.48f, 0, 0, 0));
 
     /// <summary>The six parts of a detailed model, or null if it has none. Models face +Z, feet at y = 0.</summary>
-    private static FineGrid[]? Rig(string model) => model switch
+    private static FineGrid[]? Hand(string model) => model switch
     {
         "spearman" => Spearman(),
         "worker" => Worker(),
         "archer" => Archer(),
         _ => null,
     };
+
+    // The hand-drawn models' six parts.
+    private enum Part { LegL, LegR, Body, Head, ArmL, ArmR }
+    private const int Parts = 6;
 
     /// <summary>A grid big enough for any part (with gear held out), centred on x and z.</summary>
     private static FineGrid Grid() => new(-14, -2, -12, 14, 50, 14);
