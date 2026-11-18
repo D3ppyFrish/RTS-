@@ -225,6 +225,11 @@ public static class UnitModels
         "mage" => new Builder().Robe()
             .Box(-2, 14, -2, 1, 14, 1, TeamDark).Box(-1, 15, -1, 0, 16, 0, TeamDark).Box(-1, 17, -1, -1, 18, -1, Team)
             .Box(3, 0, 1, 3, 15, 1, Wood).Box(3, 16, 1, 3, 16, 1, Glow),
+        "healer" => new Builder().Robe()
+            .Box(-2, 13, -3, 1, 14, 1, Cloth).Box(-2, 10, -3, 1, 12, -3, Cloth)          // white hood
+            .Box(-2, 6, 1, 1, 9, 1, Cloth).Box(-1, 6, 1, 0, 9, 1, Team).Box(-2, 8, 1, 1, 8, 1, Team) // apron with a cross
+            .Box(-4, 4, -1, -4, 6, 0, Leather).Box(-4, 7, -1, -4, 7, 0, Leaf)            // satchel of herbs
+            .Box(3, 0, 1, 3, 13, 1, Wood).Box(3, 14, 0, 3, 14, 2, Leaf).Box(3, 15, 1, 3, 15, 1, Lamp), // staff tied with leaves
         "rider" => new Builder().Mount(Horse)
             .Box(-3, 5, -4, 2, 9, 1, TeamDark)                                           // caparison down the flanks
             .Humanoid(lift: 6, legs: false)
@@ -257,6 +262,11 @@ public static class UnitModels
             .Box(-2, 11, 2, 1, 14, 2, Bone).Box(-1, 13, 2, -1, 13, 2, Toxic).Box(0, 13, 2, 0, 13, 2, Toxic) // skull mask
             .Box(-3, 15, -1, 2, 15, 2, Team).Box(-3, 16, -1, -3, 18, -1, Team).Box(2, 16, -1, 2, 18, -1, Team).Box(-1, 16, -1, 0, 19, -1, Team) // feathered crown
             .Box(3, 0, 1, 3, 17, 1, Bone).Box(2, 18, 0, 4, 20, 2, Bone).Box(3, 19, 3, 3, 19, 3, Toxic), // bone staff with a skull
+        "orcs/healer" => new Builder().Orc(legs: false)
+            .Box(-3, 0, -1, 2, 4, 1, TeamDark)                                           // long hide skirt
+            .Box(-2, 15, -1, 1, 15, 2, Moss).Box(-2, 16, 0, 1, 16, 1, Leaf)              // moss cap
+            .Box(-4, 6, -1, -4, 9, 1, Hide).Box(-4, 10, 0, -4, 10, 0, Leaf)              // pouch of herbs
+            .Box(3, 0, 1, 3, 16, 1, Wood).Box(2, 17, 0, 4, 18, 2, Leaf).Box(3, 19, 1, 3, 19, 1, Toxic), // branch staff
 
         // Settler forms.
         "foreman" => new Builder().Humanoid().Rank()

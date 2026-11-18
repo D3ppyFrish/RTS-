@@ -60,7 +60,7 @@ namespace Rts.Game;
 ///                         room, so this makes room to try out training and hiring)
 ///   --raid=N              N of player 1's sappers stand beside your house nearest your start (with --houses)
 ///                         and are ordered to knock it down (to try out rebuild orders)
-///   --battle=N            two armies of N soldiers each (every soldier type in turn) face each other at
+///   --battle=N            two armies of N soldiers each (every soldier type matches start with, in turn) face each other at
 ///                         the camera focus, yours to the west, with an enemy house to the north
 ///   --lineup              every unit type each of the first two players can have (its faction's own, the
 ///                         shared ones, monsters, caravans and mercenaries) stands in a row at the camera
@@ -849,7 +849,7 @@ public partial class Main : Node3D
             return;
         }
         _sim.PlaceStartingBuildings();
-        var defs = _sim.Content.BaseUnits;
+        var defs = _sim.Content.StartUnits;
         int side = (int)Math.Ceiling(Math.Sqrt(count));
         for (int k = 0; _spawned.Count < count && k < count * 4; k++)
         {
@@ -872,7 +872,7 @@ public partial class Main : Node3D
         if (!tree.Exists) return;
         int me = PlayerControl.LocalPlayer;
         var kinds = new List<UnitDef>();
-        foreach (var d in _sim.Content.BaseUnits)
+        foreach (var d in _sim.Content.StartUnits)
             if (d.Role != UnitRole.Worker && d.CanAttack)
                 for (int k = 0; k < n; k++) kinds.Add(d);
         if (tree.UseFor(me) == DuskTreeUse.Heal)
@@ -904,7 +904,7 @@ public partial class Main : Node3D
     private void SpawnBattle(int n, int fx, int fz)
     {
         var soldiers = new List<string>();
-        foreach (var d in _sim.Content.BaseUnits)
+        foreach (var d in _sim.Content.StartUnits)
             if (d.Role != UnitRole.Worker && d.CanAttack) soldiers.Add(d.Id);
         if (soldiers.Count == 0) return;
         for (int side = 0; side < 2; side++)

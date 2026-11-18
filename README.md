@@ -60,7 +60,7 @@ Units live in the simulation core as flat arrays (`src/Sim/Units/UnitStore.cs`) 
 positions and stable ids. A move order sends a group to a point. Units step up one block (never two),
 drop up to three, wade through shallow water, fall when the ground under them is dug away, push each
 other apart so crowds spread out, and stop when they arrive or the crowd at the goal has settled. Unit
-types (worker, spearman, archer, rider, sapper, mage, and the Settlers' forms they evolve into: see
+types (worker, spearman, archer, rider, sapper, mage, healer, and the Settlers' forms they evolve into: see
 [Evolution](docs/rules.md#evolution)) come from `data/units.json` (see [Game data](#game-data)).
 Godot draws them with one MultiMesh per model; the placeholder models are built from voxels an eighth
 of a terrain block across, tinted in the owner's colour. Each player starts with a town hall at their
@@ -118,7 +118,7 @@ replay made with different data says so instead of drifting apart.
   against and how much less damage the others deal to buildings, and how fast units out of the fight
   heal (see [Combat](docs/rules.md#combat)).
 - **Buildings and units** name the techs they need; the barracks trains spearmen at once, and archers,
-  riders, sappers and mages after their techs. `units.json` also holds the forms units evolve into and the
+  riders, sappers, mages and healers after their techs. `units.json` also holds the forms units evolve into and the
   monsters, and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)), whether it
   tames monsters, and how a computer player plays it (`aiStyle`: `waves` or `balanced`, see
   [Winning and computer players](docs/rules.md#winning-and-computer-players)).

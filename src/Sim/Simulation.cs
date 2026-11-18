@@ -186,13 +186,13 @@ public sealed class Simulation
 
     /// <summary>
     /// Match setup: <paramref name="perPlayer"/> units at every start area, cycling through the unit types
-    /// that are trained (not forms, see <see cref="ContentDb.BaseUnits"/>), in rows of ten just south of the
+    /// matches start with (see <see cref="ContentDb.StartUnits"/>), in rows of ten just south of the
     /// start point (skipping spots with nowhere to stand, like tree trunks). Returns the new ids in spawn order.
     /// </summary>
     public List<int> SpawnStartingUnits(int perPlayer)
     {
         var ids = new List<int>();
-        var defs = Content.BaseUnits;
+        var defs = Content.StartUnits;
         foreach (var start in Map.Starts)
         {
             int placed = 0;
@@ -226,8 +226,8 @@ public sealed class Simulation
         }
     }
 
-    /// <summary>Units each player has at the usual start: four of every unit type that is trained.</summary>
-    public static int UsualStartUnits(ContentDb content) => 4 * content.BaseUnits.Count;
+    /// <summary>Units each player has at the usual start: four of every unit type matches start with.</summary>
+    public static int UsualStartUnits(ContentDb content) => 4 * content.StartUnits.Count;
 
     /// <summary>
     /// Match setup for the usual start: each player's town hall with the starting goods,
