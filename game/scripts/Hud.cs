@@ -1397,6 +1397,8 @@ public partial class Hud : CanvasLayer
             string heals = !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Z[i].FloorToInt()) is { } camp
                     ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
+            int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
+            if (hurt > 0) heals += hurt >= Rts.Sim.World.HazardSystem.LavaDamage ? " (scorched by lava)" : " (poisoned by the bog)";
             string staff = _sim.DuskTree.HasStaff(i) ? " with the Dusk Staff" : "";
             int tend = _sim.DuskTree.TendProgress(u.Id[i]);
             if (tend > 0)

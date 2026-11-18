@@ -46,7 +46,7 @@ shot $OUT/units-icons-far.png
 "
 LOG="$OUT/ui-lineup.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --lineup --focus=100,276 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --lineup --focus=100,276 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|Lineup)" | tee "$LOG"
 
 fail() { echo "UI lineup test failed: $1" >&2; exit 1; }

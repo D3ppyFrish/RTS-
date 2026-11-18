@@ -49,7 +49,8 @@ public sealed class Lair
 /// <summary>
 /// Wild monsters, and the Orcs' taming of them. Monsters belong to no player: they are the wild side,
 /// <see cref="Simulation.WildPlayer"/>, which fights everyone. They live in lairs: every match has one on the
-/// way from each start area to the map centre (<see cref="PlaceAtStarts"/>), a den with a pack around it. The
+/// way from each start area to the map centre (<see cref="PlaceAtStarts"/>), and more are spread across the map by
+/// biome (<see cref="PlaceWild"/>): a den with a pack around it. The
 /// pack guards its den: a monster with nothing to do goes after the unit nearest the den within the lair's
 /// guard radius (<see cref="LairDef.Guard"/>), workers included, and walks back to the den when there is none.
 /// One lured further than the leash (<see cref="LairDef.Leash"/>) breaks off and goes home. Monsters never break
@@ -180,6 +181,58 @@ public sealed class MonsterSystem
             }
         }
         return placed;
+    }
+
+    /// <summary>The nearest a lair spread across the map (see <see cref="PlaceWild"/>) is to a start area (blocks).</summary>
+    public const int WildStartGap = 100;
+    /// <summary>The nearest a lair spread across the map is to any other lair or to a city-state's town (blocks).</summary>
+    public const int WildGap = 40;
+    /// <summary>Columns tried for each lair spread across the map before it is given up.</summary>
+    private const int WildTries = 600;
+
+    /// <summary>
+    /// Match setup: the lairs spread across the map (issue #45), for each monster with a
+    /// <see cref="LairDef.Biome"/> in data order, <see cref="LairDef.Count"/> of them for each 512 by 512 blocks of
+    /// map (rounded down). Each den is on dry ground of its biome where <see cref="SiteFits"/>, at least
+    /// <see cref="WildStartGap"/> from every start and <see cref="WildGap"/> from every other lair and town, at a
+    /// column picked from a random stream of the map's seed; a lair with no such column in
+    /// <see cref="WildTries"/> tries is left out. Call after placing the starts' lairs and the city-states.
+    /// Returns the lairs placed.
+    /// </summary>
+    public List<Lair> PlaceWild()
+    {
+        var placed = new List<Lair>();
+        var monsters = _sim.Content.WildMonsters;
+        long area = (long)World.SizeX * World.SizeZ;
+        for (int k = 0; k < monsters.Count; k++)
+        {
+            var monster = monsters[k];
+            var def = monster.Lair!;
+            int count = (int)(def.Count * area / (512L * 512L));
+            var rng = new DeterministicRandom(_sim.Seed ^ 0x3A1D5EEDUL ^ (ulong)(k + 1) * 0x9E3779B97F4A7C15UL);
+            for (int n = 0; n < count; n++)
+            for (int t = 0; t < WildTries; t++)
+            {
+                int x = rng.Range(0, World.SizeX), z = rng.Range(0, World.SizeZ);
+                if (_sim.Map.BiomeAt(x, z) != def.Biome || !WildSiteFits(x, z)) continue;
+                if (Place(monster, x, z) is { } lair) placed.Add(lair);
+                break;
+            }
+        }
+        return placed;
+    }
+
+    private bool WildSiteFits(int x, int z)
+    {
+        foreach (var s in _sim.Map.Starts)
+            if (IntMath.Distance(x, z, s.X, s.Z) < WildStartGap) return false;
+        foreach (var lair in _lairs)
+            if (IntMath.Distance(x, z, lair.X, lair.Z) < WildGap) return false;
+        foreach (var town in _sim.Cities.Towns)
+            if (IntMath.Distance(x, z, town.X, town.Z) < WildGap) return false;
+        if (!SiteFits(x, z)) return false;
+        int y = Walk.GroundLevel(World, x, z);
+        return World.Get(x, y - 1, z) is not (BlockType.Water or BlockType.Lava or BlockType.Bog);
     }
 
     /// <summary>
@@ -526,7 +579,7 @@ public sealed class MonsterSystem
 
     /// <summary>True if the player can use the den now: it is cleared and unused, their faction has a use for it, and a unit of theirs among the units can.</summary>
     public bool CanUseDen(int player, Lair lair, IEnumerable<int> units) =>
-        lair.Cleared && !lair.Used && !lair.Monster.Lair!.DuskTree && DenUse(player) is { } use && DenUser(lair, Owned(player, units), use) >= 0;
+        lair.Cleared && !lair.Used && lair.Monster.Lair!.Den && DenUse(player) is { } use && DenUser(lair, Owned(player, units), use) >= 0;
 
     private IEnumerable<int> Owned(int player, IEnumerable<int> units)
     {
@@ -537,7 +590,7 @@ public sealed class MonsterSystem
     /// <summary>The player uses the den, if they can (see the class notes); it is gone from the map.</summary>
     internal void Apply(DenCommand c)
     {
-        if (GetLair(c.Lair) is not { } lair || !lair.Cleared || lair.Used || lair.Monster.Lair!.DuskTree
+        if (GetLair(c.Lair) is not { } lair || !lair.Cleared || lair.Used || !lair.Monster.Lair!.Den
             || DenUse(c.PlayerId) is not { } use) return;
         var units = _sim.OwnedUnits(c);
         int user = DenUser(lair, units, use);

@@ -35,6 +35,10 @@
 // faction tames monsters (see "tamesMonsters" in factions.json): then each monster their units beat is
 // theirs to ride or to recruit. A lair with duskTree guards the map's one dusk tree instead (see "Dusk tree" in
 // docs/rules.md): it is not placed at the starts and leaves no den.
+// biome and count (optional) spread count lairs of the monster over that biome (grassland, forest, hills,
+// swamp or beach) for each 512 by 512 blocks of map, well away from the starts, the towns and each other;
+// such a monster has no lair at the starts unless atStarts is true. den: false means a cleared lair leaves
+// no den to use.
 // ride (optional) says which unit can climb on a beaten monster (rider) and what it becomes (becomes); a
 // recruited monster fights for its new owner as it is. tracksBlood (optional)
 // makes a wild monster follow a fresh blood trail it finds to the bleeding unit, well past its leash.
@@ -149,8 +153,20 @@
     "description": "Hunts in packs around its den. Orcs who beat one can ride it or keep it.",
     "speed": 7, "hp": 60, "model": "wolf", "damage": 7, "attackTime": 1, "range": 1.25, "sight": 9,
     "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true,
-    "lair": { "pack": 4, "guard": 12, "leash": 20, "reward": { "food": 150, "iron": 20 } },
+    "lair": { "pack": 4, "guard": 12, "leash": 20, "reward": { "food": 150, "iron": 20 },
+      "biome": "grassland", "count": 1, "atStarts": true },
     "ride": { "rider": "spearman", "becomes": "wolf_rider" } },
+  { "id": "boar", "name": "Wild boar", "role": "monster",
+    "description": "Roots in the forests in small herds and charges anyone who comes near. Orcs who beat one can ride it to war.",
+    "speed": 6, "hp": 80, "model": "boar", "damage": 9, "attackTime": 1.25, "range": 1.25, "sight": 8,
+    "attack": "pierce", "body": "beast", "armor": { "body": 2 },
+    "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 200 }, "biome": "forest", "count": 2, "den": false },
+    "ride": { "rider": "spearman", "becomes": "rider" } },
+  { "id": "stone_giant", "name": "Stone giant", "role": "monster",
+    "description": "A hulk of living rock that guards a pass in the hills. Slow, but each blow crushes; it leaves stone and iron behind.",
+    "speed": 3, "hp": 450, "model": "stone_giant", "damage": 22, "attackTime": 1.75, "range": 1.75, "sight": 10,
+    "attack": "crush", "armor": { "head": 3, "torso": 4, "arms": 3, "legs": 3 },
+    "lair": { "pack": 1, "guard": 10, "leash": 14, "reward": { "stone": 200, "iron": 60 }, "biome": "hills", "count": 1, "den": false } },
   { "id": "dusk_warden", "name": "Dusk Warden", "role": "monster",
     "description": "A hulking husk of bark and bone that guards the dusk tree. Only once it falls can a battle priest heal the tree.",
     "speed": 3.5, "hp": 500, "model": "dusk_warden", "damage": 18, "attackTime": 1.5, "range": 1.75, "sight": 10,

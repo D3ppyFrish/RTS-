@@ -159,6 +159,17 @@ public sealed class LairDef
     /// from each start: it has no lair at the starts and leaves no den to use.
     /// </summary>
     public bool DuskTree { get; init; }
+    /// <summary>
+    /// Where lairs of this monster are spread across the map besides the starts' (see
+    /// <see cref="MonsterSystem.PlaceWild"/>): the biome their dens are in, or null for none.
+    /// </summary>
+    public World.Biome? Biome { get; init; }
+    /// <summary>Lairs of this monster spread over its <see cref="Biome"/> for each 512 by 512 blocks of map.</summary>
+    public int Count { get; init; }
+    /// <summary>A lair of this monster lies on the way from every start (see <see cref="MonsterSystem.PlaceAtStarts"/>).</summary>
+    public bool AtStarts { get; init; } = true;
+    /// <summary>A cleared lair leaves a den a player can use once (see <see cref="MonsterSystem"/>); never for the dusk tree's.</summary>
+    public bool Den { get; init; } = true;
 }
 
 /// <summary>Riding a beaten monster: a unit of type <see cref="Rider"/> near it climbs on and becomes a <see cref="Becomes"/>.</summary>

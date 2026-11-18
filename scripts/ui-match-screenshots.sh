@@ -54,7 +54,7 @@ print
 "
 LOG="$OUT/ui-match.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --menu --seed=1234 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --menu --seed=1234 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|Match over|Replay saved|Player)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
@@ -105,7 +105,7 @@ shot $OUT/ui-victory.png
 "
 LOG="$OUT/ui-match-victory.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --seed=1234 --units=40 --focus=424,256 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --seed=1234 --units=40 --focus=424,256 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|Match over|Replay saved)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"

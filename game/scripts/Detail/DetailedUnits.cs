@@ -129,7 +129,7 @@ public partial class DetailedUnits : Node3D
 
     public ShaderMaterial Material => _material;
 
-    public static bool Has(string model) => Array.IndexOf(Models, model) >= 0 || Sculpted.Rigs.ContainsKey(model);
+    public static bool Has(string model) => Array.IndexOf(Models, model) >= 0 || Sculpted.Rigs.ContainsKey(model) || Sculpted.SameAs.ContainsKey(model);
 
     public void Init(Aabb worldBox)
     {
@@ -213,6 +213,7 @@ public partial class DetailedUnits : Node3D
     private Rig? RigOf(string model)
     {
         if (_rigs.TryGetValue(model, out var rig)) return rig;
+        if (Sculpted.SameAs.TryGetValue(model, out var same)) return _rigs[model] = RigOf(same);
         var tris = new List<int>();
         if (Sculpted.Rigs.TryGetValue(model, out var def))
         {

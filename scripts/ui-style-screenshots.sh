@@ -48,7 +48,7 @@ shot $OUT/$LOOK-end.png
 "
   LOG="$OUT/$LOOK.log"
   xvfb-run -a -s "-screen 0 1600x900x24" \
-    timeout 600 godot --path game --rendering-driver opengl3 -- --menu --seed=1234 --ui-look="$LOOK" --replays="$OUT/replays" --input="$STEPS" 2>&1 \
+    timeout 600 godot --path game --rendering-driver opengl3 -- --world=512x64x512 --menu --seed=1234 --ui-look="$LOOK" --replays="$OUT/replays" --input="$STEPS" 2>&1 \
     | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
   ! grep -q '^Input script' "$LOG" || fail "$LOOK: a scripted step found nothing to click"
   [ "$(grep -c '^Saved screenshot' "$LOG")" -eq 4 ] || fail "$LOOK: missing screenshots"

@@ -447,6 +447,15 @@ areas, and Orcs who beat a wolf keep it.
   out (at most two thirds of the way and at least 20, on dry ground away from buildings), with a pack
   of four wolves around its den. Monsters belong to the wild side (player 7), everyone's enemy, which
   earns no experience and pays no upkeep.
+- **Across the map** (issue #45): more lairs are spread over the map by biome, for each 512 by 512 blocks
+  of it: a wolf pack in the grassland, two herds of **wild boar** in the forests and a **stone giant** in the
+  hills (on the default 768 map, twice that, rounded down: 2, 4 and 2). Each den is at least 100 blocks from
+  every start and 40 from any other lair or town. A boar herd is three boars (80 hit points, quick, tusks
+  that pierce) that pay 200 food; Orcs who beat a boar can ride it, and the spearman becomes a rider (the
+  Orcs' own rider sits on a war boar). A stone giant stands alone: 450 hit points, slow, heavy armour and
+  crushing blows, and pays 200 stone and 60 iron; Orcs can recruit it. Neither leaves a den to use. In the
+  data, `biome` and `count` in a `lair` spread it, `atStarts` keeps it at the starts too, `den: false`
+  leaves no den.
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.
@@ -520,6 +529,19 @@ large bare tree in the hills about halfway between the starts, and a monster gua
   shows "(healing the dusk tree, X%)", an Orc "(hacking at the dusk tree, X%)". The bearer is drawn
   holding the staff, its panel says "with the Dusk Staff", and the Dusk Bloom button (or the `,` key)
   uses it. The computer players leave the tree alone for now.
+
+## Natural hazards
+
+`src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, issue #45): ground that hurts the units on or near it.
+
+- **Poison bog**: patches of violet sludge (`BlockType.Bog`) on the swamp's dry mud, never near a start.
+  Units walk on it, but each second on it costs 3 hit points. Workers dig it away like mud, which makes the
+  ground safe.
+- **Lava heat**: a unit within a column of lava, at its feet's level or the one below, loses 6 hit points
+  a second.
+- Both land like falling ground does, by no one: armour does not help and nobody gets the kill. Wild
+  monsters are hurt the same. A unit's panel says "(poisoned by the bog)" or "(scorched by lava)" while it
+  is. The numbers are first guesses for playtesting.
 
 ## City-states
 

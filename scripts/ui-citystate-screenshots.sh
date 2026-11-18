@@ -80,7 +80,7 @@ shot $OUT/ui-caravan-trade.png
 "
 LOG="$OUT/ui-citystate.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --goods=1000 --houses=4 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --goods=1000 --houses=4 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|City-state)" | tee "$LOG"
 
 fail() { echo "UI city-state test failed: $1" >&2; exit 1; }
@@ -91,7 +91,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[0]}" city)" = goblins ] && [ "$(field "${UI[0]}" holder)" -eq -1 ] && [ "$(field "${UI[0]}" totem_owner)" -eq 7 ] \
   && [ "$(field "${UI[0]}" guards)" -eq 6 ] && [ "$(field "${UI[0]}" guards_owner)" -eq 7 ] \
   || fail "the goblin town is not selected, or it is not neutral with its totem and guards: ${UI[0]}"
-[ "$(field "${UI[1]}" lairs)" -eq 2 ] || fail "the starting units did not clear the wolf lair: ${UI[1]}"
+[ "$(field "${UI[1]}" lairs)" -eq $(( $(field "${UI[0]}" lairs) - 1 )) ] || fail "the starting units did not clear the wolf lair: ${UI[1]}"
 [ "$(field "${UI[2]}" holder)" -eq 0 ] && [ "$(field "${UI[2]}" totem_owner)" -eq 0 ] && [ "$(field "${UI[2]}" guards_owner)" -eq 0 ] \
   || fail "the starting units did not take the goblin town: ${UI[2]}"
 [ "$(field "${UI[3]}" mercs)" -eq 2 ] && [ "$(field "${UI[3]}" pool)" -eq 4 ] || fail "no goblins hired: ${UI[3]}"

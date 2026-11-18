@@ -358,6 +358,7 @@ public static class ChunkMesher
         BlockType.Bedrock => new Color(0.1f, 0.1f, 0.1f),
         BlockType.Leaves => new Color(0.2f, 0.45f, 0.18f),
         BlockType.Mud => new Color(0.3f, 0.27f, 0.17f),
+        BlockType.Bog => new Color(0.42f, 0.27f, 0.45f), // poison bog: a sickly violet sludge, unlike mud or grass
         BlockType.BerryBush => new Color(0.75f, 0.15f, 0.3f),
         BlockType.Planks => new Color(0.72f, 0.54f, 0.32f),
         BlockType.Thatch => new Color(0.8f, 0.69f, 0.38f),

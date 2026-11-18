@@ -84,7 +84,7 @@ print
 LOG="$OUT/ui-dusktree.log"
 run() {
   xvfb-run -a -s "-screen 0 1600x900x24" \
-    godot --path game --rendering-driver opengl3 -- "$@" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)"
+    godot --path game --rendering-driver opengl3 -- --world=512x64x512 "$@" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)"
 }
 {
   run --focus=dusk --time-of-day=0 --input="$NIGHT_STEPS"

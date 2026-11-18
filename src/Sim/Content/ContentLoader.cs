@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Rts.Sim.Economy;
 using Rts.Sim.Units;
+using Rts.Sim.World;
 
 namespace Rts.Sim.Content;
 
@@ -334,17 +335,32 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "den");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
+            bool dusk = o.Bool("duskTree");
+            Biome? biome = null;
+            if (o.Str("biome", false) is { } name)
+            {
+                if (Enum.TryParse<Biome>(name, ignoreCase: true, out var b) && b is not (Biome.Ocean or Biome.River)) biome = b;
+                else o.Error($"\"biome\" is \"{name}\": it should be grassland, forest, hills, swamp or beach");
+            }
+            int count = o.Int("count", 0, 64, biome != null ? 1 : 0);
+            if (count > 0 && biome == null) o.Error("\"count\" needs a \"biome\" to spread the lairs over");
+            bool atStarts = !dusk && (e.TryGetProperty("atStarts", out _) ? o.Bool("atStarts") : biome == null);
+            if (dusk && (biome != null || o.Bool("atStarts"))) o.Error("a lair with \"duskTree\" guards the dusk tree only: no \"biome\" or \"atStarts\"");
             return new LairDef
             {
                 Pack = o.Int("pack", 1, 50, 4, required: true),
                 Guard = guard,
                 Leash = Math.Max(leash, guard),
                 Reward = o.Cost("reward"),
-                DuskTree = o.Bool("duskTree"),
+                DuskTree = dusk,
+                Biome = biome,
+                Count = biome != null ? count : 0,
+                AtStarts = atStarts,
+                Den = !dusk && (!e.TryGetProperty("den", out _) || o.Bool("den")),
             };
         }
 
@@ -1083,6 +1099,7 @@ public static class ContentLoader
             }
             var bases = new List<UnitDef>();
             var monsters = new List<UnitDef>();
+            var wild = new List<UnitDef>();
             foreach (var u in _db.Units)
             {
                 var forms = new List<UnitDef>();
@@ -1090,12 +1107,14 @@ public static class ContentLoader
                     if (f.EvolvesFrom == u && !f.FromDen) forms.Add(f);
                 u.Forms = forms.ToArray();
                 if (u.TrainedAt != null && !u.IsTrader) bases.Add(u);
-                if (u.Lair is { DuskTree: false }) monsters.Add(u);
+                if (u.Lair is { DuskTree: false, AtStarts: true }) monsters.Add(u);
+                if (u.Lair is { DuskTree: false, Count: > 0 }) wild.Add(u);
                 if (u.Lair is { DuskTree: true }) _db.DuskWarden = u;
             }
             _db.BaseUnits = bases.ToArray();
             _db.StartUnits = bases.FindAll(u => u.InStart).ToArray();
             _db.LairMonsters = monsters.ToArray();
+            _db.WildMonsters = wild.ToArray();
             foreach (var c in _db.CityStates)
             {
                 var hired = new List<UnitDef>();
@@ -1223,6 +1242,10 @@ public static class ContentLoader
                     h.Add(lair.Leash);
                     h.Add(lair.Reward);
                     h.Add(lair.DuskTree ? 1 : 0);
+                    h.Add(lair.Biome is { } b ? (int)b : -1);
+                    h.Add(lair.Count);
+                    h.Add(lair.AtStarts ? 1 : 0);
+                    h.Add(lair.Den ? 1 : 0);
                 }
                 else
                 {

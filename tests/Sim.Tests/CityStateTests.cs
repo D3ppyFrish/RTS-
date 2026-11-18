@@ -497,7 +497,9 @@ public class CityStateTests
 
         var lair = sim.Monsters.GetLair(town.LairId);
         Assert.NotNull(lair);
-        Assert.Equal(4, sim.Monsters.Lairs.Count); // the two start lairs, the dusk tree's warden and the town's
+        // The two start lairs, the dusk tree's warden and the town's, then those spread across the map (placed last).
+        Assert.Same(lair, sim.Monsters.Lairs[3]);
+        Assert.All(sim.Monsters.Lairs.Skip(4), l => Assert.NotNull(l.Monster.Lair!.Biome));
         Assert.DoesNotContain(lair, startLairs);
         Assert.InRange(IntMath.Distance(town.X, town.Z, lair!.X, lair.Z), CityStateSystem.LairNear, CityStateSystem.LairFar);
         Assert.Equal(4, lair.Pack.Count);

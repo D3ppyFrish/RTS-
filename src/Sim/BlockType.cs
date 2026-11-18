@@ -108,12 +108,17 @@ public enum BlockType : byte
     /// block nobody stands on, so units are never shut inside a building or step into it through a gap.
     /// </summary>
     Floor,
+    /// <summary>
+    /// Poison bog: a sickly crust over the swamp's mud that units can walk on, but that hurts them while
+    /// they stand on it (see <see cref="World.HazardSystem"/>). Workers dig it away like mud.
+    /// </summary>
+    Bog,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Floor;
+    public const BlockType Last = BlockType.Bog;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
@@ -158,7 +163,7 @@ public static class BlockInfo
     /// themselves up, buildings look after their own blocks, and bedrock never moves.
     /// </summary>
     public static bool CanFall(BlockType t) => t is BlockType.Grass or BlockType.Soil or BlockType.Sand
-        or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.Mud
+        or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.Mud or BlockType.Bog
         || IsRubble(t);
 
     /// <summary>Any tree's trunk: workers cut it for wood, and it topples when its foot is cut.</summary>
@@ -187,5 +192,5 @@ public static class BlockInfo
 
     /// <summary>Natural ground a building site can be levelled through or a road laid on.</summary>
     public static bool IsGround(BlockType t) =>
-        t is BlockType.Grass or BlockType.Soil or BlockType.Sand or BlockType.Mud or BlockType.Stone;
+        t is BlockType.Grass or BlockType.Soil or BlockType.Sand or BlockType.Mud or BlockType.Bog or BlockType.Stone;
 }
