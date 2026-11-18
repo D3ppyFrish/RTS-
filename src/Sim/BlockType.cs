@@ -113,12 +113,18 @@ public enum BlockType : byte
     /// they stand on it (see <see cref="World.HazardSystem"/>). Workers dig it away like mud.
     /// </summary>
     Bog,
+    /// <summary>
+    /// A sinkhole's crust: a thin, dry, cracked lid of earth over a hollow (see <see cref="World.HazardSystem"/>).
+    /// It looks like parched ground and holds until a unit stands on it, then gives way and the unit drops into
+    /// the hole. It is held up by its rim, so it never falls on its own. Workers dig it away (it gives nothing).
+    /// </summary>
+    Crust,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Bog;
+    public const BlockType Last = BlockType.Crust;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Rts.Sim.World;
 
@@ -18,6 +19,8 @@ public static class RegionGenerator
 {
     /// <summary>Distance (blocks, horizontal) within which each start is guaranteed its basic resources.</summary>
     public const int StartResourceRadius = 40;
+    /// <summary>Sinkholes (see <see cref="HazardSystem.MakeSinkhole"/>) per 512 by 512 blocks of map.</summary>
+    public const int SinkholesPer512 = 12;
 
     /// <summary>
     /// The default map's width and depth in blocks (issue #45: half again as wide as the first slice's 512, so
@@ -188,6 +191,7 @@ public static class RegionGenerator
             PlaceDuskTree();
             PlantTrees();
             PlaceStartResources();
+            PlaceSinkholes();
             return _map;
         }
 
@@ -441,6 +445,57 @@ public static class RegionGenerator
 
         /// <summary>The bog noise (0 to 255) above which swamp mud is poison bog.</summary>
         private const int BogNoise = 160;
+
+        // --- Sinkholes ------------------------------------------------------------------------------
+
+        private const int SinkholeRadius = HazardSystem.SinkholeRadius;
+        /// <summary>Least distance between two sinkholes' middles.</summary>
+        private const int SinkholeGap = 24;
+
+        /// <summary>
+        /// Sinkholes (see <see cref="HazardSystem.MakeSinkhole"/>). They lie on flat, open grassland, forest and hill ground,
+        /// well away from the starts and each other, as many as <see cref="SinkholesPer512"/> per 512 by 512 blocks.
+        /// Placed last, from a random stream of their own, so nothing else on existing seeds moves.
+        /// </summary>
+        private void PlaceSinkholes()
+        {
+            var rng = new DeterministicRandom(_seed ^ 0x51AC40E5UL);
+            int want = Math.Max(1, (int)((long)SinkholesPer512 * _sx * _sz / (512 * 512)));
+            int keepOff = StartResourceRadius + Sx(24), r = SinkholeRadius;
+            var placed = new List<(int X, int Z)>();
+            for (int tries = 0; tries < want * 40 && placed.Count < want; tries++)
+            {
+                int cx = rng.Range(r + 1, _sx - r - 1), cz = rng.Range(r + 1, _sz - r - 1);
+                if (_map.BiomeAt(cx, cz) is not (Biome.Grassland or Biome.Forest or Biome.Hills) || NearStart(cx, cz, keepOff)) continue;
+                bool far = true;
+                foreach (var p in placed)
+                    if ((p.X - cx) * (p.X - cx) + (p.Z - cz) * (p.Z - cz) < SinkholeGap * SinkholeGap) far = false;
+                if (!far || !SinkholeFits(cx, cz)) continue;
+                HazardSystem.MakeSinkhole(_w, cx, _height[Idx(cx, cz)], cz);
+                placed.Add((cx, cz));
+            }
+        }
+
+        /// <summary>
+        /// True if a sinkhole fits around (cx, cz): every column of it (and the ring around it) is level, its top
+        /// is natural ground with nothing on it, and there is solid ground under the hollow.
+        /// </summary>
+        private bool SinkholeFits(int cx, int cz)
+        {
+            int h = _height[Idx(cx, cz)], r = SinkholeRadius + 1;
+            if (h <= _water + 1 || h < 4) return false;
+            for (int dz = -r; dz <= r; dz++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                int x = cx + dx, z = cz + dz;
+                if (x < 0 || z < 0 || x >= _sx || z >= _sz || _height[Idx(x, z)] != h) return false;
+                if (_w.Get(x, h, z) is not (BlockType.Grass or BlockType.Soil or BlockType.Stone or BlockType.Sand)) return false;
+                if (_w.Get(x, h + 1, z) != BlockType.Air || _w.Get(x, h + 2, z) != BlockType.Air) return false;
+                if (!BlockInfo.IsSolid(_w.Get(x, h - 1, z)) || !BlockInfo.IsSolid(_w.Get(x, h - 2, z)) || !BlockInfo.IsSolid(_w.Get(x, h - 3, z)))
+                    return false;
+            }
+            return true;
+        }
 
         // --- Cavern ---------------------------------------------------------------------------------
 

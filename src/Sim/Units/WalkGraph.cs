@@ -30,12 +30,15 @@ public sealed class WalkGraph
     public static readonly int[] DirCost = { 10, 10, 10, 10, 14, 14, 14, 14 };
 
     /// <summary>What a unit's feet are in or on at a node, which sets the cost of stepping onto it.</summary>
-    internal const byte Plain = 0, Wading = 1, OnRoad = 2, Rough = 3, InGate = 4;
+    internal const byte Plain = 0, Wading = 1, OnRoad = 2, Rough = 3, InGate = 4, Hazard = 5;
 
     /// <summary>
     /// Path cost of a step in each direction onto plain ground, into shallow water (double: wading is slow),
     /// onto a road (half: units walk twice as fast there), onto rubble (double, like wading) and into a gate
-    /// (as plain ground; only its owner's units go through, see <see cref="PathService"/>).
+    /// (as plain ground; only its owner's units go through, see <see cref="PathService"/>), and onto ground
+    /// that hurts or traps whoever stands there (eight times plain ground, see <see cref="World.HazardSystem"/>):
+    /// units walk up to seven blocks out of their way for each block of bog, lava heat or sinkhole crust they
+    /// keep off, and cross it when there is no other way.
     /// </summary>
     internal static readonly int[][] StepCost =
     {
@@ -44,7 +47,11 @@ public sealed class WalkGraph
         new[] { 5, 5, 5, 5, 7, 7, 7, 7 },
         new[] { 20, 20, 20, 20, 28, 28, 28, 28 },
         DirCost,
+        new[] { 80, 80, 80, 80, 112, 112, 112, 112 },
     };
+
+    /// <summary>The dearest step there is (a diagonal onto a hazard), which sizes the path search's queue.</summary>
+    internal const int MaxStepCost = 112;
 
     public int SizeX { get; }
     public int SizeZ { get; }
@@ -65,7 +72,8 @@ public sealed class WalkGraph
     // Shared with PathService's inner loop, which reads them directly.
     internal readonly short[] _level;     // node -> feet level, or -1
     internal readonly uint[] _edges;      // node -> 8 x 3 bits: bit 2 = can step that way, bits 0-1 = target slot
-    internal readonly byte[] _ground;     // node -> Plain, Wading, OnRoad, Rough or InGate
+    internal readonly byte[] _ground;     // node -> Plain, Wading, OnRoad, Rough, InGate or Hazard: what a step onto it costs
+    private readonly byte[] _base;        // node -> the same but for hazards, which depend on the columns around
     internal readonly bool[] _gated;      // column -> a unit standing there has its feet in a gate
     private readonly bool[] _columnDirty;
     private readonly List<int> _dirtyColumns = new();
@@ -84,6 +92,7 @@ public sealed class WalkGraph
         _level = new short[columns * MaxLevels];
         _edges = new uint[columns * MaxLevels];
         _ground = new byte[columns * MaxLevels];
+        _base = new byte[columns * MaxLevels];
         _gated = new bool[columns];
         _columnDirty = new bool[columns];
         _edgeStamp = new int[columns];
@@ -125,10 +134,12 @@ public sealed class WalkGraph
     public int ColumnX(int node) => (node >> LevelBits) % SizeX;
     public int ColumnZ(int node) => (node >> LevelBits) / SizeX;
     public int Region(int x, int z) => (z / RegionSize) * RegionsX + x / RegionSize;
-    public bool IsWet(int node) => _ground[node] == Wading;
-    public bool IsRoad(int node) => _ground[node] == OnRoad;
+    public bool IsWet(int node) => _base[node] == Wading;
+    public bool IsRoad(int node) => _base[node] == OnRoad;
     /// <summary>True if a unit standing at the node is in a gate (its feet or its head).</summary>
-    public bool InGateAt(int node) => _ground[node] == InGate;
+    public bool InGateAt(int node) => _base[node] == InGate;
+    /// <summary>True if the ground at the node hurts or traps a unit standing there (see <see cref="World.HazardSystem.IsHazard"/>).</summary>
+    public bool IsHazard(int node) => _ground[node] == Hazard;
     /// <summary>True if some standing level of column (x, z) is in a gate.</summary>
     public bool Gated(int x, int z) => _gated[z * SizeX + x];
 
@@ -148,7 +159,7 @@ public sealed class WalkGraph
         return (e & 4) != 0 && (int)(e & 3) == (to & (MaxLevels - 1));
     }
 
-    /// <summary>Path cost of stepping in direction d onto <paramref name="to"/>: wading counts double, roads half.</summary>
+    /// <summary>Path cost of stepping in direction d onto <paramref name="to"/>: wading counts double, roads half, hazards eightfold.</summary>
     public int Cost(int d, int to) => StepCost[_ground[to]][d];
 
     /// <summary>
@@ -227,7 +238,7 @@ public sealed class WalkGraph
         int x = column % SizeX, z = column / SizeX;
         int first = column << LevelBits;
         for (int k = 0; k < MaxLevels; k++)
-            if (_ground[first + k] == OnRoad) RoadNodes--;
+            if (_base[first + k] == OnRoad) RoadNodes--;
         int s = 0;
         _gated[column] = false;
         // Scan down from the top: a level needs solid ground, passable feet and air at head height.
@@ -241,6 +252,7 @@ public sealed class WalkGraph
                 byte ground = at == BlockType.Gate || above == BlockType.Gate ? InGate : at == BlockType.Water ? Wading : below == BlockType.Road ? OnRoad
                     : BlockInfo.IsRubble(below) ? Rough : Plain;
                 if (ground == InGate) _gated[column] = true;
+                _base[first + s] = ground;
                 _ground[first + s] = ground;
                 if (ground == OnRoad) RoadNodes++;
                 s++;
@@ -252,6 +264,7 @@ public sealed class WalkGraph
         {
             _level[first + s] = -1;
             _ground[first + s] = Plain;
+            _base[first + s] = Plain;
             _edges[first + s] = 0;
         }
     }
@@ -264,6 +277,10 @@ public sealed class WalkGraph
         {
             int y = _level[first + s];
             if (y < 0) break;
+            // Hazards depend on the columns around (lava heat), which is why they are set with the edges: those
+            // are rebuilt for every column next to a changed one. A gate is never counted as a hazard.
+            byte b = _base[first + s];
+            _ground[first + s] = b != InGate && World.HazardSystem.IsHazard(_w, x, y, z) ? Hazard : b;
             uint edges = 0;
             for (int d = 0; d < 8; d++)
             {

@@ -30,6 +30,11 @@ public enum GameEventKind : byte
     TownLost,
     /// <summary>A city-state town the player holds sent them a tribute caravan.</summary>
     TributeSent,
+    /// <summary>
+    /// A unit of the player's was killed by the ground alone: poison bog, lava's heat or a sinkhole giving way
+    /// (see <see cref="World.HazardSystem"/>). <see cref="GameEvent.Def"/> is its unit type.
+    /// </summary>
+    UnitLostToHazard,
 }
 
 /// <summary>
@@ -135,6 +140,10 @@ public sealed class EventLog
 
     internal void UnitTrained(int player, int unitId, int def, int x, int y, int z) =>
         Add(player, GameEventKind.UnitTrained, x, y, z, unitId, def);
+
+    /// <summary>The ground killed a unit of the player's at (x, y, z) (see <see cref="World.HazardSystem"/>).</summary>
+    internal void UnitLostToHazard(int player, int unitId, int def, int x, int y, int z) =>
+        Add(player, GameEventKind.UnitLostToHazard, x, y, z, unitId, def);
 
     /// <summary>True (and remembered) if no attack on the player was reported near (x, z) lately.</summary>
     private bool Throttle(int player, int x, int z)
