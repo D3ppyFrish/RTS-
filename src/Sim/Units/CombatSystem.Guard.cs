@@ -9,6 +9,13 @@ namespace Rts.Sim.Units;
 /// that come within <see cref="GuardRange"/> columns of it, first whoever hits the charge. It lets an enemy
 /// go once that enemy is more than <see cref="GuardLeash"/> columns from the charge, and walks back. The order
 /// ends when the charge dies, is destroyed or changes hands, or the soldier is given another order.
+///
+/// Guards of a town hall with a governor (see <see cref="GovernCommand"/>) are the governor's town guard: they
+/// defend the whole town, the ground within <see cref="TownReach"/> columns of the hall. They pick fights with
+/// enemies anywhere in it, let them go only past <see cref="TownLeash"/> columns, and, with nothing to fight,
+/// the governor sends them after the enemy in the town nearest to them that the player can see (see
+/// <see cref="Intruder"/>), even out of their own sight. With nobody left in the town they walk back to the
+/// hall. When the governor steps off, they are plain guards of the hall again.
 /// </summary>
 public sealed partial class CombatSystem
 {
@@ -23,6 +30,12 @@ public sealed partial class CombatSystem
 
     /// <summary>Ticks between a guard's looks at where its charge has got to.</summary>
     public const int GuardInterval = 8;
+
+    /// <summary>How far (columns from the hall) a governor's town guard defends: the governor's town.</summary>
+    public const int TownReach = Automation.AutomationSystem.GovernRadius;
+
+    /// <summary>A town guard chasing an enemy lets it go once it is more than this many columns from the hall.</summary>
+    public const int TownLeash = TownReach + 6;
 
     /// <summary>How close (blocks) a guard walking to its charge comes before it stops.</summary>
     public static readonly Fix64 GuardArrive = Fix64.FromRatio(3, 2);
@@ -70,6 +83,75 @@ public sealed partial class CombatSystem
         return b != null && b.Owner == u.Owner[i] && !b.Planned;
     }
 
+    /// <summary>True if guard i guards a town hall of its player's that has a governor: it is in the town guard.</summary>
+    public bool TownGuard(int i) => TownHallGuarded(i) != null;
+
+    /// <summary>The governed town hall guard i guards, or null if it is not in a town guard.</summary>
+    private Building? TownHallGuarded(int i)
+    {
+        var u = U;
+        if (u.Combat[i] != CombatOrder.Guard || u.GuardUnit[i] != 0) return null;
+        var b = Buildings.Get(u.GuardBuilding[i]);
+        return b != null && b.Owner == u.Owner[i] && !b.Planned && b.Def.Kind == BuildingKind.TownHall
+               && b.Governor != GovernorFocus.None ? b : null;
+    }
+
+    /// <summary>How far from its charge guard i picks fights: the town for a town guard.</summary>
+    private int RangeOf(int i) => TownGuard(i) ? TownReach : GuardRange;
+
+    /// <summary>How far from its charge guard i chases an enemy before it lets it go.</summary>
+    private int LeashOf(int i) => TownGuard(i) ? TownLeash : GuardLeash;
+
+    /// <summary>The player's units guarding that hall: its town guard while it has a governor.</summary>
+    public int TownGuardCount(Building hall)
+    {
+        var u = U;
+        int n = 0;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Combat[i] == CombatOrder.Guard && u.GuardUnit[i] == 0 && u.GuardBuilding[i] == hall.Id && u.Owner[i] == hall.Owner) n++;
+        return n;
+    }
+
+    /// <summary>
+    /// For town guard i with nothing to fight: the enemy unit in its town (within <see cref="TownReach"/>
+    /// columns of the hall) that its player can see and that is nearest to it (ties to the lowest id), or -1.
+    /// A beaten monster and a neutral city-state's guards are left alone, as everyone leaves them alone.
+    /// </summary>
+    private int Intruder(int i, Building hall)
+    {
+        var u = U;
+        int owner = u.Owner[i];
+        Fix64 hx = Fix64.FromInt(hall.X) + Fix64.FromRatio(hall.Def.SizeX, 2);
+        Fix64 hz = Fix64.FromInt(hall.Z) + Fix64.FromRatio(hall.Def.SizeZ, 2);
+        Fix64 r = Fix64.FromInt(TownReach + Math.Max(hall.Def.SizeX, hall.Def.SizeZ));
+        Cells(hx, hz, r, out int x0, out int z0, out int x1, out int z1);
+        int best = -1;
+        Fix64 bestD = Fix64.MaxValue;
+        for (int cz = z0; cz <= z1; cz++)
+        for (int cx = x0; cx <= x1; cx++)
+        {
+            int c = (cz * _cellsX + cx) * _players;
+            for (int p = 0; p < _players; p++)
+            {
+                if (p == owner) continue;
+                for (int j = _head[c + p]; j >= 0; j = _next[j])
+                {
+                    if (u.Subdued[j] || u.Town[j] != 0 && u.Owner[j] == Simulation.WildPlayer) continue;
+                    if (hall.ColumnDistance(u.X[j].FloorToInt(), u.Z[j].FloorToInt()) > TownReach) continue;
+                    if (!_sim.Vision.SeesUnit(owner, j)) continue;
+                    Fix64 dx = u.X[j] - u.X[i], dz = u.Z[j] - u.Z[i];
+                    Fix64 d = dx * dx + dz * dz;
+                    if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
+                    {
+                        best = j;
+                        bestD = d;
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
     /// <summary>Columns from (x, z) to the charge, counting diagonal steps as one (0 inside a building).</summary>
     private int ChargeDistance(int ward, Building? b, int x, int z) =>
         b != null
@@ -86,7 +168,7 @@ public sealed partial class CombatSystem
         var u = U;
         if (!Charge(i, out int ward, out _) || ward < 0 || u.HitBy[ward] == 0) return -1;
         int by = u.IndexOf(u.HitBy[ward]);
-        return by >= 0 && u.Owner[by] != u.Owner[i] && !u.Subdued[by] && NearCharge(i, by, GuardLeash) ? by : -1;
+        return by >= 0 && u.Owner[by] != u.Owner[i] && !u.Subdued[by] && NearCharge(i, by, LeashOf(i)) ? by : -1;
     }
 
     /// <summary>

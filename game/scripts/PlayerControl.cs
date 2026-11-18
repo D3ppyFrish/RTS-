@@ -373,6 +373,7 @@ public partial class PlayerControl : Node
                 break;
             case Key.Tab: TogglePlanMode(); break;
             case Key.Delete or Key.Backspace: CancelSelectedPlan(); break;
+            case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
             case Key.K: ToggleTechTree(); break;
             case Key.Period: SelectNextIdleWorker(); break;
@@ -1139,6 +1140,41 @@ public partial class PlayerControl : Node
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// The governed town hall of yours nearest the selected soldiers (ties to the lowest id), or null: the one
+    /// <see cref="DefendTown"/> hands them to.
+    /// </summary>
+    public Building? TownToDefend()
+    {
+        var soldiers = OwnSoldiers();
+        if (soldiers.Count == 0) return null;
+        int i = _sim.Units.IndexOf(soldiers[0]);
+        int x = _sim.Units.X[i].FloorToInt(), z = _sim.Units.Z[i].FloorToInt();
+        Building? best = null;
+        int bestD = int.MaxValue;
+        foreach (var b in _sim.Buildings.All)
+        {
+            if (b.Owner != LocalPlayer || b.Planned || b.Def.Kind != BuildingKind.TownHall || b.Governor == GovernorFocus.None) continue;
+            int d = b.ColumnDistance(x, z);
+            if (d < bestD) (best, bestD) = (b, d);
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// The selected soldiers join the town guard of your nearest governed town hall: they guard it, and the
+    /// governor sends them after enemies anywhere in its town (the same as Alt+right click on the hall).
+    /// </summary>
+    public void DefendTown()
+    {
+        var hall = TownToDefend();
+        if (hall == null) return;
+        _sim.Schedule(_sim.Tick, new GuardCommand(LocalPlayer, OwnSoldiers().ToArray(), 0, hall.Id));
+        float bs = ChunkMesher.BlockSize;
+        _rings.ShowMarker(new Vector3(hall.X + hall.Def.SizeX / 2f, hall.Y, hall.Z + hall.Def.SizeZ / 2f) * bs, SelectionRenderer.Own);
+        Changed?.Invoke();
+    }
+
     /// <summary>The selected units of yours that fight and are not workers (the ones with a stance), in id order.</summary>
     public List<int> OwnSoldiers()
     {
@@ -1895,7 +1931,8 @@ public partial class PlayerControl : Node
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} " +
                $"rebuild={(_sim.Economy.Rebuilds(LocalPlayer) ? 1 : 0)} ruins={OwnRuins()} " +
-               $"governor={(sel?.Governor ?? GovernorFocus.None).ToString().ToLowerInvariant()} houses={OwnKind(BuildingKind.House)} " +
+               $"governor={(sel?.Governor ?? GovernorFocus.None).ToString().ToLowerInvariant()} town_guard={(sel != null ? _sim.Combat.TownGuardCount(sel) : 0)} " +
+               $"houses={OwnKind(BuildingKind.House)} " +
                $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +
