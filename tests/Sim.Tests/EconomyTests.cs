@@ -657,9 +657,10 @@ public class EconomyTests
             int k = (int)good;
             Assert.Equal(start[k] + p.Gathered[k] - p.Spent[k] - p.Eaten[k], totals[k]);
         }
-        // Two on wood, one each on stone, iron ore and berries. Measured (wood 67, and the start's stone
-        // outcrop, ore outcrop and berry patch dug or picked clean: 10, 6 and 30), then set a little below.
-        Assert.InRange(p.Gathered[(int)Good.Wood], 55, 200);
+        // Two on wood, one each on stone, iron ore and berries. Measured (wood 210 from the start's grove of
+        // trees twice the size, 67 with the first trees; and the start's stone outcrop, ore outcrop and berry
+        // patch dug or picked clean: 10, 6 and 30), then set a little below.
+        Assert.InRange(p.Gathered[(int)Good.Wood], 150, 300);
         Assert.InRange(p.Gathered[(int)Good.Stone], 8, 60);
         Assert.InRange(p.Gathered[(int)Good.IronOre], 5, 60);
         Assert.InRange(p.Gathered[(int)Good.Food], 25, 30);

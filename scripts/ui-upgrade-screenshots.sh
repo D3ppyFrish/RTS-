@@ -13,6 +13,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, west start: town hall at 84..90 x 253..259; --houses=1 puts a house just north of it (85..88 x
 # 244..247). --goods=600 pays for both upgrades.
+# The first, smaller trees (--trees=1): the steps click at places the bigger trees now stand on.
 STEPS="
 wait 20
 camera 87,252 34 50 32
@@ -43,7 +44,7 @@ shot $OUT/ui-upgrade-great-hall.png
 "
 LOG="$OUT/ui-upgrade.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --houses=1 --goods=600 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --trees=1 --houses=1 --goods=600 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI upgrade test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

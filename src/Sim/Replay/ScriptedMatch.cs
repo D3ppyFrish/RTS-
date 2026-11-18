@@ -31,6 +31,7 @@ public static class ScriptedMatch
         {
             Seed = seed, SizeX = sizeX, SizeY = sizeY, SizeZ = sizeZ, Ticks = ticks, StartUnits = startUnits,
             StartBuildings = true, StartLairs = true, StartCities = true, ContentHash = ContentDb.Default.Hash,
+            TreeScale = World.RegionGenerator.DefaultTreeScale,
         };
         var sim = log.CreateSimulation();
         var rng = new DeterministicRandom(seed ^ 0x5C819EDUL);

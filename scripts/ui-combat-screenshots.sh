@@ -13,7 +13,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, map centre: open ground at levels 21 and 22. With --battle=16 your army stands in two ranks
 # at x 241..242, z 211..225 (a sapper at 242,217), the enemy's at x 254..255, and the enemy house at
-# 248..251 x 204..207.
+# 248..251 x 204..207. With the first, smaller trees (--trees=1): the bigger ones put a birch over the house.
 STEPS="
 wait 20
 camera 248,218 0 55 22
@@ -50,7 +50,7 @@ shot $OUT/ui-combat-house.png
 "
 LOG="$OUT/ui-combat.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --trees=1 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI combat test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

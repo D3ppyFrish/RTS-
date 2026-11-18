@@ -707,7 +707,7 @@ public class AutomationTests
     [Fact]
     public void ScriptedMatchesUseAutomation()
     {
-        var log = ScriptedMatch.Generate(1, 256, 64, 256, ticks: 3000, startUnits: 12); // a seed whose 3000 ticks pick every kind of setting
+        var log = ScriptedMatch.Generate(3, 256, 64, 256, ticks: 3000, startUnits: 12); // a seed whose 3000 ticks pick every kind of setting
         Assert.Contains(log.Commands, c => c.Command is AutomateCommand);
         Assert.Contains(log.Commands, c => c.Command is AutomateAllCommand);
         Assert.Contains(log.Commands, c => c.Command is RepeatCommand);

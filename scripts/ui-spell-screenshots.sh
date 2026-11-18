@@ -16,6 +16,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # at x 241..242, z 211..225, the enemy's at x 254..255 (they stand their ground until something comes near).
 # The wall runs north to south at x 248 (three thick: x 247..249), well within a mage's reach; the second line at x 250
 # raises nothing while every mage waits.
+# The first, smaller trees (--trees=1): the steps click at places the bigger trees now stand on.
 STEPS="
 wait 20
 camera 248,218 300 50 20
@@ -52,7 +53,7 @@ shot $OUT/ui-earth-wall-crumbled.png
 "
 LOG="$OUT/ui-spell.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --trees=1 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI spell test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

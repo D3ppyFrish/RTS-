@@ -27,6 +27,73 @@ public static class Trees
     /// </summary>
     public static bool Grow(VoxelWorld w, int x, int g, int z, int trunk, int crown, TreeKind kind, ulong seed)
     {
+        int s = w.TreeScale;
+        return s <= 1 ? GrowUsual(w, x, g, z, trunk, crown, kind, seed, x, z) : GrowScaled(w, x, g, z, trunk, crown, kind, seed, s);
+    }
+
+    /// <summary>The biggest <see cref="VoxelWorld.TreeScale"/> trees grow at.</summary>
+    public const int MaxScale = 3;
+
+    /// <summary>
+    /// The columns a scaled tree's trunk stands in, for a trunk block in column (x, z): trunks of scale s are
+    /// s blocks square, lined up on a grid of s, so the square holding (x, z) is the whole trunk. Its west and
+    /// north edge, and its width.
+    /// </summary>
+    public static (int X0, int Z0, int Size) Footprint(VoxelWorld w, int x, int z)
+    {
+        int s = Math.Clamp(w.TreeScale, 1, MaxScale);
+        return (Math.DivRem(x, s, out _) * s, Math.DivRem(z, s, out _) * s, s);
+    }
+
+    /// <summary>
+    /// A usual tree grown in a small world of its own, then copied into <paramref name="w"/> with each block
+    /// made a cube <paramref name="s"/> across, its trunk standing on the s-aligned square holding (x, z). Each
+    /// trunk column reaches down through open air to the ground under it. Leaves only fill air.
+    /// </summary>
+    private static bool GrowScaled(VoxelWorld w, int x, int g, int z, int trunk, int crown, TreeKind kind, ulong seed, int s)
+    {
+        s = Math.Min(s, MaxScale);
+        const int half = 4, tall = 16; // a usual tree: crown within 2 (willow curtains, sprigs) and under 14 tall
+        var small = new VoxelWorld(half * 2 + 1, tall, half * 2 + 1);
+        if (!GrowUsual(small, half, 0, half, trunk, crown, kind, seed, x, z)) return false;
+        int top = 0;
+        for (int ly = tall - 1; ly > 0 && top == 0; ly--)
+            for (int lz = 0; lz < small.SizeZ && top == 0; lz++)
+            for (int lx = 0; lx < small.SizeX; lx++)
+                if (small.Get(lx, ly, lz) != BlockType.Air) { top = ly; break; }
+        if (!w.InBounds(x, g, z) || g + top * s >= w.SizeY) return false;
+        var (x0, z0, _) = Footprint(w, x, z);
+        for (int ly = 1; ly <= top; ly++)
+        for (int lz = 0; lz < small.SizeZ; lz++)
+        for (int lx = 0; lx < small.SizeX; lx++)
+        {
+            var b = small.Get(lx, ly, lz);
+            if (b == BlockType.Air) continue;
+            bool wood = BlockInfo.IsTrunk(b);
+            for (int j = 0; j < s; j++)
+            for (int k = 0; k < s; k++)
+            for (int i = 0; i < s; i++)
+            {
+                int bx = x0 + (lx - half) * s + i, by = g + 1 + (ly - 1) * s + j, bz = z0 + (lz - half) * s + k;
+                if (!w.InBounds(bx, by, bz)) continue;
+                if (wood) w.Set(bx, by, bz, b);
+                else if (w.Get(bx, by, bz) == BlockType.Air) w.Set(bx, by, bz, b);
+            }
+        }
+        // The trunk's foot: down to the ground in every column of it.
+        var foot = small.Get(half, 1, half);
+        for (int k = 0; k < s; k++)
+        for (int i = 0; i < s; i++)
+            for (int by = g; by > 0 && w.Get(x0 + i, by, z0 + k) is BlockType.Air or BlockType.Water; by--)
+                w.Set(x0 + i, by, z0 + k, foot);
+        return true;
+    }
+
+    /// <summary>
+    /// The usual tree (see <see cref="Grow"/>), its shape's small variations a hash of column (hx, hz).
+    /// </summary>
+    private static bool GrowUsual(VoxelWorld w, int x, int g, int z, int trunk, int crown, TreeKind kind, ulong seed, int hx, int hz)
+    {
         // Pines stand two blocks taller (their lowest boughs clear the ground like any crown), willows one,
         // and mushrooms are a block shorter than a tree, with the cap over the top of the stalk.
         trunk += kind switch { TreeKind.Pine => 2, TreeKind.Willow => 1, TreeKind.Mushroom => -1, _ => 0 };
@@ -40,7 +107,7 @@ public static class Trees
         };
         for (int y = 1; y <= trunk; y++) w.Set(x, g + y, z, wood);
         int top = g + trunk;
-        uint h = DeterministicRandom.Hash(x, z, seed + 32);
+        uint h = DeterministicRandom.Hash(hx, hz, seed + 32);
         switch (kind)
         {
             case TreeKind.Pine: Pine(w, x, top, z, crown); return true;

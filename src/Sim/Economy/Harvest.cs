@@ -118,20 +118,28 @@ public static class Harvest
     public static int FellTree(VoxelWorld w, int x, int baseY, int topY, int z, List<SectionBlock>? taken = null)
     {
         int wood = 0;
-        for (int y = baseY; y <= topY; y++)
+        // A bigger tree (see VoxelWorld.TreeScale) has a trunk several columns square: all of it comes down,
+        // its columns' feet reaching a little lower on uneven ground.
+        var (x0, z0, s) = Trees.Footprint(w, x, z);
+        if (s == 1) (x0, z0) = (x, z);
+        int low = s == 1 ? baseY : Math.Max(0, baseY - 4 * s);
+        for (int cz = z0; cz < z0 + s; cz++)
+        for (int cx = x0; cx < x0 + s; cx++)
+        for (int y = low; y <= topY; y++)
         {
-            var trunk = w.Get(x, y, z);
+            var trunk = w.Get(cx, y, cz);
             if (!BlockInfo.IsTrunk(trunk)) continue;
-            w.Set(x, y, z, BlockType.Air);
-            taken?.Add(new SectionBlock(x, y, z, trunk));
+            w.Set(cx, y, cz, BlockType.Air);
+            taken?.Add(new SectionBlock(cx, y, cz, trunk));
             wood++;
         }
-        for (int ly = baseY - 1; ly <= topY + CrownAbove; ly++)
-        for (int lz = z - CrownRadius; lz <= z + CrownRadius; lz++)
-        for (int lx = x - CrownRadius; lx <= x + CrownRadius; lx++)
+        int reach = CrownRadius * s, above = CrownAbove * s + s - 1;
+        for (int ly = low - 1; ly <= topY + above; ly++)
+        for (int lz = z0 - reach; lz <= z0 + s - 1 + reach; lz++)
+        for (int lx = x0 - reach; lx <= x0 + s - 1 + reach; lx++)
         {
             var leaf = w.Get(lx, ly, lz);
-            if (!BlockInfo.IsLeaves(leaf) || NearTrunk(w, lx, ly, lz)) continue;
+            if (!BlockInfo.IsLeaves(leaf) || NearTrunk(w, lx, ly, lz, s)) continue;
             w.Set(lx, ly, lz, BlockType.Air);
             taken?.Add(new SectionBlock(lx, ly, lz, leaf));
         }
@@ -206,11 +214,12 @@ public static class Harvest
     }
 
     /// <summary>True if another trunk is close enough to this leaf block to hold it up.</summary>
-    private static bool NearTrunk(VoxelWorld w, int x, int y, int z)
+    private static bool NearTrunk(VoxelWorld w, int x, int y, int z, int s = 1)
     {
-        for (int dy = -3; dy <= 1; dy++)
-        for (int dz = -2; dz <= 2; dz++)
-        for (int dx = -2; dx <= 2; dx++)
+        int r = 3 * s - 1;
+        for (int dy = -3 * s; dy <= s; dy++)
+        for (int dz = -r; dz <= r; dz++)
+        for (int dx = -r; dx <= r; dx++)
             if (BlockInfo.IsTrunk(w.Get(x + dx, y + dy, z + dz))) return true;
         return false;
     }

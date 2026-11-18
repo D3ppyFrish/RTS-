@@ -298,7 +298,9 @@ public partial class Main : Node3D
         }
         else
         {
-            _sim = new Simulation(setup.Seed, WorldX, WorldY, WorldZ, _content);
+            // --trees=1 grows the first, smaller trees, --trees=3 bigger ones still (see VoxelWorld.TreeScale).
+            int treeScale = _args.TryGetValue("trees", out var ts) && int.TryParse(ts, out var tv) ? tv : Rts.Sim.World.RegionGenerator.DefaultTreeScale;
+            _sim = new Simulation(setup.Seed, WorldX, WorldY, WorldZ, _content, treeScale);
         }
         _sim.Fog = setup.Fog;
         _sim.DayNight = setup.DayNight;
@@ -652,7 +654,7 @@ public partial class Main : Node3D
             if (_args.ContainsKey(option)) odd.Add("--" + option);
         _noReplay = odd.Count > 0 ? $"the match was set up with {string.Join(", ", odd)}" : "";
         if (odd.Count == 0) _sim.Recording = CommandLog.UsualStart(setup.Seed, WorldX, WorldY, WorldZ, _content, setup.Fog,
-            setup.DayNight, _sim.DayStart, setup.TestMode);
+            setup.DayNight, _sim.DayStart, setup.TestMode, _sim.World.TreeScale);
     }
 
     /// <summary>
@@ -667,6 +669,7 @@ public partial class Main : Node3D
             Seed = scenario.Seed, SizeX = scenario.SizeX, SizeY = scenario.SizeY, SizeZ = scenario.SizeZ, StartUnits = scenario.StartUnits,
             StartBuildings = scenario.StartBuildings, StartLairs = scenario.StartLairs, StartCities = scenario.StartCities,
             ContentHash = scenario.ContentHash, Fog = scenario.Fog, DayNight = scenario.DayNight, DayStart = scenario.DayStart, TestMode = true,
+            TreeScale = scenario.TreeScale,
         };
         int next = 0;
         while (_sim.Tick < scenario.Ticks)

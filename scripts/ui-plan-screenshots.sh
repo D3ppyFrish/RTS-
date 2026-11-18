@@ -15,6 +15,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # Seed 1234, west start: town hall at 84..90 x 253..259 holding 150 wood and 50 stone, the starting units in
 # rows just south of it; open ground for houses at 94..97 x 264..267 and 80..83 x 245..248, and for a town
 # hall at 94..100 x 245..251.
+# The first, smaller trees (--trees=1): the steps click at places the bigger trees now stand on.
 STEPS="
 wait 20
 camera 87,261 45 55 22
@@ -70,7 +71,7 @@ print
 "
 LOG="$OUT/ui-plan.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --trees=1 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI plan test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

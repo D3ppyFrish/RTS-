@@ -78,7 +78,8 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// "start-cities 1" (optional) then places a town for each city-state, and "fog 1" (optional) plays it with
 /// fog of war (see <see cref="Simulation.Fog"/>), and "daynight 1" (optional) with day, night and weather
 /// (see <see cref="Simulation.DayNight"/>), starting at minute M of the day with "daystart M" (optional, 480 if not given), and
-/// "test-mode 1" (optional) in test mode. A log with a "content" line only replays with the same data
+/// "test-mode 1" (optional) in test mode, and "trees N" for trees N times the first size (optional, 1 if not
+/// given, see <see cref="VoxelWorld.TreeScale"/>). A log with a "content" line only replays with the same data
 /// (see <see cref="ContentDb.Hash"/>).
 /// </summary>
 public sealed class CommandLog
@@ -106,6 +107,11 @@ public sealed class CommandLog
     public int DayStart { get; init; } = Conditions.StartMinute;
     /// <summary>The match is played in test mode (see <see cref="Simulation.TestMode"/>).</summary>
     public bool TestMode { get; init; }
+    /// <summary>
+    /// How big the map's trees grow (see <see cref="VoxelWorld.TreeScale"/>): "trees N" in the log, and 1, the
+    /// first trees, for logs recorded before trees grew bigger.
+    /// </summary>
+    public int TreeScale { get; init; } = 1;
     /// <summary>Hash of the game data the match was played with, if recorded.</summary>
     public ulong? ContentHash { get; init; }
     public List<LoggedCommand> Commands { get; } = new();
@@ -116,14 +122,14 @@ public sealed class CommandLog
     /// played (see <see cref="Simulation.Recording"/>).
     /// </summary>
     public static CommandLog UsualStart(ulong seed, int sizeX, int sizeY, int sizeZ, ContentDb? content = null, bool fog = false, bool dayNight = false,
-        int dayStart = Conditions.StartMinute, bool testMode = false)
+        int dayStart = Conditions.StartMinute, bool testMode = false, int treeScale = Rts.Sim.World.RegionGenerator.DefaultTreeScale)
     {
         content ??= ContentDb.Default;
         return new CommandLog
         {
             Seed = seed, SizeX = sizeX, SizeY = sizeY, SizeZ = sizeZ, StartUnits = Simulation.UsualStartUnits(content),
             StartBuildings = true, StartLairs = true, StartCities = true, ContentHash = content.Hash, Fog = fog, DayNight = dayNight, DayStart = dayStart,
-            TestMode = testMode,
+            TestMode = testMode, TreeScale = treeScale,
         };
     }
 
@@ -137,7 +143,7 @@ public sealed class CommandLog
         if (ContentHash is { } hash && hash != content.Hash)
             throw new InvalidOperationException(
                 $"This match was played with different game data (content {hash:x16}, this game has {content.Hash:x16})");
-        var sim = new Simulation(Seed, SizeX, SizeY, SizeZ, content) { Fog = Fog, DayNight = DayNight, DayStart = DayStart, TestMode = TestMode };
+        var sim = new Simulation(Seed, SizeX, SizeY, SizeZ, content, TreeScale) { Fog = Fog, DayNight = DayNight, DayStart = DayStart, TestMode = TestMode };
         if (StartBuildings) sim.PlaceStartingBuildings();
         if (StartUnits > 0) sim.SpawnStartingUnits(StartUnits);
         if (StartLairs) sim.SpawnLairs();
@@ -168,6 +174,7 @@ public sealed class CommandLog
         if (DayNight) w.WriteLine("daynight 1");
         if (DayStart != Conditions.StartMinute) w.WriteLine($"daystart {DayStart}");
         if (TestMode) w.WriteLine("test-mode 1");
+        if (TreeScale != 1) w.WriteLine(string.Create(ci, $"trees {TreeScale}"));
         foreach (var (tick, cmd) in Commands)
         {
             w.WriteLine(cmd switch
@@ -260,6 +267,7 @@ public sealed class CommandLog
         long ticks = 0;
         int startUnits = 0;
         bool startBuildings = false, startLairs = false, startCities = false, fog = false, dayNight = false, testMode = false;
+        int treeScale = 1;
         int dayStart = Conditions.StartMinute;
         ulong? content = null;
         int? version = null;
@@ -295,6 +303,7 @@ public sealed class CommandLog
                     case "daynight": dayNight = Flag(f); break;
                     case "daystart": dayStart = Int(f[1]); break;
                     case "test-mode": testMode = Flag(f); break;
+                    case "trees": treeScale = Int(f[1]); break;
                     default:
                         long tick = long.Parse(f[0], CultureInfo.InvariantCulture);
                         Command cmd = f[1] switch
@@ -388,6 +397,7 @@ public sealed class CommandLog
             DayNight = dayNight,
             DayStart = dayStart,
             TestMode = testMode,
+            TreeScale = treeScale,
         };
         log.Commands.AddRange(commands);
         return log;

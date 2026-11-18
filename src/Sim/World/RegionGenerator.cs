@@ -25,8 +25,14 @@ public static class RegionGenerator
     /// </summary>
     public const int DefaultSize = 768, DefaultHeight = 64;
 
-    public static RegionMap Generate(ulong seed, int sizeX, int sizeY, int sizeZ) =>
-        new Builder(seed, new VoxelWorld(sizeX, sizeY, sizeZ)).Build();
+    /// <summary>
+    /// How many times bigger than the first trees a generated map's trees grow (see
+    /// <see cref="VoxelWorld.TreeScale"/>): twice, so the world's trees tower over its people.
+    /// </summary>
+    public const int DefaultTreeScale = 2;
+
+    public static RegionMap Generate(ulong seed, int sizeX, int sizeY, int sizeZ, int treeScale = DefaultTreeScale) =>
+        new Builder(seed, new VoxelWorld(sizeX, sizeY, sizeZ) { TreeScale = Math.Clamp(treeScale, 1, Trees.MaxScale) }).Build();
 
     /// <summary>Fills an existing empty world. The map's biomes and starts are returned.</summary>
     public static RegionMap Generate(VoxelWorld world, ulong seed) => new Builder(seed, world).Build();
@@ -522,12 +528,14 @@ public static class RegionGenerator
 
         private void PlantTrees()
         {
-            const int cell = 5;
-            for (int gz = 0; gz * cell < _sz; gz++)
-            for (int gx = 0; gx * cell < _sx; gx++)
+            // Bigger trees (see VoxelWorld.TreeScale) stand further apart, on their own grid: a cell of 4 such
+            // squares rather than 5 blocks, so a forest keeps most of its wood with fewer trees.
+            int ts = _w.TreeScale, cell = ts > 1 ? 4 : 5;
+            for (int gz = 0; gz * cell * ts < _sz; gz++)
+            for (int gx = 0; gx * cell * ts < _sx; gx++)
             {
                 uint h = DeterministicRandom.Hash(gx, gz, _seed + 30);
-                int x = gx * cell + (int)(h % cell), z = gz * cell + (int)(h / cell % cell);
+                int x = (gx * cell + (int)(h % (uint)cell)) * ts, z = (gz * cell + (int)(h / (uint)cell % (uint)cell)) * ts;
                 // Random vegetation stays out of the start areas so both players get the same mirrored layout.
                 if (x >= _sx || z >= _sz || NearStart(x, z, Sx(StartResourceRadius + 4))) continue;
                 int chance = _map.BiomeAt(x, z) switch
@@ -609,7 +617,26 @@ public static class RegionGenerator
             // The dusk tree stands alone in its clearing.
             if (_duskX >= 0 && Math.Max(Math.Abs(x - _duskX), Math.Abs(z - _duskZ)) <= DuskClearing) return;
             if (!GroundOk(x, z, out int g)) return;
+            // A bigger tree's trunk (see VoxelWorld.TreeScale) only stands on ground that is level under it.
+            var (x0, z0, s) = Trees.Footprint(_w, x, z);
+            for (int k = 0; k < s && s > 1; k++)
+            for (int i = 0; i < s; i++)
+            {
+                int cx = x0 + i, cz = z0 + k;
+                if (cx >= _sx || cz >= _sz || !GroundOk(cx, cz, out int cg) || Math.Abs(cg - g) > 1) return;
+            }
             Trees.Grow(_w, x, g, z, trunk, crown, kind, _seed);
+        }
+
+        /// <summary>True if the square a bigger tree at (x, z) would stand on already holds a trunk.</summary>
+        private bool TrunkIn(int x, int z)
+        {
+            var (x0, z0, s) = Trees.Footprint(_w, x, z);
+            for (int k = 0; k < s; k++)
+            for (int i = 0; i < s; i++)
+            for (int y = 0; y < _sy; y++)
+                if (BlockInfo.IsTrunk(_w.Get(x0 + i, y, z0 + k))) return true;
+            return false;
         }
 
         private void TryBush(int x, int z)
@@ -641,6 +668,7 @@ public static class RegionGenerator
                 for (int k = 0; k < 8; k++)
                 {
                     int tx = Ox(10 + k % 4 * 6), tz = Oz(-12 - k / 4 * 6 - k % 2 * 2);
+                    if (_w.TreeScale > 1 && TrunkIn(tx, tz)) continue; // bigger trees: this one would stand in the last
                     Ground(tx, tz, BlockType.Air, 0);
                     TryTree(tx, tz, 4 + k % 2, 0, k % 4 == 1 ? TreeKind.Birch : k == 7 ? TreeKind.Pine : TreeKind.Broadleaf);
                 }
