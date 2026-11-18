@@ -33,6 +33,8 @@ public sealed class RigDef
     public required Vector3[] Pivots;
     /// <summary>The parts' voxels at a step (sculpt units per voxel: 1, 2 or 4).</summary>
     public required Func<int, FineGrid[]> Build;
+    /// <summary>Scenery, not a unit of the rules (the golem): built when first shown rather than while the match loads.</summary>
+    public bool Scenery;
     /// <summary>Blocks walked per stride.</summary>
     public float StrideBlocks = 1.6f;
     public float LegSwing = 0.6f, ArmSwing = 0.35f, Lean = 1f;
@@ -129,7 +131,7 @@ public partial class DetailedUnits : Node3D
 
     public ShaderMaterial Material => _material;
 
-    public static bool Has(string model) => Array.IndexOf(Models, model) >= 0 || Sculpted.Rigs.ContainsKey(model) || Sculpted.SameAs.ContainsKey(model);
+    public static bool Has(string model) => Array.IndexOf(Models, model) >= 0 || Sculpted.Rigs.ContainsKey(model);
 
     public void Init(Aabb worldBox)
     {
@@ -138,7 +140,9 @@ public partial class DetailedUnits : Node3D
         // Build every detailed model now, while the match loads, rather than on the frame one first shows.
         var timer = System.Diagnostics.Stopwatch.StartNew();
         foreach (var model in Models) RigOf(model);
-        foreach (var model in Sculpted.Rigs.Keys) RigOf(model);
+        // Scenery models (the golem of --golems and --showcase) are built when first shown instead.
+        foreach (var (model, def) in Sculpted.Rigs)
+            if (!def.Scenery) RigOf(model);
         BuildMs = timer.Elapsed.TotalMilliseconds;
     }
 
@@ -213,7 +217,6 @@ public partial class DetailedUnits : Node3D
     private Rig? RigOf(string model)
     {
         if (_rigs.TryGetValue(model, out var rig)) return rig;
-        if (Sculpted.SameAs.TryGetValue(model, out var same)) return _rigs[model] = RigOf(same);
         var tris = new List<int>();
         if (Sculpted.Rigs.TryGetValue(model, out var def))
         {

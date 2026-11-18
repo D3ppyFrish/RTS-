@@ -67,11 +67,12 @@ public static partial class Sculpted
             Roles = new[] { Role.LegA, Role.LegB, Role.Body, Role.Head, Role.ArmA, Role.ArmB, Role.Fixed },
             Pivots = new[] { V(-26, 78, 0), V(26, 78, 0), V(0, 78, 0), V(0, 160, 24), V(-50, 152, 5), V(50, 152, 5), V(0, 78, 0) },
             Build = Golem, StrideBlocks = 4f, LegSwing = 0.35f, ArmSwing = 0.25f, Lean = 0.5f, Bob = 3f, Blow = 0.6f, Far = true,
+            Scenery = true,
         },
+        // The hills' stone giants (issue #45): Sawyer's own model, made with Meshy AI, its eyes set glowing.
+        ["stone_giant"] = ImportedRig("res://models/stone_giant.vox.gz", stride: 4f, bob: 3f,
+            (79, 182, 47, 82, 186, 50, GolemEye), (86, 182, 47, 89, 186, 50, GolemEye)),
     };
-
-    /// <summary>Models drawn with another's sculpt, built once: the hills' stone giants (issue #45) are the golem.</summary>
-    public static readonly Dictionary<string, string> SameAs = new() { ["stone_giant"] = "golem" };
 
     // ---- Orcs ---------------------------------------------------------------------------------------
 
