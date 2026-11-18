@@ -34,6 +34,10 @@
 // fromDen (optional): built only on a cleared monster den, by a faction whose prize there names it ("prizes" in units.json),
 // never from the build menu. yield and yieldTime (optional, together): goods it brings in on its own every
 // yieldTime seconds once finished, into its owner's storage nearest it.
+// Kind quarry is a quarry or mine: workers work it like a farm (up to workerSlots at once) and never run it dry.
+// works is what a round of work gives and workTime the seconds a round takes (both needed, and only for a
+// quarry); with several goods, each worker's rounds give them in turn (iron_ore 4 then coal 2, and again), so
+// the list sets both which goods and how much of each. Gathering techs make the rounds quicker.
 [
   { "id": "town_hall", "name": "Town hall", "kind": "town_hall", "size": [7, 7], "wallHeight": 4,
     "wall": "planks", "footing": "stone_brick", "roof": "roof_tile",
@@ -79,6 +83,13 @@
   { "id": "foundry", "name": "Foundry", "kind": "smelter", "size": [5, 5], "wallHeight": 4,
     "wall": "stone_brick", "roof": "stone_brick", "chimney": true, "icon": "smelter",
     "cost": { "stone": 60, "wood": 20 }, "buildTime": 30, "workerSlots": 2, "light": 4, "sturdy": 2, "speed": 200 },
+  { "id": "quarry", "name": "Quarry", "kind": "quarry", "size": [5, 5], "wallHeight": 2,
+    "wall": "planks", "footing": "stone_brick", "roof": "thatch", "icon": "stone",
+    "cost": { "wood": 60 }, "buildTime": 30, "workerSlots": 3, "works": { "stone": 5 }, "workTime": 12 },
+  { "id": "mine", "name": "Mine", "kind": "quarry", "size": [5, 5], "wallHeight": 3,
+    "wall": "stone_brick", "roof": "planks", "chimney": true, "icon": "iron_ore", "requires": "smelting",
+    "cost": { "wood": 60, "stone": 40 }, "buildTime": 40, "workerSlots": 2, "works": { "iron_ore": 4, "coal": 2 },
+    "workTime": 15 },
   { "id": "barrier", "name": "Wooden barrier", "kind": "wall", "size": [1, 1], "wallHeight": 2, "wall": "palisade",
     "cost": { "wood": 1 }, "buildTime": 1, "sight": 2, "sturdy": 2, "icon": "wall", "upgrade": "wooden_wall" },
   { "id": "wooden_wall", "name": "Wooden wall", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "planks",

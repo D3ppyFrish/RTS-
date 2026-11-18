@@ -92,7 +92,7 @@ public sealed partial class AutomationSystem
     // Per player, recomputed when something may have changed: goods, people and work.
     private readonly List<Stats> _stats = new();
     private bool _dirty = true;
-    // Workers at each building (by id) on a build, farm or haul job.
+    // Workers at each building (by id) on a build, farm, haul, supply or quarry job.
     private readonly Dictionary<int, int> _working = new();
 
     // Bookkeeping (not hashed): when each worker (by id) may look for work again, the last job automation
@@ -357,6 +357,7 @@ public sealed partial class AutomationSystem
         int id = u.Id[i];
         bool mayGather = !_retry.TryGetValue(id, out long at) || tick >= at;
         bool looked = false;
+        Span<long> need = stackalloc long[Gatherable.Length];
         foreach (var kind in WorkPriorities.Unpack(PrioritiesOf(i)))
         {
             int rank = kind switch { WorkKind.Build => 0, WorkKind.Farm => 1, WorkKind.Smelt => 2, WorkKind.Supply => 3, _ => -1 };
@@ -373,9 +374,16 @@ public sealed partial class AutomationSystem
                 assignment = new Assignment(tick, job, best.Id, 0, 0, 0, BlockType.Air);
                 return new WorkCommand(owner, me, best.Id);
             }
+            int only = kind == WorkKind.Needed ? -1 : GatherIndex(WorkPriorities.GoodOf(kind)!.Value);
+            // The good wanted most comes from a quarry or mine with a free place, if the player has one.
+            int top = Needs(s, only, need);
+            if (top >= 0 && FreeQuarry(owner, Gatherable[top].Good, x, z, tick) is { } quarry)
+            {
+                assignment = new Assignment(tick, UnitJob.Quarry, quarry.Id, 0, 0, 0, BlockType.Air);
+                return new WorkCommand(owner, me, quarry.Id);
+            }
             if (!mayGather) continue;
             looked = true;
-            int only = kind == WorkKind.Needed ? -1 : GatherIndex(WorkPriorities.GoodOf(kind)!.Value);
             if (!FindGather(i, s, only, out int gx, out int gy, out int gz)) continue;
             _retry.Remove(id);
             assignment = new Assignment(tick, UnitJob.Gather, 0, gx, gy, gz, World.Get(gx, gy, gz));
@@ -416,6 +424,48 @@ public sealed partial class AutomationSystem
     public static int MaxBuilders(BuildingDef def) => 1 + def.BuildTicks / (30 * Tps);
 
     /// <summary>
+    /// Each good's need (see <see cref="FindGather"/>), by index in <see cref="Gatherable"/>, into
+    /// <paramref name="need"/> (0 for a good not wanted), and the index of the most needed; -1 if none is.
+    /// </summary>
+    private static int Needs(Stats s, int only, Span<long> need)
+    {
+        int top = -1;
+        need.Clear();
+        for (int k = 0; k < Gatherable.Length; k++)
+        {
+            var (good, _, share) = Gatherable[k];
+            if (only >= 0 ? k != only : good is Good.IronOre or Good.Coal && !s.Smelter) continue;
+            long n = share * 1000L / (s.Gatherers[(int)good] + 1);
+            if (good == Good.Food && (s.Starving || s.Stock[(int)Good.Food] < 2 * s.Upkeep))
+                n *= 4;
+            if (s.Stock[(int)good] >= Plenty) n /= 16;
+            need[k] = Math.Max(1, n);
+            if (top < 0 || need[k] > need[top]) top = k;
+        }
+        return top;
+    }
+
+    /// <summary>
+    /// The nearest of the player's finished quarries and mines to (x, z) that gives <paramref name="good"/> and has a
+    /// free place, or null. Gathering a good such a building gives is done there rather than block by block: it
+    /// never runs out.
+    /// </summary>
+    private Building? FreeQuarry(int owner, Good good, int x, int z, long tick)
+    {
+        Building? best = null;
+        long bestD = 0;
+        foreach (var b in Buildings.All)
+        {
+            if (b.Owner != owner || !b.Def.IsQuarry || !b.Active || !b.Def.Gives(good)) continue;
+            if (_working.GetValueOrDefault(b.Id) >= b.Def.WorkerSlots || Avoided(-(long)b.Id, tick)) continue;
+            long d = b.CentreDistance2(x, z);
+            if (best != null && d >= bestD) continue;
+            (best, bestD) = (b, d);
+        }
+        return best;
+    }
+
+    /// <summary>
     /// The block for worker i to gather, if any: of the goods the player could use, the one with the most
     /// need, at its nearest block within <see cref="SearchRadius"/> columns and <see cref="SearchHeight"/>
     /// levels that no other worker has claimed and that a worker can stand next to (for a tree, the base
@@ -434,18 +484,7 @@ public sealed partial class AutomationSystem
         int ux = u.X[i].FloorToInt(), uy = u.Y[i], uz = u.Z[i].FloorToInt();
         int kinds = Gatherable.Length;
         Span<long> need = stackalloc long[kinds];
-        int top = -1;
-        for (int k = 0; k < kinds; k++)
-        {
-            var (good, _, share) = Gatherable[k];
-            if (only >= 0 ? k != only : good is Good.IronOre or Good.Coal && !s.Smelter) continue;
-            long n = share * 1000L / (s.Gatherers[(int)good] + 1);
-            if (good == Good.Food && (s.Starving || s.Stock[(int)Good.Food] < 2 * s.Upkeep))
-                n *= 4;
-            if (s.Stock[(int)good] >= Plenty) n /= 16;
-            need[k] = Math.Max(1, n);
-            if (top < 0 || need[k] > need[top]) top = k;
-        }
+        int top = Needs(s, only, need);
         if (top < 0) return false;
 
         Span<bool> have = stackalloc bool[kinds];
@@ -790,7 +829,9 @@ public sealed partial class AutomationSystem
             s.Workers++;
             if (u.Job[i] == UnitJob.Gather && Harvest.Yields(u.JobBlock[i], out var good)) s.Gatherers[(int)good]++;
             else if (u.Job[i] == UnitJob.Farm) s.Gatherers[(int)Good.Food]++;
-            if (u.Job[i] is UnitJob.Build or UnitJob.Farm or UnitJob.Haul or UnitJob.Supply)
+            else if (u.Job[i] == UnitJob.Quarry && Buildings.Get(u.JobTarget[i]) is { } q)
+                foreach (var w in q.Def.Works) s.Gatherers[(int)w.Good]++;
+            if (u.Job[i] is UnitJob.Build or UnitJob.Farm or UnitJob.Haul or UnitJob.Supply or UnitJob.Quarry)
                 _working[u.JobTarget[i]] = _working.GetValueOrDefault(u.JobTarget[i]) + 1;
         }
         foreach (var b in Buildings.All)

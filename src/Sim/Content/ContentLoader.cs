@@ -442,7 +442,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "walkway", "upgrade", "facing", "aim", "speed");
+                "sturdy", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -452,7 +452,7 @@ public static class ContentLoader
             var kind = o.Enum("kind", BuildingKind.House, required: true);
             var (sizeX, sizeZ) = o.Size("size");
             int slots = o.Int("workerSlots", 0, 20, 0);
-            if (kind is BuildingKind.Farm or BuildingKind.Smelter && slots == 0)
+            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry && slots == 0)
                 o.Error($"a {SnakeName(kind)} needs \"workerSlots\" of 1 or more, or nobody can work it");
             int wallHeight = o.Int("wallHeight", 1, 12, 3);
             if (kind is BuildingKind.Wall or BuildingKind.Tower && wallHeight <= Walk.MaxClimb)
@@ -489,7 +489,13 @@ public static class ContentLoader
                 Walkway = o.Bool("walkway"),
                 Aim = o.Int("aim", 0, 100, 0),
                 Speed = o.Int("speed", 100, 1000, 100),
+                Works = o.Cost("works"),
+                WorkTicks = o.Int("workTime", 1, MaxSeconds, 0) * Tps,
             };
+            if (kind == BuildingKind.Quarry && (def.Works.Length == 0 || def.WorkTicks == 0))
+                o.Error("a quarry needs \"works\" (the goods a round of work gives) and \"workTime\" (the seconds a round takes)");
+            if (kind != BuildingKind.Quarry && (def.Works.Length > 0 || def.WorkTicks > 0))
+                o.Error("only a quarry has \"works\" and \"workTime\"");
             bool wall = kind is BuildingKind.Wall or BuildingKind.Gate, tower = kind == BuildingKind.Tower;
             if (def.Walkway && !wall && !tower) o.Error("only a wall, gate or tower has a \"walkway\"");
             if (def.Aim > 0 && !tower) o.Error("only a tower has \"aim\"");
@@ -1258,6 +1264,8 @@ public static class ContentLoader
                 h.Add(b.Upgrade?.Index ?? -1);
                 h.Add(b.Facing?.Index ?? -1);
                 h.Add(b.Aim);
+                h.Add(b.Works);
+                h.Add(b.WorkTicks);
             }
             h.Add(db.Units.Count);
             foreach (var u in db.Units)

@@ -181,6 +181,10 @@ public sealed partial class EconomySystem
     public int WorkTicks(int player, BlockType kind) =>
         Math.Max(1, Harvest.WorkTicks(kind) * 100 / (100 + (Find(player)?.GatherPercent ?? 0)));
 
+    /// <summary>Ticks of one round of work at a quarry or mine of the player's, with their gathering techs.</summary>
+    public int QuarryTicks(int player, BuildingDef def) =>
+        Math.Max(1, def.WorkTicks * 100 / (100 + (Find(player)?.GatherPercent ?? 0)));
+
     /// <summary>Food from one harvest at one of the player's farms.</summary>
     public int FarmYieldOf(int player) => FarmYield + (Find(player)?.FarmBonus ?? 0);
 

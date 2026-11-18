@@ -77,10 +77,11 @@ public partial class PlayerControl : Node
 
     public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, IceBridge, Test }
 
-    /// <summary>Building hotkeys, in the order the HUD lists them.</summary>
+    /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
+        (Key.None, "quarry"), (Key.None, "mine"),
         (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
@@ -339,7 +340,7 @@ public partial class PlayerControl : Node
         }
         foreach (var (buildKey, building) in BuildKeys)
         {
-            if (code != buildKey || key.CtrlPressed) continue;
+            if (buildKey == Key.None || code != buildKey || key.CtrlPressed) continue;
             StartBuild(building);
             GetViewport().SetInputAsHandled();
             return;
@@ -1932,7 +1933,9 @@ public partial class PlayerControl : Node
                $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} " +
                $"rebuild={(_sim.Economy.Rebuilds(LocalPlayer) ? 1 : 0)} ruins={OwnRuins()} " +
                $"governor={(sel?.Governor ?? GovernorFocus.None).ToString().ToLowerInvariant()} town_guard={(sel != null ? _sim.Combat.TownGuardCount(sel) : 0)} " +
-               $"houses={OwnKind(BuildingKind.House)} " +
+               $"houses={OwnKind(BuildingKind.House)} quarries={OwnKind(BuildingKind.Quarry)} " +
+               $"quarrying={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Quarry)} " +
+               $"ore={stock[(int)Good.IronOre]} coal={stock[(int)Good.Coal]} " +
                $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +

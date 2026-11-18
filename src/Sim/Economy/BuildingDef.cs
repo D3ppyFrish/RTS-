@@ -54,6 +54,12 @@ public enum BuildingKind : byte
     /// It sees far (<see cref="BuildingDef.Sight"/>), and those posted on it aim better (<see cref="BuildingDef.Aim"/>).
     /// </summary>
     Tower,
+    /// <summary>
+    /// A quarry or mine: workers work it, as they work a farm, for the goods in its <see cref="BuildingDef.Works"/>
+    /// list, one round of work (<see cref="BuildingDef.WorkTicks"/>) at a time, taking each good of the list in turn,
+    /// and carry them to storage. It never runs out, wherever it stands.
+    /// </summary>
+    Quarry,
 }
 
 /// <summary>One block of a building, relative to its footprint corner and base level.</summary>
@@ -98,10 +104,17 @@ public sealed class BuildingDef
     public bool Storage { get; init; }
     /// <summary>Enemies can capture it (with its goods) or burn it.</summary>
     public bool Raidable { get; init; }
-    /// <summary>Most workers that can work here at once (farm, smelter).</summary>
+    /// <summary>Most workers that can work here at once (farm, smelter, quarry, mine).</summary>
     public int WorkerSlots { get; init; }
     /// <summary>How far (columns) beyond its footprint its player sees under fog of war (see <see cref="VisionSystem"/>).</summary>
     public int Sight { get; init; } = 6;
+    /// <summary>
+    /// What a quarry or mine gives its workers (see <see cref="BuildingKind.Quarry"/>): each round of work gives one
+    /// entry of the list, a worker taking the entries in turn, so the list sets both which goods and how much of each.
+    /// </summary>
+    public GoodAmount[] Works { get; init; } = Array.Empty<GoodAmount>();
+    /// <summary>Worker-ticks of one round of work at a quarry or mine; 0 for other buildings.</summary>
+    public int WorkTicks { get; init; }
     /// <summary>Unit ids this building trains (the units whose <c>trainedAt</c> names it), in data order.</summary>
     public string[] Trains { get; internal set; } = Array.Empty<string>();
     /// <summary>Techs the player must have before placing it.</summary>
@@ -157,6 +170,17 @@ public sealed class BuildingDef
     /// hall or a foundry better at its work than the building it was upgraded from.
     /// </summary>
     public int Speed { get; init; } = 100;
+
+    /// <summary>A quarry or mine (see <see cref="BuildingKind.Quarry"/>).</summary>
+    public bool IsQuarry => Kind == BuildingKind.Quarry;
+
+    /// <summary>True if a round of work here can give <paramref name="good"/>.</summary>
+    public bool Gives(Good good)
+    {
+        foreach (var w in Works)
+            if (w.Good == good) return true;
+        return false;
+    }
 
     /// <summary>Units stand on it rather than next to it.</summary>
     public bool Walkable => Kind == BuildingKind.Farm;
