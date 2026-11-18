@@ -232,4 +232,90 @@ public class GovernorTests
         Assert.Equal(log.Commands, back.Commands);
         Assert.Contains("governor 1 2 defence", log.ToString());
     }
+
+    // --- Town guard ---------------------------------------------------------------------------------
+
+    /// <summary>Player 0's town hall at (20, 20) (7 by 7) with two spearmen guarding it, and the governor's focus.</summary>
+    private static (Simulation Sim, Building Hall, int[] Guards) Guarded(GovernorFocus focus, bool fog = false)
+    {
+        var sim = Flat();
+        if (fog) sim.Fog = true;
+        var hall = Place(sim, 0, "town_hall", 20, 20);
+        hall.Stock[(int)Good.Food] = 300;
+        var guards = new[] { sim.SpawnUnit(0, "spearman", 23, 29), sim.SpawnUnit(0, "spearman", 24, 29) };
+        sim.Schedule(0, new GovernCommand(0, hall.Id, focus));
+        sim.Schedule(0, new GuardCommand(0, guards, 0, hall.Id));
+        sim.Run(3 * Tps);
+        return (sim, hall, guards);
+    }
+
+    private static int Hp(Simulation sim, int id) => sim.Units.Exists(id) ? sim.Units.Hp[sim.Units.IndexOf(id)] : 0;
+
+    private static int FromHall(Simulation sim, Building hall, int id)
+    {
+        int i = sim.Units.IndexOf(id);
+        return hall.ColumnDistance(sim.Units.X[i].FloorToInt(), sim.Units.Z[i].FloorToInt());
+    }
+
+    [Fact]
+    public void SoldiersGuardingAGovernedHallAreItsTownGuard()
+    {
+        var (sim, hall, guards) = Guarded(GovernorFocus.Defence);
+        foreach (int g in guards) Assert.True(sim.Combat.TownGuard(sim.Units.IndexOf(g)));
+        Assert.Equal(2, sim.Combat.TownGuardCount(hall));
+
+        // With the governor stepped off they are plain guards of the hall again.
+        sim.Schedule(sim.Tick, new GovernCommand(0, hall.Id, GovernorFocus.None));
+        sim.Step();
+        foreach (int g in guards) Assert.False(sim.Combat.TownGuard(sim.Units.IndexOf(g)));
+        Assert.Equal(CombatOrder.Guard, sim.Units.Combat[sim.Units.IndexOf(guards[0])]);
+    }
+
+    [Fact]
+    public void TheTownGuardGoesAfterARaiderAnywhereInTheTownAndComesBack()
+    {
+        // A raider 19 columns from the hall: out of the guards' sight and far beyond a plain guard's reach.
+        int Raid(GovernorFocus focus, out Simulation sim, out Building hall, out int[] guards)
+        {
+            (sim, hall, guards) = Guarded(focus);
+            int raider = sim.SpawnUnit(1, "worker", 45, 23);
+            sim.Units.Stance[sim.Units.IndexOf(raider)] = UnitStance.Hold;
+            sim.Run(25 * Tps);
+            return raider;
+        }
+        int plain = Raid(GovernorFocus.None, out var sim0, out _, out _);
+        Assert.Equal(40, Hp(sim0, plain));
+
+        int raider = Raid(GovernorFocus.Defence, out var sim1, out var hall, out var guards);
+        Assert.False(sim1.Units.Exists(raider));
+        RunUntil(sim1, () => guards.All(g => FromHall(sim1, hall, g) <= CombatSystem.GuardFollow), 30 * Tps, "the town guard to walk back");
+        foreach (int g in guards) Assert.Equal(CombatOrder.Guard, sim1.Units.Combat[sim1.Units.IndexOf(g)]);
+    }
+
+    [Fact]
+    public void TheTownGuardLeavesEnemiesOutsideTheTownAlone()
+    {
+        var (sim, hall, guards) = Guarded(GovernorFocus.Army);
+        // 30 columns east of the hall: past the town's reach.
+        int outsider = sim.SpawnUnit(1, "worker", 26 + CombatSystem.TownReach + 6, 23);
+        sim.Run(15 * Tps);
+        Assert.Equal(40, Hp(sim, outsider));
+        foreach (int g in guards) Assert.True(FromHall(sim, hall, g) <= CombatSystem.GuardFollow + 1);
+    }
+
+    [Fact]
+    public void TheTownGuardGoesOnlyAfterEnemiesThePlayerCanSee()
+    {
+        var (sim, hall, guards) = Guarded(GovernorFocus.Defence, fog: true);
+        int raider = sim.SpawnUnit(1, "worker", 45, 40);
+        sim.Units.Stance[sim.Units.IndexOf(raider)] = UnitStance.Hold;
+        sim.Run(10 * Tps);
+        Assert.False(sim.Vision.SeesUnit(0, sim.Units.IndexOf(raider)));
+        Assert.Equal(40, Hp(sim, raider));
+        foreach (int g in guards) Assert.True(FromHall(sim, hall, g) <= CombatSystem.GuardFollow + 1);
+
+        // A scout of the player's sees the raider: the governor sends the town guard.
+        sim.SpawnUnit(0, "worker", 45, 44);
+        RunUntil(sim, () => !sim.Units.Exists(raider), 30 * Tps, "the town guard to cut down the raider it now sees");
+    }
 }

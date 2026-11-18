@@ -408,6 +408,14 @@ its commands played back ends the same. An order of the player's always comes fi
   starts with that one. Nothing is trained or researched without room in the houses and a minute's food left
   for everyone. With a governor in your town hall, the houses and farms for all-automatic workers above come
   from the governor instead.
+  **Town guard**: soldiers you hand to the governor (Shift+V or the Defend the town button with soldiers
+  selected, which picks your nearest governed hall, or Alt+right click on the hall: a guard order on it)
+  defend the whole town instead of only the hall. They fight enemies within 24 columns of the hall and let
+  one go only past 30; with nothing to fight, the governor sends each after the enemy in the town nearest
+  to it that you can see (any of your units or buildings seeing it will do, so a raider out of the guards'
+  own sight is still caught), except beaten monsters and a neutral city-state's guards. With the town clear
+  they walk back to the hall. If the governor steps off they stay as plain guards of the hall (8 columns);
+  any other order takes a soldier out of the town guard. The hall's panel shows how many it has.
 - **Stances** (`StanceCommand`, V): soldiers are aggressive (they chase what they see), hold their
   ground (they fight only what is in reach and never move to chase), or retreat when hurt (aggressive
   until down to a third of their hit points, then they hold their ground, and when hit away from home

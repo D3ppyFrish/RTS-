@@ -87,7 +87,8 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!;
+    private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
     private SelectionBox _box = null!;
@@ -519,6 +520,15 @@ public partial class Hud : CanvasLayer
         _workerPrioritiesButton.Visible = false;
         column.AddChild(_workerPrioritiesButton);
 
+        _defendTownButton = MakeToolButton("Defend the town  [Shift+V]");
+        _defendTownButton.Name = "defend_town";
+        _defendTownButton.ToggleMode = false;
+        _defendTownButton.TooltipText = "Hand the selected soldiers to the governor of your nearest governed town hall: they guard the hall, " +
+                                        $"and the governor sends them after enemies you can see anywhere within {CombatSystem.TownReach} columns of it.";
+        _defendTownButton.Pressed += () => _control.DefendTown();
+        _defendTownButton.Visible = false;
+        column.AddChild(_defendTownButton);
+
         _tameRow = new HBoxContainer { Visible = false };
         _tameRow.AddThemeConstantOverride("separation", 4);
         _tameLabel = MakeLabel("", 13);
@@ -780,6 +790,12 @@ public partial class Hud : CanvasLayer
             row.AddChild(button);
             _governorButtons.Add((button, f));
         }
+        _townGuardLabel = MakeLabel("", 13);
+        _townGuardLabel.Name = "town_guard";
+        _townGuardLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _townGuardLabel.CustomMinimumSize = new Vector2(360, 0);
+        _townGuardLabel.ThemeTypeVariation = UiStyle.Dim;
+        _governorBox.AddChild(_townGuardLabel);
         column.AddChild(_governorBox);
     }
 
@@ -790,6 +806,13 @@ public partial class Hud : CanvasLayer
         _governorBox.Visible = show;
         if (!show) return;
         foreach (var (button, focus) in _governorButtons) button.SetPressedNoSignal(b!.Governor == focus);
+        int guard = _sim.Combat.TownGuardCount(b!);
+        _townGuardLabel.Visible = b.Governor != GovernorFocus.None || guard > 0;
+        _townGuardLabel.Text = b.Governor == GovernorFocus.None
+            ? $"{guard} soldiers guard this hall; with a governor they defend the whole town"
+            : guard == 0
+                ? "Town guard: none. Select soldiers and press Shift+V (or Alt+right-click this hall) to hand them to the governor"
+                : $"Town guard: {guard} soldier{(guard == 1 ? "" : "s")}, sent after enemies you see within {CombatSystem.TownReach} columns";
     }
 
     /// <summary>Shows the supply buttons for a finished storage building of yours.</summary>
@@ -987,6 +1010,7 @@ public partial class Hud : CanvasLayer
         _digButton.Visible = _control.OwnDiggers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Dig;
         _digButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Dig);
         _workerPrioritiesButton.Visible = _control.OwnWorkers().Count > 0;
+        _defendTownButton.Visible = _control.TownToDefend() != null;
         RefreshEvolveRows();
         RefreshTaming();
         RefreshDen();
@@ -1768,6 +1792,7 @@ public partial class Hud : CanvasLayer
         int w = u.GuardUnit[i] != 0 ? u.IndexOf(u.GuardUnit[i]) : -1;
         if (w >= 0) return $"guarding a {_sim.Content.Units[u.Def[w]].Name.ToLowerInvariant()}";
         var b = _sim.Buildings.Get(u.GuardBuilding[i]);
+        if (_sim.Combat.TownGuard(i)) return "defending the town";
         return b != null ? $"guarding the {b.Def.Name.ToLowerInvariant()}" : "guarding";
     }
 
