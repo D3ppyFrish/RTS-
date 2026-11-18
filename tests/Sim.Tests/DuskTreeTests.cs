@@ -137,6 +137,28 @@ public class DuskTreeTests
     }
 
     [Fact]
+    public void TheDuskTreeHasAWideFootThatLeavesRoomToStandRoundIt()
+    {
+        var sim = WithTree();
+        var w = sim.World;
+        // Roots all round the trunk at the ground, buttresses up its four sides.
+        for (int dz = -1; dz <= 1; dz++)
+        for (int dx = -1; dx <= 1; dx++)
+            Assert.Equal(BlockType.DuskWood, w.Get(TreeX + dx, Ground + 1, TreeZ + dz));
+        foreach (var (dx, dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            Assert.Equal(BlockType.DuskWood, w.Get(TreeX + dx, Ground + 2, TreeZ + dz));
+        // The columns two from the trunk, where tenders stand, stay open below the branches.
+        for (int dz = -2; dz <= 2; dz++)
+        for (int dx = -2; dx <= 2; dx++)
+            if (Math.Max(Math.Abs(dx), Math.Abs(dz)) == 2)
+                for (int y = Ground + 1; y <= Ground + 4; y++)
+                    Assert.Equal(BlockType.Air, w.Get(TreeX + dx, y, TreeZ + dz));
+        // The trunk is still the one found, not a root.
+        Assert.True(DuskTreeSystem.Find(w, out int x, out _, out int z));
+        Assert.Equal((TreeX, TreeZ), (x, z));
+    }
+
+    [Fact]
     public void TheDuskTreeCannotBeCutOrDug()
     {
         var sim = WithTree();

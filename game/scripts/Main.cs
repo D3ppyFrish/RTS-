@@ -810,7 +810,7 @@ public partial class Main : Node3D
     /// --showcase[=X,Z]: a scene to look at the sculpted models (see Detail/Sculpted), all showpieces in player 1's
     /// colour rather than units of the rules: a golem with an orc on its back at block (X, Z) (by default six
     /// columns east and twelve south of the camera focus), an orc spearman and an orc worker in front of it,
-    /// two wolves and a wolf rider about it.
+    /// two wolves and a wolf rider about it, two knights, and a Dusk Warden to its west.
     /// </summary>
     private void PlaceShowcase(string at, int fx, int fz)
     {
@@ -833,6 +833,7 @@ public partial class Main : Node3D
         Put("wolf_rider", 0.4f, 6.4f, 5);
         Put("knight", -1.6f, 8.6f, 0);
         Put("knight", 1.8f, 8.4f, -35);
+        Put("dusk_warden", -8.5f, -1.5f, 40);
         GD.Print($"Showcase at {cx},{cz}");
     }
 

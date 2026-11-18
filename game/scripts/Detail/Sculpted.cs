@@ -60,6 +60,7 @@ public static partial class Sculpted
             Roles = RiderRoles, Pivots = RiderPivots(), Build = WolfRider,
             StrideBlocks = 1.4f, LegSwing = 0.55f, ArmSwing = 0.1f, Lean = 0.3f, Bob = 1.3f,
         },
+        ["dusk_warden"] = WardenRig(), // the dusk tree's guardian (Sculpted.Warden)
         ["knight"] = ImportedRig("res://models/knight.vox.gz"), // made with Meshy AI (Sculpted.Imported)
         ["golem"] = new RigDef
         {
