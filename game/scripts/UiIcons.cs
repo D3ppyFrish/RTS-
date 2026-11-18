@@ -335,6 +335,12 @@ public static class UiIcons
             "............", "...kkkkkk...", "..krrRRrrk..", ".krrRrrRrrk.", ".krRrrrrRrk.", ".krrrRRrrrk.",
             ".krRrrrrRrk.", ".krrRrrRrrk.", "..krrRRrrk..", "...kkkkkk...", "....kppk....", ".....kk.....",
         },
+        // The wyrm crystal: a violet crystal, glowing at its heart.
+        ["wyrm_crystal"] = new[]
+        {
+            ".....kk.....", "....kvvk....", "...kvttvk...", "...kvwtvk...", "..kvtwwtvk..", "..kvtwwtvk..",
+            "..kvttttvk..", "..kvttttvk..", "...kvttvk...", "...kvttvk...", "....kvvk....", ".....kk.....",
+        },
         ["paw"] = new[]
         {
             "............", "..kk....kk..", ".kBBk..kBBk.", ".kBBk..kBBk.", "..kkkkkkkk..", "kk.kBBBBk.kk",

@@ -264,12 +264,16 @@ public sealed class Simulation
     /// Match setup: a town for each city-state, about as far from every start area as from the others, each
     /// with a lair of its monster nearby (see <see cref="CityStateSystem.PlaceAll"/>). Call after spawning the
     /// lairs. When the lairs were spawned, the lairs spread across the map follow, away from the towns (see
-    /// <see cref="MonsterSystem.PlaceWild"/>).
+    /// <see cref="MonsterSystem.PlaceWild"/>), and then those in the cavern (<see cref="MonsterSystem.PlaceCavern"/>).
     /// </summary>
     public List<CityState> SpawnCities()
     {
         var towns = Cities.PlaceAll();
-        if (_lairsSpawned) Monsters.PlaceWild();
+        if (_lairsSpawned)
+        {
+            Monsters.PlaceWild();
+            Monsters.PlaceCavern();
+        }
         return towns;
     }
 

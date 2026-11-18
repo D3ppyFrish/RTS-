@@ -497,6 +497,18 @@ areas, and Orcs who beat a wolf keep it.
   shelled hard all over (head 3, body 5, legs 2); a pair pays 150 food. Each leaves a den with its own
   prizes (see "Cleared dens"). In the data, `biome` and `count` in a `lair` spread it, and `atStarts` keeps
   it at the starts too.
+- **Roaming** (issue #65): the wolf packs and boar herds spread across the map roam (`roam` in a `lair`: 32
+  blocks for wolves, 24 for boars). Every 20 seconds, unless it is fighting, the pack wanders on together to
+  another spot within that distance of its den (on dry ground, away from buildings), and it guards round where it
+  is rather than round the den: it goes after any unit, workers too, within its guard radius of that spot, and
+  its leash is measured from there. The starts' wolves, the city-states' monsters and the rest stay home.
+- **The cavern** (issue #65, `CavernTests`): on maps at least 384 blocks across, the cavern under the hills has
+  three nests of **cave crawlers** spread along it, from near the way in to near the far end, and a **cave wyrm**
+  alone in its deepest chamber (the furthest on foot from the way in). A crawler (40 hit points, quick, piercing
+  bites) is weak alone, but a nest of five comes at once; a nest pays 30 iron and 40 coal and leaves no den. The
+  wyrm is the cavern's boss: 700 hit points, slow, armoured all over, with a crushing bite; it pays 150 stone and
+  120 iron, and its den gives the **wyrm crystal**. In the data, `cavern` in a `lair` is `along` or `deepest`, with
+  `count` lairs.
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.
@@ -531,6 +543,8 @@ The den is gone from the map either way.
 | Stone giant | a fighting unit takes up the giant's heart | none: they keep the beaten giant itself |
 | Bog horror | a fighting unit takes up the bog lantern | the same: the bog lantern |
 | Giant crab | a fighting unit takes up a crab shell shield | crab pots |
+| Cave crawler | none | none |
+| Cave wyrm | a fighting unit takes up the wyrm crystal | the same: the wyrm crystal (and they keep the beaten wyrm) |
 | Dusk Warden | the Dusk Staff, by healing the tree (see "Dusk tree") | the beaten warden itself |
 
 
@@ -553,7 +567,8 @@ The den is gone from the map either way.
   no relic yet takes it up at once. The giant's heart gives its bearer 60 more hit points (it gets them
   at once too) and 2 more armour on every part. A unit bears one relic at most, keeps it when it evolves,
   and it is gone with the bearer (dropping relics is a follow-up). The bog lantern adds 4 damage to each
-  hit, and the crab shell shield 3 armour on every part.
+  hit, the crab shell shield 3 armour on every part, and the wyrm crystal 40 hit points, 6 damage a hit and
+  1 armour on every part.
 - **Orcs: crab pots.** At a cleared crab den the Orcs' workers set crab pots (20 wood, 10 seconds): they
   house 2 and bring in 6 food every 15 seconds.
 - **Stays as it was:** the Settlers still get a lair's reward for clearing it.

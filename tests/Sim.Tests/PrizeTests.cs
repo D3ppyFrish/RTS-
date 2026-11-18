@@ -217,7 +217,7 @@ public class PrizeTests
         Edit(files, "relics.json", "\"hp\": 60, \"armor\": 2 }", "\"hp\": 60, \"armor\": 2, \"speed\": 1 },\n  { \"id\": \"giant_heart\", \"name\": \"Again\" }");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
         Assert.Contains("units.json: unit 'stone_giant', lair, prizes, settlers: \"relic\" is \"crown\", which is not in relics.json", e.Errors);
-        Assert.Contains(e.Errors, m => m.Contains("unit 'dusk_warden', lair") && m.Contains("no \"biome\", \"atStarts\" or \"prizes\""));
+        Assert.Contains(e.Errors, m => m.Contains("unit 'dusk_warden', lair") && m.Contains("no \"biome\", \"cavern\", \"atStarts\" or \"prizes\""));
         Assert.Contains(e.Errors, m => m.StartsWith("relics.json: relic 'giant_heart'") && m.Contains("speed"));
         Assert.Contains(e.Errors, m => m.StartsWith("relics.json: relic 'giant_heart'") && m.Contains("another relic already has this id"));
     }
