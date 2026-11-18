@@ -311,6 +311,18 @@ public static class UiIcons
             "k........k..", ".k......k...", "..kkkkkkkkk.", ".klllllllllk", ".kwwwwwwwwwk", ".kRkrrkrrkRk",
             ".krrkrrkrrrk", ".krkrrrkrrrk", ".kRrkrkrrrRk", ".krrrkrrrrrk", ".kRRRRRRRRRk", "..kkkkkkkkk.",
         },
+        // The giant's heart: a lump of grey stone with a glowing amber core.
+        ["giant_heart"] = new[]
+        {
+            "............", "...kkkkkk...", "..kssSssssk.", ".ksSsyysSsk.", ".kssyffysSk.", ".kSsyffyssk.",
+            ".kssyyyysSk.", ".ksSssssssk.", "..ksSsssSk..", "...kssSsk...", "....kssk....", ".....kk.....",
+        },
+        // A boar's tusk, curved, on a strap.
+        ["tusk"] = new[]
+        {
+            "............", "..........k.", ".........kwk", "........kwlk", ".......kwlk.", "......kwlk..",
+            "....kkwlk...", "..kkwwlk....", ".kwwllk.....", "kbbkkk......", "kBk.........", ".k..........",
+        },
         ["paw"] = new[]
         {
             "............", "..kk....kk..", ".kBBk..kBBk.", ".kBBk..kBBk.", "..kkkkkkkk..", "kk.kBBBBk.kk",

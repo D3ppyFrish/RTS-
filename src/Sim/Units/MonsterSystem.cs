@@ -67,11 +67,12 @@ public sealed class Lair
 /// A lair is cleared when its pack is gone. If the player whose unit got the last of the pack does not tame
 /// monsters, they get the lair's reward (<see cref="LairDef.Reward"/>) in their storage nearest the den.
 ///
-/// A cleared den can then be used, once, by any player with a unit within <see cref="DenRange"/> of it, as
-/// their faction's den use says (<see cref="Content.FactionDef.Den"/>, see <see cref="DenCommand"/>): the
-/// Orcs put up a wolf lodge on it, a site their workers build, which houses people and brings in food from
-/// its wolves hunting; a form den use turns the nearest of the units that can take the form into it. The
-/// den is gone from the map either way.
+/// A cleared den can then be used, once, by any player with a unit within <see cref="DenRange"/> of it whose
+/// faction has a prize for beating that monster (<see cref="LairDef.Prizes"/>, see <see cref="DenCommand"/>):
+/// a building put up on the den, a site their workers build (the Orcs' wolf lodge at a wolf den, anyone's boar
+/// pen at a boar wallow); a form, which the nearest of the units that can take it takes (the Settlers'
+/// Wolfheart); or a relic, which the nearest of the fighting units without one takes up (the Settlers' giant's
+/// heart). The den is gone from the map either way.
 /// All numbers are starting guesses to be tuned in playtests.
 /// </summary>
 public sealed class MonsterSystem
@@ -547,13 +548,24 @@ public sealed class MonsterSystem
 
     // --- Dens --------------------------------------------------------------------------------------
 
-    /// <summary>What the player's faction makes of a cleared den, or null if nothing.</summary>
-    public Content.DenUse? DenUse(int player) =>
-        player >= 0 && player != Simulation.WildPlayer ? Economy.Faction(player).Den : null;
+    /// <summary>What the player's faction makes of the lair's den once it is cleared, its prize there, or null if nothing.</summary>
+    public Content.DenUse? DenUse(int player, Lair lair) =>
+        player >= 0 && player != Simulation.WildPlayer ? lair.Monster.Lair!.PrizeFor(Economy.Faction(player)) : null;
+
+    /// <summary>True if the player's faction has a prize at any monster's den.</summary>
+    public bool HasPrizes(int player)
+    {
+        if (player < 0 || player == Simulation.WildPlayer) return false;
+        var faction = Economy.Faction(player);
+        foreach (var m in _sim.Content.Units)
+            if (m.Lair?.PrizeFor(faction) != null) return true;
+        return false;
+    }
 
     /// <summary>
     /// The unit among <paramref name="units"/> (indexes) nearest the den within <see cref="DenRange"/> (ties to
-    /// the lowest id) that can use it: any unit for a building, one that can take the form for a form. -1 if none.
+    /// the lowest id) that can use it: any unit for a building, one that can take the form for a form, a
+    /// fighting unit without a relic for a relic. -1 if none.
     /// </summary>
     public int DenUser(Lair lair, IEnumerable<int> units, Content.DenUse use)
     {
@@ -565,6 +577,7 @@ public sealed class MonsterSystem
         {
             if (j < 0 || u.Subdued[j] || u.Rout[j] > 0 || IsWild(j) || u.Town[j] != 0) continue;
             if (use.Form is { } form && form.EvolvesFrom != Def(j)) continue;
+            if (use.Relic != null && (u.Relic[j] != 0 || Def(j).Damage <= 0 || Def(j).Role == UnitRole.Worker)) continue;
             if (Math.Abs(u.Y[j] - lair.Y) > GuardHeight) continue;
             Fix64 d = Distance2(j, lair);
             if (d > r2) continue;
@@ -579,7 +592,7 @@ public sealed class MonsterSystem
 
     /// <summary>True if the player can use the den now: it is cleared and unused, their faction has a use for it, and a unit of theirs among the units can.</summary>
     public bool CanUseDen(int player, Lair lair, IEnumerable<int> units) =>
-        lair.Cleared && !lair.Used && lair.Monster.Lair!.Den && DenUse(player) is { } use && DenUser(lair, Owned(player, units), use) >= 0;
+        lair.Cleared && !lair.Used && DenUse(player, lair) is { } use && DenUser(lair, Owned(player, units), use) >= 0;
 
     private IEnumerable<int> Owned(int player, IEnumerable<int> units)
     {
@@ -590,8 +603,7 @@ public sealed class MonsterSystem
     /// <summary>The player uses the den, if they can (see the class notes); it is gone from the map.</summary>
     internal void Apply(DenCommand c)
     {
-        if (GetLair(c.Lair) is not { } lair || !lair.Cleared || lair.Used || !lair.Monster.Lair!.Den
-            || DenUse(c.PlayerId) is not { } use) return;
+        if (GetLair(c.Lair) is not { } lair || !lair.Cleared || lair.Used || DenUse(c.PlayerId, lair) is not { } use) return;
         var units = _sim.OwnedUnits(c);
         int user = DenUser(lair, units, use);
         if (user < 0) return;
@@ -605,6 +617,11 @@ public sealed class MonsterSystem
             if (form.Faction != null && form.Faction != Economy.Faction(c.PlayerId)) return;
             if (Economy.MissingTech(c.PlayerId, form.Requires) != null) return;
             _sim.Evolution.Evolve(user, form);
+        }
+        else if (use.Relic is { } relic)
+        {
+            U.Relic[user] = (short)(relic.Index + 1);
+            U.Hp[user] += relic.Hp;
         }
         lair.Used = true;
         lair.UsedBy = c.PlayerId;

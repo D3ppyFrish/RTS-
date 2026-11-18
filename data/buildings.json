@@ -31,7 +31,7 @@
 // wall material wallHeight high (see src/Sim/Conditions.cs). Kind totem is a city-state's totem, which nobody
 // builds (see citystates.json): a plinth of its footing across the footprint with a pole of its wall material
 // in the middle, wallHeight high in all.
-// fromDen (optional): built only on a cleared monster den, by a faction whose "den" in factions.json names it,
+// fromDen (optional): built only on a cleared monster den, by a faction whose prize there names it ("prizes" in units.json),
 // never from the build menu. yield and yieldTime (optional, together): goods it brings in on its own every
 // yieldTime seconds once finished, into its owner's storage nearest it.
 [
@@ -109,6 +109,9 @@
   { "id": "wolf_lodge", "name": "Wolf lodge", "kind": "house", "size": [4, 4], "wallHeight": 2,
     "wall": "planks", "footing": "stone_brick", "roof": "thatch", "icon": "paw", "faction": "orcs", "fromDen": true,
     "cost": { "wood": 30 }, "buildTime": 15, "housing": 5, "yield": { "food": 5 }, "yieldTime": 15, "light": 3 },
+  { "id": "boar_pen", "name": "Boar pen", "kind": "house", "size": [4, 4], "wallHeight": 2,
+    "wall": "palisade", "footing": "stone_brick", "roof": "thatch", "icon": "tusk", "fromDen": true,
+    "cost": { "wood": 25 }, "buildTime": 12, "housing": 2, "yield": { "food": 8 }, "yieldTime": 15 },
   { "id": "goblin_totem", "name": "Goblin totem", "kind": "totem", "size": [3, 3], "wallHeight": 7,
     "wall": "planks", "footing": "stone_brick", "buildTime": 1, "sight": 8 },
   { "id": "ogre_idol", "name": "Ogre idol", "kind": "totem", "size": [3, 3], "wallHeight": 8,

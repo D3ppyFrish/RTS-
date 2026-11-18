@@ -200,17 +200,18 @@ public class WildsTests
 
     /// <summary>
     /// A stone giant guards its ground alone, hits hard and is hard to hurt; beaten, it pays stone and iron.
-    /// Neither a giant's nor a boar herd's lair leaves a den to use, unlike a wolf lair.
+    /// Every wild monster's lair leaves a den with a prize (see PrizeTests).
     /// </summary>
     [Fact]
-    public void StoneGiantsPayStoneAndIronAndLeaveNoDen()
+    public void StoneGiantsPayStoneAndIron()
     {
         var sim = Flat(96);
         var db = sim.Content;
         Assert.True(db.Unit("stone_giant").MaxHp > 4 * db.Unit("wolf").MaxHp);
-        Assert.False(db.Unit("stone_giant").Lair!.Den);
-        Assert.False(db.Unit("boar").Lair!.Den);
+        Assert.True(db.Unit("stone_giant").Lair!.Den);
+        Assert.True(db.Unit("boar").Lair!.Den);
         Assert.True(db.Unit("wolf").Lair!.Den);
+        Assert.False(db.Unit("dusk_warden").Lair!.Den);
         Assert.Equal(new[] { "wolf" }, db.LairMonsters.Select(u => u.Id));
         Assert.Equal(new[] { "wolf", "boar", "stone_giant" }, db.WildMonsters.Select(u => u.Id));
 
@@ -223,8 +224,6 @@ public class WildsTests
         RunUntil(sim, () => lair.Cleared, 10 * Tps, "the archer fells the giant");
         sim.Step();
         Assert.Equal((200, 60), (hall.Stock[(int)Good.Stone], hall.Stock[(int)Good.Iron]));
-        int spearman = sim.SpawnUnit(Settlers, "spearman", 60, 46);
-        Assert.False(sim.Monsters.CanUseDen(Settlers, lair, new[] { Index(sim, spearman) }));
     }
 
     // --- Data ---------------------------------------------------------------------------------------

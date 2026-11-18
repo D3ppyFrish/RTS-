@@ -469,9 +469,9 @@ areas, and Orcs who beat a wolf keep it.
   every start and 40 from any other lair or town. A boar herd is three boars (80 hit points, quick, tusks
   that pierce) that pay 200 food; Orcs who beat a boar can ride it, and the spearman becomes a rider (the
   Orcs' own rider sits on a war boar). A stone giant stands alone: 450 hit points, slow, heavy armour and
-  crushing blows, and pays 200 stone and 60 iron; Orcs can recruit it. Neither leaves a den to use. In the
-  data, `biome` and `count` in a `lair` spread it, `atStarts` keeps it at the starts too, `den: false`
-  leaves no den.
+  crushing blows, and pays 200 stone and 60 iron; Orcs can recruit it. Each leaves a den with its own
+  prizes (see "Cleared dens"). In the data, `biome` and `count` in a `lair` spread it, and `atStarts` keeps
+  it at the starts too.
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.
@@ -494,8 +494,18 @@ areas, and Orcs who beat a wolf keep it.
 ### Cleared dens
 
 `DenTests` (issue #3): once a lair is cleared, its den can be used once, by a player with one of their
-units within 8 blocks of it (`DenCommand`). What it becomes is the faction's `den` in `factions.json`;
-the den is gone from the map either way.
+units within 8 blocks of it (`DenCommand`). What it becomes is that faction's prize for beating that
+monster, the lair's `prizes` in `units.json` (`PrizeTests`): each monster has its own, and two factions can
+share one. A faction with no prize there leaves the den be, and a monster with no prizes leaves no den.
+The den is gone from the map either way.
+
+| Monster | Settlers | Orcs |
+| --- | --- | --- |
+| Wolf | a spearman becomes a Wolfheart | a wolf lodge |
+| Wild boar | a boar pen | a boar pen |
+| Stone giant | a fighting unit takes up the giant's heart | none: they keep the beaten giant itself |
+| Dusk Warden | the Dusk Staff, by healing the tree (see "Dusk tree") | the beaten warden itself |
+
 
 - **Orcs: the wolf lodge.** A site for a wolf lodge goes up on the den (or as near as the ground allows,
   its middle at most 4 columns off), paid for like any building (30 wood), and the workers among the
@@ -509,10 +519,18 @@ the den is gone from the map either way.
   Auto. A Wolfheart wears the pelt of the pack: 110 hit points, 12 damage, speed 5.5, sight 12 and a
   little more armour (head 1, torso 2), and it eats 3 food a minute. With no spearman near the den, the
   den cannot be used. The numbers are first guesses for playtesting.
+- **Anyone: the boar pen.** At a cleared boar wallow either faction's workers can put up a boar pen
+  (25 wood, 12 seconds): it houses 2 and its boars bring in 8 food every 15 seconds.
+- **Settlers: the giant's heart, a relic.** A relic (`{ "relic": id }`, from `data/relics.json`) is a
+  one-of-a-kind thing a unit takes up: the selected fighting unit (not a worker) nearest the den that bears
+  no relic yet takes it up at once. The giant's heart gives its bearer 60 more hit points (it gets them
+  at once too) and 2 more armour on every part. A unit bears one relic at most, keeps it when it evolves,
+  and it is gone with the bearer (dropping relics is a follow-up). A relic can also add `damage` to each hit.
 - **Stays as it was:** the Settlers still get a lair's reward for clearing it.
 - **In the game**: with your units selected near a cleared den, the selection panel has a button for
-  it ("Make the wolf den a wolf lodge", greyed out while you cannot pay, or "Make a spearman a
-  wolfheart at the wolf den"). Computer players leave dens be.
+  it ("Make the wolf den a wolf lodge", greyed out while you cannot pay, "Make a spearman a
+  wolfheart at the wolf den", or "Take up the giant's heart at the stone giant den"). A bearer's panel
+  names its relic ("Spearman with the Giant's heart"). Computer players leave dens be.
 
 `MonsterTests` has the issue's check: Orcs clear a wolf lair, recruit one beaten wolf and ride another
 (a spearman becomes a wolf rider); Settlers who clear one get its reward instead, as does whoever beats

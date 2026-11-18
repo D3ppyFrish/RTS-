@@ -123,7 +123,8 @@ replay made with different data says so instead of drifting apart.
   heal (see [Combat](docs/rules.md#combat)).
 - **Buildings and units** name the techs they need; the barracks trains spearmen at once, and archers,
   riders, sappers, mages and healers after their techs. `units.json` also holds the forms units evolve into and the
-  monsters, and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)), whether it
+  monsters, with each monster's `prizes` per faction for clearing its lair (`relics.json` has the relics units
+  take up as prizes, see [Monsters](docs/rules.md#monsters-and-taming)), and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)), whether it
   tames monsters, and how a computer player plays it (`aiStyle`: `waves` or `balanced`, see
   [Winning and computer players](docs/rules.md#winning-and-computer-players)).
 - **Walls, gates and towers** in `buildings.json`: walls and gates come in tiers, where `"upgrade"` names
