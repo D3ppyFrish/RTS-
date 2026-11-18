@@ -52,11 +52,32 @@ public static partial class Sculpted
         return g;
     }
 
-    /// <summary>An imported model as one part (it stands still and breathes), at a step, from <paramref name="path"/>.</summary>
-    private static FineGrid[] Imported(string path, int step)
+    /// <summary>
+    /// An imported model as one part (it stands still and breathes), at a step, from <paramref name="path"/>.
+    /// <paramref name="glows"/> are boxes in the file's own voxels (x0, y0, z0, x1, y1, z1, inclusive) painted
+    /// with a glowing material, for eyes and the like the model's texture can only give as a colour.
+    /// </summary>
+    private static FineGrid[] Imported(string path, int step, (int X0, int Y0, int Z0, int X1, int Y1, int Z1, FineMaterial M)[]? glows = null)
     {
         var g = ReadImported(path);
         if (g == null) return new[] { new Sculpt(step, 0, 0, 0, 1, 1, 1).Grid };
+        if (glows != null && glows.Length > 0)
+        {
+            int first = g.Palette.Length;
+            var palette = new FineMaterial[first + glows.Length];
+            Array.Copy(g.Palette, palette, first);
+            for (int k = 0; k < glows.Length; k++)
+            {
+                var b = glows[k];
+                palette[first + k] = b.M;
+                for (int z = b.Z0; z <= b.Z1; z++)
+                for (int y = b.Y0; y <= b.Y1; y++)
+                for (int x = b.X0; x <= b.X1; x++)
+                    if (x >= 0 && y >= 0 && z >= 0 && x < g.X && y < g.Y && z < g.Z)
+                        g.Cells[x + g.X * (y + g.Y * z)] = (byte)(first + k);
+            }
+            g.Palette = palette;
+        }
         float hx = g.X / 2f, hz = g.Z / 2f;
         var grid = new Sculpt(step, -hx, 0, -hz, hx, g.Y - g.Lowest, hz).Grid;
         var codes = new byte[g.Palette.Length];
@@ -74,9 +95,10 @@ public static partial class Sculpted
         return new[] { grid };
     }
 
-    private static RigDef ImportedRig(string path) => new()
+    private static RigDef ImportedRig(string path, float stride = 1.2f, float bob = 1f,
+        params (int, int, int, int, int, int, FineMaterial)[] glows) => new()
     {
-        Roles = new[] { Role.Body }, Pivots = new[] { Vector3.Zero }, Build = step => Imported(path, step),
-        StrideBlocks = 1.2f, Bob = 1f, Far = true,
+        Roles = new[] { Role.Body }, Pivots = new[] { Vector3.Zero }, Build = step => Imported(path, step, glows),
+        StrideBlocks = stride, Bob = bob, Far = true,
     };
 }
