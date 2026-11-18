@@ -81,7 +81,10 @@ the computer play the other players (see [Winning and computer players](docs/rul
 `--time-of-day=H` does too, starting at hour H (8 morning, 13 noon, 19.3 dusk, 0 midnight);
 `--weather=W` makes the first day's weather W (clear, cloudy, rain, storm or fog), `--lights=N` puts N
 torches and a campfire around your town hall, and `--focus=swamp` or `--focus=lava` looks at the swamp
-or the first pool of lava (see [Day, night and weather](docs/rules.md#day-night-and-weather)). These options start a match at once; started without options, the game shows the start screen instead (see [Start screen, match end and replays](docs/rules.md#start-screen-match-end-and-replays)).
+or the first pool of lava (see [Day, night and weather](docs/rules.md#day-night-and-weather)).
+`--trees=2` or `--trees=3` is an experiment (off by default): every tree on a generated map grows two or
+three times bigger, its trunk that many blocks square, and the forests' trees stand as much further apart;
+`scripts/ui-bigtree-screenshots.sh` shows the same views at each size. Replays and saved maps don't keep it. These options start a match at once; started without options, the game shows the start screen instead (see [Start screen, match end and replays](docs/rules.md#start-screen-match-end-and-replays)).
 
 Pathfinding (`src/Sim/Units/WalkGraph.cs`, `FlowField.cs`): the walk graph keeps up to four standing
 levels per block column (surface, tunnels, caves, bridges) and the steps between them, following the

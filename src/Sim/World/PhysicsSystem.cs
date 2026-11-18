@@ -325,7 +325,16 @@ public sealed class PhysicsSystem
     private void LandTree(FallingTree t)
     {
         _laid.Clear();
-        Harvest.LayFelled(_w, t.X, t.BaseY, t.Z, t.Logs, t.DirX, t.DirZ, _laid);
+        var (x0, z0, s) = Trees.Footprint(_w, t.X, t.Z);
+        if (s == 1) Harvest.LayFelled(_w, t.X, t.BaseY, t.Z, t.Logs, t.DirX, t.DirZ, _laid);
+        else
+        {
+            // A bigger tree's trunk (see VoxelWorld.TreeScale) lies down as a log from each of its columns.
+            int each = t.Logs / (s * s), rest = t.Logs % (s * s);
+            for (int k = 0; k < s; k++)
+            for (int i = 0; i < s; i++)
+                Harvest.LayFelled(_w, x0 + i, t.BaseY, z0 + k, each + (rest-- > 0 ? 1 : 0), t.DirX, t.DirZ, _laid);
+        }
         if (_laid.Count == 0) return;
         long sx = 0, sy = 0, sz = 0;
         foreach (var (x, y, z) in _laid) { sx += x; sy += y; sz += z; }

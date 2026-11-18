@@ -298,7 +298,9 @@ public partial class Main : Node3D
         }
         else
         {
-            _sim = new Simulation(setup.Seed, WorldX, WorldY, WorldZ, _content);
+            // --trees=2 or 3: the bigger-trees experiment (see VoxelWorld.TreeScale), off by default.
+            int treeScale = _args.TryGetValue("trees", out var ts) && int.TryParse(ts, out var tv) ? tv : 1;
+            _sim = new Simulation(setup.Seed, WorldX, WorldY, WorldZ, _content, treeScale);
         }
         _sim.Fog = setup.Fog;
         _sim.DayNight = setup.DayNight;

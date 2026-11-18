@@ -19,6 +19,14 @@ public sealed class VoxelWorld
 
     private readonly BlockType[]?[] _chunks;
 
+    /// <summary>
+    /// Experiment (off by default): how many times bigger than usual this world's trees grow, 1 to
+    /// <see cref="World.Trees.MaxScale"/>. Each block of a usual tree becomes a cube this many blocks across, so
+    /// a tree of scale 2 has a trunk two blocks square and a crown twice as wide and tall. Felling reads it to
+    /// take the whole trunk (see <see cref="World.Trees.Footprint"/>). Set before the trees are grown.
+    /// </summary>
+    public int TreeScale { get; set; } = 1;
+
     /// <summary>Raised with chunk coordinates whenever a block in that chunk changes.</summary>
     public event Action<int, int, int>? ChunkChanged;
 
