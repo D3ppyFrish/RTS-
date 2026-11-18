@@ -766,7 +766,7 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
   (the line a wall is laid along) of up to 8 columns, 3 blocks high from the ground, so nobody walks through
   or climbs over it. Its top is grass, the rest soil. The line's middle must be within 12 blocks of the mage;
   one further away walks up and casts once in range (any other order on the way calls it off, and costs
-  nothing). Of the selected units, the first mage that is ready casts, one already in range first.
+  nothing). Of the selected units, the mages that are ready cast together (see Group spells below).
 - **Where earth rises**: on ground a unit stands on, but not where a building or a city-state's town is, on
   water, or in a column with a unit standing in it (or right at its edge). Leaves in the way are pushed aside;
   an overhang stops the column short.
@@ -793,6 +793,12 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
   cracks in its last 5, then melts, back into water where it was water and into air above that. A unit still
   on it falls to whatever is under it: into shallow water it wades on, but with only deep water under it, it
   drowns (as if crushed: nobody gets the kill).
+- **Group spells** (issue #39): every ready mage among the selected casts the spell together, up to 3. The
+  ones in range wait while the others walk up, and the spell goes off once all of them are in range (one given
+  another order on the way drops out, and the rest cast without it). Each mage beyond the first makes an earth
+  wall one column thicker (the line, then the column before it, then the one after) and 4 columns longer (8,
+  12, 16), and an ice bridge 2 columns wider (3, 5, 7 abreast). Every mage in the group then waits its 40
+  seconds; a mage still waiting does not join.
 - **In the game**: the Earth Wall button (Shift+Y) and the Ice Bridge button (Shift+') show with a mage
   selected, greyed out with the wait while none of the selected is ready. All numbers are starting guesses to
   be tuned in playtests.

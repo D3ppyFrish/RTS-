@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Scripted-input screenshot test for terrain magic: your army (--battle) is box-selected, the Earth Wall tool
-# (Shift+Y) is drawn as a line between the two armies and a mage raises a wall of earth along it. A second
-# wall goes up from the next mage, then both crumble back into the ground when their time is up. Saves PNGs to
+# (Shift+Y) is drawn as a line between the two armies and its three mages raise a wall of earth along it
+# together, three columns thick (group spells, issue #39). A second line draws nothing while they all wait, and
+# the wall crumbles back into the ground when its time is up. Saves PNGs to
 # OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-spell-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -13,7 +14,8 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, map centre: open ground at levels 21 and 22. With --battle=16 your army stands in two ranks
 # at x 241..242, z 211..225, the enemy's at x 254..255 (they stand their ground until something comes near).
-# The first wall runs north to south at x 248, the second at x 250, both well within a mage's reach.
+# The wall runs north to south at x 248 (three thick: x 247..249), well within a mage's reach; the second line at x 250
+# raises nothing while every mage waits.
 STEPS="
 wait 20
 camera 248,218 300 50 20
@@ -60,16 +62,17 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 # The army is selected, with at least two mages among it, both ready.
 [ "$(field "${UI[0]}" own)" -ge 12 ] || fail "the army is not selected: ${UI[0]}"
 [ "$(field "${UI[0]}" casters)" -ge 2 ] && [ "$(field "${UI[0]}" caster_ready)" -eq 1 ] || fail "no ready mages selected: ${UI[0]}"
-# Dragging the tool previews the line's 8 columns; nothing has risen yet.
+# Dragging the tool previews the line's 8 columns, three thick for three mages; nothing has risen yet.
 [ "$(field "${UI[1]}" tool)" = EarthWall ] || fail "the Earth Wall tool is not on: ${UI[1]}"
-[ "$(field "${UI[1]}" wall_preview)" -eq 8 ] || fail "the preview does not show the line: ${UI[1]}"
+[ "$(field "${UI[1]}" wall_preview)" -eq 24 ] || fail "the preview does not show the line: ${UI[1]}"
 [ "$(field "${UI[1]}" earth_walls)" -eq 0 ] || fail "earth rose before letting go: ${UI[1]}"
-# Letting go raises the wall: 8 columns, 3 blocks each, and the tool is put away.
-[ "$(field "${UI[2]}" earth_walls)" -eq 1 ] && [ "$(field "${UI[2]}" earth_blocks)" -eq 24 ] || fail "the wall did not rise: ${UI[2]}"
+# Letting go raises the wall: 24 columns, 3 blocks each, every mage then waits, and the tool is put away.
+[ "$(field "${UI[2]}" earth_walls)" -eq 1 ] && [ "$(field "${UI[2]}" earth_blocks)" -eq 72 ] || fail "the wall did not rise: ${UI[2]}"
 [ "$(field "${UI[2]}" tool)" = Select ] || fail "the tool stayed on: ${UI[2]}"
-# The next mage raises a second wall.
-[ "$(field "${UI[3]}" earth_walls)" -eq 2 ] && [ "$(field "${UI[3]}" earth_blocks)" -eq 48 ] || fail "the second wall did not rise: ${UI[3]}"
-# Both crumble when their time is up.
-[ "$(field "${UI[4]}" earth_walls)" -eq 0 ] && [ "$(field "${UI[4]}" earth_blocks)" -eq 0 ] || fail "the walls did not crumble: ${UI[4]}"
+[ "$(field "${UI[2]}" caster_ready)" -eq 0 ] || fail "a mage did not join the group spell: ${UI[2]}"
+# With every mage waiting, a second line raises nothing.
+[ "$(field "${UI[3]}" earth_walls)" -eq 1 ] && [ "$(field "${UI[3]}" earth_blocks)" -eq 72 ] || fail "a second wall rose: ${UI[3]}"
+# It crumbles when its time is up.
+[ "$(field "${UI[4]}" earth_walls)" -eq 0 ] && [ "$(field "${UI[4]}" earth_blocks)" -eq 0 ] || fail "the wall did not crumble: ${UI[4]}"
 [ "$(grep -c '^Saved screenshot' "$LOG")" -eq 4 ] || fail "missing screenshots"
 echo "UI spell screenshot test OK: $OUT"

@@ -80,6 +80,29 @@ public class IceBridgeTests
     }
 
     [Fact]
+    public void MagesFreezingTogetherMakeAWiderBridge()
+    {
+        var sim = River();
+        int a = Spawn(sim, P, "mage", 30, 24), b = Spawn(sim, P, "mage", 31, 24);
+        Freeze(sim, new[] { a, b }, 30, 26, 30, 35);
+        Assert.Equal(5, SpellSystem.IceWidthFor(2));
+        Assert.Equal(6 * 5, IceIn(sim, 28, 32, RiverZ1, RiverZ2));
+        Assert.Equal(0, IceIn(sim, 27, 27, RiverZ1, RiverZ2));
+        Assert.Equal(0, IceIn(sim, 33, 33, RiverZ1, RiverZ2));
+        Assert.False(sim.Spells.CanCast(Index(sim, a), Spell.IceBridge));
+        Assert.False(sim.Spells.CanCast(Index(sim, b), Spell.IceBridge));
+
+        sim = River();
+        int[] three = { Spawn(sim, P, "mage", 30, 24), Spawn(sim, P, "mage", 31, 24), Spawn(sim, P, "mage", 29, 24) };
+        Freeze(sim, three, 30, 26, 30, 35);
+        Assert.Equal(6 * 7, IceIn(sim, 27, 33, RiverZ1, RiverZ2));
+        Assert.Equal(6 * 7, IceIn(sim, 0, 63, RiverZ1, RiverZ2));
+        var plan = new List<(int X, int Z, int Y, bool Room)>();
+        Assert.Equal(Stand, sim.Spells.PlanIce(40, 26, 40, 35, plan, 3));
+        Assert.Equal(6 * 7, plan.Count);
+    }
+
+    [Fact]
     public void ABridgeIsAtMostSixteenColumnsLong()
     {
         var sim = TestWorlds.Sim(TestWorlds.Flat(64, 16, 64, Ground));

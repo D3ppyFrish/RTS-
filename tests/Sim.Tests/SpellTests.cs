@@ -86,11 +86,13 @@ public class SpellTests
     {
         var sim = Flat();
         int a = Spawn(sim, P, "mage", 20, 30), b = Spawn(sim, P, "mage", 20, 31);
-        Cast(sim, new[] { a, b }, 26, 20, 26, 24);
+        Cast(sim, new[] { a }, 26, 20, 26, 24);
         Assert.False(sim.Spells.CanCast(Index(sim, a)));
         Assert.True(sim.Spells.CanCast(Index(sim, b)));
+        // With both selected only b is ready, so it casts alone: a plain wall.
         Cast(sim, new[] { a, b }, 26, 30, 26, 34);
         Assert.Equal(2, sim.Spells.Walls.Count);
+        Assert.Equal(5 * SpellSystem.Height, sim.Spells.Walls[1].Blocks.Count);
         Assert.False(sim.Spells.CanCast(Index(sim, b)));
         // Neither can cast a third until its wait is over.
         Cast(sim, new[] { a, b }, 30, 30, 30, 34);
@@ -100,6 +102,113 @@ public class SpellTests
         Assert.True(sim.Spells.CanCast(Index(sim, a)));
         Cast(sim, new[] { a }, 30, 30, 30, 34);
         Assert.Equal(SpellSystem.Height, Earth(sim, 30, 32));
+    }
+
+    /// <summary>Columns (along x, at row z) with earth standing in them, from x 0 to 63.</summary>
+    private static int Row(Simulation sim, int z)
+    {
+        int n = 0;
+        for (int x = 0; x < 64; x++)
+            if (Earth(sim, x, z) > 0) n++;
+        return n;
+    }
+
+    [Fact]
+    public void MagesCastingTogetherRaiseAThickerLongerWall()
+    {
+        // Two mages: two rows thick (the line and the row before it), twelve columns long.
+        var sim = Flat();
+        int a = Spawn(sim, P, "mage", 30, 22), b = Spawn(sim, P, "mage", 31, 22);
+        Cast(sim, new[] { a, b }, 20, 30, 45, 30);
+        Assert.Single(sim.Spells.Walls);
+        Assert.Equal(SpellSystem.MaxLength + SpellSystem.WallPerHelper, Row(sim, 30));
+        Assert.Equal(SpellSystem.MaxLength + SpellSystem.WallPerHelper, Row(sim, 29));
+        Assert.Equal(0, Row(sim, 31));
+        Assert.Equal(2 * 12 * SpellSystem.Height, sim.Spells.Walls[0].Blocks.Count);
+        Assert.False(sim.Spells.CanCast(Index(sim, a)));
+        Assert.False(sim.Spells.CanCast(Index(sim, b)), "both cast, so both wait");
+
+        // Three: three rows, sixteen long.
+        sim = Flat();
+        int[] three = { Spawn(sim, P, "mage", 30, 22), Spawn(sim, P, "mage", 31, 22), Spawn(sim, P, "mage", 32, 22) };
+        Cast(sim, three, 20, 30, 45, 30);
+        for (int z = 29; z <= 31; z++) Assert.Equal(16, Row(sim, z));
+        Assert.Equal(0, Row(sim, 28));
+        Assert.Equal(0, Row(sim, 32));
+    }
+
+    [Fact]
+    public void AtMostThreeMagesJoinOneSpell()
+    {
+        var sim = Flat();
+        int[] four = new int[4];
+        for (int k = 0; k < 4; k++) four[k] = Spawn(sim, P, "mage", 28 + k, 22);
+        Cast(sim, four, 20, 30, 45, 30);
+        Assert.Single(sim.Spells.Walls);
+        Assert.Equal(SpellSystem.WallLength(SpellSystem.MaxGroup), Row(sim, 30));
+        Assert.Equal(0, Row(sim, 32));
+        int ready = 0;
+        foreach (int id in four)
+            if (sim.Spells.CanCast(Index(sim, id))) ready++;
+        Assert.Equal(1, ready);
+        Assert.Equal(SpellSystem.WallLength(4), SpellSystem.WallLength(3));
+    }
+
+    [Fact]
+    public void AMageInRangeWaitsForTheOthersToWalkUp()
+    {
+        var sim = Flat();
+        int near = Spawn(sim, P, "mage", 30, 22), far = Spawn(sim, P, "mage", 2, 30);
+        Cast(sim, new[] { far, near }, 26, 26, 26, 34);
+        Assert.Empty(sim.Spells.Walls);
+        Assert.True(sim.Spells.Casting(near));
+        Assert.True(sim.Spells.Casting(far));
+        Assert.True(sim.Spells.CanCast(Index(sim, near)), "nothing is spent while it waits");
+        for (int t = 0; t < 30 * Tps && sim.Spells.Walls.Count == 0; t++) sim.Step();
+        Assert.Single(sim.Spells.Walls);
+        Assert.False(sim.Spells.Casting(near));
+        Assert.False(sim.Spells.Casting(far));
+        // A wall two thick: the line at x 26 and the row before it.
+        Assert.Equal(SpellSystem.Height, Earth(sim, 26, 30));
+        Assert.Equal(SpellSystem.Height, Earth(sim, 25, 30));
+        Assert.Equal(0, Earth(sim, 27, 30));
+        Assert.False(sim.Spells.CanCast(Index(sim, near)));
+        Assert.False(sim.Spells.CanCast(Index(sim, far)));
+    }
+
+    [Fact]
+    public void IfTheWalkerIsCalledOffTheOneWaitingCastsAlone()
+    {
+        var sim = Flat();
+        int near = Spawn(sim, P, "mage", 30, 22), far = Spawn(sim, P, "mage", 2, 30);
+        Cast(sim, new[] { far, near }, 26, 26, 26, 34);
+        sim.Run(Tps);
+        sim.Schedule(sim.Tick, new MoveCommand(P, new[] { far }, 2, 10));
+        sim.Run(2);
+        Assert.Single(sim.Spells.Walls);
+        Assert.Equal(SpellSystem.Height, Earth(sim, 26, 30));
+        Assert.Equal(0, Earth(sim, 25, 30));
+        Assert.True(sim.Spells.CanCast(Index(sim, far)), "the one that left spends nothing");
+        Assert.False(sim.Spells.CanCast(Index(sim, near)));
+    }
+
+    [Fact]
+    public void ThePlanGrowsWithTheCasters()
+    {
+        var sim = Flat();
+        var plan = new List<(int X, int Z, int Y, bool Room)>();
+        sim.Spells.Plan(20, 30, 45, 30, plan);
+        Assert.Equal(SpellSystem.MaxLength, plan.Count);
+        sim.Spells.Plan(20, 30, 45, 30, plan, 2);
+        Assert.Equal(2 * 12, plan.Count);
+        sim.Spells.Plan(20, 30, 45, 30, plan, 3);
+        Assert.Equal(3 * 16, plan.Count);
+        foreach (var (_, z, y, room) in plan)
+        {
+            Assert.InRange(z, 29, 31);
+            Assert.Equal(Stand, y);
+            Assert.True(room);
+        }
     }
 
     [Fact]
@@ -177,8 +286,11 @@ public class SpellTests
         {
             var sim = Flat();
             int a = Spawn(sim, P, "mage", 5, 30), b = Spawn(sim, P, "mage", 20, 20);
-            sim.Schedule(0, new EarthWallCommand(P, new[] { a }, 40, 28, 40, 32));
+            int d = Spawn(sim, P, "mage", 36, 30);
+            sim.Schedule(0, new EarthWallCommand(P, new[] { a, d }, 40, 28, 40, 32));
+            int c = Spawn(sim, P, "mage", 4, 34);
             sim.Schedule(10, new EarthWallCommand(P, new[] { b }, 22, 25, 28, 25));
+            sim.Schedule(20, new EarthWallCommand(P, new[] { b, c }, 10, 20, 10, 26)); // b is waiting: c walks up alone
             sim.Run(SpellSystem.LastsTicks + 10 * Tps);
             return sim.StateHash();
         }
