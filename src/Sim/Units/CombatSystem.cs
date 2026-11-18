@@ -1281,7 +1281,10 @@ public sealed partial class CombatSystem
         return true;
     }
 
-    /// <summary>True if unit i is at home: within the role table's home range (columns) of a finished town hall or house of its owner's.</summary>
+    /// <summary>
+    /// True if unit i is at home: within the role table's home range (columns) of a finished town hall or house of
+    /// its owner's, or within the healing reach of a city-state town its owner holds (<see cref="CityStateSystem.HealingTown"/>).
+    /// </summary>
     private bool AtHome(int i)
     {
         if (!_homesFound)
@@ -1295,7 +1298,7 @@ public sealed partial class CombatSystem
         int owner = u.Owner[i], x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), range = Rules.HomeRange;
         foreach (var b in _homes)
             if (b.Owner == owner && b.ColumnDistance(x, z) <= range) return true;
-        return false;
+        return _sim.Cities.HealingTown(owner, x, z) != null;
     }
 
     // --- Morale ------------------------------------------------------------------------------------

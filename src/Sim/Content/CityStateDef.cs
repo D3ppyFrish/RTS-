@@ -52,6 +52,13 @@ public sealed class CityStateDef
     /// <summary>How much more the holder's caravans bring back, in percent.</summary>
     public int HolderBonus { get; init; } = 50;
 
+    /// <summary>
+    /// How far beyond the town's square (columns) its holder's hurt units heal as at home: at the home rate,
+    /// with their wounds bound, once out of the fight (see <c>CombatSystem.StepRecovery</c>). Negative for no
+    /// healing there.
+    /// </summary>
+    public int HealRange { get; init; } = 6;
+
     /// <summary>The units the town's holder can hire there (those whose <see cref="UnitDef.HiredFrom"/> is this), in data order.</summary>
     public IReadOnlyList<UnitDef> Mercenaries { get; internal set; } = Array.Empty<UnitDef>();
     /// <summary>Most mercenaries ready to hire at a time.</summary>

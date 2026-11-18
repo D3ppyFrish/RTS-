@@ -609,7 +609,7 @@ public static class ContentLoader
         private void ReadCityState(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "lair", "wall", "roof");
+            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof");
             if (id == null) return;
             if (_db.TryGetCityState(id, out _))
             {
@@ -626,6 +626,8 @@ public static class ContentLoader
             trade?.Keys("buys", "load", "sells", "price", "holderBonus");
             var mercenaries = Part(o, "mercenaries", "{ \"pool\": 6, \"refill\": 30 }");
             mercenaries?.Keys("pool", "refill");
+            var heal = Part(o, "heal", "{ \"range\": 6 }");
+            heal?.Keys("range");
             var buys = trade?.Enum("buys", Good.Food, required: false) ?? Good.Food;
             var sells = trade?.Enum("sells", Good.Iron, required: false) ?? Good.Iron;
             if (buys == sells) trade!.Error($"buys and sells the same good ({SnakeName(buys)})");
@@ -647,6 +649,7 @@ public static class ContentLoader
                 HolderBonus = trade?.Int("holderBonus", 0, 1000, 50) ?? 50,
                 Pool = mercenaries?.Int("pool", 0, 100, 6) ?? 6,
                 RefillTicks = (mercenaries?.Int("refill", 1, MaxSeconds, 30) ?? 30) * Tps,
+                HealRange = heal?.Int("range", 0, 64, 6) ?? -1,
                 Wall = o.Material("wall", BlockType.Planks),
                 Roof = o.Material("roof", BlockType.Thatch),
             };
@@ -1250,6 +1253,7 @@ public static class ContentLoader
                 h.Add(c.HolderBonus);
                 h.Add(c.Pool);
                 h.Add(c.RefillTicks);
+                h.Add(c.HealRange);
                 h.Add(c.Lair?.Index ?? -1);
                 h.Add((int)c.Wall);
                 h.Add((int)c.Roof);

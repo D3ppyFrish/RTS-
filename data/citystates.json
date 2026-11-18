@@ -13,6 +13,8 @@
 //     gets holderBonus percent more.
 //   mercenaries: the holder hires the units whose hiredFrom names the city-state (see units.json), paying
 //     their cost, at most pool at a time; one more is ready every refill seconds.
+//   heal (optional): the holder's hurt units within range columns of the town's square heal as at home
+//     (the home rate in roles.json, wounds bound) once out of the fight. Leave it out for no healing there.
 //   lair (optional): a monster (see "lair" in units.json) whose lair lies near the town.
 //   wall, roof: what the town's huts are built of (planks, thatch, roof_tile or stone_brick).
 // All the numbers are first guesses for playtesting.
@@ -24,6 +26,7 @@
     "tribute": { "caravan": "caravan", "good": "iron", "amount": 15, "every": 60 },
     "trade": { "buys": "food", "load": 20, "sells": "iron", "price": 5, "holderBonus": 50 },
     "mercenaries": { "pool": 6, "refill": 30 },
+    "heal": { "range": 6 },
     "lair": "wolf",
     "wall": "stone_brick", "roof": "thatch" }
 ]
