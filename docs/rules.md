@@ -936,10 +936,13 @@ newest 256 events, each with a sequence number that only grows, so the game asks
 last one it saw. Nothing in the simulation reads it, so it is not part of the state hash.
 `EconomySystem.IdleWorkers` lists a player's workers with nothing to do: standing with no order and no
 job (automatic ones too, while they find no work).
+`CombatSystem.ArmyUnits` lists a player's combat units: every unit they own that is not a worker or a
+caravan, leaving out beaten monsters not yet ridden or recruited.
 
 In the game (`game/scripts/Alerts.cs`), under the top bar on the left, the Idle workers button shows how
 many of your workers are idle; each click (or the . key) selects the next one and moves the camera to
-it. Below it are your latest five alerts, newest first, red for attacks and losses, green for buildings
+it. Under it the Army button shows how many combat units you have; a click (or F2) selects them all.
+Below those are your latest five alerts, newest first, red for attacks and losses, green for buildings
 finished and town halls won, blue for research. Clicking one moves the camera to where it happened. The
 same alert again within 10 seconds is counted on the one showing ("x3"); an alert goes after 20 seconds
 on screen, not counting time paused.

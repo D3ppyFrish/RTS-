@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Scripted-input screenshot test for alerts and the idle workers button (issue #42). Seed 1234, west start:
+# Scripted-input screenshot test for alerts, the idle workers button (issue #42) and the Army button (#41). Seed 1234, west start:
 # the Idle workers button counts the starting workers, and two clicks select one idle worker after another
 # with the camera on each; the workers build a house, a "House finished" alert shows, and clicking it with
-# the camera far away brings the camera back to the house. Then a battle (--battle) where your army
-# attack-moves into the enemy's: an under attack alert shows, and clicking it moves the camera to the
+# the camera far away brings the camera back to the house. Then a battle (--battle): F2 selects your whole
+# army and none of your workers, then your army attack-moves into the enemy's: an under attack alert shows, and clicking it moves the camera to the
 # fight. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-alerts-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -80,6 +80,10 @@ wait 20
 camera 248,218 0 55 22
 wait 5
 print
+key f2
+wait 2
+print
+shot $OUT/ui-army-selected.png
 dragworld 236,g,208 245,g,229
 wait 2
 clickworld 262,g,222 right ctrl
@@ -98,13 +102,17 @@ xvfb-run -a -s "-screen 0 1600x900x24" \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click in the battle"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 3 ] || fail "expected 3 UI lines in the battle, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 4 ] || fail "expected 4 UI lines in the battle, got ${#UI[@]}"
 [ "$(field "${UI[0]}" alerts)" -eq 0 ] || fail "alerts before the battle: ${UI[0]}"
+army="$(field "${UI[1]}" army)"
+[ "$army" -gt 0 ] && [ "$(field "${UI[1]}" selected)" -eq "$army" ] && [ "$(field "${UI[1]}" selected_workers)" -eq 0 ] \
+  || fail "F2 did not select the whole army and only the army: ${UI[1]}"
+UI=("${UI[0]}" "${UI[@]:2}")
 [[ ",$(field "${UI[1]}" alert_kinds)," == *,UnitsAttacked,* ]] || fail "no under attack alert in the battle: ${UI[1]}"
 # Under attack alerts for the one fight do not pile up.
 [ "$(field "${UI[1]}" alerts)" -le 2 ] || fail "under attack alerts repeat for the same fight: ${UI[1]}"
 cam="$(field "${UI[2]}" camera)"
 [ "${cam%,*}" -ge 225 ] && [ "${cam%,*}" -le 270 ] && [ "${cam#*,}" -ge 200 ] && [ "${cam#*,}" -le 240 ] \
   || fail "clicking the alert did not move the camera to the fight: ${UI[2]}"
-[ "$(cat "$OUT"/ui-alerts.log "$OUT"/ui-alerts-battle.log | grep -c '^Saved screenshot')" -eq 4 ] || fail "missing screenshots"
+[ "$(cat "$OUT"/ui-alerts.log "$OUT"/ui-alerts-battle.log | grep -c '^Saved screenshot')" -eq 5 ] || fail "missing screenshots"
 echo "UI alerts screenshot test OK: $OUT"

@@ -54,6 +54,8 @@ namespace Rts.Game;
 ///   V                     the selected soldiers' stance: aggressive, hold their ground, retreat when hurt
 ///   .                     select your next idle worker and centre the camera on it (as the HUD's Idle
 ///                         workers button does)
+///   F2                    select all your combat units, leaving workers and caravans out (as the HUD's
+///                         Army button does)
 /// Evolving has no key: the selection panel has a button for each form the selected units can take, and
 /// one that picks the form your units of that type take on their own (see <see cref="EvolutionSystem"/>).
 /// Neither has taming: the selection panel has Ride and Recruit buttons for the beaten monsters selected,
@@ -370,6 +372,7 @@ public partial class PlayerControl : Node
             case Key.V: CycleStance(); break;
             case Key.K: ToggleTechTree(); break;
             case Key.Period: SelectNextIdleWorker(); break;
+            case Key.F2: SelectArmy(); break;
             case Key.Space: _clock.TogglePause(); break;
             case Key.Minus or Key.KpSubtract: _clock.Slower(); break;
             case Key.Equal or Key.Plus or Key.KpAdd: _clock.Faster(); break;
@@ -1279,6 +1282,16 @@ public partial class PlayerControl : Node
         CentreOn(one);
     }
 
+    /// <summary>
+    /// Selects every combat unit you own, leaving workers and caravans out (see <see cref="CombatSystem.ArmyUnits"/>).
+    /// Does nothing if you have none, so the selection you had stays.
+    /// </summary>
+    public void SelectArmy()
+    {
+        var ids = _sim.Combat.ArmyUnits(LocalPlayer);
+        if (ids.Count > 0) SetSelection(ids);
+    }
+
     /// <summary>Moves the camera focus to block (x, y, z), keeping its angle and distance.</summary>
     public void LookAt(int x, int y, int z)
     {
@@ -1886,7 +1899,8 @@ public partial class PlayerControl : Node
                $"totem_owner={(town != null ? _sim.Cities.Totem(town)?.Owner ?? -1 : -1)} guards={town?.Guards.Count() ?? 0} " +
                $"guards_owner={(town != null && town.Guards.Any() ? u.Owner[u.IndexOf(town.Guards.First())] : -1)} tribute={town?.Caravans.Count ?? 0} " +
                $"pool={town?.Ready ?? 0} caravans={caravans} trading={trading} mercs={mercs} " +
-               $"idle={_sim.Economy.IdleWorkers(LocalPlayer).Count} camera={cam.X},{cam.Z} " +
+               $"idle={_sim.Economy.IdleWorkers(LocalPlayer).Count} army={_sim.Combat.ArmyUnits(LocalPlayer).Count} " +
+               $"selected_workers={_selected.Count(id => u.IndexOf(id) is int k && k >= 0 && _sim.Content.Units[u.Def[k]].Role == UnitRole.Worker)} camera={cam.X},{cam.Z} " +
                $"dusk_tree={duskState} warden={warden} staff={staff} staff_at={staffAt} tending={tending} bloom_ready={(StaffSelected() is int sb && sb != 0 && dusk.CanBloom(u.IndexOf(sb)) ? 1 : 0)} " +
                $"formation={inFormation} line_preview={_formationPreview.Count} spread={Spread(own)}";
     }

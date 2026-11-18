@@ -39,6 +39,7 @@ public partial class Alerts : VBoxContainer
     private Simulation _sim = null!;
     private PlayerControl _control = null!;
     private Button _idleButton = null!;
+    private Button _armyButton = null!;
     private readonly List<Alert> _alerts = new(); // newest first
     private readonly List<Button> _buttons = new();
     private long _lastSeq;
@@ -61,6 +62,15 @@ public partial class Alerts : VBoxContainer
         _idleButton.TooltipText = "Your workers with nothing to do: click (or press .) to select the next one and look at it";
         _idleButton.Pressed += () => _control.SelectNextIdleWorker();
         AddChild(_idleButton);
+
+        _armyButton = Hud.MakeButton("");
+        _armyButton.Name = "army_button";
+        _armyButton.ToggleMode = false;
+        _armyButton.AddThemeFontSizeOverride("font_size", 14);
+        _armyButton.Alignment = HorizontalAlignment.Left;
+        _armyButton.TooltipText = "Your combat units: click (or press F2) to select them all, leaving workers out";
+        _armyButton.Pressed += () => _control.SelectArmy();
+        AddChild(_armyButton);
 
         for (int k = 0; k < MaxShown; k++)
         {
@@ -91,6 +101,9 @@ public partial class Alerts : VBoxContainer
         int idle = _sim.Economy.IdleWorkers(PlayerControl.LocalPlayer).Count;
         _idleButton.Text = $"Idle workers: {idle}  [.]";
         _idleButton.Disabled = idle == 0;
+        int army = _sim.Combat.ArmyUnits(PlayerControl.LocalPlayer).Count;
+        _armyButton.Text = $"Army: {army}  [F2]";
+        _armyButton.Disabled = army == 0;
 
         foreach (var e in _sim.Events.After(_lastSeq, PlayerControl.LocalPlayer)) Add(e);
         _lastSeq = _sim.Events.NextSeq - 1;

@@ -162,6 +162,25 @@ public sealed partial class CombatSystem
     /// <summary>Enemy units the player's units have killed (a death counts for the nearest unit that hit it).</summary>
     public int Kills(int player) => player >= 0 && player < _kills.Count ? _kills[player] : 0;
 
+    /// <summary>
+    /// The player's combat units, in id order: everything they own that is not a worker or a caravan. A beaten
+    /// monster that is not yet ridden or recruited is left out. The HUD's Army button (and F2) selects these.
+    /// </summary>
+    public List<int> ArmyUnits(int player)
+    {
+        var u = U;
+        var ids = new List<int>();
+        for (int i = 0; i < u.Count; i++)
+        {
+            if (u.Owner[i] != player || u.Subdued[i]) continue;
+            var role = _sim.Content.Units[u.Def[i]].Role;
+            if (role is UnitRole.Worker or UnitRole.Trader) continue;
+            ids.Add(u.Id[i]);
+        }
+        ids.Sort();
+        return ids;
+    }
+
     /// <summary>Hash of the fighting's own state (units and buildings hash theirs).</summary>
     public ulong ComputeHash()
     {
