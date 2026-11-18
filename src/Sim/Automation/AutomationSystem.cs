@@ -632,7 +632,7 @@ public sealed partial class AutomationSystem
     private BuildingDef? Unlocked(int p, BuildingKind kind)
     {
         foreach (var d in _sim.Content.Buildings)
-            if (d.Kind == kind && Economy.Unlocked(p, d)) return d;
+            if (d.Kind == kind && d.UpgradeOf == null && Economy.Unlocked(p, d)) return d;
         return null;
     }
 

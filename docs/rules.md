@@ -31,6 +31,22 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   and smelter. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
   A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column
   gap from other buildings, and its cost; its voxel blocks go up layer by layer as workers build it.
+- **Building upgrades** (`UpgradeCommand`, `"upgrade"` and `"speed"` in `data/buildings.json`, #47): a
+  finished building is upgraded where it stands into a bigger one of its kind, for that building's cost and
+  build time. A house (4 by 4, houses 5) becomes a large house (6 by 6, houses 12; 45 wood, 10 stone) and then a
+  manor (8 by 8, houses 25; 60 wood, 60 stone, needs Masonry); a town hall (7 by 7, houses 25) a great hall
+  (9 by 9, houses 40, trains at 150%, sees 12; 150 wood, 150 stone) and then a castle keep (11 by 11, stone,
+  houses 60, trains at 200%, sees 15, twice as sturdy; 300 stone, 100 wood, 10 iron, needs Masonry); a
+  storehouse a warehouse (7 by 7, sturdier, and cannot be captured or burned; 50 wood, 40 stone); a barracks a
+  great barracks (8 by 7, trains at 175%; 80 wood, 60 stone); a smelter a foundry (5 by 5, smelts at 200%, two
+  workers; 60 stone, 20 wood); and a farm a large farm (9 by 9, four farmers; 30 wood). An upgrade trains what
+  the building it came from trains. It grows from its middle, half the extra columns on each side (the odd
+  one on the far side), so it needs room round it: the new footprint must be on the map, keep the one-column
+  gap from other buildings and from city-states, and the new ground must be within a block of the
+  building's level with nothing solid over it (the same as putting it down there). It is paid for when it is
+  ordered, and is builders' work; meanwhile the building works as it is, and nothing can be put on the ground
+  it is to grow onto. Once the work is done, idle units on that ground are sent off it (it waits up to 10
+  seconds for them), then the old building comes down and the new one stands whole on the levelled ground.
 - **Plans** (`PlanCommand`, issue #92): a building marked out but not paid for or built, so it can be
   placed before the player can afford it. It needs the same ground and gap as a site (and the tech),
   keeps its footprint free of other buildings, and leaves the ground as it is. A `WorkCommand` on a plan

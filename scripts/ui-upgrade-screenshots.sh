@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Scripted-input screenshot test for building upgrades: every worker is made automatic (Shift+J), the house
+# north of the town hall is selected and upgraded (U) to a large house, which grows a column out on each side
+# once the workers are done; then the town hall is selected and upgraded (Ctrl+U, since U trains there) to a
+# great hall. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
+# Usage: scripts/ui-upgrade-screenshots.sh [OUT_DIR]
+set -euo pipefail
+OUT="$(realpath -m "${1:-screenshots/upgrades}")"
+mkdir -p "$OUT"
+cd "$(dirname "$0")/.."
+dotnet build game/Game.csproj -v q -nologo >/dev/null
+[ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
+
+# Seed 1234, west start: town hall at 84..90 x 253..259; --houses=1 puts a house just north of it (85..88 x
+# 244..247). --goods=600 pays for both upgrades.
+STEPS="
+wait 20
+camera 87,252 34 50 32
+wait 5
+key shift+j
+clickworld 86,g,245
+wait 3
+mouse 800,200
+print
+shot $OUT/ui-upgrade-house.png
+key u
+ticks 2
+print
+shot $OUT/ui-upgrade-started.png
+key plus*2
+ticks 1200
+print
+shot $OUT/ui-upgrade-large-house.png
+clickworld 87,g,256
+wait 3
+key ctrl+u
+ticks 2
+print
+ticks 3000
+mouse 800,200
+print
+shot $OUT/ui-upgrade-great-hall.png
+"
+LOG="$OUT/ui-upgrade.log"
+xvfb-run -a -s "-screen 0 1600x900x24" \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --houses=1 --goods=600 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+
+fail() { echo "UI upgrade test failed: $1" >&2; exit 1; }
+field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
+mapfile -t UI < <(grep '^UI ' "$LOG")
+[ "${#UI[@]}" -eq 5 ] || fail "expected 5 UI lines, got ${#UI[@]}"
+[ "$(field "${UI[0]}" building)" = house ] || fail "the house is not selected: ${UI[0]}"
+[ "$(field "${UI[1]}" upgrading)" -eq 1 ] || fail "U did not start the house's upgrade: ${UI[1]}"
+[ "$(field "${UI[2]}" building)" = large_house ] && [ "$(field "${UI[2]}" upgrading)" -eq 0 ] || fail "the house did not become a large house: ${UI[2]}"
+[ "$(field "${UI[3]}" building)" = town_hall ] && [ "$(field "${UI[3]}" upgrading)" -eq 1 ] || fail "Ctrl+U did not start the town hall's upgrade: ${UI[3]}"
+[ "$(field "${UI[4]}" building)" = great_hall ] || fail "the town hall did not become a great hall: ${UI[4]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 4 ] || fail "missing screenshots"
+echo "UI upgrade screenshot test OK: $OUT"

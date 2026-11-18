@@ -1032,6 +1032,11 @@ public partial class Hud : CanvasLayer
         }
         _upgradeRow.Visible = to != null;
         if (to == null) return;
+        if (!b!.Def.IsWall)
+        {
+            RefreshGrow(b, to);
+            return;
+        }
         var result = _sim.Economy.CanUpgrade(b!);
         string? needs = Needs(to.Requires, to.Faction);
         int stretch = b!.Upgrade != null ? 0 : _sim.Economy.Stretch(b).Count;
@@ -1046,6 +1051,37 @@ public partial class Hud : CanvasLayer
         _upgradeButton.Disabled = result != PlaceResult.Ok;
         _upgradeOneButton.Visible = b.Upgrade == null && needs == null;
         _upgradeOneButton.Disabled = result != PlaceResult.Ok;
+    }
+
+    /// <summary>
+    /// The upgrade button for a house, hall or other building that has a bigger one to become: what it becomes,
+    /// its price and what it does better, greyed out without the tech, the goods or room round it to grow.
+    /// </summary>
+    private void RefreshGrow(Building b, BuildingDef to)
+    {
+        var result = _sim.Economy.CanUpgrade(b);
+        string? needs = Needs(to.Requires, to.Faction);
+        string key = b.Def.Trains.Length > 0 ? "Ctrl+U" : "U";
+        _upgradeButton.Text = b.Upgrade != null
+            ? $"Becoming a {to.Name.ToLowerInvariant()}: {100L * Math.Min(b.UpgradeWork, to.BuildTicks) / Math.Max(1, to.BuildTicks)}%"
+            : needs != null ? $"{to.Name}: {needs}"
+            : result == PlaceResult.Blocked ? $"{to.Name}: no room round it to grow"
+            : $"Upgrade to {to.Name.ToLowerInvariant()}  [{key}]   {CostText(to.Cost)}";
+        var better = new List<string>();
+        int housing = to.Housing - b.Def.Housing;
+        if (housing > 0) better.Add($"houses {housing} more");
+        if (to.Speed > b.Def.Speed) better.Add($"{(to.Kind == BuildingKind.Smelter ? "smelts" : "trains")} at {to.Speed}% of the usual pace");
+        if (to.WorkerSlots > b.Def.WorkerSlots) better.Add($"takes {to.WorkerSlots} workers");
+        if (to.Sight > b.Def.Sight) better.Add($"sees {to.Sight} columns round it");
+        if (b.Def.Raidable && !to.Raidable) better.Add("cannot be captured or burned");
+        if (to.Sturdy > b.Def.Sturdy) better.Add("is sturdier");
+        _upgradeButton.TooltipText =
+            $"Turns this {b.Def.Name.ToLowerInvariant()} into a {to.Name.ToLowerInvariant()}, {to.SizeX} by {to.SizeZ} columns: " +
+            $"it grows from its middle onto the level, free ground round it. A {to.Name.ToLowerInvariant()} " +
+            (better.Count > 0 ? string.Join(", ", better) : "is bigger") +
+            ". Workers do the work (automatic ones by themselves; or right click it with workers), and it keeps working as it is until they are done.";
+        _upgradeButton.Disabled = result != PlaceResult.Ok;
+        _upgradeOneButton.Visible = false;
     }
 
     /// <summary>
@@ -1528,6 +1564,7 @@ public partial class Hud : CanvasLayer
                 else if (_sim.Economy.Starving(b.Owner)) text.Append("   (needs food)");
             }
             if (b.Def.IsRampart) text.Append(DescribeWall(b));
+            else text.Append(DescribeUpgrade(b));
             if (b.Def.Trains.Length > 0 && b.Owner == PlayerControl.LocalPlayer)
                 text.Append(b.HasRally
                     ? "\nRally point set: new units walk to the flag (right click the building to clear it)"
@@ -1565,6 +1602,34 @@ public partial class Hud : CanvasLayer
             rules.Add($"{want} {Goods.Name(g).ToLowerInvariant()}{(missing > 0 ? $" ({missing} short)" : "")}");
         }
         return $"\nKeeps {string.Join(", ", rules)}   {duty} on supply duty";
+    }
+
+    /// <summary>
+    /// A house's, hall's or other building's upgrade: how it is going, and what the building does better than the
+    /// one it came from, or that it is as big as it gets.
+    /// </summary>
+    private string DescribeUpgrade(Building b)
+    {
+        var text = new StringBuilder();
+        if (b.Def.Speed > 100)
+            text.Append($"\n{(b.Def.Kind == BuildingKind.Smelter ? "Smelts" : "Trains")} at {b.Def.Speed}% of the usual pace");
+        if (b.Def.UpgradeOf is { } from && from.Raidable && !b.Def.Raidable) text.Append("\nToo stout to be captured or burned");
+        if (b.Upgrade is { } to)
+        {
+            var u = _sim.Units;
+            int builders = 0;
+            for (int i = 0; i < u.Count; i++)
+                if (u.Job[i] == UnitJob.Build && u.JobTarget[i] == b.Id) builders++;
+            if (b.UpgradeWork >= to.BuildTicks) text.Append($"\nBecoming a {to.Name.ToLowerInvariant()}: waiting for the ground round it to clear");
+            else
+            {
+                text.Append($"\nBecoming a {to.Name.ToLowerInvariant()}: {100L * b.UpgradeWork / Math.Max(1, to.BuildTicks)}%   " +
+                            $"{builders} builder{(builders == 1 ? "" : "s")}");
+                if (builders == 0) text.Append(" (right click it with workers)");
+            }
+        }
+        else if (b.Def.Upgrade == null && b.Def.UpgradeOf != null) text.Append("\nAs big as it gets");
+        return text.ToString();
     }
 
     /// <summary>

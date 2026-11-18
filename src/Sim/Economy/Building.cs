@@ -47,9 +47,10 @@ public sealed class Building
     public int Owner { get; internal set; }
     /// <summary>What it is. Changes only when an upgrade is finished (see <see cref="Upgrade"/>).</summary>
     public BuildingDef Def { get; internal set; }
-    public int X { get; }
+    /// <summary>The footprint's corner. Moves only when an upgrade that grows it is finished (see <see cref="CornerOf"/>).</summary>
+    public int X { get; internal set; }
     public int Y { get; internal set; }
-    public int Z { get; }
+    public int Z { get; internal set; }
     public BuildingState State { get; internal set; }
     /// <summary>Worker-ticks of building work done (a site is finished at <see cref="BuildingDef.BuildTicks"/>).</summary>
     public int Work { get; internal set; }
@@ -114,8 +115,33 @@ public sealed class Building
     public BuildingDef? Upgrade { get; internal set; }
     /// <summary>Worker-ticks of work done on its upgrade (finished at the upgrade's <see cref="BuildingDef.BuildTicks"/>).</summary>
     public int UpgradeWork { get; internal set; }
-    /// <summary>True if builders have work to do on it: a site going up, or a building being upgraded.</summary>
-    public bool WantsBuilders => State == BuildingState.Site || Upgrade != null;
+    /// <summary>
+    /// Ticks its finished upgrade has waited for units to step off the ground it grows onto (see
+    /// <see cref="Economy.EconomySystem.UpgradeWaitTicks"/>).
+    /// </summary>
+    public int UpgradeWait { get; internal set; }
+    /// <summary>True if builders have work to do on it: a site going up, or a building being upgraded whose work is not done.</summary>
+    public bool WantsBuilders => State == BuildingState.Site || (Upgrade != null && UpgradeWork < Upgrade.BuildTicks);
+
+    /// <summary>
+    /// The footprint corner it has once it is turned into <paramref name="to"/>: a bigger building grows from
+    /// its middle, half the extra on each side (the odd column on the far side).
+    /// </summary>
+    public (int X, int Z) CornerOf(BuildingDef to) => (X - (to.SizeX - Def.SizeX) / 2, Z - (to.SizeZ - Def.SizeZ) / 2);
+
+    /// <summary>
+    /// The columns it takes up: its footprint, and while it is being upgraded to a bigger building, the ground
+    /// that building grows onto too, which nothing else may be put on meanwhile.
+    /// </summary>
+    public (int X0, int Z0, int X1, int Z1) Claim
+    {
+        get
+        {
+            if (Upgrade == null) return (X, Z, MaxX, MaxZ);
+            var (x, z) = CornerOf(Upgrade);
+            return (Math.Min(X, x), Math.Min(Z, z), Math.Max(MaxX, x + Upgrade.SizeX - 1), Math.Max(MaxZ, z + Upgrade.SizeZ - 1));
+        }
+    }
 
     /// <summary>The toughness of the blocks placed so far.</summary>
     public int Built => Def.ToughnessOf(Placed);
@@ -236,7 +262,7 @@ public sealed class BuildingStore
             Mix(b.Owed.Count);
             foreach (int o in b.Owed) Mix(o);
             Mix(b.Lost); Mix(b.Damage);
-            Mix(b.Upgrade?.Index ?? -1); Mix(b.UpgradeWork);
+            Mix(b.Upgrade?.Index ?? -1); Mix(b.UpgradeWork); Mix(b.UpgradeWait);
             Mix(b.RallyX); Mix(b.RallyZ); Mix(b.RallyY);
             Mix((int)b.Governor);
         }
