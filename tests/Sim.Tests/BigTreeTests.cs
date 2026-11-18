@@ -49,7 +49,7 @@ public class BigTreeTests
     }
 
     [Fact]
-    public void FellingABigTreeTakesItsWholeTrunkAndCrownAndLaysTwiceAUsualTreesLogs()
+    public void FellingABigTreeTakesItsWholeTrunkAndCrownAndLaysFourTimesAUsualTreesLogs()
     {
         var w = TestWorlds.Flat(64, 40, 64, Ground);
         w.TreeScale = 2;
@@ -61,7 +61,7 @@ public class BigTreeTests
         Assert.Equal(0, Count(w, BlockInfo.IsTrunk));
         Assert.Equal(0, Count(w, BlockInfo.IsLeaves));
         sim.Run(PhysicsSystem.TreeFallTicks + 1);
-        Assert.Equal(trunk / 4, Count(w, b => b == BlockType.TreeRubble)); // a log for every four blocks: twice a usual tree's wood
+        Assert.Equal(trunk / 2, Count(w, b => b == BlockType.TreeRubble)); // a log for every two blocks: four times a usual tree's wood
     }
 
     [Fact]

@@ -22,8 +22,8 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   that size (`RegionGenerator.DefaultTreeScale`, `VoxelWorld.TreeScale`; `--trees=1` for the first
   size): each block a cube two across, a trunk two blocks square and twice as tall, on level ground,
   and forests' trees about one and a half times as far apart. Cutting any column of a big trunk fells the whole
-  tree, which takes twice as long and lays a log for every four blocks of trunk: twice the wood of a
-  first-size tree (16 to 20 for most). They carry
+  tree, which takes twice as long and lays a log for every two blocks of trunk: four times the wood of
+  a first-size tree (32 to 40 for most), so wood comes in about as fast as with the first trees. They carry
   up to 5 goods to the nearest storage, then come back for more of the same nearby; a group spreads
   over a resource instead of crowding one block. A worker that cannot get to its block tries the next
   one nearby, and gives the job up after three in a row (stone at the bottom of a pit too deep to climb

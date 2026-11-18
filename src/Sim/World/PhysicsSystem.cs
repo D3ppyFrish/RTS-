@@ -330,8 +330,9 @@ public sealed class PhysicsSystem
         else
         {
             // A bigger tree's trunk (see VoxelWorld.TreeScale) lies down as a log from each of its columns, a log
-            // block for every s * s of trunk: a tree of scale 2, twice as tall, gives twice the wood.
-            int logs = Math.Max(1, t.Logs / (s * s));
+            // block for every s of trunk: a tree of scale 2 gives four times the wood of a first-size tree, so
+            // felling it, twice as slow, and its forests, with fewer trees, keep up the first trees' wood.
+            int logs = Math.Max(1, t.Logs / s);
             int each = logs / (s * s), rest = logs % (s * s);
             for (int k = 0; k < s; k++)
             for (int i = 0; i < s; i++)
