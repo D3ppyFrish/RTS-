@@ -66,6 +66,7 @@ Controls:
 | Shift+' | with a mage selected (also the Ice Bridge button in the selection panel): drag from bank to bank across water and let go, and a ready mage freezes a level way of ice across, three columns wide and up to 16 long, walking into range first. Green squares are where ice forms; red ones have something in the way. Units on the ice slide: they are slow to get going and to stop. Dark cracks show on it in its last 5 seconds before it melts (see [Terrain magic](rules.md#terrain-magic)) |
 | K | open the tech tree: click a tech to research it at your town hall |
 | . | select your next idle worker and look at it (as the Idle workers button does) |
+| F2 | select all your combat units, leaving workers and caravans out (as the Army button does) |
 | Ctrl+1..9, 1..9 | assign a control group, recall it (press twice to centre the camera on it) |
 | Space, - and + | pause (orders still work), slower and faster: 0.5x, 1x, 2x, 4x |
 | F7 | detailed units on or off: near the camera, Settlers workers, spearmen and archers are drawn finer and swing their arms and legs as they walk and fight (a prototype; see the README) |
@@ -75,7 +76,7 @@ Controls:
 | Z | dig tool (also the Dig an area button): drag out an area for the selected workers and sappers to dig out, [ and ] for how many levels deep (below the ground where the drag starts); Shift keeps the tool for another area; right click or Esc stops |
 
 The HUD shows the goods in your storage and your population over housing (each beside its picture; hover for its name), food a minute beside the food (the food gathered in the last minute less what your people eat each minute; green when it grows, red when it shrinks), the game clock, the tech
-being researched, the tech tree, automatic workers and speed buttons, the Idle workers button and alerts under the top bar on the left (see [Alerts and idle workers](rules.md#alerts-and-idle-workers)), build buttons on the left (a building you lack the
+being researched, the tech tree, automatic workers and speed buttons, the Idle workers and Army buttons and alerts under the top bar on the left (see [Alerts and idle workers](rules.md#alerts-and-idle-workers)), build buttons on the left (a building you lack the
 tech for says which tech it needs), the height slice slider and what is selected: a unit's hit points,
 what it is doing, its load and morale, its level and experience and what its type is about, or a
 building's health, progress, goods, workers and training queue (with train buttons and a repeat

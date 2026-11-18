@@ -707,4 +707,21 @@ public class CombatTests
         Assert.Equal(log.Commands, copy.Commands);
         Assert.Equal(log.ToString(), copy.ToString());
     }
+
+    [Fact]
+    public void ArmyUnitsAreYourFightersWithoutWorkersCaravansOrBeatenMonsters()
+    {
+        var sim = Flat();
+        sim.SpawnUnit(0, "worker", 10, 10);
+        int spear = sim.SpawnUnit(0, "spearman", 12, 10);
+        int archer = sim.SpawnUnit(0, "archer", 14, 10);
+        int sapper = sim.SpawnUnit(0, "sapper", 16, 10);
+        sim.SpawnUnit(0, "caravan", 18, 10);
+        int wolf = sim.SpawnUnit(0, "wolf", 20, 10);
+        int beaten = sim.SpawnUnit(0, "wolf", 22, 10);
+        sim.Units.Subdued[sim.Units.IndexOf(beaten)] = true; // beaten, not yet ridden or recruited
+        sim.SpawnUnit(1, "spearman", 40, 40);
+        Assert.Equal(new[] { spear, archer, sapper, wolf }, sim.Combat.ArmyUnits(0));
+        Assert.Empty(sim.Combat.ArmyUnits(2));
+    }
 }
