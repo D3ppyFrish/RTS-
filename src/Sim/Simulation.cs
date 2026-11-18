@@ -613,9 +613,13 @@ public sealed class Simulation
     /// beaten monsters, until the player has them ridden or recruited (see <see cref="MonsterSystem"/>), and a
     /// city-state town's guards and tribute caravans, which go about their own business (see <see cref="CityStateSystem"/>).
     /// </summary>
-    /// <summary>Unit i's most hit points: its type's for its owner, and the Dusk Staff's if it bears it.</summary>
+    /// <summary>Unit i's most hit points: its type's for its owner, and the Dusk Staff's and its relic's if it bears them.</summary>
     public int MaxHpOf(int i) =>
-        Economy.MaxHp(Units.Owner[i], Content.Units[Units.Def[i]]) + (DuskTree.HasStaff(i) ? DuskTreeSystem.StaffHp : 0);
+        Economy.MaxHp(Units.Owner[i], Content.Units[Units.Def[i]]) + (DuskTree.HasStaff(i) ? DuskTreeSystem.StaffHp : 0)
+        + (RelicOf(i)?.Hp ?? 0);
+
+    /// <summary>The relic unit i bears (a lair's prize, see <see cref="MonsterSystem"/>), or null.</summary>
+    public Content.RelicDef? RelicOf(int i) => Units.Relic[i] > 0 ? Content.Relics[Units.Relic[i] - 1] : null;
 
     internal List<int> OwnedUnits(UnitsCommand c)
     {

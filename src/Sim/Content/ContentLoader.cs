@@ -42,7 +42,7 @@ public static class ContentLoader
 {
     /// <summary>The data files, in the order they are read.</summary>
     public static readonly IReadOnlyList<string> Files =
-        new[] { "factions.json", "techs.json", "buildings.json", "units.json", "roles.json", "citystates.json" };
+        new[] { "factions.json", "techs.json", "buildings.json", "units.json", "roles.json", "citystates.json", "relics.json" };
 
     private const int Tps = Simulation.TicksPerSecond;
     private const int MaxSeconds = 3600;
@@ -155,6 +155,7 @@ public static class ContentLoader
                 ReadFile("units.json", "unit", ReadUnit);
                 ReadRoles("roles.json");
                 ReadFile("citystates.json", "city-state", ReadCityState);
+                ReadFile("relics.json", "relic", ReadRelic);
                 foreach (var resolve in _resolve) resolve();
                 CheckTree();
                 CheckFactions();
@@ -218,7 +219,7 @@ public static class ContentLoader
         private void ReadFaction(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "den", "duskTree", "aiStyle");
+            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "duskTree", "aiStyle");
             if (id == null) return;
             if (_db.TryGetFaction(id, out _) || id == _db.Wild.Id)
             {
@@ -237,44 +238,68 @@ public static class ContentLoader
                 AiStyle = o.Enum("aiStyle", AiStyle.Waves, required: false),
             };
             _db.Add(faction);
-            Den(o, faction);
         }
 
-        /// <summary>A faction's den use (<c>"den": { "building": id }</c> or <c>{ "form": id }</c>), resolved once every file is read.</summary>
-        private void Den(Obj faction, FactionDef def)
+        /// <summary>
+        /// A lair's prizes, <c>"prizes": { "orcs": { "building": id }, "settlers": { "form": id } }</c>: for each
+        /// faction one of a building put up on the den, a form, or a relic, resolved once every file is read.
+        /// </summary>
+        private void Prizes(Obj lair, LairDef def)
         {
-            if (!faction.E.TryGetProperty("den", out var e)) return;
-            var o = new Obj(_errors, faction.File, "den", $"{faction.Where}, den", e);
+            if (!lair.E.TryGetProperty("prizes", out var e)) return;
+            var where = new Obj(_errors, lair.File, "prizes", $"{lair.Where}, prizes", e);
             if (e.ValueKind != JsonValueKind.Object)
             {
-                o.Error("should be an object: { \"building\": \"wolf_lodge\" } or { \"form\": \"...\" }");
+                where.Error("should be an object: { \"orcs\": { \"building\": \"wolf_lodge\" }, \"settlers\": { \"relic\": \"...\" } }");
                 return;
             }
-            o.Keys("building", "form");
-            var building = o.Str("building", false);
-            var form = o.Str("form", false);
-            if ((building == null) == (form == null))
+            var prizes = new List<LairPrize>();
+            def.Prizes = prizes;
+            foreach (var p in e.EnumerateObject())
             {
-                o.Error("needs one of \"building\" (put up on the den) or \"form\" (a unit near the den takes it), not both");
-                return;
+                var o = new Obj(_errors, lair.File, "prize", $"{lair.Where}, prizes, {p.Name}", p.Value);
+                if (!_db.TryGetFaction(p.Name, out var faction))
+                {
+                    o.Error($"\"{p.Name}\" is not a faction");
+                    continue;
+                }
+                if (p.Value.ValueKind != JsonValueKind.Object)
+                {
+                    o.Error("should be an object: { \"building\": \"...\" }, { \"form\": \"...\" } or { \"relic\": \"...\" }");
+                    continue;
+                }
+                o.Keys("building", "form", "relic");
+                var building = o.Str("building", false);
+                var form = o.Str("form", false);
+                var relic = o.Str("relic", false);
+                if ((building != null ? 1 : 0) + (form != null ? 1 : 0) + (relic != null ? 1 : 0) != 1)
+                {
+                    o.Error("needs one of \"building\" (put up on the den), \"form\" (a unit near the den takes it) or \"relic\" (a unit near the den takes it up)");
+                    continue;
+                }
+                _resolve.Add(() =>
+                {
+                    if (building != null)
+                    {
+                        if (!_db.TryGetBuilding(building, out var b)) o.Error($"\"building\" is \"{building}\", which is not a building");
+                        else if (!b.FromDen) o.Error($"\"building\" is \"{building}\", which needs \"fromDen\": true in buildings.json");
+                        else if (b.Faction != null && b.Faction != faction) o.Error($"\"building\" is \"{building}\", which only {b.Faction.Id} can build");
+                        else prizes.Add(new LairPrize(faction, new DenUse { Building = b }));
+                    }
+                    else if (form != null)
+                    {
+                        if (!_db.TryGetUnit(form, out var u)) o.Error($"\"form\" is \"{form}\", which is not a unit");
+                        else if (!u.FromDen) o.Error($"\"form\" is \"{form}\", which needs \"fromDen\": true in units.json");
+                        else if (u.Faction != null && u.Faction != faction) o.Error($"\"form\" is \"{form}\", which only {u.Faction.Id} have");
+                        else prizes.Add(new LairPrize(faction, new DenUse { Form = u }));
+                    }
+                    else
+                    {
+                        if (!_db.TryGetRelic(relic!, out var r)) o.Error($"\"relic\" is \"{relic}\", which is not in relics.json");
+                        else prizes.Add(new LairPrize(faction, new DenUse { Relic = r }));
+                    }
+                });
             }
-            _resolve.Add(() =>
-            {
-                if (building != null)
-                {
-                    if (!_db.TryGetBuilding(building, out var b)) o.Error($"\"building\" is \"{building}\", which is not a building");
-                    else if (!b.FromDen) o.Error($"\"building\" is \"{building}\", which needs \"fromDen\": true in buildings.json");
-                    else if (b.Faction != null && b.Faction != def) o.Error($"\"building\" is \"{building}\", which only {b.Faction.Id} can build");
-                    else def.Den = new DenUse { Building = b };
-                }
-                else
-                {
-                    if (!_db.TryGetUnit(form!, out var u)) o.Error($"\"form\" is \"{form}\", which is not a unit");
-                    else if (!u.FromDen) o.Error($"\"form\" is \"{form}\", which needs \"fromDen\": true in units.json");
-                    else if (u.Faction != null && u.Faction != def) o.Error($"\"form\" is \"{form}\", which only {u.Faction.Id} have");
-                    else def.Den = new DenUse { Form = u };
-                }
-            });
         }
 
         /// <summary>A faction's experience rules, or null if its units earn none.</summary>
@@ -335,7 +360,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "den");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -349,8 +374,9 @@ public static class ContentLoader
             int count = o.Int("count", 0, 64, biome != null ? 1 : 0);
             if (count > 0 && biome == null) o.Error("\"count\" needs a \"biome\" to spread the lairs over");
             bool atStarts = !dusk && (e.TryGetProperty("atStarts", out _) ? o.Bool("atStarts") : biome == null);
-            if (dusk && (biome != null || o.Bool("atStarts"))) o.Error("a lair with \"duskTree\" guards the dusk tree only: no \"biome\" or \"atStarts\"");
-            return new LairDef
+            if (dusk && (biome != null || o.Bool("atStarts") || e.TryGetProperty("prizes", out _)))
+                o.Error("a lair with \"duskTree\" guards the dusk tree only: no \"biome\", \"atStarts\" or \"prizes\"");
+            var def = new LairDef
             {
                 Pack = o.Int("pack", 1, 50, 4, required: true),
                 Guard = guard,
@@ -360,8 +386,9 @@ public static class ContentLoader
                 Biome = biome,
                 Count = biome != null ? count : 0,
                 AtStarts = atStarts,
-                Den = !dusk && (!e.TryGetProperty("den", out _) || o.Bool("den")),
             };
+            if (!dusk) Prizes(o, def);
+            return def;
         }
 
         /// <summary>Who rides a beaten monster and what they become (unit ids, resolved later), or null if nobody does.</summary>
@@ -626,6 +653,28 @@ public static class ContentLoader
                 if (!_db.TryGetUnit(evolvesFrom, out var from)) o.Error($"\"evolvesFrom\" is \"{evolvesFrom}\", which is not a unit");
                 else if (from == def) o.Error("cannot evolve from itself");
                 else def.EvolvesFrom = from;
+            });
+        }
+
+        private void ReadRelic(Obj o)
+        {
+            var id = o.Id();
+            o.Keys("id", "name", "description", "icon", "hp", "damage", "armor");
+            if (id == null) return;
+            if (_db.TryGetRelic(id, out _))
+            {
+                o.Error("another relic already has this id");
+                return;
+            }
+            _db.Add(new RelicDef
+            {
+                Id = id,
+                Name = o.Str("name", true) ?? id,
+                Description = o.Str("description", false) ?? "",
+                Icon = o.Str("icon", false) ?? id,
+                Hp = o.Int("hp", 0, 10000, 0),
+                Damage = o.Int("damage", 0, 1000, 0),
+                Armour = o.Int("armor", 0, 100, 0),
             });
         }
 
@@ -1148,8 +1197,6 @@ public static class ContentLoader
                 h.Add(f.TamesMonsters ? 1 : 0);
                 h.Add((int)f.DuskTree);
                 h.Add((int)f.AiStyle);
-                h.Add(f.Den?.Building?.Index ?? -1);
-                h.Add(f.Den?.Form?.Index ?? -1);
                 if (f.Experience is not { } x)
                 {
                     h.Add(-1);
@@ -1257,7 +1304,14 @@ public static class ContentLoader
                     h.Add(lair.Biome is { } b ? (int)b : -1);
                     h.Add(lair.Count);
                     h.Add(lair.AtStarts ? 1 : 0);
-                    h.Add(lair.Den ? 1 : 0);
+                    h.Add(lair.Prizes.Count);
+                    foreach (var p in lair.Prizes)
+                    {
+                        h.Add(p.Faction.Index);
+                        h.Add(p.Use.Building?.Index ?? -1);
+                        h.Add(p.Use.Form?.Index ?? -1);
+                        h.Add(p.Use.Relic?.Index ?? -1);
+                    }
                 }
                 else
                 {
@@ -1308,6 +1362,14 @@ public static class ContentLoader
             {
                 h.Add(combat.StrongAgainstStructures(a) ? 1 : 0);
                 foreach (var t in Enum.GetValues<UnitRole>()) h.Add(combat.StrongAgainst(a, t) ? 1 : 0);
+            }
+            h.Add(db.Relics.Count);
+            foreach (var r in db.Relics)
+            {
+                h.Add(r.Id);
+                h.Add(r.Hp);
+                h.Add(r.Damage);
+                h.Add(r.Armour);
             }
             return h.Value;
         }

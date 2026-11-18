@@ -1,0 +1,18 @@
+// Relics: one-of-a-kind things a unit takes up as the prize for beating a monster (a lair's "prizes" in
+// units.json, { "relic": id }). The nearest of the player's fighting units near the cleared den, without a
+// relic already, takes it up. It keeps it when it evolves, and it is gone with it. A unit bears at most one.
+//   hp: hit points added to the bearer's most (it gets them at once too)
+//   damage: added to each of the bearer's hits
+//   armor: added on every part of the bearer
+//   icon: the pixel icon (game/scripts/UiIcons.cs), by default the id
+[
+  { "id": "giant_heart", "name": "Giant's heart", "icon": "giant_heart",
+    "description": "The glowing stone heart of a stone giant. Its bearer stands like a hill: more hit points and harder skin.",
+    "hp": 60, "armor": 2 },
+  { "id": "bog_lantern", "name": "Bog lantern", "icon": "bog_lantern",
+    "description": "A bog horror's lure, a cold green light in a cage of reeds. Its bearer strikes where the light shows the gaps.",
+    "damage": 4 },
+  { "id": "crab_shell", "name": "Crab shell shield", "icon": "crab_shell",
+    "description": "A giant crab's back made into a shield. Its bearer turns aside blows from every side.",
+    "armor": 3 }
+]

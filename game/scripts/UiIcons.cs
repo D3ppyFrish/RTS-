@@ -311,6 +311,30 @@ public static class UiIcons
             "k........k..", ".k......k...", "..kkkkkkkkk.", ".klllllllllk", ".kwwwwwwwwwk", ".kRkrrkrrkRk",
             ".krrkrrkrrrk", ".krkrrrkrrrk", ".kRrkrkrrrRk", ".krrrkrrrrrk", ".kRRRRRRRRRk", "..kkkkkkkkk.",
         },
+        // The giant's heart: a lump of grey stone with a glowing amber core.
+        ["giant_heart"] = new[]
+        {
+            "............", "...kkkkkk...", "..kssSssssk.", ".ksSsyysSsk.", ".kssyffysSk.", ".kSsyffyssk.",
+            ".kssyyyysSk.", ".ksSssssssk.", "..ksSsssSk..", "...kssSsk...", "....kssk....", ".....kk.....",
+        },
+        // A boar's tusk, curved, on a strap.
+        ["tusk"] = new[]
+        {
+            "............", "..........k.", ".........kwk", "........kwlk", ".......kwlk.", "......kwlk..",
+            "....kkwlk...", "..kkwwlk....", ".kwwllk.....", "kbbkkk......", "kBk.........", ".k..........",
+        },
+        // The bog lantern: a cold green light in a cage of reeds, on a hook.
+        ["bog_lantern"] = new[]
+        {
+            ".....kk.....", "....k..k....", ".....kk.....", "...kGkkGk...", "..kGgttgGk..", "..kgtwwtgk..",
+            "..kgtwwtgk..", "..kGgttgGk..", "...kGkkGk...", "....kGGk....", ".....kk.....", "............",
+        },
+        // The crab shell shield: a round red shell with ridges.
+        ["crab_shell"] = new[]
+        {
+            "............", "...kkkkkk...", "..krrRRrrk..", ".krrRrrRrrk.", ".krRrrrrRrk.", ".krrrRRrrrk.",
+            ".krRrrrrRrk.", ".krrRrrRrrk.", "..krrRRrrk..", "...kkkkkk...", "....kppk....", ".....kk.....",
+        },
         ["paw"] = new[]
         {
             "............", "..kk....kk..", ".kBBk..kBBk.", ".kBBk..kBBk.", "..kkkkkkkk..", "kk.kBBBBk.kk",

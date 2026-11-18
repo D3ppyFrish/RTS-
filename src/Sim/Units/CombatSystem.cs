@@ -800,7 +800,7 @@ public sealed partial class CombatSystem
         if (b != null)
         {
             Fought(i);
-            int damage = Math.Max(1, (Fix64.FromInt(def.Damage) * Rules.StructureMultiplier(def.Role)).RoundToInt());
+            int damage = Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * Rules.StructureMultiplier(def.Role)).RoundToInt());
             AddShot(i, def, Clamp(u.X[i], b.X, b.MaxX + 1), b.Y + 1, Clamp(u.Z[i], b.Z, b.MaxZ + 1));
             _sim.Evolution.Damaged(i, damage);
             HitBuilding(b, damage, i, def.Role == UnitRole.Sapper);
@@ -886,15 +886,18 @@ public sealed partial class CombatSystem
         Fix64 m = Rules.Multiplier(def.Role, target.Role);
         int weakness = target.WeaknessTo(def.Role);
         if (weakness > 0) m = m * (100 + weakness) / 100;
-        return Math.Max(1, (Fix64.FromInt(def.Damage) * m).RoundToInt());
+        return Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * m).RoundToInt());
     }
+
+    /// <summary>Unit i's attack: its type's damage, and its relic's if it bears one.</summary>
+    public int AttackOf(int i, UnitDef def) => def.Damage + (_sim.RelicOf(i)?.Damage ?? 0);
 
     /// <summary>The damage of unit i's hit on unit t landing on the part, after the part's multiplier and t's armour there.</summary>
     public int HitDamage(int i, UnitDef def, int t, BodyPart part) =>
         Body.Damage(Damage(i, def, t), Def(t).Body, part, def.Attack, Armour(t, part));
 
-    /// <summary>Unit i's armour on the part: its type's and any it has of its own.</summary>
-    public int Armour(int i, BodyPart part) => Def(i).ArmourOn(part) + U.Extra(i, part);
+    /// <summary>Unit i's armour on the part: its type's, any it has of its own, and its relic's.</summary>
+    public int Armour(int i, BodyPart part) => Def(i).ArmourOn(part) + U.Extra(i, part) + (_sim.RelicOf(i)?.Armour ?? 0);
 
     /// <summary>How unit i stands against unit t for a hit: see <see cref="Body.Angle"/>.</summary>
     public Body.Angle AngleOf(int i, int t)

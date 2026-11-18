@@ -174,9 +174,25 @@ public sealed class LairDef
     public int Count { get; init; }
     /// <summary>A lair of this monster lies on the way from every start (see <see cref="MonsterSystem.PlaceAtStarts"/>).</summary>
     public bool AtStarts { get; init; } = true;
-    /// <summary>A cleared lair leaves a den a player can use once (see <see cref="MonsterSystem"/>); never for the dusk tree's.</summary>
-    public bool Den { get; init; } = true;
+    /// <summary>
+    /// What each faction gets for beating this monster: what it makes of the den a cleared lair leaves (see
+    /// <see cref="MonsterSystem"/>), in data order. Two factions can share a prize; one not listed gets none.
+    /// </summary>
+    public IReadOnlyList<LairPrize> Prizes { get; internal set; } = Array.Empty<LairPrize>();
+    /// <summary>A cleared lair leaves a den some faction can use once: the lair has a prize. Never the dusk tree's.</summary>
+    public bool Den => Prizes.Count > 0;
+
+    /// <summary>The faction's prize for this monster, or null if it has none.</summary>
+    public Content.DenUse? PrizeFor(Content.FactionDef faction)
+    {
+        foreach (var p in Prizes)
+            if (p.Faction == faction) return p.Use;
+        return null;
+    }
 }
+
+/// <summary>One faction's prize for beating a lair's monster (see <see cref="LairDef.Prizes"/>).</summary>
+public sealed record LairPrize(Content.FactionDef Faction, Content.DenUse Use);
 
 /// <summary>Riding a beaten monster: a unit of type <see cref="Rider"/> near it climbs on and becomes a <see cref="Becomes"/>.</summary>
 public sealed class RideDef

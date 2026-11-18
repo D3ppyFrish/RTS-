@@ -185,7 +185,7 @@ public class DenTests
         Assert.NotEmpty(alive);
         var users = alive.Append(worker).ToArray();
         Assert.True(sim.Monsters.CanUseDen(Settlers, lair, users.Select(id => Index(sim, id))));
-        int nearest = sim.Monsters.DenUser(lair, users.Select(id => Index(sim, id)), sim.Content.Faction("settlers").Den!);
+        int nearest = sim.Monsters.DenUser(lair, users.Select(id => Index(sim, id)), sim.Content.Unit("wolf").Lair!.PrizeFor(sim.Content.Faction("settlers"))!);
         int chosen = sim.Units.Id[nearest];
         int hpBefore = sim.Units.Hp[nearest];
         sim.Schedule(sim.Tick, new DenCommand(Settlers, users, lair.Id));
@@ -215,7 +215,7 @@ public class DenTests
     public void ADenFormIsTakenByTheNearestUnitThatCanAndOnlyAtADen()
     {
         var db = ContentDb.Default;
-        Assert.Same(db.Unit("wolfheart"), db.Faction("settlers").Den!.Form);
+        Assert.Same(db.Unit("wolfheart"), db.Unit("wolf").Lair!.PrizeFor(db.Faction("settlers"))!.Form);
 
         var sim = Flat();
         var lair = PlaceLair(sim);
@@ -302,7 +302,7 @@ public class DenTests
     {
         var db = ContentDb.Default;
         var lodge = db.Building("wolf_lodge");
-        Assert.Same(lodge, db.Faction("orcs").Den!.Building);
+        Assert.Same(lodge, db.Unit("wolf").Lair!.PrizeFor(db.Faction("orcs"))!.Building);
         Assert.True(lodge.FromDen);
         Assert.Same(db.Faction("orcs"), lodge.Faction);
         Assert.Equal(BuildingKind.House, lodge.Kind);
@@ -314,22 +314,24 @@ public class DenTests
     [Fact]
     public void DenDataIsChecked()
     {
+        const string Wolf = "\"prizes\": { \"orcs\": { \"building\": \"wolf_lodge\" }, \"settlers\": { \"form\": \"wolfheart\" } }";
         var files = Files();
-        Edit(files, "factions.json", "\"den\": { \"building\": \"wolf_lodge\" }", "\"den\": { \"building\": \"house\", \"form\": \"knight\" }");
-        Edit(files, "factions.json", "\"den\": { \"form\": \"wolfheart\" }", "\"den\": { \"form\": \"knight\" }");
+        Edit(files, "units.json", Wolf, "\"prizes\": { \"orcs\": { \"building\": \"house\", \"form\": \"knight\" }, \"settlers\": { \"form\": \"knight\" } }");
         Edit(files, "buildings.json", "\"yieldTime\": 15, ", "");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
-        Assert.Contains("factions.json: faction 'orcs', den: needs one of \"building\" (put up on the den) or \"form\" (a unit near the den takes it), not both", e.Errors);
-        Assert.Contains("factions.json: faction 'settlers', den: \"form\" is \"knight\", which needs \"fromDen\": true in units.json", e.Errors);
+        Assert.Contains("units.json: unit 'wolf', lair, prizes, orcs: needs one of \"building\" (put up on the den), \"form\" (a unit near the den takes it) or \"relic\" (a unit near the den takes it up)", e.Errors);
+        Assert.Contains("units.json: unit 'wolf', lair, prizes, settlers: \"form\" is \"knight\", which needs \"fromDen\": true in units.json", e.Errors);
         Assert.Contains("buildings.json: building 'wolf_lodge': \"yield\" and \"yieldTime\" go together: the goods it brings in, and the seconds between", e.Errors);
         Assert.Equal(3, e.Errors.Count);
 
         files = Files();
-        Edit(files, "factions.json", "\"den\": { \"building\": \"wolf_lodge\" }", "\"den\": { \"building\": \"house\" }");
+        Edit(files, "units.json", Wolf, "\"prizes\": { \"orcs\": { \"building\": \"house\" }, \"settlers\": { \"building\": \"wolf_lodge\" }, \"elves\": { \"relic\": \"crown\" } }");
         Edit(files, "units.json", "\"id\": \"knight\", \"name\": \"Knight\", \"evolvesFrom\": \"spearman\",", "\"id\": \"knight\", \"name\": \"Knight\",");
         Edit(files, "units.json", "\"id\": \"knight\", \"name\": \"Knight\",", "\"id\": \"knight\", \"name\": \"Knight\", \"fromDen\": true,");
         e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
-        Assert.Contains("factions.json: faction 'orcs', den: \"building\" is \"house\", which needs \"fromDen\": true in buildings.json", e.Errors);
+        Assert.Contains("units.json: unit 'wolf', lair, prizes, orcs: \"building\" is \"house\", which needs \"fromDen\": true in buildings.json", e.Errors);
+        Assert.Contains("units.json: unit 'wolf', lair, prizes, settlers: \"building\" is \"wolf_lodge\", which only orcs can build", e.Errors);
+        Assert.Contains("units.json: unit 'wolf', lair, prizes, elves: \"elves\" is not a faction", e.Errors);
         Assert.Contains("units.json: unit 'knight': is taken at a den (\"fromDen\"), so it is a form: it needs \"evolvesFrom\"", e.Errors);
     }
 
@@ -343,8 +345,8 @@ public class DenTests
             return ContentLoader.Load(files).Hash;
         }
         ulong original = ContentDb.Default.Hash;
-        Assert.NotEqual(original, Hash("factions.json", ",\n    \"den\": { \"building\": \"wolf_lodge\" }", ""));
-        Assert.NotEqual(original, Hash("factions.json", "\"den\": { \"form\": \"wolfheart\" }, ", ""));
+        Assert.NotEqual(original, Hash("units.json", "\"orcs\": { \"building\": \"wolf_lodge\" }, ", ""));
+        Assert.NotEqual(original, Hash("units.json", ", \"settlers\": { \"form\": \"wolfheart\" }", ""));
         Assert.NotEqual(original, Hash("buildings.json", "\"yield\": { \"food\": 5 }", "\"yield\": { \"food\": 6 }"));
         Assert.NotEqual(original, Hash("buildings.json", "\"yieldTime\": 15", "\"yieldTime\": 16"));
     }
