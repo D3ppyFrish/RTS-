@@ -36,7 +36,7 @@ EOF
 }
 run() {
   xvfb-run -a -s "-screen 0 1600x900x24" \
-    godot --path game --rendering-driver opengl3 -- --units=0 --focus=100,276 --showcase=106,279 "$@" 2>&1 \
+    godot --path game --rendering-driver opengl3 -- --world=512x64x512 --units=0 --focus=100,276 --showcase=106,279 "$@" 2>&1 \
     | grep -E "^(Saved|Input script|Showcase|Detailed units)"
 }
 LOG="$OUT/ui-sculpt.log"

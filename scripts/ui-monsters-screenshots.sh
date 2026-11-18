@@ -106,7 +106,7 @@ shot $OUT/ui-den-wolfheart.png
 LOG="$OUT/ui-monsters.log"
 run() {
   xvfb-run -a -s "-screen 0 1600x900x24" \
-    godot --path game --rendering-driver opengl3 -- "$@" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)"
+    godot --path game --rendering-driver opengl3 -- --world=512x64x512 "$@" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)"
 }
 { run --player=1 --focus=start1 --input="$ORC_STEPS"; run --player=0 --focus=start0 --input="$SETTLER_STEPS"; } | tee "$LOG"
 
@@ -115,10 +115,12 @@ field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step failed: $(grep '^Input script' "$LOG")"
 mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "${#UI[@]}" -eq 12 ] || fail "expected 12 UI lines, got ${#UI[@]}"
-[ "$(field "${UI[0]}" own)" -eq 24 ] && [ "$(field "${UI[0]}" wild)" -eq 12 ] && [ "$(field "${UI[0]}" lairs)" -eq 3 ] \
+# Three wolf packs (one by each start and the goblins'), and the lairs spread across the map (issue #45).
+[ "$(field "${UI[0]}" own)" -eq 24 ] && [ "$(field "${UI[0]}" wild)" -ge 12 ] && [ "$(field "${UI[0]}" lairs)" -ge 3 ] \
   || fail "the Orcs' starting units are not selected, or the three packs are not there: ${UI[0]}"
 # The Orcs beat the whole pack: the four wolves are theirs, waiting, the lair is cleared and pays nothing.
-[ "$(field "${UI[1]}" beaten)" -eq 4 ] && [ "$(field "${UI[1]}" wild)" -eq 8 ] && [ "$(field "${UI[1]}" lairs)" -eq 2 ] \
+[ "$(field "${UI[1]}" beaten)" -eq 4 ] && [ "$(field "${UI[1]}" wild)" -eq $(( $(field "${UI[0]}" wild) - 4 )) ] \
+  && [ "$(field "${UI[1]}" lairs)" -eq $(( $(field "${UI[0]}" lairs) - 1 )) ] \
   && [ "$(field "${UI[1]}" food)" -eq "$(field "${UI[0]}" food)" ] || fail "the Orcs did not beat the pack: ${UI[1]}"
 [ "$(field "${UI[2]}" own)" -eq 1 ] && [ "$(field "${UI[2]}" unit)" = wolf ] || fail "the Beaten button did not pick a wolf: ${UI[2]}"
 [ "$(field "${UI[3]}" riders)" -eq 1 ] && [ "$(field "${UI[3]}" beaten)" -eq 3 ] || fail "no spearman rode the wolf: ${UI[3]}"
@@ -130,8 +132,9 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
   || fail "the den did not become a lodge site: ${UI[6]}"
 [ "$(field "${UI[7]}" den_buildings)" -eq 1 ] || fail "the wolf lodge was not built: ${UI[7]}"
 # The Settlers kill the pack instead and get the lair's reward: 150 food and 20 iron.
-[ "$(field "${UI[8]}" own)" -eq 24 ] && [ "$(field "${UI[8]}" lairs)" -eq 3 ] || fail "the Settlers' starting units are not selected: ${UI[8]}"
-[ "$(field "${UI[9]}" lairs)" -eq 2 ] && [ "$(field "${UI[9]}" wild)" -eq 8 ] && [ "$(field "${UI[9]}" beaten)" -eq 0 ] \
+[ "$(field "${UI[8]}" own)" -eq 24 ] && [ "$(field "${UI[8]}" lairs)" -eq "$(field "${UI[0]}" lairs)" ] || fail "the Settlers' starting units are not selected: ${UI[8]}"
+[ "$(field "${UI[9]}" lairs)" -eq $(( $(field "${UI[8]}" lairs) - 1 )) ] && [ "$(field "${UI[9]}" wild)" -eq $(( $(field "${UI[8]}" wild) - 4 )) ] \
+  && [ "$(field "${UI[9]}" beaten)" -eq 0 ] \
   && [ "$(field "${UI[9]}" food)" -eq $(( $(field "${UI[8]}" food) + 150 )) ] && [ "$(field "${UI[9]}" iron)" -eq $(( $(field "${UI[8]}" iron) + 20 )) ] \
   || fail "the Settlers did not clear the lair for its reward: ${UI[9]}"
 # Then they use the den: one spearman becomes a Wolfheart, and the den is gone.

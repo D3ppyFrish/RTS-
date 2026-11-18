@@ -87,7 +87,7 @@ shot $OUT/ui-test-loaded.png
 "
 LOG="$OUT/ui-test-mode.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --test-mode --daynight --scenarios="$SCEN" --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --test-mode --daynight --scenarios="$SCEN" --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|Scenario)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"

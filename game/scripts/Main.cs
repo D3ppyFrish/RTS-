@@ -103,7 +103,8 @@ namespace Rts.Game;
 /// </summary>
 public partial class Main : Node3D
 {
-    private int WorldX = 512, WorldY = 64, WorldZ = 512;
+    private int WorldX = Rts.Sim.World.RegionGenerator.DefaultSize, WorldY = Rts.Sim.World.RegionGenerator.DefaultHeight,
+        WorldZ = Rts.Sim.World.RegionGenerator.DefaultSize;
 
     /// <summary>Most simulation ticks run in one frame; at 4x on a slow frame the game slows down instead.</summary>
     private const int MaxTicksPerFrame = 8;
@@ -748,7 +749,9 @@ public partial class Main : Node3D
     {
         if (_match == null) return $"screen=start {_startScreen?.Describe()}";
         string screen = _endPanel is { Visible: true } ? "end" : "match";
+        var lairs = _sim.Monsters.Lairs.GroupBy(l => l.Monster.Id).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key}:{g.Count()}");
         return $"tick={_sim.Tick} screen={screen} player={PlayerControl.LocalPlayer} result={Result()} " +
+               $"world={_sim.World.SizeX}x{_sim.World.SizeY}x{_sim.World.SizeZ} lair_kinds={string.Join(",", lairs)} " +
                $"replay={(_replayPath != null ? "saved" : "none")} terrain_tool={(PlayerControl.TerrainTool ? 1 : 0)} " +
                $"falling={_sim.Physics.Falling.Count} trees_falling={_sim.Physics.FallingTrees.Count} dust={_fallingRenderer.Effects} icons={_unitIcons.Shown} {_hud.AlertFeed.Describe()} {_control.Describe()}" +
                (_testPanel != null ? " " + _testPanel.Describe() : "");

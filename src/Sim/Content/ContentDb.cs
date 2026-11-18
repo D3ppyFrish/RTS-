@@ -41,8 +41,10 @@ public sealed class ContentDb
     /// <c>"start": false</c> (the healer, issue #42), which are only trained.
     /// </summary>
     public IReadOnlyList<UnitDef> StartUnits { get; internal set; } = Array.Empty<UnitDef>();
-    /// <summary>The monsters that keep lairs (<see cref="UnitDef.Lair"/>), in data order.</summary>
+    /// <summary>The monsters that keep a lair on the way from every start (<see cref="LairDef.AtStarts"/>), in data order.</summary>
     public IReadOnlyList<UnitDef> LairMonsters { get; internal set; } = Array.Empty<UnitDef>();
+    /// <summary>The monsters whose lairs are spread across the map (a lair with a <c>biome</c> and <c>count</c>), in data order.</summary>
+    public IReadOnlyList<UnitDef> WildMonsters { get; internal set; } = Array.Empty<UnitDef>();
     /// <summary>The monster that guards the map's dusk tree (a lair with <c>duskTree</c>), or null if none does.</summary>
     public UnitDef? DuskWarden { get; internal set; }
     public IReadOnlyList<BuildingDef> Buildings => _buildings;

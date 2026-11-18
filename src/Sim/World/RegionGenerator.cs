@@ -6,8 +6,8 @@ namespace Rts.Sim.World;
 /// Generates the slice's region from a seed, with integer maths only:
 /// ocean on the west and east edges with sandy coasts, a river running north to south through the
 /// middle (crossable at three shallow fords), rolling grassland with forests, a hill range with stone
-/// ridges in the north, a swamp in the south, one cavern with ore and crystal under the hills, and a few
-/// pools of lava up in the hills.
+/// ridges in the north, a swamp in the south with patches of poison bog, one cavern with ore and crystal under the
+/// hills, and a few pools of lava up in the hills.
 /// Each player starts on a flat clearing
 /// near their coast, with food, wood, stone and iron placed close by (mirrored, so the starts are balanced).
 ///
@@ -18,6 +18,12 @@ public static class RegionGenerator
 {
     /// <summary>Distance (blocks, horizontal) within which each start is guaranteed its basic resources.</summary>
     public const int StartResourceRadius = 40;
+
+    /// <summary>
+    /// The default map's width and depth in blocks (issue #45: half again as wide as the first slice's 512, so
+    /// 2.25 times the land), and its height. Features are laid out for 512 and scale with the size.
+    /// </summary>
+    public const int DefaultSize = 768, DefaultHeight = 64;
 
     public static RegionMap Generate(ulong seed, int sizeX, int sizeY, int sizeZ) =>
         new Builder(seed, new VoxelWorld(sizeX, sizeY, sizeZ)).Build();
@@ -172,6 +178,7 @@ public static class RegionGenerator
             Fill();
             CarveCavern();
             PlaceLava();
+            PlaceBogs();
             PlaceDuskTree();
             PlantTrees();
             PlaceStartResources();
@@ -404,6 +411,30 @@ public static class RegionGenerator
             }
             return true;
         }
+
+        // --- Poison bog ------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Patches of poison bog (<see cref="BlockType.Bog"/>, see <see cref="HazardSystem"/>) on the swamp's dry
+        /// mud, where a noise of its own runs high, and never near a start. Only the top block changes, so
+        /// nothing else on existing seeds moves (bar the swamp trees that would have grown on it).
+        /// </summary>
+        private void PlaceBogs()
+        {
+            int scale = Math.Max(3, Sx(9)), keepOff = StartResourceRadius + Sx(16);
+            for (int z = 0; z < _sz; z++)
+            for (int x = 0; x < _sx; x++)
+            {
+                if (_map.BiomeAt(x, z) != Biome.Swamp) continue;
+                int h = _height[Idx(x, z)];
+                if (h < _water || _w.Get(x, h, z) != BlockType.Mud || _w.Get(x, h + 1, z) != BlockType.Air) continue;
+                if (Noise.Value(x, z, scale, _seed + 40) <= BogNoise || NearStart(x, z, keepOff)) continue;
+                _w.Set(x, h, z, BlockType.Bog);
+            }
+        }
+
+        /// <summary>The bog noise (0 to 255) above which swamp mud is poison bog.</summary>
+        private const int BogNoise = 160;
 
         // --- Cavern ---------------------------------------------------------------------------------
 

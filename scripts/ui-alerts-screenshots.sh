@@ -52,7 +52,7 @@ shot $OUT/ui-alert-clicked.png
 "
 LOG="$OUT/ui-alerts.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
@@ -98,7 +98,7 @@ print
 "
 LOG="$OUT/ui-alerts-battle.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click in the battle"
 mapfile -t UI < <(grep '^UI ' "$LOG")

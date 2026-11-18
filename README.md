@@ -43,16 +43,20 @@ scripts/setup.sh --with-export-templates && scripts/export-windows.sh
 
 ### Maps
 
-`RegionGenerator` (src/Sim/World) builds the 512×64×512 slice region from a seed with integer maths:
+`RegionGenerator` (src/Sim/World) builds the region from a seed with integer maths, 768×64×768 by default
+(`RegionGenerator.DefaultSize`, issue #45; `--world=WxHxD` picks another size, and the features are laid out
+for 512 and scale with it):
 ocean and beaches on the west and east edges, a river running north–south that can be waded at three
 shallow fords (about a quarter, half and three quarters of the way down), grassland and forests,
-a hill range with stone ridges, a swamp, and a cavern with ore and crystal under the hills. Each
+a hill range with stone ridges and pools of lava, a swamp with patches of poison bog (see
+[Natural hazards](docs/rules.md#natural-hazards)), and a cavern with ore and crystal under the hills. Each
 player starts in a clearing near their coast with berry bushes, a grove, a stone outcrop and an iron
 outcrop mirrored around it. Each biome grows its own trees (`RegionGenerator.KindFor`): broad-leaved
 trees and birches in the grassland, those and pines in the forest, pines in the hills (plus the one dusk tree, see
 `docs/rules.md`), and willows and giant mushrooms in the swamp; the start grove has two birches and a pine.
 Every kind is its own trunk and leaf block (`BlockInfo.IsTrunk`, `BlockInfo.IsLeaves`). `RegionMap.Save`/`Load` read and write a run-length-encoded binary map,
-so handmade maps can be loaded with `--map=PATH`. `--focus=start0|start1|cavern|dusk|X,Z` points the camera; `--dusk-party=N` puts a party of yours near the dusk tree.
+so handmade maps can be loaded with `--map=PATH`. The `ui-*` screenshot scripts run on the 512 map
+(`--world=512x64x512`), which their coordinates were written for; `ui-wilds-screenshots.sh` looks at the default one. `--focus=start0|start1|cavern|dusk|X,Z` points the camera; `--dusk-party=N` puts a party of yours near the dusk tree.
 
 ### Units
 

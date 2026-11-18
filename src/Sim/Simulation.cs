@@ -56,6 +56,8 @@ public sealed class Simulation
     public PhysicsSystem Physics { get; }
     /// <summary>Blood on the ground: trails, stained fields and pools (see <see cref="BloodSystem"/>).</summary>
     public BloodSystem Blood { get; }
+    /// <summary>Natural hazards: poison bog and the heat by lava (see <see cref="HazardSystem"/>).</summary>
+    public HazardSystem Hazards { get; }
     /// <summary>The time of day, the weather and the light, with <see cref="DayNight"/> on.</summary>
     public Conditions Conditions { get; }
     /// <summary>Test mode's tools and cheats, with <see cref="TestMode"/> on (see <see cref="Sandbox.SandboxSystem"/>).</summary>
@@ -98,6 +100,7 @@ public sealed class Simulation
         Vision = new VisionSystem(this);
         Physics = new PhysicsSystem(this);
         Blood = new BloodSystem(this);
+        Hazards = new HazardSystem(this);
         Events = new EventLog(this);
         Conditions = new Conditions(this);
         Sandbox = new Sandbox.SandboxSystem(this);
@@ -253,15 +256,25 @@ public sealed class Simulation
     {
         var lairs = Monsters.PlaceAtStarts();
         DuskTree.Place();
+        _lairsSpawned = true;
         return lairs;
     }
 
     /// <summary>
     /// Match setup: a town for each city-state, about as far from every start area as from the others, each
     /// with a lair of its monster nearby (see <see cref="CityStateSystem.PlaceAll"/>). Call after spawning the
-    /// lairs.
+    /// lairs. When the lairs were spawned, the lairs spread across the map follow, away from the towns (see
+    /// <see cref="MonsterSystem.PlaceWild"/>).
     /// </summary>
-    public List<CityState> SpawnCities() => Cities.PlaceAll();
+    public List<CityState> SpawnCities()
+    {
+        var towns = Cities.PlaceAll();
+        if (_lairsSpawned) Monsters.PlaceWild();
+        return towns;
+    }
+
+    // SpawnLairs was called: SpawnCities then spreads the wild lairs (they keep away from the towns).
+    private bool _lairsSpawned;
 
     /// <summary>
     /// The match as it is played, when set: each scheduled command is added to this log on the tick it is
@@ -301,6 +314,7 @@ public sealed class Simulation
         Automation.Step();
         Economy.Step();
         Physics.Step();
+        Hazards.Step();
         Combat.Step();
         Blood.Step();
         Evolution.Step();

@@ -70,6 +70,9 @@ public static partial class Sculpted
         },
     };
 
+    /// <summary>Models drawn with another's sculpt, built once: the hills' stone giants (issue #45) are the golem.</summary>
+    public static readonly Dictionary<string, string> SameAs = new() { ["stone_giant"] = "golem" };
+
     // ---- Orcs ---------------------------------------------------------------------------------------
 
     /// <summary>Six sculpts for an orc's parts at a step, each big enough for its part with gear held out.</summary>

@@ -49,7 +49,7 @@ shot $OUT/ui-fog-contact.png
 "
 LOG="$OUT/ui-fog.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --menu --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --menu --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
@@ -79,7 +79,7 @@ shot $OUT/ui-fog-off.png
 "
 LOG="$OUT/ui-fog-off.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "${#UI[@]}" -eq 1 ] || fail "expected 1 UI line without fog of war, got ${#UI[@]}"

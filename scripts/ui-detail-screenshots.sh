@@ -10,7 +10,7 @@ mkdir -p "$OUT"
 cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
-run() { xvfb-run -a -s "-screen 0 1600x900x24" godot --path game --rendering-driver opengl3 -- "$@" 2>&1 \
+run() { xvfb-run -a -s "-screen 0 1600x900x24" godot --path game --rendering-driver opengl3 -- --world=512x64x512 "$@" 2>&1 \
   | grep -E "^(Saved|Screenshot|Input script|Keeps|Detailed)" | tee -a "$OUT/ui-detail.log"; }
 : > "$OUT/ui-detail.log"
 

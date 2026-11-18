@@ -345,6 +345,24 @@ public static class UnitModels
 
         // Monsters, and what taming them gives.
         "wolf" => new Builder().Wolf(Fur, PaleFur),
+        // A wild boar: the orcs' war boar, with a collar in its owner's colour once it is someone's.
+        "boar" => new Builder().WarBoar().Box(-2, 6, 4, 1, 7, 4, Team),
+        // A stone giant: a hunched hulk of rock half again as tall as a house's door, moss on its shoulders,
+        // glowing eyes and fists like boulders. The golem's sculpt (Detail/Sculpted) shows instead unless
+        // detailed units are off.
+        "stone_giant" => new Builder()
+            .Box(-7, 0, -3, -3, 14, 3, Rock).Box(2, 0, -3, 6, 14, 3, Rock)                      // legs
+            .Box(-8, 0, -3, -2, 2, 4, DarkRock).Box(1, 0, -3, 7, 2, 4, DarkRock)                // feet
+            .Box(-8, 14, -5, 7, 20, 5, Rock)                                                    // hips
+            .Box(-10, 21, -6, 9, 33, 7, Rock)                                                   // a barrel of a chest
+            .Box(-11, 30, -8, 10, 35, 3, DarkRock)                                              // hunched back
+            .Box(-7, 20, -6, 6, 21, 6, TeamDark)                                                // a sash, once it is someone's
+            .Box(-12, 34, -5, -6, 37, 3, Leaf).Box(5, 34, -5, 11, 37, 3, Leaf)                  // moss on the shoulders
+            .Box(-15, 18, -3, -11, 34, 3, Rock).Box(10, 18, -3, 14, 34, 3, Rock)                // arms
+            .Box(-16, 10, -4, -10, 17, 4, DarkRock).Box(9, 10, -4, 15, 17, 4, DarkRock)         // fists
+            .Box(-4, 33, 2, 3, 40, 9, Rock)                                                     // head, thrust forward
+            .Box(-4, 38, 9, 3, 39, 9, DarkRock)                                                 // brow
+            .Box(-3, 36, 10, -2, 36, 10, Fire).Box(1, 36, 10, 2, 36, 10, Fire),                 // eyes
         "wolf_rider" => new Builder().Wolf(DarkFur, Fur, big: true)
             .Box(-3, 6, -4, 2, 9, 1, TeamDark)                                           // saddle cloth down the flanks
             .Orc(lift: 4, legs: false)
