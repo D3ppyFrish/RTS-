@@ -169,8 +169,8 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>
-    /// The building's blocks standing on (x, y, z), now that it is empty, fall: the column of them above it
-    /// drops as one piece (see <see cref="World.PhysicsSystem.Release"/>), and lands as rubble.
+    /// The building's blocks standing on (x, y, z), now that it is empty, fall: the column of them above it,
+    /// up through its room to the roof over it, drops (see <see cref="World.PhysicsSystem.Release"/>), and lands as rubble.
     /// </summary>
     private void Fall(int x, int y, int z)
     {
@@ -178,9 +178,12 @@ public sealed partial class CombatSystem
         var b = Buildings.At(x, y + 1, z);
         if (b == null || b.Def.Walkable) return;
         _column.Clear();
+        int top = b.Y + b.Def.Height;
         for (int cy = y + 1; cy < World.SizeY; cy++)
         {
             var t = World.Get(x, cy, z);
+            // Up through the building's room (open air under its roof) to the roof over it.
+            if (t == BlockType.Air && cy < top) continue;
             if (!BlockInfo.IsBuilt(t) || t is BlockType.Road or BlockType.Farmland || Buildings.At(x, cy, z) != b) break;
             _column.Add((x, cy, z));
         }

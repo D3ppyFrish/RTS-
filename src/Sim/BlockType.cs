@@ -103,12 +103,17 @@ public enum BlockType : byte
     /// thaws back into water. Nothing digs it or falls with it.
     /// </summary>
     Ice,
+    /// <summary>
+    /// The floorboards inside a building, under its room (see <see cref="Economy.BuildingDef.Blocks"/>): a building
+    /// block nobody stands on, so units are never shut inside a building or step into it through a gap.
+    /// </summary>
+    Floor,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Ice;
+    public const BlockType Last = BlockType.Floor;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
@@ -118,11 +123,11 @@ public static class BlockInfo
 
     /// <summary>The dusk tree's wood: its trunk, roots and branches (not its leaves).</summary>
     public static bool IsDuskTree(BlockType t) => t is BlockType.DuskWood or BlockType.DuskBranch;
-    /// <summary>Solid ground nothing can stand on (lava).</summary>
-    public static bool CanStandOn(BlockType t) => IsSolid(t) && t != BlockType.Lava;
+    /// <summary>Solid ground something can stand on: not lava, nor a building's floor (see <see cref="BlockType.Floor"/>).</summary>
+    public static bool CanStandOn(BlockType t) => IsSolid(t) && t != BlockType.Lava && t != BlockType.Floor;
 
-    /// <summary>Blocks that buildings are made of (walls, roofs, doors, gates, stakes, fields and roads).</summary>
-    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle;
+    /// <summary>Blocks that buildings are made of (walls, floors, roofs, doors, gates, stakes, fields and roads).</summary>
+    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle or BlockType.Floor;
 
     /// <summary>
     /// Damage a building's block takes before it is knocked out (see <see cref="Units.CombatSystem"/>); 0 for
@@ -141,6 +146,7 @@ public static class BlockInfo
         BlockType.Palisade => 10,
         BlockType.Rampart => 25,
         BlockType.Trestle => 10,
+        BlockType.Floor => 6,
         _ => 0,
     };
 
@@ -173,7 +179,7 @@ public static class BlockInfo
         BlockType.Stone or BlockType.Crystal or BlockType.StoneBrick or BlockType.RoofTile or BlockType.Rampart => BlockType.StoneRubble,
         BlockType.IronOre => BlockType.OreRubble,
         BlockType.Coal => BlockType.CoalRubble,
-        BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Trestle => BlockType.WoodRubble,
+        BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Trestle or BlockType.Floor => BlockType.WoodRubble,
         _ when IsTrunk(t) => BlockType.WoodRubble,
         _ when IsRubble(t) => t,
         _ => BlockType.Rubble,

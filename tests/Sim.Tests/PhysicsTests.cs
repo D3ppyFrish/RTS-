@@ -318,6 +318,76 @@ public class PhysicsTests
         Assert.True(CountRubble(sim.World, 0, 0, 0, 63, 15, 63) > inside);
     }
 
+    [Fact]
+    public void MeleeUnitsThatBringAHouseDownAreNotHurtByItsRubble()
+    {
+        var w = TestWorlds.Flat(64, 16, 64, Ground);
+        var sim = TestWorlds.Sim(w);
+        var house = sim.Economy.PlaceFinished(0, sim.Content.Building("house"), 20, 20)!;
+        // Spearmen hard up against every side of it.
+        var ids = new System.Collections.Generic.List<int>();
+        for (int k = 0; k < house.Def.SizeX; k++)
+        {
+            ids.Add(sim.SpawnUnit(1, "spearman", 20 + k, 19));
+            ids.Add(sim.SpawnUnit(1, "spearman", 20 + k, 20 + house.Def.SizeZ));
+        }
+        for (int k = 0; k < house.Def.SizeZ; k++)
+        {
+            ids.Add(sim.SpawnUnit(1, "spearman", 19, 20 + k));
+            ids.Add(sim.SpawnUnit(1, "spearman", 20 + house.Def.SizeX, 20 + k));
+        }
+        int hp = sim.Units.Hp[sim.Units.IndexOf(ids[0])];
+        sim.Schedule(0, new AttackBuildingCommand(1, ids.ToArray(), house.Id));
+        RunUntil(sim, () => sim.Buildings.Get(house.Id) == null, 120 * Simulation.TicksPerSecond, "the house to fall");
+        RunUntil(sim, () => sim.Physics.Falling.Count == 0, 400, "the house to come down");
+        sim.Run(10);
+
+        foreach (int id in ids)
+        {
+            int i = sim.Units.IndexOf(id);
+            Assert.True(i >= 0, $"spearman {id} died");
+            Assert.Equal(hp, sim.Units.Hp[i]);
+        }
+    }
+
+    [Fact]
+    public void AFallingHouseCavesInOnItsOwnGround()
+    {
+        var sim = TestWorlds.Sim(TestWorlds.Flat(64, 16, 64, Ground));
+        var house = sim.Economy.PlaceFinished(0, sim.Content.Building("town_hall"), 20, 20)!;
+        sim.Physics.Crumble(house);
+        RunUntil(sim, () => sim.Physics.Falling.Count == 0, 400, "the hall to come down");
+
+        int all = CountRubble(sim.World, 0, 0, 0, 63, 15, 63);
+        int inside = CountRubble(sim.World, 20, 0, 20, house.MaxX, 15, house.MaxZ);
+        Assert.True(all > 0);
+        Assert.Equal(all, inside); // all of it on its own ground
+    }
+
+    [Fact]
+    public void HousesAreHollowWithAFloorNobodyStandsOn()
+    {
+        var sim = TestWorlds.Sim(TestWorlds.Flat(64, 16, 64, Ground));
+        var def = sim.Content.Building("house");
+        var house = sim.Economy.PlaceFinished(0, def, 20, 20)!;
+        int y0 = house.Y;
+        // Walls round the edge, floorboards inside, and a room above them right up under the roof.
+        Assert.Equal(BlockType.Floor, sim.World.Get(21, y0, 21));
+        for (int y = y0 + 1; y < y0 + def.WallHeight + 1; y++)
+            Assert.Equal(BlockType.Air, sim.World.Get(21, y, 21));
+        Assert.True(BlockInfo.IsBuilt(sim.World.Get(20, y0 + 1, 21)));
+        Assert.True(BlockInfo.IsBuilt(sim.World.Get(21, y0 + def.WallHeight + 1, 21))); // the roof's top closes it
+        Assert.Equal(-1, def.BlockAt(1, 1, 1));
+        // Nobody can stand in the room, so no unit is ever put in there.
+        Assert.False(Walk.CanStand(sim.World, 21, y0 + 1, 21));
+        Assert.Equal(-1, Walk.NearestStandLevel(sim.World, 21, 21, y0 + 1, 2));
+        // As hard to bring down as when it was solid: its blocks are tougher for the room inside.
+        int solid = def.SizeX * def.SizeZ * def.WallHeight * BlockInfo.Toughness(BlockType.Planks);
+        for (int k = 0; 2 * k < Math.Min(def.SizeX, def.SizeZ); k++) solid += (def.SizeX - 2 * k) * (def.SizeZ - 2 * k) * BlockInfo.Toughness(BlockType.Thatch);
+        solid += (BlockInfo.Toughness(BlockType.Door) - BlockInfo.Toughness(BlockType.Planks)) * 2;
+        Assert.InRange(def.Toughness, solid * 9 / 10, solid);
+    }
+
     /// <summary>A pond 6 x 6 and one deep (water at level 3) in flat ground.</summary>
     private static Simulation Pond()
     {

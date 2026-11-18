@@ -174,6 +174,14 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   attacker (a sapper knocks out the bottom one, so the whole column falls), and a building that has lost
   half of itself (by block toughness) collapses. Sappers deal full damage to buildings, everyone else a
   quarter.
+- **Hollow buildings** (houses, halls, barracks and every other roofed building; walls, gates and towers
+  stay solid): walls round the edge, a floor (`BlockType.Floor`, which nobody stands on, so no unit ends
+  up shut inside) and a stepped roof over a room that goes up under it. Their blocks are tougher by what
+  is missing inside, so a hollow building takes as much to bring down as a solid one did. A building that
+  collapses **caves in**: its chunks are pulled toward its middle, and its rubble only slides inward off
+  the heap, so it all comes down on its own ground. Falling pieces crush whoever they land straight on;
+  rubble sliding off a heap only buries those beside it, and they climb out, so units hacking at a
+  building are not killed by it coming down.
 - **Tunnels** (`TunnelCommand`): sappers dig toward a block column by column, a level up or down each
   column, twice as fast as a worker digs, and walk in. They stop at bedrock, water, buildings and fields.
   Digging just under a building takes away what holds it up, and that part of it falls in.

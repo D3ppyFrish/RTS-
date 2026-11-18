@@ -167,6 +167,9 @@ public sealed class BuildingDef
 
     private TemplateBlock[]? _blocks;
     private int[]? _toughness;
+    // A hollow building's blocks are made tougher by solid / hollow (the toughness of the solid building it would
+    // be over that of its blocks), so hollowing it out leaves it as hard to bring down as before. 1 / 1 otherwise.
+    private int _solid = 1, _hollow = 1;
     private int[]? _indexAt;
 
     /// <summary>The building's blocks in the order they are built: bottom layer first.</summary>
@@ -177,9 +180,14 @@ public sealed class BuildingDef
 
     /// <summary>
     /// The damage block k of <see cref="Blocks"/> takes before it is knocked out: its material's toughness
-    /// (see <see cref="BlockInfo.Toughness"/>) times <see cref="Sturdy"/>.
+    /// (see <see cref="BlockInfo.Toughness"/>) times <see cref="Sturdy"/>. A hollow building's blocks are tougher
+    /// in proportion to what it lacks inside, so all of it together is as tough as it would be solid.
     /// </summary>
-    public int BlockToughness(int k) => BlockInfo.Toughness(Blocks[k].Block) * Sturdy;
+    public int BlockToughness(int k)
+    {
+        var block = Blocks[k].Block; // builds the template, and with it the hollow building's scale
+        return BlockInfo.Toughness(block) * Sturdy * _solid / _hollow;
+    }
 
     /// <summary>The toughness of its first <paramref name="placed"/> blocks in build order.</summary>
     public int ToughnessOf(int placed)
@@ -265,24 +273,41 @@ public sealed class BuildingDef
             return list.ToArray();
         }
 
+        // Hollow: a floor, walls round the edge and a roof over a room inside, so it comes apart like a
+        // building, not a solid lump. The floor inside is BlockType.Floor, which nobody stands on, so units
+        // never end up shut in the room (or step into it through a gap knocked in a wall).
         int doorX = SizeX / 2;
+        int solid = 0; // the toughness it would have solid
         for (int y = 0; y < WallHeight; y++)
         for (int z = 0; z < SizeZ; z++)
         for (int x = 0; x < SizeX; x++)
         {
+            bool edge = x == 0 || z == 0 || x == SizeX - 1 || z == SizeZ - 1;
             var block = y == 0 && Footing != BlockType.Air ? Footing : Wall;
             if (z == SizeZ - 1 && x == doorX && y < 2) block = BlockType.Door;
-            list.Add(new TemplateBlock(x, y, z, block));
+            solid += BlockInfo.Toughness(block);
+            if (!edge && y > 0) continue;
+            list.Add(new TemplateBlock(x, y, z, edge ? block : BlockType.Floor));
         }
-        // A stepped roof: each layer one block in from the last.
+        // A stepped roof: each layer one block in from the last. Each layer is only the ring the next one
+        // does not cover, and the top layer is whole, so the room goes up under the roof.
         int top = WallHeight;
         for (int k = 0; k <= SizeX - 1 - k && k <= SizeZ - 1 - k; k++, top++)
-        for (int z = k; z <= SizeZ - 1 - k; z++)
-        for (int x = k; x <= SizeX - 1 - k; x++)
         {
-            bool chimney = Chimney && x == SizeX - 1 && z == 0;
-            list.Add(new TemplateBlock(x, top, z, chimney ? BlockType.StoneBrick : Roof));
+            bool last = k + 1 > SizeX - 2 - k || k + 1 > SizeZ - 2 - k;
+            for (int z = k; z <= SizeZ - 1 - k; z++)
+            for (int x = k; x <= SizeX - 1 - k; x++)
+            {
+                bool chimney = Chimney && x == SizeX - 1 && z == 0;
+                var block = chimney ? BlockType.StoneBrick : Roof;
+                solid += BlockInfo.Toughness(block);
+                if (!last && x > k && x < SizeX - 1 - k && z > k && z < SizeZ - 1 - k) continue;
+                list.Add(new TemplateBlock(x, top, z, block));
+            }
         }
+        int hollow = 0;
+        foreach (var t in list) hollow += BlockInfo.Toughness(t.Block);
+        if (hollow > 0 && solid > hollow) (_solid, _hollow) = (solid, hollow);
         if (Chimney)
             for (int y = WallHeight + 1; y < top + 1; y++)
                 list.Add(new TemplateBlock(SizeX - 1, y, 0, BlockType.StoneBrick));
