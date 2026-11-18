@@ -455,8 +455,8 @@ public class CityStateTests
     /// <summary>
     /// Every match has a goblin town about as far from one start as the other: a levelled square with a hut at
     /// each corner, its door toward the open market, and a wolf lair just beyond it. No building may go on it.
-    /// The ogres' hold (issue #46) is placed the same way, but well away from the goblins, with a boar lair
-    /// beyond it.
+    /// The ogres' hold (issue #46) is placed the same way, but well away from the goblins, with a stone giant's
+    /// lair beyond it.
     /// </summary>
     [Fact]
     public void EveryMatchHasATownForEachCityStateWithItsLair()
@@ -515,18 +515,23 @@ public class CityStateTests
         Assert.Equal(PlaceResult.Crowded, sim.Economy.CanPlace(0, house, town.X + r + 1, town.Z, out _, checkPlayer: false));
         Assert.False(sim.Cities.SiteFits(town.X, town.Z));
 
-        // The ogres' hold: out from the starts like the goblins, but well apart from them, its idol on the market,
-        // four guards and a boar lair just beyond it.
+        // The ogres' hold: fair to both starts too, but well apart from the goblins and further out, its idol on the market,
+        // four guards and a stone giant's lair just beyond it.
         var hold = towns[1];
         var o = sim.Map.Starts.Select(s => IntMath.Distance(s.X, s.Z, hold.X, hold.Z)).ToArray();
-        Assert.All(o, d => Assert.InRange(d, 150, 260)); // about as far out as the goblins, where the ground allows
+        Assert.InRange(Math.Abs(o[0] - o[1]), 0, 12);
+        Assert.All(o, d => Assert.True(d >= 144, $"the hold is {d} blocks from a start")); // never close to a start
         Assert.True(IntMath.Distance(town.X, town.Z, hold.X, hold.Z) > 120, $"the towns are {IntMath.Distance(town.X, town.Z, hold.X, hold.Z)} blocks apart");
         Assert.Equal("ogre_idol", sim.Cities.Totem(hold)!.Def.Id);
+        // Neither town is near the dusk tree's warden.
+        var warden = sim.Monsters.Lairs.Single(l => l.Monster.Lair!.DuskTree);
+        Assert.All(towns, t => Assert.True(IntMath.Distance(t.X, t.Z, warden.X, warden.Z) >= CityStateSystem.LairNear * 3 / 2,
+            $"{t.Def.Id} at {t.X},{t.Z} is near the dusk tree at {warden.X},{warden.Z}; hold at {hold.X},{hold.Z}"));
         Assert.Equal(4, hold.Guards.Count());
         var den = sim.Monsters.GetLair(hold.LairId);
         Assert.NotNull(den);
         Assert.Same(den, sim.Monsters.Lairs[4]);
-        Assert.Equal("boar", den!.Monster.Id);
+        Assert.Equal("stone_giant", den!.Monster.Id);
         Assert.InRange(IntMath.Distance(hold.X, hold.Z, den.X, den.Z), CityStateSystem.LairNear, CityStateSystem.LairFar);
     }
 
@@ -643,7 +648,7 @@ public class CityStateTests
         Assert.Equal((Good.Food, Good.Stone), (ogres.Buys, ogres.Sells));
         Assert.Equal(new[] { "ogre_brute", "ogre_hurler" }, ogres.Mercenaries.Select(u => u.Id));
         Assert.Equal((3, 60 * Tps), (ogres.Pool, ogres.RefillTicks));
-        Assert.Same(db.Unit("boar"), ogres.Lair);
+        Assert.Same(db.Unit("stone_giant"), ogres.Lair);
         Assert.Equal((BlockType.StoneBrick, BlockType.RoofTile), (ogres.Wall, ogres.Roof));
         // Big, slow and costly, and they heal even in a fight.
         var spearman = db.Unit("spearman");

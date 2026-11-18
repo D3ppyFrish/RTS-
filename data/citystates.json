@@ -37,6 +37,6 @@
     "trade": { "buys": "food", "load": 20, "sells": "stone", "price": 10, "holderBonus": 50 },
     "mercenaries": { "pool": 3, "refill": 60 },
     "heal": { "range": 6 },
-    "lair": "boar",
+    "lair": "stone_giant",
     "wall": "stone_brick", "roof": "roof_tile" }
 ]

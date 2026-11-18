@@ -18,7 +18,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # 84..90 x 253..259 with the starting units in rows just south of it, and the wolf lair 40 blocks east
 # (den at 127,256), which a lone caravan would not get past. --goods gives enough for the hires and the
 # caravan; --houses makes room for them behind the hall (the start has more people than its hall houses).
-# The ogres' hold has its market at 305,372.
+# The ogres' hold has its market at 261,456.
 STEPS="
 wait 20
 clickui city_goblins
@@ -82,10 +82,10 @@ shot $OUT/ui-caravan-trade.png
 clickui city_ogres
 wait 5
 print
-camera 305,372 20 40 26
+camera 261,456 20 40 26
 wait 5
 shot $OUT/ui-ogres.png
-camera 306,373 -30 40 11
+camera 262,457 -30 40 11
 wait 5
 shot $OUT/ui-ogres-close.png
 "

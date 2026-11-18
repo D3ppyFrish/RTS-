@@ -222,7 +222,7 @@ public sealed class CityStateSystem
         var scored = Scored(cx, cz, out int want);
         foreach (var def in defs)
         {
-            foreach (var (x, z) in Spread(scored, want))
+            foreach (var (x, z) in Spread(scored, want, cx, cz))
             {
                 if (!SiteFits(x, z)) continue;
                 var town = Place(def, x, z)!;
@@ -237,21 +237,23 @@ public sealed class CityStateSystem
     /// <summary>
     /// Columns a town could go at, every fourth column out from (cx, cz), each scored (lower is better) by how
     /// much further it is from the furthest start than from the nearest, counted four times, plus how far off
-    /// the wanted distance from (cx, cz) it is (<paramref name="want"/>, about 3/16 of the map's width).
+    /// the wanted distance from (cx, cz) it is (<paramref name="want"/>, about 3/16 of the map's width). Sites
+    /// from half to two and a half times that distance out are scored; each also carries how far it is from
+    /// the nearest start.
     /// </summary>
-    private List<(long Score, int X, int Z)> Scored(int cx, int cz, out int want)
+    private List<(long Score, int X, int Z, int Near)> Scored(int cx, int cz, out int want)
     {
         var w = World;
         var starts = _sim.Map.Starts;
         want = Math.Max(TownRadius + 1, Math.Min(w.SizeX, w.SizeZ) * 3 / 16);
         int edge = TownMargin + TownRadius;
-        var scored = new List<(long Score, int X, int Z)>();
+        var scored = new List<(long Score, int X, int Z, int Near)>();
         for (int z = cz - (cz - edge) / 4 * 4; z < w.SizeZ - edge; z += 4)
         for (int x = cx - (cx - edge) / 4 * 4; x < w.SizeX - edge; x += 4)
         {
             if (x < edge || z < edge) continue;
             int r = IntMath.Distance(cx, cz, x, z);
-            if (r < want / 2 || r > want * 3 / 2) continue;
+            if (r < want / 2 || r > want * 5 / 2) continue;
             int near = int.MaxValue, far = 0;
             foreach (var s in starts)
             {
@@ -260,7 +262,7 @@ public sealed class CityStateSystem
                 far = Math.Max(far, d);
             }
             int unfair = starts.Count > 1 ? far - near : 0;
-            scored.Add((4L * unfair + Math.Abs(r - want), x, z));
+            scored.Add((4L * unfair + Math.Abs(r - want), x, z, near));
         }
         return scored;
     }
@@ -268,13 +270,17 @@ public sealed class CityStateSystem
     /// <summary>
     /// The scored sites best first for the next town: each also counts how much nearer it is than one and a
     /// half times <paramref name="want"/> to the nearest town already placed, so the towns spread round the middle
-    /// rather than bunch (the first town is not moved by this); ties to the lower z, then x.
+    /// rather than bunch. The first town is looked for at most one and a half times <paramref name="want"/>
+    /// from (cx, cz) (the distance in <see cref="Scored"/>); later ones further out too, as the fair ground
+    /// nearer the middle may be taken, but never nearer any start than one and a half times
+    /// <paramref name="want"/>. Ties to the lower z, then x.
     /// </summary>
-    private List<(int X, int Z)> Spread(List<(long Score, int X, int Z)> scored, int want)
+    private List<(int X, int Z)> Spread(List<(long Score, int X, int Z, int Near)> scored, int want, int cx, int cz)
     {
         var ranked = new List<(long Score, int X, int Z)>(scored.Count);
-        foreach (var (score, x, z) in scored)
+        foreach (var (score, x, z, near) in scored)
         {
+            if (_towns.Count == 0 ? IntMath.Distance(cx, cz, x, z) > want * 3 / 2 : near < want * 3 / 2) continue;
             int nearest = int.MaxValue;
             foreach (var town in _towns) nearest = Math.Min(nearest, IntMath.Distance(town.X, town.Z, x, z));
             long crowd = nearest == int.MaxValue ? 0 : Math.Max(0, want * 3 / 2 - nearest);
@@ -296,7 +302,7 @@ public sealed class CityStateSystem
     /// True if a town can have its market at column (x, z): the square is well inside the map, its ground is
     /// within <see cref="TownSlope"/> levels of the market's and not under water, no tree stands in it or
     /// within two columns of it, it is <see cref="TownGap"/> columns from buildings and other towns, and no
-    /// den is within <see cref="LairNear"/> blocks of the market.
+    /// den is within <see cref="LairNear"/> blocks of the market (the dusk tree's warden half as far again).
     /// </summary>
     public bool SiteFits(int x, int z)
     {
@@ -314,7 +320,11 @@ public sealed class CityStateSystem
         foreach (var town in _towns)
             if (Math.Max(Math.Abs(town.X - x), Math.Abs(town.Z - z)) - 2 * r < TownGap) return false;
         foreach (var lair in _sim.Monsters.Lairs)
-            if (IntMath.Distance(x, z, lair.X, lair.Z) < LairNear) return false;
+        {
+            // The dusk tree's warden is kept half as far again, so the town's guards and the tree's fights stay apart.
+            int keep = lair.Monster.Lair?.DuskTree == true ? LairNear * 3 / 2 : LairNear;
+            if (IntMath.Distance(x, z, lair.X, lair.Z) < keep) return false;
+        }
         for (int cz = z - r - 2; cz <= z + r + 2; cz++)
         for (int cx = x - r - 2; cx <= x + r + 2; cx++)
         {

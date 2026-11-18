@@ -556,7 +556,9 @@ holds for both, with the goblins' numbers unless the ogres' section says otherwi
   any others. Its own wolf lair lies 24 to 36 blocks further out, so the start areas reach the town
   before its lair. Each further town is placed the same way, but also kept about one and a half times
   that distance (144 blocks on a 512 map) from the towns placed before it, so the towns spread round the
-  middle; where the ground does not allow a fair spot it may lie somewhat nearer one start.
+  middle, and never nearer a start than that; it may lie up to two and a half times that distance from the
+  middle of the starts, as the fair ground nearer in may be taken, and where the ground allows no fair spot
+  it lies somewhat nearer one start. No town goes within 36 blocks of the dusk tree's warden.
 - **The totem** (`goblin_totem` in `buildings.json`): attacked like any building (right-click it with
   soldiers). Whoever breaks it holds the town, and it stands again 5 seconds later in their colour.
   Breaking a held town's totem takes the town over. Your own units do not attack your totem.
@@ -594,7 +596,8 @@ holds for both, with the goblins' numbers unless the ogres' section says otherwi
 - **The ogres' hold** (issue #46): a second city-state, placed after the goblins and away from them. Its
   huts are stone with red tile roofs, and its totem is an ogre idol (`ogre_idol`: a stone pillar 8 high on
   a 3×3 plinth, carved with a horned ogre face, painted in the holder's colour). It is guarded by two ogre
-  brutes and two ogre hurlers (a fallen one is replaced every 60 seconds), and a boar lair lies beyond it.
+  brutes and two ogre hurlers (a fallen one is replaced every 60 seconds), and a stone giant's lair lies
+  beyond it.
   Its holder gets 30 stone every minute as tribute, caravans bring back stone there (10 per 100 blocks of
   route) instead of iron, and its holder hires ogres, at most 3 ready at a time and one more every 60
   seconds:
