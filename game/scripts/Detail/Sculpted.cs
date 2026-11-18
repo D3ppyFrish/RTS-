@@ -11,7 +11,7 @@ namespace Rts.Game.Detail;
 /// with an orc on its back. Sizes are in sculpt units (a thirty-second of a block, 1.56 cm): an orc stands
 /// about 62 units (a metre) tall, a wolf 36 at the ears, the golem 200 (3.1 m).
 /// </summary>
-public static class Sculpted
+public static partial class Sculpted
 {
     private static FineMaterial M(float r, float g, float b, Surface s = Surface.Plain) => new(new Color(r, g, b), s);
     private static Vector3 V(float x, float y, float z) => new(x, y, z);
@@ -60,6 +60,7 @@ public static class Sculpted
             Roles = RiderRoles, Pivots = RiderPivots(), Build = WolfRider,
             StrideBlocks = 1.4f, LegSwing = 0.55f, ArmSwing = 0.1f, Lean = 0.3f, Bob = 1.3f,
         },
+        ["knight"] = ImportedRig("res://models/knight.vox.gz"), // made with Meshy AI (Sculpted.Imported)
         ["golem"] = new RigDef
         {
             Roles = new[] { Role.LegA, Role.LegB, Role.Body, Role.Head, Role.ArmA, Role.ArmB, Role.Fixed },

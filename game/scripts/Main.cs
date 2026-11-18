@@ -831,6 +831,8 @@ public partial class Main : Node3D
         Put("wolf", -5.2f, 2, 35);
         Put("wolf", 5.6f, 5.4f, -50);
         Put("wolf_rider", 0.4f, 6.4f, 5);
+        Put("knight", -1.6f, 8.6f, 0);
+        Put("knight", 1.8f, 8.4f, -35);
         GD.Print($"Showcase at {cx},{cz}");
     }
 
