@@ -16,11 +16,11 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 fail() { echo "UI alerts test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it and open
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it and open
 # ground for a house south-east of it (as in ui-economy-screenshots.sh).
 STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 print
 clickui idle_button
@@ -30,7 +30,7 @@ clickui idle_button
 wait 3
 print
 shot $OUT/ui-idle-worker.png
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 3
 down 520,260
 mouse 800,450
@@ -38,12 +38,12 @@ mouse 1080,640
 up 1080,640
 wait 2
 key h
-clickworld 96,g,266
+clickworld 140,g,394
 key plus*2
 ticks 500
 print
 shot $OUT/ui-alert-house.png
-camera 200,150
+camera 244,278
 wait 3
 clickui alert_0
 wait 3
@@ -52,7 +52,7 @@ shot $OUT/ui-alert-clicked.png
 "
 LOG="$OUT/ui-alerts.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
@@ -62,7 +62,7 @@ idle="$(field "${UI[0]}" idle)"
 [ "$idle" -ge 2 ] && [ "$(field "${UI[0]}" alerts)" -eq 0 ] || fail "the starting workers are not counted idle, or alerts show at the start: ${UI[0]}"
 [ "$(field "${UI[1]}" selected)" -eq 1 ] && [ "$(field "${UI[1]}" unit)" = worker ] || fail "the idle workers button did not select a worker: ${UI[1]}"
 cam="$(field "${UI[1]}" camera)"
-[ "${cam%,*}" -ge 75 ] && [ "${cam%,*}" -le 100 ] && [ "${cam#*,}" -ge 255 ] && [ "${cam#*,}" -le 275 ] \
+[ "${cam%,*}" -ge 119 ] && [ "${cam%,*}" -le 144 ] && [ "${cam#*,}" -ge 383 ] && [ "${cam#*,}" -le 403 ] \
   || fail "the camera is not on the idle worker: ${UI[1]}"
 [ "$(field "${UI[2]}" selected)" -eq 1 ] && [ "$(field "${UI[2]}" unit)" = worker ] \
   && [ "$(field "${UI[2]}" first_id)" -ne "$(field "${UI[1]}" first_id)" ] || fail "a second click did not select the next idle worker: ${UI[2]}"
@@ -70,27 +70,27 @@ cam="$(field "${UI[1]}" camera)"
 [[ ",$(field "${UI[3]}" alert_kinds)," == *,BuildingFinished,* ]] || fail "no alert for the finished house: ${UI[3]}"
 [ "$(field "${UI[3]}" alert0)" = BuildingFinished ] || fail "the newest alert is not the finished house: ${UI[3]}"
 cam="$(field "${UI[4]}" camera)"
-# The camera was far off (200,150); the house is a few columns from the town hall (84..90 x 253..259).
-[ "${cam%,*}" -ge 75 ] && [ "${cam%,*}" -le 105 ] && [ "${cam#*,}" -ge 250 ] && [ "${cam#*,}" -le 285 ] \
+# The camera was far off (200,150); the house is a few columns from the town hall (128..134 x 381..387).
+[ "${cam%,*}" -ge 119 ] && [ "${cam%,*}" -le 149 ] && [ "${cam#*,}" -ge 378 ] && [ "${cam#*,}" -le 413 ] \
   || fail "clicking the alert did not move the camera to the house: ${UI[4]}"
 
 # A battle at the map centre: your army attack-moves east into the enemy's.
 STEPS="
 wait 20
-camera 248,218 0 55 22
+camera 376,360 0 55 22
 wait 5
 print
 key f2
 wait 2
 print
 shot $OUT/ui-army-selected.png
-dragworld 236,g,208 245,g,229
+dragworld 364,g,350 373,g,371
 wait 2
-clickworld 262,g,222 right ctrl
+clickworld 390,g,364 right ctrl
 ticks 120
 print
 shot $OUT/ui-alert-attack.png
-camera 100,100
+camera 228,242
 wait 3
 clickui alert_0
 wait 3
@@ -98,7 +98,7 @@ print
 "
 LOG="$OUT/ui-alerts-battle.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --seed=1234 --focus=376,360 --battle=16 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click in the battle"
 mapfile -t UI < <(grep '^UI ' "$LOG")
@@ -112,7 +112,7 @@ UI=("${UI[0]}" "${UI[@]:2}")
 # Under attack alerts for the one fight do not pile up.
 [ "$(field "${UI[1]}" alerts)" -le 2 ] || fail "under attack alerts repeat for the same fight: ${UI[1]}"
 cam="$(field "${UI[2]}" camera)"
-[ "${cam%,*}" -ge 225 ] && [ "${cam%,*}" -le 270 ] && [ "${cam#*,}" -ge 200 ] && [ "${cam#*,}" -le 240 ] \
+[ "${cam%,*}" -ge 353 ] && [ "${cam%,*}" -le 398 ] && [ "${cam#*,}" -ge 342 ] && [ "${cam#*,}" -le 382 ] \
   || fail "clicking the alert did not move the camera to the fight: ${UI[2]}"
 [ "$(cat "$OUT"/ui-alerts.log "$OUT"/ui-alerts-battle.log | grep -c '^Saved screenshot')" -eq 5 ] || fail "missing screenshots"
 echo "UI alerts screenshot test OK: $OUT"

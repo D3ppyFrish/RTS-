@@ -10,16 +10,16 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, map centre: open ground at levels 21 and 22. With --battle=16 your army stands in two ranks
-# at x 241..242, z 211..225, the enemy's at x 254..255 (they stand their ground until something comes near).
+# Seed 1234, map centre: open ground at levels 20 to 22. With --battle=16 your army stands in two ranks
+# at x 369..370, z 353..367, the enemy's at x 382..383 (they stand their ground until something comes near).
 STEPS="
 wait 20
-camera 248,218 0 55 22
+camera 376,360 0 55 22
 wait 5
-dragworld 236,g,208 245,g,229
+dragworld 364,g,350 373,g,371
 wait 2
 print
-clickworld 234,g,228 right alt
+clickworld 362,g,370 right alt
 ticks 30
 print
 shot $OUT/ui-patrol-out.png
@@ -29,7 +29,7 @@ shot $OUT/ui-patrol-later.png
 "
 LOG="$OUT/ui-patrol.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --focus=376,360 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI patrol test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

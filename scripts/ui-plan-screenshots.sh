@@ -12,13 +12,13 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259 holding 150 wood and 50 stone, the starting units in
-# rows just south of it; open ground for houses at 94..97 x 264..267 and 80..83 x 245..248, and for a town
-# hall at 94..100 x 245..251.
+# Seed 1234, west start: town hall at 128..134 x 381..387 holding 150 wood and 50 stone, the starting units in
+# rows just south of it; open ground for houses at 138..141 x 392..395 and 124..127 x 373..376, and for a town
+# hall at 138..144 x 373..379.
 # The first, smaller trees (--trees=1): the steps click at places the bigger trees now stand on.
 STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
@@ -27,41 +27,41 @@ up 1080,640
 wait 2
 key tab
 key h
-mouseworld 96,g,266
+mouseworld 140,g,394
 wait 3
 print
 shot $OUT/ui-plan-cursor.png
-clickworld 96,g,266
+clickworld 140,g,394
 ticks 4
 print
 key n
-mouseworld 97,g,248
+mouseworld 141,g,376
 wait 2
-clickworld 97,g,248
+clickworld 141,g,376
 ticks 4
 print
 key tab
 key h
-mouseworld 82,g,247
+mouseworld 126,g,375
 wait 2
-clickworld 82,g,247
+clickworld 126,g,375
 ticks 4
 print
 ticks 50
-camera 85,253 25 45 17
+camera 129,381 25 45 17
 wait 3
 shot $OUT/ui-plan-colours.png
-camera 82,247 30 45 11
+camera 126,375 30 45 11
 wait 2
 shot $OUT/ui-plan-site.png
-camera 89,256 20 45 22
+camera 133,384 20 45 22
 key escape
-clickworld 96,g,266 right
+clickworld 140,g,394 right
 ticks 4
 print
 wait 3
 shot $OUT/ui-plan-started.png
-clickworld 97,g,248
+clickworld 141,g,376
 wait 3
 print
 shot $OUT/ui-plan-selected.png
@@ -71,7 +71,7 @@ print
 "
 LOG="$OUT/ui-plan.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --trees=1 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --trees=1 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI plan test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

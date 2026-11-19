@@ -11,29 +11,29 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, map centre: open ground at levels 21 and 22 (see ui-combat-screenshots.sh). With --battle=16
-# your army stands at x 241..242, z 211..225 and the enemy's at x 254..255.
+# Seed 1234, map centre: open ground at levels 20 to 22 (see ui-combat-screenshots.sh). With --battle=16
+# your army stands at x 369..370, z 353..367 and the enemy's at x 382..383.
 STEPS="
 wait 20
-camera 248,218 0 55 22
+camera 376,360 0 55 22
 wait 5
-dragworld 236,g,208 245,g,229
+dragworld 364,g,350 373,g,371
 wait 2
-clickworld 262,g,218 right ctrl
+clickworld 390,g,360 right ctrl
 ticks 120
-camera 249,218 20 40 12
+camera 377,360 20 40 12
 wait 3
 print
 shot $OUT/ui-blood-fight.png
 ticks 400
-camera 249,218 20 55 18
+camera 377,360 20 55 18
 wait 3
 print
 shot $OUT/ui-blood-field.png
 "
 LOG="$OUT/ui-blood.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --focus=376,360 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI blood test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

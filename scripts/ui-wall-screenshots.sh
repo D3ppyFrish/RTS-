@@ -17,11 +17,11 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it, and open
-# ground at 92..103 x 262..269.
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it, and open
+# ground at 136..147 x 390..397.
 STEPS="
 wait 20
-camera 97,264 30 50 20
+camera 141,392 30 50 20
 wait 5
 down 520,260
 mouse 800,450
@@ -30,16 +30,16 @@ up 1080,640
 wait 2
 print
 key o
-mouseworld 97,g,266
+mouseworld 141,g,394
 wait 2
-clickworld 97,g,266
+clickworld 141,g,394
 wait 2
 print
 key y
 wait 2
-mouseworld 92,g,266
+mouseworld 136,g,394
 down here
-mouseworld 103,g,266
+mouseworld 147,g,394
 wait 3
 print
 shot $OUT/ui-wall-drag.png
@@ -51,7 +51,7 @@ ticks 200
 wait 5
 shot $OUT/ui-wall-building.png
 ticks 1600
-camera 97,262 20 40 16
+camera 141,390 20 40 16
 wait 5
 print
 shot $OUT/ui-wall-done.png
@@ -60,16 +60,16 @@ wait 3
 clickui tech_tools
 mouse 1500,820
 key k
-clickworld 93,g,266
+clickworld 137,g,394
 wait 3
 print
 shot $OUT/ui-wall-upgrade-button.png
 clickui wall_upgrade
 ticks 2
 print
-dragworld 84,g,258 104,g,270
+dragworld 128,g,386 148,g,398
 wait 2
-clickworld 93,g,266 right
+clickworld 137,g,394 right
 ticks 1300
 key k
 wait 3
@@ -77,41 +77,41 @@ clickui tech_masonry
 mouse 1500,820
 key k
 print
-clickworld 100,g,266 right
+clickworld 144,g,394 right
 ticks 400
 wait 5
 print
 shot $OUT/ui-wall-posted.png
 ticks 400
-clickworld 93,g,266
+clickworld 137,g,394
 wait 3
 clickui wall_upgrade
 ticks 2
 print
-dragworld 84,g,258 104,g,270
+dragworld 128,g,386 148,g,398
 wait 2
-clickworld 93,g,266 right
+clickworld 137,g,394 right
 ticks 3600
 wait 5
 print
 shot $OUT/ui-wall-stone.png
-camera 98,267 30 45 22
+camera 142,395 30 45 22
 wait 5
 key backslash
-mouseworld 102,g,267
+mouseworld 146,g,395
 wait 3
 print
 shot $OUT/ui-tower-snap.png
-clickworld 102,g,267
+clickworld 146,g,395
 ticks 2
 print
 ticks 1800
 print
 key slash
-mouseworld 95,g,273
+mouseworld 139,g,401
 wait 3
 print
-clickworld 95,g,273
+clickworld 139,g,401
 ticks 2
 print
 ticks 200
@@ -121,16 +121,16 @@ ticks 800
 print
 drag 360,100 1450,780
 wait 2
-clickworld 102,g,266 right
+clickworld 146,g,394 right
 ticks 800
-clickworld 102,g,266
+clickworld 146,g,394
 wait 5
 print
 shot $OUT/ui-tower-posted.png
 "
 LOG="$OUT/ui-wall.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --goods=500 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --goods=500 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI wall test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

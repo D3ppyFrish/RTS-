@@ -12,12 +12,12 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, the 24 starting units (four of each of the six
-# trained types, in turn: worker, spearman, archer, rider, sapper, mage) in rows from 82,260, so there is
-# a spearman at 83,260.
+# Seed 1234, west start: town hall at 128..134 x 381..387, the 24 starting units (four of each of the six
+# trained types, in turn: worker, spearman, archer, rider, sapper, mage) in rows from 126,388, so there is
+# a spearman at 127,388.
 STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
@@ -43,16 +43,16 @@ clickui evolve_seer
 ticks 2
 print
 shot $OUT/ui-evolved.png
-camera 86,261 20 40 9
+camera 130,389 20 40 9
 wait 5
-clickworld 83,g+1,260
+clickworld 127,g+1,388
 wait 2
 print
 shot $OUT/ui-forms.png
 "
 LOG="$OUT/ui-evolution.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --xp=150 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --xp=150 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI evolution test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

@@ -12,15 +12,15 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it. --goods=600
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it. --goods=600
 # pays for the barracks, the towers and the soldiers without waiting on the gatherers. The towers get 6000 ticks
 # in two steps: one step gives up after 600 frames (about 4800 ticks at 4x), and the fourth tower can finish just
 # after that (it did once the map had lairs spread across it).
 STEPS="
 wait 20
-camera 87,256 46 55 34
+camera 131,384 46 55 34
 wait 5
-clickworld 87,g,256
+clickworld 131,g,384
 wait 3
 clickui governor_defence
 mouse 800,200
@@ -39,7 +39,7 @@ key f2
 wait 2
 key shift+v
 ticks 240
-clickworld 87,g,256
+clickworld 131,g,384
 wait 3
 mouse 800,200
 wait 2
@@ -51,7 +51,7 @@ print
 "
 LOG="$OUT/ui-governor.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --goods=600 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --goods=600 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI governor test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

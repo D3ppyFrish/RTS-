@@ -12,13 +12,13 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it, open
-# ground for a storehouse to the south-east at 96..100 x 266..270 (its roof is at 1100,600 on screen from this
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it, open
+# ground for a storehouse to the south-east at 140..144 x 394..398 (its roof is at 1100,600 on screen from this
 # camera). --goods=200 pays for it and fills the
 # town hall with stone and wood to send over.
 STEPS="
 wait 20
-camera 92,262 40 55 26
+camera 136,390 40 55 26
 wait 5
 down 520,260
 mouse 800,450
@@ -26,7 +26,7 @@ mouse 1080,640
 up 1080,640
 wait 2
 key g
-clickworld 98,g,268
+clickworld 142,g,396
 ticks 4
 print
 key plus*2
@@ -50,7 +50,7 @@ shot $OUT/ui-supply-stocked.png
 "
 LOG="$OUT/ui-supply.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --goods=200 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --goods=200 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI supply test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

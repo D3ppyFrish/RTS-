@@ -12,26 +12,26 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: open ground at 92..103 x 262..269, east of the town hall. The pillar stands at
-# 92, 265 and the ledge (9 x 5, six blocks up) reaches east from its top.
+# Seed 1234, west start: flat open ground at 152..180 x 393..412, south-east of the town hall. The pillar
+# stands at 164,402 and the ledge (9 x 5, six blocks up) reaches east from its top.
 STEPS="
 wait 20
-place 92,g+1,265 92,g+6,265
-place 92,g+6,265 100,g+6,269
+place 164,g+1,402 164,g+6,402
+place 164,g+6,402 172,g+6,406
 ticks 4
-camera 96,267 30 30 16
+camera 168,404 30 30 16
 wait 5
 print
 shot $OUT/ui-collapse-ledge.png
 key t
-clickworld 92,g,265
+clickworld 164,g,402
 ticks 7
 key space
 wait 3
 print
 shot $OUT/ui-collapse-falling.png
 key space
-ticks 10
+ticks 2
 key space
 wait 3
 print
@@ -43,7 +43,7 @@ shot $OUT/ui-collapse-rubble.png
 "
 LOG="$OUT/ui-physics.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI physics test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

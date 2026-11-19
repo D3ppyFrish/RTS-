@@ -11,11 +11,11 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it, open
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it, open
 # ground further south. --houses gives room to train, --goods the food.
 STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
@@ -23,13 +23,13 @@ mouse 1080,640
 up 1080,640
 wait 2
 print
-clickworld 87,g,256 right alt
+clickworld 131,g,384 right alt
 ticks 120
 print
 shot $OUT/ui-guard-hall.png
-clickworld 87,g,256
+clickworld 131,g,384
 wait 2
-clickworld 80,g,270 right
+clickworld 124,g,398 right
 ticks 2
 print
 key u
@@ -39,7 +39,7 @@ shot $OUT/ui-rally-flag.png
 "
 LOG="$OUT/ui-guard.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --houses=4 --goods=200 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --houses=4 --goods=200 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI guard test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

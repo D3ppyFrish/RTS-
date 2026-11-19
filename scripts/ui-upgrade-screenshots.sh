@@ -11,15 +11,19 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259; --houses=1 puts a house just north of it (85..88 x
-# 244..247). --goods=600 pays for both upgrades.
+# Seed 1234, west start: town hall at 128..134 x 381..387; --houses=1 puts a house just north of it (129..132 x
+# 372..375). --goods=600 pays for both upgrades.
+# The army (F2) first clears the wolf pack whose den (171,384) is by the stone the workers dig.
 # The first, smaller trees (--trees=1): the steps click at places the bigger trees now stand on.
 STEPS="
 wait 20
-camera 87,252 34 50 32
+camera 131,380 34 50 32
 wait 5
+key f2
+clickworld 168,g,385 right ctrl
+wait 2
 key shift+j
-clickworld 86,g,245
+clickworld 130,g,373
 wait 3
 mouse 800,200
 print
@@ -29,10 +33,11 @@ ticks 2
 print
 shot $OUT/ui-upgrade-started.png
 key plus*2
-ticks 1200
+# Few workers build on the 768 map at first (the rest are out gathering), so give the house time.
+ticks 1800
 print
 shot $OUT/ui-upgrade-large-house.png
-clickworld 87,g,256
+clickworld 131,g,384
 wait 3
 key ctrl+u
 ticks 2
@@ -44,7 +49,7 @@ shot $OUT/ui-upgrade-great-hall.png
 "
 LOG="$OUT/ui-upgrade.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --trees=1 --houses=1 --goods=600 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --trees=1 --houses=1 --goods=600 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI upgrade test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

@@ -13,42 +13,42 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234: the dusk tree's trunk is at 281,385 (lowest trunk block at level 26) and its warden stands
-# by it at 283,383. The ground east of the tree is level with it, so --dusk-party puts the party in ranks
-# from 296 (15 columns east of the trunk) eastward, 378..392 north to south.
+# Seed 1234: the dusk tree's trunk is at 413,590 (lowest trunk block at level 26) and its warden stands
+# by it at 415,588. The ground east of the tree is level with it, so --dusk-party puts the party in ranks
+# from 428 (15 columns east of the trunk) eastward, 583..597 north to south.
 NIGHT_STEPS="
 wait 20
-camera 281,385 30 25 16
+camera 413,590 30 25 16
 wait 10
 shot $OUT/dusk-tree-night.png
-camera 281,385 210 20 16
+camera 413,590 210 20 16
 wait 10
 shot $OUT/dusk-tree-night-2.png
 "
 SETTLER_STEPS="
 wait 20
-camera 281,385 30 30 24
+camera 413,590 30 30 24
 wait 10
 print
 shot $OUT/dusk-tree-guarded.png
-camera 296,385 0 75 40
+camera 428,590 0 75 40
 wait 5
-dragworld 293,g,375 302,g,395
+dragworld 425,g,580 434,g,600
 wait 2
 print
-clickworld 283,g,383 right ctrl
+clickworld 415,g,588 right ctrl
 ticks 700
 print
-camera 281,385 30 35 26
+camera 413,590 30 35 26
 wait 5
-clickworld 281,31,385 right
+clickworld 413,31,590 right
 ticks 2
 print
 ticks 60
 shot $OUT/dusk-tree-healing.png
 ticks 260
 print
-camera 281,385 30 30 26
+camera 413,590 30 30 26
 wait 10
 shot $OUT/dusk-tree-healed.png
 clickui dusk_bloom
@@ -59,20 +59,20 @@ shot $OUT/dusk-tree-staff.png
 "
 ORC_STEPS="
 wait 20
-camera 296,385 0 75 40
+camera 428,590 0 75 40
 wait 5
-dragworld 293,g,375 302,g,395
+dragworld 425,g,580 434,g,600
 wait 2
 print
-clickworld 283,g,383 right ctrl
+clickworld 415,g,588 right ctrl
 ticks 700
 print
-clickworld 281,31,385 right
+clickworld 413,31,590 right
 ticks 2
 print
 ticks 300
 print
-camera 281,385 30 35 26
+camera 413,590 30 35 26
 wait 10
 shot $OUT/dusk-tree-razed.png
 clickui beaten_button
@@ -84,7 +84,7 @@ print
 LOG="$OUT/ui-dusktree.log"
 run() {
   xvfb-run -a -s "-screen 0 1600x900x24" \
-    godot --path game --rendering-driver opengl3 -- --world=512x64x512 "$@" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)"
+    godot --path game --rendering-driver opengl3 -- "$@" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)"
 }
 {
   run --focus=dusk --time-of-day=0 --input="$NIGHT_STEPS"

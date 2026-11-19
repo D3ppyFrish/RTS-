@@ -15,13 +15,13 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234: the start areas are at 87,256 (west, the Settlers) and 436,256 (east, the Orcs), each with
+# Seed 1234: the start areas are at 131,384 (west, the Settlers) and 655,384 (east, the Orcs), each with
 # its 24 starting units in rows from 5 columns west and 4 rows south of the start, and a wolf lair 40
-# blocks towards the map centre: dens at 127,256 and 396,256, four wolves each. A third pack keeps the
-# lair by the goblin town (den at 259,176), far from both.
+# blocks towards the map centre: dens at 171,384 and 615,384, four wolves each. A third pack keeps the
+# lair by the goblin town (den at 395,266), far from both.
 ORC_STEPS="
 wait 20
-camera 436,261 45 55 22
+camera 655,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
@@ -30,9 +30,9 @@ up 1080,640
 wait 2
 ticks 2
 print
-camera 403,257 45 50 30
+camera 622,385 45 50 30
 wait 5
-clickworld 399,g,257 right ctrl
+clickworld 618,g,385 right ctrl
 key plus*2
 ticks 110
 shot $OUT/ui-wolves-fight.png
@@ -41,7 +41,7 @@ print
 clickui beaten_button
 wait 3
 print
-camera 398,257 30 45 16
+camera 617,385 30 45 16
 wait 5
 shot $OUT/ui-wolves-beaten.png
 clickui tame_ride
@@ -52,12 +52,12 @@ wait 3
 clickui tame_recruit
 ticks 2
 print
-camera 398,257 30 40 12
+camera 617,385 30 40 12
 wait 5
 shot $OUT/ui-wolves-tamed.png
-camera 398,257 30 50 34
+camera 617,385 30 50 34
 wait 5
-dragworld 386,g,245 410,g,269
+dragworld 605,g,373 629,g,397
 wait 2
 ticks 2
 print
@@ -66,14 +66,14 @@ clickui den_use
 ticks 2
 print
 ticks 500
-camera 398,257 30 45 20
+camera 617,385 30 45 20
 wait 5
 print
 shot $OUT/ui-den-lodge.png
 "
 SETTLER_STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
@@ -82,16 +82,16 @@ up 1080,640
 wait 2
 ticks 2
 print
-camera 121,257 45 50 30
+camera 165,385 45 50 30
 wait 5
-clickworld 124,g,257 right ctrl
+clickworld 168,g,385 right ctrl
 key plus*2
 ticks 510
 print
 shot $OUT/ui-wolves-settlers.png
-camera 127,257 30 50 34
+camera 171,385 30 50 34
 wait 5
-dragworld 116,g,251 134,g,265
+# The whole army stays selected: on the 768 map its spearmen chase the last wolves out of a box round the den.
 wait 2
 ticks 2
 print
@@ -99,14 +99,14 @@ shot $OUT/ui-den-wolfheart-button.png
 clickui den_use
 ticks 2
 print
-camera 127,257 30 35 10
+camera 171,385 30 35 10
 wait 5
 shot $OUT/ui-den-wolfheart.png
 "
 LOG="$OUT/ui-monsters.log"
 run() {
   xvfb-run -a -s "-screen 0 1600x900x24" \
-    godot --path game --rendering-driver opengl3 -- --world=512x64x512 "$@" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)"
+    godot --path game --rendering-driver opengl3 -- "$@" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)"
 }
 { run --player=1 --focus=start1 --input="$ORC_STEPS"; run --player=0 --focus=start0 --input="$SETTLER_STEPS"; } | tee "$LOG"
 

@@ -20,8 +20,8 @@ rm -rf "$REPLAYS"
 fail() { echo "UI match test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 
-# Seed 1234: the west start (player 0, the Settlers) at 87,256 and the east start (player 1, the Orcs)
-# at 436,256, whose town hall covers 433..439 x 253..259.
+# Seed 1234: the west start (player 0, the Settlers) at 131,384 and the east start (player 1, the Orcs)
+# at 655,384, whose town hall covers 652..658 x 381..387.
 STEPS="
 wait 10
 print
@@ -54,7 +54,7 @@ print
 "
 LOG="$OUT/ui-match.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --menu --seed=1234 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --menu --seed=1234 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|Match over|Replay saved|Player)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
@@ -90,13 +90,13 @@ grep -q '^Result: player 0 won' "$RUN_LOG" || fail "the replay does not end with
 # and sent at it with a right click, at 4x speed.
 STEPS="
 wait 10
-camera 430,256 0 60 36
+camera 649,384 0 60 36
 wait 5
 print
-dragworld 419,g,251 429,g,261
+dragworld 638,g,379 648,g,389
 wait 2
 print
-clickworld 436,g,256 right
+clickworld 655,g,384 right
 key plus*2
 ticks 1200
 wait 5
@@ -105,7 +105,7 @@ shot $OUT/ui-victory.png
 "
 LOG="$OUT/ui-match-victory.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --seed=1234 --units=40 --focus=424,256 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --seed=1234 --units=40 --focus=643,384 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|Match over|Replay saved)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"

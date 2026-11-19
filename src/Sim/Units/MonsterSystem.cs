@@ -256,29 +256,36 @@ public sealed class MonsterSystem
     /// in data order, <see cref="LairDef.Count"/> of them. The cavern's floor is walked from its first chamber (where
     /// the way in from the surface comes down) under the roof only; a monster that lives along the cavern has its
     /// dens spread out along the walk, at (n + 1) / (count + 1) of the way to the cell furthest in, and a boss (deepest)
-    /// is at that furthest cell. The den and pack stand on the cave floor. No cavern, or a map smaller than
+    /// is at that furthest cell. The den and pack stand on the cave floor. A bigger map's further caverns (issue #67,
+    /// see <see cref="RegionMap.Caverns"/>) get the same, bar the boss, who lives in the main one only. No cavern, or a map smaller than
     /// <see cref="CavernMapSize"/> across (test and scripted maps), no lairs. Returns the lairs placed.
     /// </summary>
     public List<Lair> PlaceCavern()
     {
         var placed = new List<Lair>();
         var monsters = _sim.Content.CavernMonsters;
-        if (monsters.Count == 0 || _sim.Map.Cavern is not { } cave) return placed;
+        if (monsters.Count == 0 || _sim.Map.Caverns.Count == 0) return placed;
         if (World.SizeX < CavernMapSize || World.SizeZ < CavernMapSize) return placed;
-        var floor = CavernFloor(cave.X, cave.Y, cave.Z);
-        _groundCache = null;
-        if (floor.Count == 0) return placed;
-        int deepest = floor[^1].Steps;
-        foreach (var monster in monsters)
+        for (int c = 0; c < _sim.Map.Caverns.Count; c++)
         {
-            var def = monster.Lair!;
-            for (int n = 0; n < def.Count; n++)
+            var cave = _sim.Map.Caverns[c];
+            var floor = CavernFloor(cave.X, cave.Y, cave.Z);
+            _groundCache = null;
+            if (floor.Count == 0) continue;
+            int deepest = floor[^1].Steps;
+            foreach (var monster in monsters)
             {
-                int want = def.Cavern == CavernSpot.Deepest ? deepest : deepest * (n + 1) / (def.Count + 1);
-                // The first cell that far in (the floor is in walking order).
-                int k = floor.FindIndex(c => c.Steps >= want);
-                var (x, y, z, _) = floor[k < 0 ? floor.Count - 1 : k];
-                if (Place(monster, x, z, near: y) is { } lair) placed.Add(lair);
+                var def = monster.Lair!;
+                // The boss (deepest) keeps to the main cavern; a further one (issue #67) has only the others.
+                if (c > 0 && def.Cavern == CavernSpot.Deepest) continue;
+                for (int n = 0; n < def.Count; n++)
+                {
+                    int want = def.Cavern == CavernSpot.Deepest ? deepest : deepest * (n + 1) / (def.Count + 1);
+                    // The first cell that far in (the floor is in walking order).
+                    int k = floor.FindIndex(f => f.Steps >= want);
+                    var (x, y, z, _) = floor[k < 0 ? floor.Count - 1 : k];
+                    if (Place(monster, x, z, near: y) is { } lair) placed.Add(lair);
+                }
             }
         }
         return placed;

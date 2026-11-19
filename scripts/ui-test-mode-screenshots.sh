@@ -17,50 +17,50 @@ field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 
 SCEN="$OUT/scenarios"
 rm -rf "$SCEN"
-# Seed 1234, west start: town hall at 84..90 x 253..259 and open grass east of it.
+# Seed 1234, west start: town hall at 128..134 x 381..387 and open grass south-east of it (152..176 x 393..412).
 STEPS="
 wait 20
-camera 106,266 30 55 34
+camera 158,402 30 55 34
 wait 5
 print
 clickui test_cat_tree
 select test_item pine
 clickui test_place
-clickworld 100,g,258
+clickworld 152,g,394
 select test_item willow
-clickworld 104,g,257
+clickworld 156,g,393
 select test_item mushroom
-clickworld 108,g,258
+clickworld 160,g,394
 select test_item birch
-clickworld 112,g,257
+clickworld 164,g,393
 clickui test_cat_block
 select test_item air
 spin test_size 5
 spin test_height 2
-clickworld 101,g,268
+clickworld 153,g,404
 ticks 3
 select test_item water
-clickworld 101,g,268
+clickworld 153,g,404
 select test_item lava
 spin test_size 2
-clickworld 108,g,270
+clickworld 160,g,406
 clickui test_cat_unit
 select test_item wolf
 select test_owner wild
 spin test_size 3
-clickworld 114,g,266
+clickworld 166,g,402
 select test_item spearman
 select test_owner orcs
 spin test_size 4
-clickworld 116,g,272
+clickworld 168,g,408
 clickui test_cat_building
 select test_item barracks
-clickworld 122,g,262
+clickworld 174,g,398
 clickui test_cat_lair
-clickworld 124,g,274
+clickworld 176,g,410
 clickui test_cat_blood
 spin test_size 2
-clickworld 106,g,276
+clickworld 158,g,412
 key escape
 ticks 10
 print
@@ -87,7 +87,7 @@ shot $OUT/ui-test-loaded.png
 "
 LOG="$OUT/ui-test-mode.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --test-mode --daynight --scenarios="$SCEN" --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --test-mode --daynight --scenarios="$SCEN" --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|Scenario)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
