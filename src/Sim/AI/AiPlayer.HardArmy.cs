@@ -152,6 +152,7 @@ public sealed partial class AiPlayer
         home.RemoveAll(_totemParty.Contains);
         Hire(sim, issue);
         Mend(sim, hall, issue);
+        RuinStep(sim, hall, home, HomeGuardPercent(sim), issue);
         ScoutStep(sim, hall, home, issue);
         Explore(sim, hall, home, issue);
         HuntStep(sim, hall, home, HomeGuardPercent(sim), issue);

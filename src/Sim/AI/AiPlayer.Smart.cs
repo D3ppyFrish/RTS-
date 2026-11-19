@@ -594,6 +594,7 @@ public sealed partial class AiPlayer
         home.RemoveAll(_totemParty.Contains);
         Hire(sim, issue);
         Mend(sim, hall, issue);
+        RuinStep(sim, hall, home, GuardPercent, issue);
         if (_waveLair == 0) ScoutStep(sim, hall, home, issue);
         else home.Remove(_scout);
         HuntStep(sim, hall, home, GuardPercent, issue);
