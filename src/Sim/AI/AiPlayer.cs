@@ -220,13 +220,13 @@ public sealed partial class AiPlayer
         }
         var hall = sim.Economy.TownHall(Player)!;
         var (hx, hz) = Middle(hall);
-        var nearest = NearestLair(sim, hx, hz);
         var soldiers = Soldiers(sim);
         if (Hard)
         {
             _startPower = PowerOf(sim, soldiers);
             KeepExplorer(sim, soldiers);
         }
+        var nearest = NearestLair(sim, hx, hz, PowerOf(sim, soldiers));
         if (soldiers.Count == 0 || (nearest == null && (!Smart || sim.Monsters.Lairs.Count == 0))) return;
         _wave.AddRange(soldiers);
         _waveBuilding = 0;
@@ -260,14 +260,17 @@ public sealed partial class AiPlayer
         if (best >= 0) soldiers.RemoveAt(best);
     }
 
-    /// <summary>The nearest lair with monsters still about within <see cref="LairReach"/> of (x, z) (for the smart levels, one they have seen), or null.</summary>
-    private Lair? NearestLair(Simulation sim, int x, int z)
+    /// <summary>
+    /// The nearest lair with monsters still about within <see cref="LairReach"/> of (x, z) (for the smart levels,
+    /// one they have seen) whose pack soldiers worth <paramref name="force"/> outweigh (see <see cref="LairOddsPercent"/>), or null.
+    /// </summary>
+    private Lair? NearestLair(Simulation sim, int x, int z, long force)
     {
         Lair? nearest = null;
         long best = (long)LairReach * LairReach + 1;
         foreach (var lair in sim.Monsters.Lairs)
         {
-            if (lair.Cleared || (Smart && !LairKnown(sim, lair))) continue;
+            if (lair.Cleared || (Smart && !LairKnown(sim, lair)) || !Outweighs(sim, force, lair)) continue;
             long d = Dist2(x, z, lair.X, lair.Z);
             if (d < best) (best, nearest) = (d, lair);
         }
@@ -781,6 +784,14 @@ public sealed partial class AiPlayer
         {
             var lair = sim.Monsters.GetLair(_waveLair);
             if (lair == null || lair.Cleared || sim.Tick - _waveSent > 3 * 60 * Tps) EndWave();
+            else if (PowerOf(sim, _wave) * 100 < PackWorth(sim, lair) * BreakOffPercent)
+            {
+                // Losing to the pack: the raid breaks off and comes home (issue #78).
+                Note(sim, $"its opening raid breaks off from the {lair.Monster.Name} lair");
+                var (rx, rz) = RallyAt(sim, hall, null);
+                issue(new MoveCommand(Player, _wave.ToArray(), rx, rz));
+                EndWave();
+            }
             else if (sim.Tick % (10 * ArmyTicks) < ArmyTicks)
             {
                 var idle = Unordered(sim, _wave, lair.X, lair.Z);

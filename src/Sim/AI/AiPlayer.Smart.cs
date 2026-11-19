@@ -307,7 +307,7 @@ public sealed partial class AiPlayer
     private bool FindLair(Simulation sim, Building hall, Action<Command> issue)
     {
         var (hx, hz) = Middle(hall);
-        if (NearestLair(sim, hx, hz) is { } lair)
+        if (NearestLair(sim, hx, hz, PowerOf(sim, _wave)) is { } lair)
         {
             _waveLair = lair.Id;
             issue(new AttackMoveCommand(Player, _wave.ToArray(), lair.X, lair.Z));
@@ -596,6 +596,7 @@ public sealed partial class AiPlayer
         Mend(sim, hall, issue);
         if (_waveLair == 0) ScoutStep(sim, hall, home, issue);
         else home.Remove(_scout);
+        HuntStep(sim, hall, home, GuardPercent, issue);
 
         // Defence: as the classic player, with the fighting done well from Normal up.
         int threat = NearestEnemy(sim, hx, hz, DefendRadius, soldiersOnly: false);
