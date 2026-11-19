@@ -123,24 +123,26 @@ public class AiRuinTests
         Assert.False(Play(sim, ai, () => ai.RuinPartyIds.Count > 0, AiPlayer.RuinRetryTicks + 20 * Tps), "no party back to the ruin it broke off from");
     }
 
+    /// <summary>In the fog it does not know where the ruin is: the pair goes looking round its town, and searches it once seen.</summary>
     [Fact]
-    public void ItGoesOnlyToARuinItHasSeen()
+    public void InTheFogThePairLooksForARuinAndSearchesItOnceSeen()
     {
-        var sim = WithRuins(8, (HallX + 200, HallZ + 100));
+        var sim = WithRuins(8, (HallX + 135, HallZ + 50));
         sim.Fog = true;
         var ruin = sim.Ruins.Ruins[0];
         var ai = new AiPlayer(0, 1, AiLevel.Normal);
-        bool sent = false;
-        for (int t = 0; t < AiPlayer.RuinTicks + 3 * 60 * Tps && !sent; t++)
+        bool looked = false;
+        for (int t = 0; t < AiPlayer.RuinTicks + 8 * 60 * Tps && !ruin.Searched; t++)
         {
             bool seen = sim.Vision.At(0, ruin.X, ruin.Z) != Sight.Unseen;
             ai.Think(sim, c => sim.Schedule(sim.Tick, c));
-            if (ai.RuinPartyIds.Count > 0)
-            {
-                Assert.True(seen, "a party only for a ruin it has seen");
-                sent = true;
-            }
+            if (ai.RuinTarget == AiPlayer.LookingForRuins) looked = true;
+            if (ai.RuinTarget >= 0) Assert.True(seen || looked, "it goes to search only a ruin it has seen");
             sim.Step();
         }
+        Assert.True(looked, "the pair to go looking");
+        Assert.True(ruin.Searched, "the ruin to be found and searched");
+        Assert.Equal(0, ruin.SearchedBy);
+        Assert.Equal(1, ai.RuinsSpotted);
     }
 }
