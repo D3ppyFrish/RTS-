@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Rts.Sim.Units;
 
 namespace Rts.Sim.World;
 
@@ -26,6 +27,10 @@ public static class RegionGenerator
     public const int SinkholesPer512 = 12;
     /// <summary>Patches of quicksand (see <see cref="HazardSystem.MakeQuicksand"/>) per 512 by 512 blocks of map.</summary>
     public const int QuicksandPer512 = 10;
+    /// <summary>Rockfalls (see <see cref="HazardSystem.MakeRockfall"/>) per 512 by 512 blocks of map.</summary>
+    public const int RockfallsPer512 = 10;
+    /// <summary>Columns out from a cliff that its rockfall's scree reaches.</summary>
+    public const int ScreeReach = 4;
     /// <summary>Columns from a quicksand patch's middle to its edge.</summary>
     public const int QuicksandRadius = 2;
     /// <summary>Ruins (see the builder's PlaceRuins) per 512 by 512 blocks of map.</summary>
@@ -229,6 +234,7 @@ public static class RegionGenerator
             PlaceStartResources();
             PlaceSinkholes();
             PlaceQuicksand();
+            PlaceRockfalls();
             return _map;
         }
 
@@ -592,6 +598,68 @@ public static class RegionGenerator
             for (int dz = -3; dz <= 3; dz++)
             for (int dx = -3; dx <= 3; dx++)
                 if (_height[Idx(cx + dx, cz + dz)] < _water && _w.Get(cx + dx, _water, cz + dz) == BlockType.Water) return true;
+            return false;
+        }
+
+        // --- Rockfall -------------------------------------------------------------------------------
+
+        /// <summary>Least distance between two rockfalls.</summary>
+        private const int RockfallGap = 20;
+
+        /// <summary>
+        /// Rockfalls (issue #78, see <see cref="HazardSystem.MakeRockfall"/>) on the steep slopes of the hills: loose
+        /// rock on the brink of a cliff at least three blocks high, over scree at its foot, well away from the starts,
+        /// the dusk tree and each other, as many as <see cref="RockfallsPer512"/> per 512 by 512 blocks. Placed after
+        /// everything else, from a random stream of their own, so nothing else on existing seeds moves.
+        /// </summary>
+        private void PlaceRockfalls()
+        {
+            var rng = new DeterministicRandom(_seed ^ 0x40CF4A11UL);
+            int want = Math.Max(1, (int)((long)RockfallsPer512 * _sx * _sz / (512 * 512)));
+            int keepOff = StartResourceRadius + Sx(24), edge = ScreeReach + 4;
+            var placed = new List<(int X, int Z)>();
+            for (int tries = 0; tries < want * 400 && placed.Count < want; tries++)
+            {
+                int cx = rng.Range(edge, _sx - edge), cz = rng.Range(edge, _sz - edge);
+                if (_map.BiomeAt(cx, cz) != Biome.Hills || NearStart(cx, cz, keepOff)) continue;
+                if (_duskX >= 0 && Math.Max(Math.Abs(cx - _duskX), Math.Abs(cz - _duskZ)) <= DuskClearing + 8) continue;
+                bool far = true;
+                foreach (var p in placed)
+                    if ((p.X - cx) * (p.X - cx) + (p.Z - cz) * (p.Z - cz) < RockfallGap * RockfallGap) far = false;
+                if (!far || !RockfallFits(cx, cz, out int dx, out int dz)) continue;
+                int top = _w.SurfaceHeight(cx, cz);
+                if (HazardSystem.MakeRockfall(_w, cx, top, cz, dx, dz, ScreeReach) == 0) continue;
+                placed.Add((cx, cz));
+            }
+        }
+
+        /// <summary>
+        /// True if column (cx, cz) is the brink of a cliff: open natural ground with nothing on it, no lava or water
+        /// near, and in direction (dx, dz) the ground drops at least three levels within two columns.
+        /// </summary>
+        private bool RockfallFits(int cx, int cz, out int dx, out int dz)
+        {
+            dx = dz = 0;
+            int h = _w.SurfaceHeight(cx, cz);
+            if (h != _height[Idx(cx, cz)] || h <= _water + 3 || h + 3 >= _sy) return false;
+            if (_w.Get(cx, h, cz) is not (BlockType.Grass or BlockType.Soil or BlockType.Stone)) return false;
+            for (int y = h + 1; y <= h + 3; y++)
+                if (_w.Get(cx, y, cz) != BlockType.Air) return false;
+            for (int oz = -3; oz <= 3; oz++)
+            for (int ox = -3; ox <= 3; ox++)
+            {
+                int top = _height[Idx(cx + ox, cz + oz)];
+                if (_w.Get(cx + ox, top, cz + oz) is BlockType.Lava or BlockType.Water || _w.Get(cx + ox, top + 1, cz + oz) == BlockType.Water) return false;
+            }
+            for (int d = 0; d < 4; d++)
+            {
+                int ddx = WalkGraph.Dirs[d].X, ddz = WalkGraph.Dirs[d].Z;
+                if (_height[Idx(cx + ddx, cz + ddz)] <= h - 3 || _height[Idx(cx + 2 * ddx, cz + 2 * ddz)] <= h - 3)
+                {
+                    dx = ddx; dz = ddz;
+                    return true;
+                }
+            }
             return false;
         }
 

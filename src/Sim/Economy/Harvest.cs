@@ -30,7 +30,7 @@ public static class Harvest
 
     /// <summary>True if a worker can dig, chop or pick this block. Buildings and roads are not dug this way.</summary>
     public static bool CanGather(BlockType b) => b is BlockType.Grass or BlockType.Soil or BlockType.Sand
-        or BlockType.Mud or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal
+        or BlockType.Mud or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal
         or BlockType.BerryBush || BlockInfo.IsTrunk(b) || BlockInfo.IsLeaves(b) || BlockInfo.IsRubble(b);
 
     /// <summary>The good a block gives, if any. Plain ground is only dug away.</summary>
@@ -40,6 +40,7 @@ public static class Harvest
         switch (b)
         {
             case BlockType.Stone: good = Good.Stone; return true;
+            case BlockType.LooseRock: good = Good.Stone; return true;
             case BlockType.IronOre: good = Good.IronOre; return true;
             case BlockType.Coal: good = Good.Coal; return true;
             case BlockType.BerryBush: good = Good.Food; return true;
@@ -77,7 +78,7 @@ public static class Harvest
     /// <summary>Ticks of work to take one block (for a tree, per trunk block).</summary>
     public static int WorkTicks(BlockType b) => b switch
     {
-        BlockType.Stone => 30,
+        BlockType.Stone or BlockType.LooseRock => 30,
         BlockType.IronOre => 40,
         BlockType.Coal => 30,
         BlockType.Crystal => 60,

@@ -341,7 +341,7 @@ public sealed class MonsterSystem
             if (IntMath.Distance(x, z, town.X, town.Z) < WildGap) return false;
         if (!SiteFits(x, z)) return false;
         int y = Walk.GroundLevel(World, x, z);
-        return World.Get(x, y - 1, z) is not (BlockType.Water or BlockType.Lava or BlockType.Bog or BlockType.Crust or BlockType.Quicksand);
+        return World.Get(x, y - 1, z) is not (BlockType.Water or BlockType.Lava or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock);
     }
 
     /// <summary>
@@ -519,7 +519,7 @@ public sealed class MonsterSystem
             if (IntMath.Distance(x, z, lair.X, lair.Z) > r || !SiteFits(x, z)) continue;
             int y = Walk.GroundLevel(World, x, z);
             if (Math.Abs(y - lair.Y) > GuardHeight * 3) continue;
-            if (World.Get(x, y - 1, z) is BlockType.Water or BlockType.Lava or BlockType.Bog or BlockType.Crust or BlockType.Quicksand) continue;
+            if (World.Get(x, y - 1, z) is BlockType.Water or BlockType.Lava or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock) continue;
             lair.HomeX = x;
             lair.HomeY = y;
             lair.HomeZ = z;

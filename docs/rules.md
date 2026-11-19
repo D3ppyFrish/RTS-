@@ -634,7 +634,7 @@ Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the bl
 
 ## Natural hazards
 
-`src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, `HazardTests` and `QuicksandTests`, issues #45, #66 and #78): ground that
+`src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, `HazardTests`, `QuicksandTests` and `RockfallTests`, issues #45, #66 and #78): ground that
 hurts the units on or near it.
 
 - **Poison bog**: patches of violet sludge (`BlockType.Bog`) on the swamp's dry mud, never near a start.
@@ -654,12 +654,21 @@ hurts the units on or near it.
   The tick a unit stands on one the whole lid gives way: the units on it drop in and lose 20 hit points
   (by no one). The hole is a block deep at its edge and two in its middle, so they climb back out. Workers
   can dig the crust away (it gives nothing); monster lairs are not put on it.
+- **Rockfall** (#78): loose rock (`BlockType.LooseRock`, dark weathered boulders: three along the brink and
+  one on top) perched on the brink of a cliff at least three blocks high in the hills, over a field of scree
+  (`BlockType.Scree`, pale broken stones) at its foot, up to four columns out and two to either side, never
+  near a start or the dusk tree, 10 per 512 by 512 blocks of map. The tick a unit steps onto the scree (or
+  onto the rocks), every loose rock within four columns of it and up to ten levels above comes away and is
+  thrown off the brink to come down where the unit stands: what it hits loses 30 hit points (as from any
+  falling ground, by no one), and it lands as stone rubble. Then the scree whose rocks are all gone is plain
+  stone. Workers quarry loose rock for stone and dig scree away (it gives nothing); monster lairs are not put
+  on either.
 - **Keeping off**: move orders path around all of them where there is another way (see Moving). Computer
   players (every level) keep their workers off them too: they never send wood cutters to a tree whose work
   spot is hazard ground, nor lay out a building whose footprint, or the ring round it where its builders
   stand, has any (`HazardSystem.HazardNear`), and Hard digs no quarry within a lava's heat.
 - **Alert**: a unit of yours killed by the ground alone raises an alert, "Your worker died in the poison
-  bog", "was dragged under by quicksand", "burned beside the lava" or "fell into a sinkhole" (`GameEventKind.UnitLostToHazard`).
+  bog", "was dragged under by quicksand", "burned beside the lava" "fell into a sinkhole" or "was crushed by falling rocks" (`GameEventKind.UnitLostToHazard`).
 
 ## City-states
 
