@@ -13,11 +13,15 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, west start: town hall at 128..134 x 381..387; --houses=1 puts a house just north of it (129..132 x
 # 372..375). --goods=600 pays for both upgrades.
+# The army (F2) first clears the wolf pack whose den (171,384) is by the stone the workers dig.
 # The first, smaller trees (--trees=1): the steps click at places the bigger trees now stand on.
 STEPS="
 wait 20
 camera 131,380 34 50 32
 wait 5
+key f2
+clickworld 168,g,385 right ctrl
+wait 2
 key shift+j
 clickworld 130,g,373
 wait 3
@@ -29,7 +33,8 @@ ticks 2
 print
 shot $OUT/ui-upgrade-started.png
 key plus*2
-ticks 1200
+# Few workers build on the 768 map at first (the rest are out gathering), so give the house time.
+ticks 1800
 print
 shot $OUT/ui-upgrade-large-house.png
 clickworld 131,g,384

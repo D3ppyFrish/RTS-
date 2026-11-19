@@ -13,7 +13,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, map centre: open ground at levels 20 to 22. With --battle=16 your army stands in two ranks
 # at x 369..370, z 353..367 (a sapper at 370,359), the enemy's at x 382..383, and the enemy house at
-# 376..379 x 346..349. With the first, smaller trees (--trees=1): the bigger ones put a birch over the house.
+# 372..375 x 346..349. With the first, smaller trees (--trees=1): the bigger ones put a birch over the house.
 STEPS="
 wait 20
 camera 376,360 0 55 22
@@ -30,7 +30,7 @@ key x
 wait 3
 print
 shot $OUT/ui-combat-tunnel-tool.png
-clickworld 377,g,347
+clickworld 373,g,347
 ticks 4
 print
 key 2
@@ -42,8 +42,8 @@ key plus*2
 ticks 700
 print
 shot $OUT/ui-combat-after.png
-clickworld 378,g,347
-camera 377,349 340 40 12
+clickworld 374,g,347
+camera 373,349 340 40 12
 wait 5
 print
 shot $OUT/ui-combat-house.png

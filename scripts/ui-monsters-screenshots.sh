@@ -91,7 +91,7 @@ print
 shot $OUT/ui-wolves-settlers.png
 camera 171,385 30 50 34
 wait 5
-dragworld 160,g,379 178,g,393
+# The whole army stays selected: on the 768 map its spearmen chase the last wolves out of a box round the den.
 wait 2
 ticks 2
 print
