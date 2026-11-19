@@ -357,6 +357,16 @@ public static class UnitModels
             .Box(-2, 13, -3, 1, 14, 1, TeamDark)                                         // hood
             .Bow(1, 17)                                                                  // tall bow
             .Box(0, 6, -2, 1, 12, -2, Wood),                                             // quiver
+        // A hero: a longbowman in a gilded hood with a gold circlet, a great bow, a full quiver and a short
+        // pennant in its owner's colour on its back, so its archers see where to gather.
+        "bowmaster" => new Builder().Humanoid().Rank()
+            .Box(-2, 13, -3, 1, 14, 1, TeamDark).Box(-2, 13, 2, 1, 13, 2, Gold)          // hood with a gold rim
+            .Box(-2, 15, -2, 1, 15, 1, Gold).Box(-1, 16, 1, 0, 16, 1, Gold)              // circlet and its peak
+            .Box(-2, 7, 1, 1, 9, 1, Leather).Box(-1, 8, 1, 0, 8, 1, Gold)                // jerkin with a gold clasp
+            .Bow(1, 18, wood: Gold)                                                      // great gilded bow
+            .Box(0, 6, -2, 1, 12, -2, Wood).Box(0, 13, -2, 1, 13, -2, Steel)             // full quiver
+            .Box(-2, 4, -3, -2, 20, -3, Wood).Box(-2, 21, -3, -2, 21, -3, Gold)          // pennant pole
+            .Box(-1, 16, -3, 2, 20, -3, Team).Box(0, 18, -3, 1, 18, -3, Gold),           // the pennant
         "ranger" => new Builder().Humanoid().Rank()
             .Box(-2, 13, -3, 1, 14, 1, Leaf).Box(-2, 5, -2, 1, 12, -2, Leaf)             // green hood and cloak
             .Bow(4, 14)

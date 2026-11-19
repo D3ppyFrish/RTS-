@@ -42,7 +42,7 @@ public class ContentTests
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "healer" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
-            "ranger", "lancer", "outrider", "tunneller", "demolisher", "battle_mage", "seer", "wolfheart" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
+            "bowmaster", "ranger", "lancer", "outrider", "tunneller", "demolisher", "battle_mage", "seer", "wolfheart" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
         Assert.Equal(15, db.Techs.Count);
 
         // A branching tree: shared roots, techs that lead to more than one, long chains, a few per faction.

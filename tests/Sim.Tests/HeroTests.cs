@@ -192,7 +192,7 @@ public class HeroTests
         var files = Files();
         Edit(files, "units.json", "\"hero\": true, \"rally\": 8, ", "\"hero\": true, ");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
-        Assert.Contains("units.json: unit 'marshal': has \"steady\" or \"inspire\" but no \"rally\"", e.Errors);
+        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\" or \"volley\" but no \"rally\"", e.Errors);
         Assert.Single(e.Errors);
 
         foreach (var (old, changed) in new[] { ("\"rally\": 8", "\"rally\": 9"), ("\"steady\": 50", "\"steady\": 40"),
@@ -202,6 +202,101 @@ public class HeroTests
             Edit(files, "units.json", old, changed);
             Assert.NotEqual(ContentDb.Default.Hash, ContentLoader.Load(files).Hash);
         }
+    }
+
+    /// <summary>The Bowmaster: the longbowman's form at level 2, a hero of its own beside the Marshal.</summary>
+    [Fact]
+    public void TheBowmasterIsALongbowmansFormAtTheSecondLevelAndIsAHero()
+    {
+        var db = ContentDb.Default;
+        var bowmaster = db.Unit("bowmaster");
+        var longbow = db.Unit("longbowman");
+        Assert.Same(longbow, bowmaster.EvolvesFrom);
+        Assert.Equal(2, bowmaster.Tier);
+        Assert.True(bowmaster.Hero);
+        Assert.Equal(UnitRole.Ranged, bowmaster.Role);
+        Assert.Equal(Fix64.FromInt(10), bowmaster.Rally);
+        Assert.Equal(25, bowmaster.Volley);
+        Assert.Equal(0, bowmaster.Steady);
+        Assert.Equal(1, bowmaster.Inspire);
+        Assert.Contains(bowmaster, longbow.Forms);
+        // Its gain is hit points, damage and reach; its drawback is upkeep.
+        Assert.True(bowmaster.MaxHp > longbow.MaxHp && bowmaster.Damage > longbow.Damage && bowmaster.Range > longbow.Range);
+        Assert.True(bowmaster.Upkeep > longbow.Upkeep);
+
+        var sim = Flat();
+        int a = sim.SpawnUnit(Settlers, "longbowman", 20, 30), b = sim.SpawnUnit(Settlers, "longbowman", 20, 34);
+        sim.Units.Xp[Index(sim, a)] = 499;
+        Assert.False(sim.Evolution.CanEvolve(Index(sim, a), bowmaster)); // level 1 only
+        sim.Units.Xp[Index(sim, a)] = 500;
+        sim.Units.Xp[Index(sim, b)] = 500;
+        // A Marshal does not stand in the Bowmaster's way: each hero is one of a kind on its own.
+        int knight = Veteran(sim, 40, 40);
+        Evolve(sim, knight, "marshal");
+        sim.Schedule(sim.Tick, new EvolveCommand(Settlers, new[] { a, b }, "bowmaster"));
+        sim.Step();
+        Assert.Equal("bowmaster", DefId(sim, a));
+        Assert.Equal("longbowman", DefId(sim, b));
+        Assert.True(sim.Evolution.WaitsForHero(Index(sim, b)));
+        Assert.Equal(80, sim.Units.Hp[Index(sim, a)]);
+    }
+
+    /// <summary>
+    /// Ranged units of its own side near the Bowmaster (itself included) hit a quarter harder; foot soldiers
+    /// beside it, archers out of its reach and the enemy's archers hit as before.
+    /// </summary>
+    [Fact]
+    public void ArchersNearTheBowmasterHitAQuarterHarder()
+    {
+        var sim = Flat();
+        int bm = sim.SpawnUnit(Settlers, "longbowman", 30, 30);
+        sim.Units.Xp[Index(sim, bm)] = 500;
+        Evolve(sim, bm, "bowmaster");
+        int near = sim.SpawnUnit(Settlers, "archer", 33, 30);
+        int spear = sim.SpawnUnit(Settlers, "spearman", 30, 33);
+        int far = sim.SpawnUnit(Settlers, "archer", 70, 70);
+        int enemy = sim.SpawnUnit(Orcs, "archer", 30, 36);
+        sim.Step(); // the volleys are worked out with the tick
+        var combat = sim.Combat;
+        int Attack(int id) => combat.AttackOf(Index(sim, id), sim.Content.Units[sim.Units.Def[Index(sim, id)]]);
+        var archer = sim.Content.Unit("archer");
+        Assert.Equal(archer.Damage * 125 / 100, Attack(near));
+        Assert.Equal(9 * 125 / 100, Attack(bm));
+        Assert.Equal(archer.Damage, Attack(far));
+        Assert.Equal(sim.Content.Unit("spearman").Damage, Attack(spear));
+        Assert.Equal(archer.Damage, Attack(enemy));
+
+        // Once it falls, its archers hit as before.
+        Kill(sim, bm);
+        sim.Step();
+        Assert.Equal(archer.Damage, Attack(near));
+    }
+
+    /// <summary>A real exchange: the same archer volley takes a dummy down faster with the Bowmaster among them.</summary>
+    [Fact]
+    public void TheBowmastersVolleysKillFaster()
+    {
+        int TicksToKill(bool withBowmaster)
+        {
+            var sim = Flat();
+            var archers = new List<int>();
+            for (int k = 0; k < 4; k++) archers.Add(sim.SpawnUnit(Settlers, "archer", 30 + k, 30));
+            if (withBowmaster)
+            {
+                // Behind the archers, holding its ground with the target beyond its own range: it only calls.
+                int lb = sim.SpawnUnit(Settlers, "longbowman", 32, 22);
+                sim.Units.Xp[Index(sim, lb)] = 500;
+                Evolve(sim, lb, "bowmaster");
+                sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { lb }, UnitStance.Hold));
+            }
+            int target = sim.SpawnUnit(Orcs, "spearman", 32, 37);
+            sim.Schedule(sim.Tick, new StanceCommand(Orcs, new[] { target }, UnitStance.Hold));
+            long start = sim.Tick;
+            while (sim.Units.Exists(target) && sim.Tick - start < 60 * Tps) sim.Step();
+            Assert.False(sim.Units.Exists(target));
+            return (int)(sim.Tick - start);
+        }
+        Assert.True(TicksToKill(true) < TicksToKill(false));
     }
 
     private static Dictionary<string, string> Files()

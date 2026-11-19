@@ -3,6 +3,7 @@
 # (Settlers) is at the second level. The starting units are selected and the spearmen become knights; one
 # knight is then selected on its own and becomes the Marshal, the knights' hero form. With all of them
 # selected again, the other knights' Marshal button says you have one already and none of them can take it.
+# Then an archer is selected on its own, becomes a longbowman and at once the Bowmaster, the longbowmen's hero.
 # Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-hero-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -14,7 +15,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, west start: town hall at 128..134 x 381..387, the 24 starting units (four of each of the six
 # trained types, in turn: worker, spearman, archer, rider, sapper, mage) in rows from 126,388, so there is
-# a spearman at 127,388.
+# a spearman at 127,388 and an archer at 128,388.
 STEPS="
 wait 20
 camera 131,389 45 55 22
@@ -48,6 +49,19 @@ wait 2
 ticks 2
 print
 shot $OUT/ui-hero-one-only.png
+camera 130,389 20 40 9
+wait 5
+clickworld 128,g+1,388
+wait 2
+ticks 2
+clickui evolve_longbowman
+ticks 2
+wait 2
+clickui evolve_bowmaster
+ticks 2
+wait 2
+print
+shot $OUT/ui-hero-bowmaster.png
 "
 LOG="$OUT/ui-hero.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -57,7 +71,7 @@ fail() { echo "UI hero test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step failed: $(grep '^Input script' "$LOG")"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 4 ] || fail "expected 4 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 5 ] || fail "expected 5 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" evolved)" -eq 4 ] && [ "$(field "${UI[0]}" heroes)" -eq 0 ] \
   || fail "the spearmen did not become knights: ${UI[0]}"
 [ "$(field "${UI[1]}" own)" -eq 1 ] && [ "$(field "${UI[1]}" unit)" = knight ] && [ "$(field "${UI[1]}" can_evolve)" -eq 1 ] \
@@ -66,5 +80,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
   || fail "the knight did not become the Marshal: ${UI[2]}"
 [ "$(field "${UI[3]}" heroes)" -eq 1 ] && [ "$(field "${UI[3]}" own)" -eq 24 ] && [ "$(field "${UI[3]}" can_evolve)" -eq 20 ] \
   || fail "the starting units are not selected again, or there is not exactly one Marshal: ${UI[3]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 2 ] || fail "missing screenshots"
+[ "$(field "${UI[4]}" own)" -eq 1 ] && [ "$(field "${UI[4]}" unit)" = bowmaster ] && [ "$(field "${UI[4]}" heroes)" -eq 2 ] \
+  || fail "the archer did not become the Bowmaster beside the Marshal: ${UI[4]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 3 ] || fail "missing screenshots"
 echo "UI hero screenshot test OK: $OUT"
