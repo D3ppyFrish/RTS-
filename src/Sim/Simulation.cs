@@ -44,6 +44,8 @@ public sealed class Simulation
     public MonsterSystem Monsters { get; }
     /// <summary>The map's dusk tree, its warden, healing it or hacking it down, and the Dusk Staff.</summary>
     public DuskTreeSystem DuskTree { get; }
+    /// <summary>Relics and the Dusk Staff lying where their bearers fell, until a unit picks them up.</summary>
+    public DroppedItemSystem Items { get; }
     /// <summary>Terrain magic: earth walls (see <see cref="SpellSystem"/>).</summary>
     public SpellSystem Spells { get; }
     /// <summary>City-states' towns: their totems and holders, guards, tribute, caravan trade and mercenaries.</summary>
@@ -93,6 +95,7 @@ public sealed class Simulation
         Evolution = new EvolutionSystem(this);
         Monsters = new MonsterSystem(this);
         DuskTree = new DuskTreeSystem(this);
+        Items = new DroppedItemSystem(this);
         Spells = new SpellSystem(this);
         Cities = new CityStateSystem(this);
         Match = new MatchSystem(this);
@@ -324,6 +327,7 @@ public sealed class Simulation
         Evolution.Step();
         Monsters.Step();
         DuskTree.Step();
+        Items.Step();
         Spells.Step();
         Cities.Step();
         Paths.Step(Units, Tick);
@@ -348,7 +352,7 @@ public sealed class Simulation
         ^ Cities.ComputeHash() * 0xA24BAED4963EE407UL ^ Match.ComputeHash() * 0x9FB21C651E98DF25UL
         ^ Physics.ComputeHash() * 0x61C8864680B583EBUL
         ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL ^ DuskTree.ComputeHash() * 0x3C6EF372FE94F82BUL
-        ^ Spells.ComputeHash() * 0x2127599BF4325C37UL
+        ^ Spells.ComputeHash() * 0x2127599BF4325C37UL ^ Items.ComputeHash() * 0x5851F42D4C957F2DUL
         ^ (_fog ? Vision.ComputeHash() * 0xBF58476D1CE4E5B9UL : 0)
         ^ (_testMode ? 0x7A3E1C5B9D2F4E61UL ^ Sandbox.ComputeHash() * 0xE7037ED1A0B428DBUL : 0)
         ^ (_dayNight ? 0x5851F42D4C957F2DUL ^ (ulong)_dayStart * 0x2545F4914F6CDD1DUL ^ Conditions.ComputeHash() * 0xD1B54A32D192ED03UL : 0);

@@ -1,6 +1,7 @@
 // Relics: one-of-a-kind things a unit takes up as the prize for beating a monster (a lair's "prizes" in
 // units.json, { "relic": id }). The nearest of the player's fighting units near the cleared den, without a
-// relic already, takes it up. It keeps it when it evolves, and it is gone with it. A unit bears at most one.
+// relic already, takes it up. It keeps it when it evolves; when it dies it drops it where it fell, and any
+// player's fighting unit without a relic that walks over it picks it up. A unit bears at most one.
 //   hp: hit points added to the bearer's most (it gets them at once too)
 //   damage: added to each of the bearer's hits
 //   armor: added on every part of the bearer

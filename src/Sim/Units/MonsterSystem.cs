@@ -706,6 +706,8 @@ public sealed class MonsterSystem
             u.CarryAmount[r] = 0;
             u.Auto[r] = u.Held[r] = false;
         }
+        // A relic the mount bore falls where it stood (its rider, if it has none, picks it up there).
+        _sim.Items.DropFrom(i);
         u.RemoveAt(i);
     }
 
