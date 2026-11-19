@@ -51,7 +51,7 @@ shallow fords (about a quarter, half and three quarters of the way down), grassl
 a hill range with stone ridges and pools of lava, a swamp with patches of poison bog (see
 [Natural hazards](docs/rules.md#natural-hazards)), a cavern with ore and crystal under the hills, and old
 stone ruins (broken stone brick walls and fallen stone to clear for stone, `RegionGenerator.RuinsPer512` for
-each 512×512 blocks). A bigger map gets more features, not just bigger ones (issue #67,
+each 512×512 blocks), each holding a find from `data/ruins.json` for the first side to search it. A bigger map gets more features, not just bigger ones (issue #67,
 `RegionGenerator.FeatureSets`): one more, smaller hill range (with its own cavern, crawler nests and lava) in
 the swamp's half and one more swamp in the hills' half for each further 512×512 blocks of land, so the 768
 map has two of each. `RegionMap.Caverns` and `RegionMap.Ruins` list where they are. Each

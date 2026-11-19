@@ -381,6 +381,16 @@ public sealed record DenCommand(int PlayerId, int[] Units, int Lair) : UnitsComm
 /// </summary>
 public sealed record DuskTreeCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
 
+/// <summary>
+/// The units search one of the map's old ruins (by its index in <see cref="World.RuinSystem.Ruins"/>) for what was
+/// left in it (see <see cref="World.RuinSystem"/>): they walk into it and search together until it is found.
+/// </summary>
+public sealed record SearchRuinCommand(int PlayerId, int[] Units, int Ruin) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(SearchRuinCommand? other) => base.Equals(other) && Ruin == other!.Ruin;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Ruin);
+}
+
 /// <summary>The Dusk Staff's bearer, if among the units, uses Dusk Bloom (see <see cref="Units.DuskTreeSystem"/>).</summary>
 public sealed record BloomCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
 

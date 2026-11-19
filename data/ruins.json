@@ -1,0 +1,25 @@
+// What the map's old ruins hold: each ruin is given one of these at match start (shuffled by the map's seed;
+// a find with a relic goes to one ruin at most, and once every find is out, the ones without a relic go round
+// again). The first player whose units search a ruin gets it (see World/RuinSystem.cs):
+//   name: what it is, as the alert names it ("a sealed granary")
+//   lore: the words found with it, the story of who built the ruins
+//   goods: put into the finder's storage nearest the ruin
+//   relic: from relics.json, taken up by the searcher if it can bear one, otherwise left lying where it stood
+// A find needs goods, a relic or both. All numbers are first guesses for playtesting.
+[
+  { "id": "mason_store", "name": "a mason's store",
+    "lore": "Cut into the lintel: \"We raised these walls in a season. The ground here gave its stone gladly.\"",
+    "goods": { "stone": 150, "iron": 30 } },
+  { "id": "granary", "name": "a sealed granary",
+    "lore": "Scratched on a jar: \"Grain for the long sleep. Do not open it until the heart is quiet.\"",
+    "goods": { "food": 200, "wood": 60 } },
+  { "id": "armoury", "name": "an old armoury",
+    "lore": "Beside the racks, a tally of the fallen, and under it: \"They came up from below.\"",
+    "goods": { "iron": 80, "coal": 40 } },
+  { "id": "toolmakers", "name": "a toolmaker's chest",
+    "lore": "Tools laid out in rows, and a warning burned into the lid: \"Dig, but not too deep. It wakes to the sound of digging.\"",
+    "goods": { "wood": 100, "stone": 60, "iron": 40 } },
+  { "id": "warden_tomb", "name": "a warden's tomb",
+    "lore": "On the bier: \"The last of the wardens. She looked into the heart of the land and came back. Her circlet is for whoever comes after.\"",
+    "relic": "sunstone_circlet" }
+]

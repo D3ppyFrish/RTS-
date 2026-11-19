@@ -7,6 +7,7 @@ using Rts.Sim.Automation;
 using Rts.Sim.Content;
 using Rts.Sim.Economy;
 using Rts.Sim.Units;
+using Rts.Sim.World;
 
 namespace Rts.Game;
 
@@ -657,6 +658,19 @@ public partial class PlayerControl : Node
                 if (own.Count == 0) return;
             }
         }
+        if (RuinUnder(screen) is { } ruin)
+        {
+            // An old ruin nobody has searched yet: the selected units walk in and search it.
+            var u = _sim.Units;
+            var searching = own.FindAll(id => _sim.Ruins.CanSearch(u.IndexOf(id)));
+            if (searching.Count > 0)
+            {
+                _sim.Schedule(_sim.Tick, new SearchRuinCommand(LocalPlayer, searching.ToArray(), ruin.Index));
+                _rings.ShowMarker(new Vector3(ruin.X + 0.5f, ruin.Y + 1, ruin.Z + 0.5f) * bs, SelectionRenderer.Work);
+                own.RemoveAll(searching.Contains);
+                if (own.Count == 0) return;
+            }
+        }
         if (ResourceUnder(screen, out int rx, out int ry, out int rz))
         {
             var workers = OwnWorkers(own);
@@ -901,6 +915,14 @@ public partial class PlayerControl : Node
         if (!VoxelRay.FromScreen(_rig.Camera, screen, World, HiddenFrom, out var hit, out _) || !Fog.HasSeen(hit.X, hit.Z)) return null;
         var town = _sim.Cities.At(hit.X, hit.Z);
         return town != null && hit.Y >= town.Y - 2 && hit.Y <= town.Y + 5 ? town : null;
+    }
+
+    /// <summary>The old ruin under the cursor (its walls, floor or the stone fallen in it), if you have seen it and nobody has searched it yet.</summary>
+    public AncientRuin? RuinUnder(Vector2 screen)
+    {
+        if (!VoxelRay.FromScreen(_rig.Camera, screen, World, HiddenFrom, out var hit, out _) || !Fog.HasSeen(hit.X, hit.Z)) return null;
+        var ruin = _sim.Ruins.At(hit.X, hit.Z);
+        return ruin is { Searched: false } && hit.Y >= ruin.Y && hit.Y <= ruin.Y + 5 ? ruin : null;
     }
 
     /// <summary>True if the dusk tree (its wood, or its leaves once healed) is under the cursor.</summary>
@@ -1256,6 +1278,47 @@ public partial class PlayerControl : Node
     {
         if (UsableDen() is not { } lair) return;
         _sim.Schedule(_sim.Tick, new DenCommand(LocalPlayer, OwnSelected().ToArray(), lair.Id));
+        Changed?.Invoke();
+    }
+
+    /// <summary>Columns from an old ruin within which a selected unit of yours offers to search it (the Search button).</summary>
+    public const int RuinOfferRange = 24;
+
+    /// <summary>
+    /// The unsearched old ruin you have seen nearest your selected units, with one of them that can search it within
+    /// <see cref="RuinOfferRange"/> columns, or null (see <see cref="RuinSystem"/>).
+    /// </summary>
+    public AncientRuin? NearRuin()
+    {
+        var own = OwnSelected();
+        if (own.Count == 0) return null;
+        var u = _sim.Units;
+        AncientRuin? best = null;
+        long bestD = long.MaxValue;
+        foreach (var ruin in _sim.Ruins.Ruins)
+        {
+            if (ruin.Searched || !Fog.HasSeen(ruin.X, ruin.Z)) continue;
+            foreach (int id in own)
+            {
+                int i = u.IndexOf(id);
+                if (!_sim.Ruins.CanSearch(i)) continue;
+                long dx = u.X[i].FloorToInt() - ruin.X, dz = u.Z[i].FloorToInt() - ruin.Z;
+                if (Math.Abs(dx) > RuinOfferRange || Math.Abs(dz) > RuinOfferRange || dx * dx + dz * dz >= bestD) continue;
+                best = ruin;
+                bestD = dx * dx + dz * dz;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>Your selected units search the old ruin near them (see <see cref="NearRuin"/>).</summary>
+    public void SearchRuin()
+    {
+        if (NearRuin() is not { } ruin) return;
+        var u = _sim.Units;
+        var searching = OwnSelected().FindAll(id => _sim.Ruins.CanSearch(u.IndexOf(id)));
+        if (searching.Count == 0) return;
+        _sim.Schedule(_sim.Tick, new SearchRuinCommand(LocalPlayer, searching.ToArray(), ruin.Index));
         Changed?.Invoke();
     }
 
@@ -1945,6 +2008,8 @@ public partial class PlayerControl : Node
                $"quarrying={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Quarry)} " +
                $"fishing={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Quarry && _sim.Buildings.Get(u.JobTarget[i])?.Def.Shore == true)} " +
                $"saplings={_sim.Economy.Saplings.Count} trees_grown={_sim.Economy.TreesGrown} " +
+               $"ruin_near={NearRuin()?.Index ?? -1} ruin_searching={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Ruins.Searching(u.Id[i]) >= 0)} " +
+               $"ruins_found={_sim.Ruins.Ruins.Count(r => r.SearchedBy == LocalPlayer)} " +
                $"ore={stock[(int)Good.IronOre]} coal={stock[(int)Good.Coal]} " +
                $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +

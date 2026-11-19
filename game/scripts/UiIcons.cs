@@ -335,6 +335,18 @@ public static class UiIcons
             "............", "...kkkkkk...", "..kssSssssk.", ".ksSsyysSsk.", ".kssyffysSk.", ".kSsyffyssk.",
             ".kssyyyysSk.", ".ksSssssssk.", "..ksSsssSk..", "...kssSsk...", "....kssk....", ".....kk.....",
         },
+        // An old ruin's carved stone tablet, gold writing on grey, standing in grass.
+        ["ruin"] = new[]
+        {
+            "....kkkk....", "...klllsk...", "..klsssssk..", "..ksysysSk..", "..kssyssSk..", "..ksyyysSk..",
+            "..kssySsSk..", "..ksyssSsk..", ".kkssSssskk.", ".kGgggggGGk.", "..kkkkkkkk..", "............",
+        },
+        // The sunstone circlet: a gold band with a glowing orange stone at its front.
+        ["sunstone_circlet"] = new[]
+        {
+            "............", "............", ".....kk.....", "....kfwk....", "..kkkffkkk..", ".kyyykkyyyk.",
+            "kyYk....kYyk", "kyk......kyk", "kYyk....kyYk", ".kYyyyyyyYk.", "..kkkkkkkk..", "............",
+        },
         // A boar's tusk, curved, on a strap.
         ["tusk"] = new[]
         {

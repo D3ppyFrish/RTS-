@@ -75,6 +75,9 @@ public sealed class DroppedItemSystem
         }
     }
 
+    /// <summary>A relic is left lying in block (x, y, z), as if <paramref name="owner"/>'s unit had dropped it there (a find in a ruin nobody there could take up).</summary>
+    internal void Drop(RelicDef relic, int x, int y, int z, int owner) => Add(relic, x, y, z, owner);
+
     private void Add(RelicDef? relic, int x, int y, int z, int owner)
     {
         var w = _sim.World;

@@ -31,6 +31,8 @@ public partial class Alerts : VBoxContainer
         public required GameEvent Event;
         public required string Text;
         public required Color Colour;
+        /// <summary>More to read on hovering it (what was written in a ruin), or null.</summary>
+        public string? More;
         public int Count = 1;
         public long LastTick;
         public double Age;
@@ -122,6 +124,7 @@ public partial class Alerts : VBoxContainer
             var a = _alerts[k];
             b.Text = a.Count > 1 ? $"{a.Text}  x{a.Count}" : a.Text;
             Hud.Frame(b, a.Colour);
+            b.TooltipText = a.More != null ? $"{a.More}\nClick to look there" : "Click to look there";
             b.Disabled = a.Event.X < 0;
         }
     }
@@ -143,7 +146,7 @@ public partial class Alerts : VBoxContainer
             _alerts.Insert(0, a);
             return;
         }
-        _alerts.Insert(0, new Alert { Event = e, Text = text, Colour = colour, LastTick = e.Tick });
+        _alerts.Insert(0, new Alert { Event = e, Text = text, Colour = colour, LastTick = e.Tick, More = MoreOf(e) });
         if (_alerts.Count > MaxShown) _alerts.RemoveRange(MaxShown, _alerts.Count - MaxShown);
     }
 
@@ -165,9 +168,25 @@ public partial class Alerts : VBoxContainer
             GameEventKind.TownLost => ($"Your {Lower(content.CityStates[e.Def].Name)} was taken", AttackColour),
             GameEventKind.TributeSent => ($"Tribute is on its way from the {Lower(content.CityStates[e.Def].Name)}", Hud.PlainColour),
             GameEventKind.UnitLostToHazard => ($"Your {Lower(content.Units[e.Def].Name)} {HazardDeath(e)}", AttackColour),
+            GameEventKind.RuinSearched => (RuinFound(e), GoodColour),
             _ => (null, Hud.PlainColour),
         };
     }
+
+    /// <summary>What your units found in a ruin: "Found a sealed granary in the ruin: 200 food, 60 wood".</summary>
+    private string? RuinFound(GameEvent e)
+    {
+        if (e.Def < 0 || e.Def >= _sim.Ruins.Ruins.Count || _sim.Ruins.Ruins[e.Def].Find is not { } find) return "Your units searched the ruin";
+        var parts = new List<string>();
+        if (find.Goods.Length > 0) parts.Add(Hud.CostText(find.Goods));
+        if (find.Relic is { } relic) parts.Add($"the {relic.Name}");
+        return $"Found {find.Name} in the ruin: {string.Join(" and ", parts)}";
+    }
+
+    /// <summary>What to read on hovering the event's alert: the words found in a ruin.</summary>
+    private string? MoreOf(GameEvent e) =>
+        e.Kind == GameEventKind.RuinSearched && e.Def >= 0 && e.Def < _sim.Ruins.Ruins.Count
+        && _sim.Ruins.Ruins[e.Def].Find is { Lore.Length: > 0 } find ? find.Lore : null;
 
     /// <summary>What the ground did, read from where the unit died: stone rubble on it means falling rocks, the crust gone a sinkhole.</summary>
     private string HazardDeath(GameEvent e)
