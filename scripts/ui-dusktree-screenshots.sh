@@ -3,8 +3,10 @@
 # Then as the Settlers (--dusk-party): a party east of the tree attack-moves on the Dusk Warden and kills
 # it; right-clicking the tree sends the battle priests to heal it, the tree grows its canopy and one priest
 # gets the Dusk Staff, whose Dusk Bloom button heals the party. Then as the Orcs: their party beats the
-# warden, which is recruited from the Beaten button, and hacks the tree down. Saves PNGs to OUT_DIR and
-# fails if the UI state is not as expected.
+# warden, which is recruited from the Beaten button, and hacks the tree down. Last, in test mode, the
+# Settlers heal the tree again, walk out east of it and are killed from the test panel: the staff's bearer drops the Dusk
+# Staff where it fell, on the map for another unit to pick up (issue #73). Saves PNGs to OUT_DIR and fails if
+# the UI state is not as expected.
 # Usage: scripts/ui-dusktree-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/dusk-tree}")"
@@ -81,6 +83,29 @@ clickui tame_recruit
 ticks 2
 print
 "
+DROP_STEPS="
+wait 20
+camera 428,590 0 75 40
+wait 5
+dragworld 425,g,580 434,g,600
+wait 2
+clickworld 415,g,588 right ctrl
+ticks 700
+clickworld 413,31,590 right
+ticks 320
+print
+camera 428,590 0 75 40
+wait 5
+clickworld 430,g,590 right
+ticks 200
+clickui test_tab_units
+clickui test_kill
+ticks 6
+print
+camera 431,588 30 40 10
+wait 10
+shot $OUT/dusk-staff-dropped.png
+"
 LOG="$OUT/ui-dusktree.log"
 run() {
   xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -90,13 +115,14 @@ run() {
   run --focus=dusk --time-of-day=0 --input="$NIGHT_STEPS"
   run --player=0 --focus=dusk --dusk-party=2 --input="$SETTLER_STEPS"
   run --player=1 --focus=dusk --dusk-party=2 --input="$ORC_STEPS"
+  run --player=0 --focus=dusk --dusk-party=2 --test-mode --input="$DROP_STEPS"
 } | tee "$LOG"
 
 fail() { echo "UI dusk tree test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step failed: $(grep '^Input script' "$LOG")"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 11 ] || fail "expected 11 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 13 ] || fail "expected 13 UI lines, got ${#UI[@]}"
 # The Settlers: the tree stands guarded; the party is selected, kills the warden and its priests heal the tree.
 [ "$(field "${UI[0]}" dusk_tree)" = guarded ] && [ "$(field "${UI[0]}" warden)" = wild ] || fail "the tree is not guarded: ${UI[0]}"
 [ "$(field "${UI[1]}" own)" -eq 12 ] || fail "the party is not selected: ${UI[1]}"
@@ -110,5 +136,8 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[8]}" tending)" -ge 1 ] || fail "nobody went to hack at the tree: ${UI[8]}"
 [ "$(field "${UI[9]}" dusk_tree)" = razed ] || fail "the tree was not hacked down: ${UI[9]}"
 [ "$(field "${UI[10]}" warden)" = own ] && [ "$(field "${UI[10]}" unit)" = dusk_warden ] || fail "the warden was not recruited: ${UI[10]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 7 ] || fail "missing screenshots"
+# Test mode: the party is killed and the staff lies on the ground.
+[ "$(field "${UI[11]}" staff)" = own ] || fail "nobody got the staff in the test mode run: ${UI[11]}"
+[ "$(field "${UI[12]}" staff)" = none ] && [ "$(field "${UI[12]}" dropped_items)" -eq 1 ] || fail "the staff was not dropped: ${UI[12]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 8 ] || fail "missing screenshots"
 echo "UI dusk tree screenshot test OK: $OUT"

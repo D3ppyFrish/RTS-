@@ -570,7 +570,7 @@ The den is gone from the map either way.
   one-of-a-kind thing a unit takes up: the selected fighting unit (not a worker) nearest the den that bears
   no relic yet takes it up at once. The giant's heart gives its bearer 60 more hit points (it gets them
   at once too) and 2 more armour on every part. A unit bears one relic at most, keeps it when it evolves,
-  and it is gone with the bearer (dropping relics is a follow-up). The bog lantern adds 4 damage to each
+  and drops it where it falls when it dies (see "Dropped relics and the Dusk Staff"). The bog lantern adds 4 damage to each
   hit, the crab shell shield 3 armour on every part, and the wyrm crystal 40 hit points, 6 damage a hit and
   1 armour on every part.
 - **Orcs: crab pots.** At a cleared crab den the Orcs' workers set crab pots (20 wood, 10 seconds): they
@@ -604,7 +604,8 @@ large bare tree in the hills about halfway between the starts, and a monster gua
   tree grows a violet canopy round its branches (once a game), and that priest gets the **Dusk Staff**.
 - **The Dusk Staff**: +20 hit points, heals 2 more each time, and **Dusk Bloom** (`BloomCommand`): every
   ally within 6 blocks heals 25 hit points (wounds mend too), then it waits 45 seconds. If the bearer
-  dies the staff is gone with it.
+  dies it drops the staff where it fell, and any side's unit that heals can pick it up there (see
+  "Dropped relics and the Dusk Staff").
 - **Razing** (`duskTree` is `raze`: the Orcs): once the warden is gone, Orc fighters sent to the tree
   hack it down: 30 seconds of one unit's work, shared among all of them. It falls as rubble (cleared for
   wood like a felled tree), and nobody can heal it any more.
@@ -612,6 +613,24 @@ large bare tree in the hills about halfway between the starts, and a monster gua
   shows "(healing the dusk tree, X%)", an Orc "(hacking at the dusk tree, X%)". The bearer is drawn
   holding the staff, its panel says "with the Dusk Staff", and the Dusk Bloom button (or the `,` key)
   uses it. The computer players leave the tree alone for now.
+
+## Dropped relics and the Dusk Staff
+
+Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the block where it fell
+(`DroppedItemSystem`, `Simulation.Items`).
+
+- **Picking it up**: a unit that comes within 1 block of it (and 1 level) takes it up at once, whoever's
+  unit it is, enemies included. A relic goes to a fighting unit (not a worker) without a relic, as at a den;
+  the staff to a unit that heals, as at the tree. Units that are beaten or running away, wild monsters and a
+  city-state's guards and caravans leave it. The nearest takes it (ties to the lowest id), and gets the
+  item's hit points at once. To fetch one, move a unit onto it.
+- **It lasts**: a dropped item never crumbles. If the ground under it is dug or falls away it falls too,
+  and if rubble falls on it it comes up on top.
+- **Not dropped**: a beaten monster that is tamed instead of killed keeps what it bears. There is no
+  handing an item over on purpose. A mount that is ridden off drops its relic where it stood, so a rider
+  without one picks it up. Units taken off the map in test mode (Remove, Clear) take their items with them.
+- **In the game**: the item stands over the ground as its pixel icon (the relic's, or Dusk Bloom's for the
+  staff), bobbing in a soft light, where you can see. Computer players do not go after dropped items yet.
 
 ## Natural hazards
 

@@ -21,7 +21,8 @@ namespace Rts.Sim.Units;
 /// The Dusk Staff gives its bearer <see cref="StaffHp"/> more hit points, heals <see cref="StaffHeal"/> more
 /// each time, and lets it use Dusk Bloom (<see cref="BloomCommand"/>): every ally within
 /// <see cref="BloomRange"/> blocks, the bearer too, gets back <see cref="BloomHeal"/> hit points, after which
-/// it can bloom again in <see cref="BloomCooldownTicks"/>. The staff is gone with its bearer.
+/// it can bloom again in <see cref="BloomCooldownTicks"/>. A bearer that dies drops it where it fell, and a unit that
+/// heals can pick it up there (see <see cref="DroppedItemSystem"/>).
 /// All numbers are starting guesses to be tuned in playtests.
 /// </summary>
 public sealed class DuskTreeSystem
@@ -409,7 +410,21 @@ public sealed class DuskTreeSystem
         LastBloomAt = (u.X[i], u.Y[i], u.Z[i]);
     }
 
-    /// <summary>The staff is gone with its bearer.</summary>
+    /// <summary>Unit i lets go of the staff (it died bearing it): nobody bears it until a unit picks it up (see <see cref="DroppedItemSystem"/>).</summary>
+    internal void DropStaff(int i)
+    {
+        if (HasStaff(i)) StaffBearer = 0;
+    }
+
+    /// <summary>Unit i picks up the dropped staff: it bears it, with the staff's hit points at once, as at the tree.</summary>
+    internal void TakeStaff(int i)
+    {
+        var u = U;
+        StaffBearer = u.Id[i];
+        u.Hp[i] = Math.Min(_sim.MaxHpOf(i), u.Hp[i] + StaffHp);
+    }
+
+    /// <summary>A bearer gone some other way than dying (taken off the map): nobody bears the staff.</summary>
     private void Forget()
     {
         if (StaffBearer != 0 && U.IndexOf(StaffBearer) < 0) StaffBearer = 0;

@@ -1940,7 +1940,7 @@ public partial class PlayerControl : Node
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +
                $"beaten={beaten} monsters={monsters} riders={riders} wild={wild} lairs={lairs} " +
-               $"den_usable={(UsableDen() != null ? 1 : 0)} dens_used={densUsed} den_buildings={lodges} den_forms={denForms} relics={relics} " +
+               $"den_usable={(UsableDen() != null ? 1 : 0)} dens_used={densUsed} den_buildings={lodges} den_forms={denForms} relics={relics} dropped_items={_sim.Items.Items.Count} item0_at={(_sim.Items.Items.Count > 0 ? $"{_sim.Items.Items[0].X},{_sim.Items.Items[0].Y},{_sim.Items.Items[0].Z}" : "none")} " +
                $"city={(_sim.Cities.Get(SelectedCity)?.Def.Id ?? "none")} holder={town?.Holder ?? -1} " +
                $"totem_owner={(town != null ? _sim.Cities.Totem(town)?.Owner ?? -1 : -1)} guards={town?.Guards.Count() ?? 0} " +
                $"guards_owner={(town != null && town.Guards.Any() ? u.Owner[u.IndexOf(town.Guards.First())] : -1)} tribute={town?.Caravans.Count ?? 0} " +

@@ -1066,8 +1066,13 @@ public sealed partial class CombatSystem
             // A gain lifts morale no higher than the cap, and never lowers morale that is over it.
             u.Morale[j] = change < 0 ? Math.Max(0, m + change) : Math.Max(m, Math.Min(MoraleCap(u.Owner[j]), m + change));
         }
+        // The dead drop the relics and the staff they bore where they fell; a tamed monster keeps its own.
         for (int k = _dead.Count - 1; k >= 0; k--)
-            if (!Tamed(u.Id[_dead[k]])) u.RemoveAt(_dead[k]);
+            if (!Tamed(u.Id[_dead[k]]))
+            {
+                _sim.Items.DropFrom(_dead[k]);
+                u.RemoveAt(_dead[k]);
+            }
         foreach (var (id, player) in _tamed) monsters.Subdue(u.IndexOf(id), player);
         return true;
     }

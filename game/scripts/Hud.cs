@@ -1271,7 +1271,7 @@ public partial class Hud : CanvasLayer
             _denButton.Text = $"Take up the {relic.Name.ToLowerInvariant()} at the {den}";
             _denButton.Icon = UiIcons.Get(relic.Icon);
             _denButton.TooltipText = $"The selected fighting unit nearest the den, without a relic already, takes up the {relic.Name.ToLowerInvariant()}" +
-                                     $"{RelicText(relic)}. It keeps it until it dies. The den is gone.\n{relic.Description}";
+                                     $"{RelicText(relic)}. It keeps it until it dies, then drops it where it falls for any fighting unit to pick up. The den is gone.\n{relic.Description}";
             _denButton.Disabled = false;
         }
     }
