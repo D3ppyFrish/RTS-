@@ -75,7 +75,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, IceBridge, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, IceBridge, Chasm, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -259,7 +259,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Test:
@@ -277,7 +277,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -391,6 +391,7 @@ public partial class PlayerControl : Node
             case Key.X:
                 SetTool(Tool == ToolMode.Tunnel ? ToolMode.Select : ToolMode.Tunnel);
                 break;
+            case Key.Z when key.ShiftPressed: ToggleChasm(); break;
             case Key.Z:
                 ToggleDig();
                 break;
@@ -1001,7 +1002,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1621,6 +1622,9 @@ public partial class PlayerControl : Node
     /// <summary>The Ice Bridge button and key (Shift+'): starts (or stops) drawing an ice bridge for a selected mage to freeze.</summary>
     public void ToggleIceBridge() => SetTool(Tool == ToolMode.IceBridge ? ToolMode.Select : ToolMode.IceBridge);
 
+    /// <summary>The Chasm button and key (Shift+Z): starts (or stops) drawing a chasm for a selected mage to open.</summary>
+    public void ToggleChasm() => SetTool(Tool == ToolMode.Chasm ? ToolMode.Select : ToolMode.Chasm);
+
     /// <summary>
     /// The selected caster that would raise the next earth wall: the first ready one, or 0. With
     /// <paramref name="soonest"/>, the one ready soonest when none is ready.
@@ -1669,6 +1673,8 @@ public partial class PlayerControl : Node
                 _sim.Schedule(_sim.Tick, new EarthWallCommand(LocalPlayer, OwnCasters().ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.IceBridge)
                 _sim.Schedule(_sim.Tick, new IceBridgeCommand(LocalPlayer, OwnCasters(Spell.IceBridge).ToArray(), _wallX, _wallZ, x2, z2));
+            else if (Tool == ToolMode.Chasm)
+                _sim.Schedule(_sim.Tick, new ChasmCommand(LocalPlayer, OwnCasters(Spell.Chasm).ToArray(), _wallX, _wallZ, x2, z2));
             else _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
                 ? new BridgeCommand(LocalPlayer, workers, BridgeBuilding, _wallX, _wallZ, x2, z2)
                 : new WallCommand(LocalPlayer, workers, WallBuilding, _wallX, _wallZ, x2, z2));
@@ -1689,7 +1695,7 @@ public partial class PlayerControl : Node
             UpdateBridgePreview();
             return;
         }
-        if (Tool is ToolMode.EarthWall or ToolMode.IceBridge)
+        if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm)
         {
             UpdateEarthWallPreview();
             return;
@@ -1722,6 +1728,7 @@ public partial class PlayerControl : Node
     {
         if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
         if (Tool == ToolMode.IceBridge) _sim.Spells.PlanIce(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.IceBridge)); // empty if it cannot span
+        else if (Tool == ToolMode.Chasm) _sim.Spells.PlanChasm(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.Chasm));
         else _sim.Spells.Plan(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters());
         foreach (var (x, z, y, room) in _earthPlan)
             if (y >= 1) _wallPreview.Add((x, y, z, room));
@@ -1925,6 +1932,7 @@ public partial class PlayerControl : Node
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
+               $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
@@ -1968,6 +1976,35 @@ public partial class PlayerControl : Node
         int n = 0;
         foreach (var wall in _sim.Spells.Walls)
             if (wall.Owner == LocalPlayer) n++;
+        return n;
+    }
+
+    /// <summary>Chasms of yours open now, and how many of their blocks are still open (air).</summary>
+    private int OwnChasms(out int open)
+    {
+        int n = 0;
+        open = 0;
+        foreach (var chasm in _sim.Spells.Chasms)
+        {
+            if (chasm.Owner != LocalPlayer) continue;
+            n++;
+            foreach (var (x, y, z) in chasm.Blocks)
+                if (_sim.World.Get(x, y, z) == BlockType.Air) open++;
+        }
+        return n;
+    }
+
+    /// <summary>Units (anyone's) standing in an open chasm, below the ground it was cut from.</summary>
+    private int InChasm()
+    {
+        var u = _sim.Units;
+        int n = 0;
+        foreach (var chasm in _sim.Spells.Chasms)
+        {
+            var open = new HashSet<(int, int, int)>(chasm.Blocks);
+            for (int i = 0; i < u.Count; i++)
+                if (open.Contains((u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()))) n++;
+        }
         return n;
     }
 

@@ -363,7 +363,7 @@ public sealed class Simulation
         // Any other order stops units working on the dusk tree.
         if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or AutomateCommand or PriorityCommand))
             DuskTree.Release(this, released);
-        if (command is UnitsCommand stopped and not (EarthWallCommand or IceBridgeCommand or StanceCommand or AutomateCommand or PriorityCommand))
+        if (command is UnitsCommand stopped and not (EarthWallCommand or IceBridgeCommand or ChasmCommand or StanceCommand or AutomateCommand or PriorityCommand))
             Spells.Release(stopped);
         switch (command)
         {
@@ -434,6 +434,7 @@ public sealed class Simulation
             case BloomCommand bl: DuskTree.Apply(bl); break;
             case EarthWallCommand ew: Spells.Apply(ew); break;
             case IceBridgeCommand ib: Spells.Apply(ib); break;
+            case ChasmCommand ch: Spells.Apply(ch); break;
             case TradeCommand t: Economy.Apply(t); break;
             case HireCommand h: Cities.Apply(h); break;
             case SurrenderCommand s: Match.Apply(s); break;

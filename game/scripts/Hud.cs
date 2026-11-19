@@ -71,6 +71,7 @@ public partial class Hud : CanvasLayer
     private Button _denButton = null!;
     private Button _bloomButton = null!;
     private Button _earthWallButton = null!;
+    private Button _chasmButton = null!;
     private Button _iceBridgeButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
@@ -591,6 +592,13 @@ public partial class Hud : CanvasLayer
         _iceBridgeButton.Pressed += () => _control.ToggleIceBridge();
         column.AddChild(_iceBridgeButton);
 
+        _chasmButton = MakeToolButton("Chasm  [Shift+Z]");
+        _chasmButton.Name = "chasm";
+        _chasmButton.Icon = UiIcons.Get("chasm");
+        _chasmButton.Visible = false;
+        _chasmButton.Pressed += () => _control.ToggleChasm();
+        column.AddChild(_chasmButton);
+
         _cityBox = new VBoxContainer { Visible = false };
         _cityBox.AddThemeConstantOverride("separation", 4);
         _hireRow = new HBoxContainer();
@@ -1030,6 +1038,7 @@ public partial class Hud : CanvasLayer
         RefreshBloom();
         RefreshEarthWall();
         RefreshIceBridge();
+        RefreshChasm();
         RefreshCities();
     }
 
@@ -1247,6 +1256,29 @@ public partial class Hud : CanvasLayer
         _iceBridgeButton.Disabled = ready == 0 && !tool;
     }
 
+    /// <summary>The Chasm button while a mage of yours is selected (greyed out while none is ready).</summary>
+    private void RefreshChasm()
+    {
+        bool tool = _control.Tool == PlayerControl.ToolMode.Chasm;
+        _chasmButton.Visible = _control.OwnCasters(Spell.Chasm).Count > 0 || tool;
+        _chasmButton.SetPressedNoSignal(tool);
+        if (!_chasmButton.Visible) return;
+        int ready = _control.ReadyCaster(spell: Spell.Chasm);
+        int next = ready != 0 ? ready : _control.ReadyCaster(soonest: true, spell: Spell.Chasm);
+        long wait = next == 0 ? 0 : Math.Max(0, _sim.Spells.ReadyAt(_sim.Units.IndexOf(next)) - _sim.Tick);
+        _chasmButton.Text = ready != 0 || next == 0 ? "Chasm  [Shift+Z]"
+            : $"Chasm in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond} s";
+        _chasmButton.TooltipText = $"A mage opens the ground {SpellSystem.ChasmDepth} blocks deep along a line of up to " +
+                                   $"{SpellSystem.MaxLength} columns, within {SpellSystem.CastRange} blocks of it: too deep to climb out of. " +
+                                   $"Whoever stands there falls in and takes {SpellSystem.FallDamage} damage. " +
+                                   $"It closes after {SpellSystem.ChasmLastsTicks / Simulation.TicksPerSecond} s and lifts them out. " +
+                                   "Not under buildings, nor beside water. " +
+                                   $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s before its next spell. " +
+                                   $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage makes the chasm " +
+                                   $"a column wider and {SpellSystem.WallPerHelper} columns longer.";
+        _chasmButton.Disabled = ready == 0 && !tool;
+    }
+
     private void RefreshDen()
     {
         int player = PlayerControl.LocalPlayer;
@@ -1435,6 +1467,21 @@ public partial class Hud : CanvasLayer
                            : _control.ReadyCaster(spell: Spell.IceBridge) == 0 ? "   (no selected mage is ready)" : "") +
                        "\nRight click or Esc to stop";
             }
+            case PlayerControl.ToolMode.Chasm:
+            {
+                var preview = _control.WallPreview;
+                int ok = 0;
+                foreach (var c in preview)
+                    if (c.Ok) ok++;
+                int group = _control.GroupCasters(Spell.Chasm);
+                return (_control.WallStarted
+                           ? $"Chasm: let go to open {ok} columns" + (ok < preview.Count ? $" ({preview.Count - ok} have a building, water or no ground to open)" : "")
+                           : $"Chasm: drag a line of up to {SpellSystem.WallLength(group)} columns for a mage to open the ground along") +
+                       (group > 1 ? $"   ({group} mages together: {SpellSystem.WallThickness(group)} wide)" : "") +
+                       (_control.OwnCasters(Spell.Chasm).Count == 0 ? "   (select a mage first)"
+                           : _control.ReadyCaster(spell: Spell.Chasm) == 0 ? "   (no selected mage is ready)" : "") +
+                       "\nRight click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Bridge:
             {
                 var preview = _control.WallPreview;
@@ -1453,7 +1500,7 @@ public partial class Hud : CanvasLayer
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance";
         }
     }

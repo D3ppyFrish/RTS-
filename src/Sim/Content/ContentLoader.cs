@@ -582,7 +582,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "upkeep", "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "earthWall", "iceBridge", "start");
+                "bleeds", "tracksBlood", "earthWall", "iceBridge", "chasm", "start");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -618,6 +618,7 @@ public static class ContentLoader
                 TracksBlood = o.Bool("tracksBlood"),
                 EarthWall = o.Bool("earthWall"),
                 IceBridge = o.Bool("iceBridge"),
+                Chasm = o.Bool("chasm"),
                 Heal = o.Int("heal", 0, 100000, 0),
                 HealTicks = Math.Max(1, (healTime * Tps).RoundToInt()),
                 HealRange = o.Decimal("healRange", Fix64.One, Fix64.FromInt(32), Fix64.FromInt(5), required: false),
@@ -1316,6 +1317,7 @@ public static class ContentLoader
                 h.Add(u.TracksBlood ? 1 : 0);
                 h.Add(u.EarthWall ? 1 : 0);
                 h.Add(u.IceBridge ? 1 : 0);
+                h.Add(u.Chasm ? 1 : 0);
                 h.Add(u.Heal);
                 h.Add(u.HealTicks);
                 h.Add(u.HealRange.Raw);
