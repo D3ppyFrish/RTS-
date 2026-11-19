@@ -361,6 +361,8 @@ public static class ChunkMesher
         BlockType.Bog => new Color(0.42f, 0.27f, 0.45f), // poison bog: a sickly violet sludge, unlike mud or grass
         BlockType.Crust => new Color(0.66f, 0.57f, 0.42f), // a sinkhole's crust: parched, pale earth that stands out from grass
         BlockType.Quicksand => new Color(0.55f, 0.45f, 0.30f), // quicksand: dark, wet, glistening sand that stands out from the beach
+        BlockType.Scree => new Color(0.69f, 0.66f, 0.6f), // scree: pale, dusty broken stones at a cliff's foot, warmer and lighter than the rock face
+        BlockType.LooseRock => new Color(0.48f, 0.36f, 0.27f), // loose rock: dark, weathered boulders perched on the brink
         BlockType.BerryBush => new Color(0.75f, 0.15f, 0.3f),
         BlockType.Planks => new Color(0.72f, 0.54f, 0.32f),
         BlockType.Thatch => new Color(0.8f, 0.69f, 0.38f),

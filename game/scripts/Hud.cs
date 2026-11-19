@@ -1815,7 +1815,7 @@ public partial class Hud : CanvasLayer
         {
             BlockType.Wood => "chopping wood",
             BlockType.BerryBush => "picking berries",
-            BlockType.Stone => "quarrying stone",
+            BlockType.Stone or BlockType.LooseRock => "quarrying stone",
             BlockType.IronOre => "mining iron ore",
             BlockType.Coal => "mining coal",
             _ => "digging",

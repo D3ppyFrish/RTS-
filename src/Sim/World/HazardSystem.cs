@@ -20,6 +20,12 @@ namespace Rts.Sim.World;
 /// into the hollow and each takes <see cref="SinkholeDamage"/>. A sinkhole's hollow is a funnel, one block deep
 /// at its edge and two in its middle, so what fell in can climb back out.
 ///
+/// Rockfall: loose rock (<see cref="BlockType.LooseRock"/>) perched on the brink of a cliff in the hills, over a
+/// field of scree (<see cref="BlockType.Scree"/>) at its foot. The tick a unit steps onto the scree, or onto the
+/// rocks, every loose rock within <see cref="RockfallReach"/> columns of it and above its feet comes away and falls
+/// towards it (see <see cref="Dislodge"/>): what the falling rock hits is crushed (<see cref="PhysicsSystem.CrushDamage"/>),
+/// and it lands as stone rubble. The scree whose rocks are all gone is then plain stone.
+///
 /// The walk graph counts every hazard as dear ground (see <see cref="WalkGraph"/>), so units on a move order
 /// walk around them where there is another way. A player's unit killed by the ground alone is reported
 /// (<see cref="GameEventKind.UnitLostToHazard"/>). The numbers are first guesses for playtesting.
@@ -41,7 +47,15 @@ public sealed class HazardSystem
     /// <summary>Most crust blocks one sinkhole gives way at once (a bound on the search; generated ones are far smaller).</summary>
     public const int MaxSinkhole = 64;
 
+    /// <summary>Columns (either way) from a unit on scree within which the loose rocks above it come down.</summary>
+    public const int RockfallReach = 4;
+    /// <summary>Levels above a unit's feet that loose rock can fall on it from.</summary>
+    public const int RockfallHeight = 10;
+        /// <summary>Speed (64ths of a block per tick) falling rocks start off upwards at, so they tip off the brink rather than slide down its face.</summary>
+    public const int RockfallHop = 24;
+
     private readonly Simulation _sim;
+    private readonly List<(int X, int Y, int Z)> _rocks = new();
     private readonly List<(int X, int Z)> _open = new();
     private readonly List<(int X, int Z)> _fell = new();
 
@@ -72,9 +86,9 @@ public sealed class HazardSystem
     /// sinkhole's crust. Units on a move order keep off such ground where they can (see <see cref="WalkGraph"/>).
     /// </summary>
     public static bool IsHazard(VoxelWorld w, int x, int y, int z) =>
-        w.Get(x, y - 1, z) == BlockType.Crust || DamageAt(w, x, y, z) > 0;
+        w.Get(x, y - 1, z) is BlockType.Crust or BlockType.Scree or BlockType.LooseRock || DamageAt(w, x, y, z) > 0;
 
-    /// <summary>Before the fighting: sinkholes give way under whoever stands on them, then the units whose second it is take what the ground does to them.</summary>
+    /// <summary>Before the fighting: sinkholes give way and rocks fall on whoever stands on them, then the units whose second it is take what the ground does to them.</summary>
     public void Step()
     {
         var u = _sim.Units;
@@ -85,7 +99,9 @@ public sealed class HazardSystem
         {
             if (u.Hp[i] <= 0) continue;
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
-            if (w.Get(x, y - 1, z) == BlockType.Crust) GiveWay(x, y - 1, z);
+            var under = w.Get(x, y - 1, z);
+            if (under == BlockType.Crust) GiveWay(x, y - 1, z);
+            else if (under is BlockType.Scree or BlockType.LooseRock) Dislodge(x, y, z);
         }
         for (int i = 0; i < u.Count; i++)
         {
@@ -132,6 +148,106 @@ public sealed class HazardSystem
             if (SinkholeDamage >= u.Hp[i]) Report(i, ux, y + 1, uz);
         }
         foreach (var (cx, cz) in _fell) w.Set(cx, y, cz, BlockType.Air);
+    }
+
+    /// <summary>
+    /// A unit with its feet at (x, y, z) has stepped onto scree or loose rock: every loose rock within
+    /// <see cref="RockfallReach"/> columns of it, from the level under its feet up to <see cref="RockfallHeight"/>
+    /// above, comes away and falls (see <see cref="PhysicsSystem.Release"/>), thrown towards the unit. Then every
+    /// block of scree around it that has no loose rock left above it within reach turns to plain stone, so the
+    /// ground there is safe. Returns how many rocks fell.
+    /// </summary>
+    public int Dislodge(int x, int y, int z)
+    {
+        var w = _sim.World;
+        int r = RockfallReach;
+        _rocks.Clear();
+        long sx = 0, sz = 0;
+        for (int ry = y - 1; ry <= y + RockfallHeight; ry++)
+        for (int rz = z - r; rz <= z + r; rz++)
+        for (int rx = x - r; rx <= x + r; rx++)
+            if (w.Get(rx, ry, rz) == BlockType.LooseRock) { _rocks.Add((rx, ry, rz)); sx += rx; sz += rz; }
+        int fell = _rocks.Count;
+        if (fell > 0)
+        {
+            // Thrown at the unit: pushed away from the point as far beyond the rocks' middle as the unit is in front
+            // of it, at the speed that brings them down where it stands.
+            int mx = (int)(sx / fell), mz = (int)(sz / fell), low = int.MaxValue;
+            foreach (var rock in _rocks) low = Math.Min(low, rock.Y);
+            int ticks = FlightTicks(Math.Max(0, low - y));
+            int dist = Math.Max(Math.Abs(x - mx), Math.Abs(z - mz));
+            int push = Math.Clamp((dist * PhysicsSystem.SubSteps + PhysicsSystem.SubSteps / 2 + ticks - 1) / ticks, MinPush, PhysicsSystem.MaxSpeed);
+            _sim.Physics.Release(_rocks, 2 * mx - x, 2 * mz - z, push, hop: RockfallHop);
+        }
+        // The scree around whose rocks are gone is safe ground now.
+        int far = 2 * r;
+        for (int cz = z - far; cz <= z + far; cz++)
+        for (int cx = x - far; cx <= x + far; cx++)
+        for (int cy = y - 1 - RockfallHeight; cy <= y + RockfallHeight; cy++)
+        {
+            if (w.Get(cx, cy, cz) != BlockType.Scree || RocksAbove(w, cx, cy + 1, cz)) continue;
+            w.Set(cx, cy, cz, BlockType.Stone);
+        }
+        return fell;
+    }
+
+    /// <summary>Least push that carries a rock a whole block out before it comes back down to where it started, clear of the brink.</summary>
+    private static readonly int MinPush = PhysicsSystem.SubSteps * PhysicsSystem.Gravity / (2 * RockfallHop) + 1;
+
+    /// <summary>Ticks a rock thrown up at <see cref="RockfallHop"/> takes to come down <paramref name="drop"/> levels below where it started.</summary>
+    private static int FlightTicks(int drop)
+    {
+        int vel = RockfallHop, pos = 0, t = 0;
+        while (pos > -drop * PhysicsSystem.SubSteps || vel > 0)
+        {
+            vel = Math.Max(vel - PhysicsSystem.Gravity, -PhysicsSystem.MaxSpeed);
+            pos += vel;
+            t++;
+        }
+        return Math.Max(1, t);
+    }
+
+    /// <summary>True if loose rock that a unit with its feet at (x, y, z) would shake loose is still there.</summary>
+    public static bool RocksAbove(VoxelWorld w, int x, int y, int z)
+    {
+        int r = RockfallReach;
+        for (int ry = y - 1; ry <= y + RockfallHeight; ry++)
+        for (int rz = z - r; rz <= z + r; rz++)
+        for (int rx = x - r; rx <= x + r; rx++)
+            if (w.Get(rx, ry, rz) == BlockType.LooseRock) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Makes a rockfall at the brink of a cliff: loose rock on the top of column (bx, bz), whose ground is at
+    /// <paramref name="top"/>, and on the columns either side of it along the brink (across direction
+    /// (<paramref name="dx"/>, <paramref name="dz"/>), which points down the cliff) where the ground is as high,
+    /// with one more rock on top in the middle; and scree in place of the top block of every column below the
+    /// cliff, up to <paramref name="reach"/> columns out from it and two to either side, that is natural ground
+    /// at least two levels lower. Returns how many columns of scree were laid.
+    /// </summary>
+    public static int MakeRockfall(VoxelWorld w, int bx, int top, int bz, int dx, int dz, int reach)
+    {
+        int px = -dz, pz = dx; // along the brink
+        for (int s = -1; s <= 1; s++)
+        {
+            int x = bx + px * s, z = bz + pz * s;
+            if (w.SurfaceHeight(x, z) != top || w.Get(x, top + 1, z) != BlockType.Air) continue;
+            w.Set(x, top + 1, z, BlockType.LooseRock);
+        }
+        if (w.Get(bx, top + 2, bz) == BlockType.Air) w.Set(bx, top + 2, bz, BlockType.LooseRock);
+        int laid = 0;
+        for (int k = 1; k <= reach; k++)
+        for (int s = -2; s <= 2; s++)
+        {
+            int x = bx + dx * k + px * s, z = bz + dz * k + pz * s;
+            if (x < 0 || z < 0 || x >= w.SizeX || z >= w.SizeZ) continue;
+            int h = w.SurfaceHeight(x, z);
+            if (h > top - 2 || !BlockInfo.IsGround(w.Get(x, h, z)) || w.Get(x, h + 1, z) != BlockType.Air) continue;
+            w.Set(x, h, z, BlockType.Scree);
+            laid++;
+        }
+        return laid;
     }
 
     /// <summary>

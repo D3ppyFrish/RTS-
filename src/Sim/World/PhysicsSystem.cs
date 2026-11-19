@@ -28,6 +28,11 @@ public sealed class FallingSection
     /// </summary>
     public bool Spreads { get; internal set; }
     /// <summary>
+    /// Rocks thrown down from a cliff (see <see cref="HazardSystem.Dislodge"/>): a player's unit they kill is reported
+    /// as lost to the ground (<see cref="GameEventKind.UnitLostToHazard"/>).
+    /// </summary>
+    public bool Rockfall { get; internal set; }
+    /// <summary>
     /// For a piece of a building caving in (see <see cref="PhysicsSystem.Crumble"/>), the building's middle in
     /// half blocks (doubled coordinates); otherwise <see cref="int.MinValue"/>. Its rubble only slides off a heap
     /// toward there, so it stays on the building's ground.
@@ -352,16 +357,17 @@ public sealed class PhysicsSystem
     /// face, each pushed away from (fromX, fromZ) at <paramref name="push"/> 64ths of a block per tick (straight
     /// down from there). Buildings use this for blocks that lose their support, are knocked out, or collapse.
     /// Places that hold nothing solid are skipped. With <paramref name="spread"/> the pieces' rubble spreads
-    /// out when it settles (see <see cref="FallingSection.Spreads"/>).
+    /// out when it settles (see <see cref="FallingSection.Spreads"/>). With <paramref name="hop"/> the pieces start
+    /// off upwards at that many 64ths of a block per tick, so what rests on the ground is thrown off it (rockfall).
     /// </summary>
-    public void Release(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX, int fromZ, int push, bool spread = false) =>
-        ReleaseFrom(cells, fromX * 2 + 1, fromZ * 2 + 1, push, spread);
+    public void Release(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX, int fromZ, int push, bool spread = false, int hop = 0) =>
+        ReleaseFrom(cells, fromX * 2 + 1, fromZ * 2 + 1, push, spread, hop: hop);
 
     /// <summary>
     /// <see cref="Release"/>, pushed from a point given in half blocks (doubled coordinates, so it can lie
     /// between blocks: the middle of block x is 2x + 1).
     /// </summary>
-    private void ReleaseFrom(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX2, int fromZ2, int push, bool spread, bool caveIn = false)
+    private void ReleaseFrom(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX2, int fromZ2, int push, bool spread, bool caveIn = false, int hop = 0)
     {
         _seen.Clear();
         foreach (var c in cells)
@@ -387,6 +393,8 @@ public sealed class PhysicsSystem
             }
             var s = Start(0);
             s.Spreads = spread;
+            s.VelY = hop;
+            s.Rockfall = hop > 0;
             if (caveIn) (s.InX, s.InZ) = (fromX2, fromZ2);
             long cx = 0, cz = 0;
             foreach (var b in s._blocks) { cx += b.X; cz += b.Z; }
@@ -654,7 +662,7 @@ public sealed class PhysicsSystem
                 int by = b.Y + s.OffY;
                 if (b.X + s.OffX != x || b.Z + s.OffZ != z || by < y || by > y + 1) continue;
                 s.Hit.Add(u.Id[i]);
-                _sim.Combat.Crush(i, CrushDamage);
+                Hurt(s, i);
                 break;
             }
         }
@@ -818,10 +826,19 @@ public sealed class PhysicsSystem
             {
                 if (p.Slid || p.X != x || p.Z != z || p.Y < y || p.Y > y + 1) continue;
                 s.Hit.Add(u.Id[i]);
-                _sim.Combat.Crush(i, CrushDamage);
+                Hurt(s, i);
                 break;
             }
         }
+    }
+
+    /// <summary>A piece hits unit <paramref name="i"/>; one killed by falling rocks is reported as lost to the ground.</summary>
+    private void Hurt(FallingSection s, int i)
+    {
+        var u = _sim.Units;
+        if (s.Rockfall && u.Hp[i] > 0 && CrushDamage >= u.Hp[i])
+            _sim.Events.UnitLostToHazard(u.Owner[i], u.Id[i], u.Def[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
+        _sim.Combat.Crush(i, CrushDamage);
     }
 
     /// <summary>Units buried in rubble climb out to the nearest open ground; one with nowhere to go dies.</summary>

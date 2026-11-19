@@ -169,10 +169,14 @@ public partial class Alerts : VBoxContainer
         };
     }
 
-    /// <summary>What the ground did, read from where the unit died: the crust gone means a sinkhole.</summary>
+    /// <summary>What the ground did, read from where the unit died: stone rubble on it means falling rocks, the crust gone a sinkhole.</summary>
     private string HazardDeath(GameEvent e)
     {
         var below = _sim.World.Get(e.X, e.Y - 1, e.Z);
+        for (int dz = -1; dz <= 1; dz++)
+        for (int dx = -1; dx <= 1; dx++)
+        for (int dy = -1; dy <= 1; dy++)
+            if (_sim.World.Get(e.X + dx, e.Y + dy, e.Z + dz) == BlockType.StoneRubble) return "was crushed by falling rocks";
         if (below == BlockType.Bog) return "died in the poison bog";
         if (below == BlockType.Quicksand) return "was dragged under by quicksand";
         if (Rts.Sim.World.HazardSystem.DamageAt(_sim.World, e.X, e.Y, e.Z) >= Rts.Sim.World.HazardSystem.LavaDamage) return "burned beside the lava";

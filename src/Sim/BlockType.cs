@@ -125,12 +125,24 @@ public enum BlockType : byte
     /// they stand on it. It looks like darker, wetter sand. Workers dig it away like sand (it gives nothing).
     /// </summary>
     Quicksand,
+    /// <summary>
+    /// Scree: loose, broken stones lying at the foot of a cliff in the hills, under rocks that are ready to fall
+    /// (see <see cref="LooseRock"/> and <see cref="World.HazardSystem"/>). Units walk on it, but the tick one
+    /// steps onto it the rocks above come down on it. Workers dig it away (it gives nothing).
+    /// </summary>
+    Scree,
+    /// <summary>
+    /// Loose rock: cracked boulders perched on the brink of a cliff in the hills, over a field of
+    /// <see cref="Scree"/>. A unit stepping onto the scree below, or onto the rocks, shakes them loose and they
+    /// fall (see <see cref="World.HazardSystem"/>). Workers quarry them for stone.
+    /// </summary>
+    LooseRock,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Quicksand;
+    public const BlockType Last = BlockType.LooseRock;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
@@ -176,7 +188,7 @@ public static class BlockInfo
     /// </summary>
     public static bool CanFall(BlockType t) => t is BlockType.Grass or BlockType.Soil or BlockType.Sand
         or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.Mud or BlockType.Bog
-        or BlockType.Quicksand || IsRubble(t);
+        or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock || IsRubble(t);
 
     /// <summary>Any tree's trunk: workers cut it for wood, and it topples when its foot is cut.</summary>
     public static bool IsTrunk(BlockType t) => t is BlockType.Wood or BlockType.PineWood or BlockType.BirchWood or BlockType.MushroomStem;
@@ -193,7 +205,7 @@ public static class BlockInfo
     /// </summary>
     public static BlockType RubbleOf(BlockType t) => t switch
     {
-        BlockType.Stone or BlockType.Crystal or BlockType.StoneBrick or BlockType.RoofTile or BlockType.Rampart => BlockType.StoneRubble,
+        BlockType.Stone or BlockType.Crystal or BlockType.StoneBrick or BlockType.RoofTile or BlockType.Rampart or BlockType.LooseRock => BlockType.StoneRubble,
         BlockType.IronOre => BlockType.OreRubble,
         BlockType.Coal => BlockType.CoalRubble,
         BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Trestle or BlockType.Floor => BlockType.WoodRubble,
@@ -204,5 +216,5 @@ public static class BlockInfo
 
     /// <summary>Natural ground a building site can be levelled through or a road laid on.</summary>
     public static bool IsGround(BlockType t) =>
-        t is BlockType.Grass or BlockType.Soil or BlockType.Sand or BlockType.Mud or BlockType.Bog or BlockType.Quicksand or BlockType.Stone;
+        t is BlockType.Grass or BlockType.Soil or BlockType.Sand or BlockType.Mud or BlockType.Bog or BlockType.Quicksand or BlockType.Scree or BlockType.Stone;
 }
