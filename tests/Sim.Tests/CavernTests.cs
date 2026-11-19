@@ -46,7 +46,7 @@ public class CavernTests
     /// <summary>
     /// The default map's cavern has three nests of five cave crawlers spread along it and a cave wyrm alone in its
     /// deepest chamber: every den on the cave floor, under the roof, and the wyrm's furthest in on foot from the way
-    /// in. Same seed, same lairs.
+    /// in. Its second cavern has crawler nests only. Same seed, same lairs.
     /// </summary>
     [Fact]
     public void TheCavernHasCrawlerNestsAndAWyrmAtItsFarEnd()
@@ -57,8 +57,18 @@ public class CavernTests
         Assert.DoesNotContain(db.Unit("cave_crawler"), db.WildMonsters);
         Assert.DoesNotContain(db.Unit("cave_crawler"), db.LairMonsters);
         var cave = sim.Map.Cavern!.Value;
-        var cavern = sim.Monsters.Lairs.Where(l => l.Monster.Lair!.Cavern != CavernSpot.None).ToList();
+        var all = sim.Monsters.Lairs.Where(l => l.Monster.Lair!.Cavern != CavernSpot.None).ToList();
+        // The main cavern's lairs come first; the default map's second cavern (issue #67, under its second hill
+        // range) has three more crawler nests but no wyrm.
+        var cavern = all.Take(4).ToList();
         Assert.Equal(new[] { "cave_crawler", "cave_crawler", "cave_crawler", "cave_wyrm" }, cavern.Select(l => l.Monster.Id));
+        Assert.Equal(2, sim.Map.Caverns.Count);
+        var second = all.Skip(4).ToList();
+        Assert.Equal(new[] { "cave_crawler", "cave_crawler", "cave_crawler" }, second.Select(l => l.Monster.Id));
+        var (c2x, c2y, c2z) = sim.Map.Caverns[1];
+        var floor2 = sim.Monsters.CavernFloor(c2x, c2y, c2z);
+        foreach (var lair in second)
+            Assert.Contains(floor2, c => c.X == lair.X && c.Z == lair.Z && c.Y == lair.Y);
 
         var floor = sim.Monsters.CavernFloor(cave.X, cave.Y, cave.Z);
         int Steps(Lair l) => floor.First(c => c.X == l.X && c.Z == l.Z && c.Y == l.Y).Steps;

@@ -24,7 +24,8 @@ using Rts.Sim.Replay;
 //     --trace             with --ai: print every minute what each player has (workers, soldiers and their
 //                         worth, goods, buildings, housing) and what its army is doing
 //     --seed=N            seed for a generated match (default 1234)
-//     --world=XxYxZ       world size for a generated match (default 512x64x512)
+//     --world=XxYxZ       world size for a generated match (default 512x64x512; with --ai, the game's
+//                         default map, 768x64x768)
 //     --minutes=M         generated match length in game minutes (default 10; with --ai, at most this
 //                         long, default 40)
 //     --players=N         scripted players (default 2)
@@ -128,7 +129,8 @@ try
     }
     else if (opts.ContainsKey("ai"))
     {
-        var size = Opt("world", "512x64x512").Split('x');
+        // Computer players play on the game's default map (issue #67).
+        var size = Opt("world", $"{Rts.Sim.World.RegionGenerator.DefaultSize}x{Rts.Sim.World.RegionGenerator.DefaultHeight}x{Rts.Sim.World.RegionGenerator.DefaultSize}").Split('x');
         if (size.Length != 3) throw new ArgumentException("--world must look like 512x64x512");
         double minutes = double.Parse(Opt("minutes", "40"), ci);
         long ticks = (long)Math.Round(minutes * 60 * Simulation.TicksPerSecond);

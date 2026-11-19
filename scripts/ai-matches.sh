@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AI check used by CI (issue #15): computer players play each other on 512x64x512 maps from the usual
+# AI check used by CI (issue #15): computer players play each other on the default 768x64x768 map from the usual
 # start, one match per seed (seeds 1 to 5 unless given), at most 40 game minutes each. Every match must
 # end with a winner, and replaying its command log (twice) must give the same hashes and the same winner.
 # The players are the Hard computer player (player 0) against the Classic one, with fog of war (issue

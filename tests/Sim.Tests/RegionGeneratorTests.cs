@@ -228,6 +228,133 @@ public class RegionGeneratorTests
         }
     }
 
+    // --- Bigger maps get more features (issue #67) ----------------------------------------------
+
+    private static readonly Lazy<RegionMap> Default768 = new(() =>
+        RegionGenerator.Generate(1234, RegionGenerator.DefaultSize, RegionGenerator.DefaultHeight, RegionGenerator.DefaultSize));
+
+    /// <summary>
+    /// Separate patches of a biome at least minSize columns big (4-connected; the river, which cuts through
+    /// everything, joins what it splits, though its own columns are not counted).
+    /// </summary>
+    private static int Patches(RegionMap map, Biome biome, int minSize)
+    {
+        int sx = map.World.SizeX, sz = map.World.SizeZ, patches = 0;
+        var seen = new bool[sx * sz];
+        var stack = new System.Collections.Generic.Stack<(int, int)>();
+        for (int z0 = 0; z0 < sz; z0++)
+        for (int x0 = 0; x0 < sx; x0++)
+        {
+            if (seen[z0 * sx + x0] || map.BiomeAt(x0, z0) != biome) continue;
+            bool Part(int x, int z) => map.BiomeAt(x, z) == biome || map.BiomeAt(x, z) == Biome.River;
+            int size = 0;
+            seen[z0 * sx + x0] = true;
+            stack.Push((x0, z0));
+            while (stack.Count > 0)
+            {
+                var (x, z) = stack.Pop();
+                if (map.BiomeAt(x, z) == biome) size++;
+                foreach (var (dx, dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                {
+                    int nx = x + dx, nz = z + dz;
+                    if (nx < 0 || nz < 0 || nx >= sx || nz >= sz || seen[nz * sx + nx] || !Part(nx, nz)) continue;
+                    seen[nz * sx + nx] = true;
+                    stack.Push((nx, nz));
+                }
+            }
+            if (size >= minSize) patches++;
+        }
+        return patches;
+    }
+
+    /// <summary>Separate pools of lava on the surface.</summary>
+    private static int LavaPools(RegionMap map)
+    {
+        var w = map.World;
+        var tops = new System.Collections.Generic.List<(int X, int Z)>();
+        for (int z = 0; z < w.SizeZ; z++)
+        for (int x = 0; x < w.SizeX; x++)
+            if (w.Get(x, w.SurfaceHeight(x, z), z) == BlockType.Lava) tops.Add((x, z));
+        int pools = 0;
+        var left = new System.Collections.Generic.List<(int X, int Z)>(tops);
+        while (left.Count > 0)
+        {
+            var (px, pz) = left[0];
+            left.RemoveAll(t => Math.Abs(t.X - px) <= 12 && Math.Abs(t.Z - pz) <= 12);
+            pools++;
+        }
+        return pools;
+    }
+
+    /// <summary>
+    /// The default 768 map has more distinct places than the 512 one, not just bigger ones: two hill ranges, two
+    /// swamps, a cavern under each hill range, more lava pools and more ruins. The 512 map keeps one of each.
+    /// </summary>
+    [Fact]
+    public void BiggerMapsGetMoreFeatures()
+    {
+        Assert.Equal(1, RegionGenerator.FeatureSets(512, 512));
+        Assert.Equal(2, RegionGenerator.FeatureSets(768, 768));
+        Assert.Equal(RegionGenerator.MaxFeatureSets, RegionGenerator.FeatureSets(4096, 4096));
+        var small = Maps[2].Value; // seed 1234 on 512
+        var big = Default768.Value;
+        Assert.Equal(1, Patches(small, Biome.Hills, 2000));
+        Assert.Equal(1, Patches(small, Biome.Swamp, 2000));
+        Assert.Equal(2, Patches(big, Biome.Hills, 2000));
+        Assert.Equal(2, Patches(big, Biome.Swamp, 2000));
+        Assert.Single(small.Caverns);
+        Assert.Equal(2, big.Caverns.Count);
+        Assert.Equal(big.Cavern, big.Caverns[0]);
+        foreach (var (cx, cy, cz) in big.Caverns)
+        {
+            Assert.Equal(Biome.Hills, big.BiomeAt(cx, cz));
+            Assert.True(big.World.SurfaceHeight(cx, cz) > cy + 3, $"cavern at {cx},{cz} is not underground");
+        }
+        Assert.True(LavaPools(big) > LavaPools(small), $"lava pools: {LavaPools(big)} on 768, {LavaPools(small)} on 512");
+        Assert.Equal(RegionGenerator.RuinsPer512, small.Ruins.Count);
+        Assert.True(big.Ruins.Count > small.Ruins.Count, $"ruins: {big.Ruins.Count} on 768, {small.Ruins.Count} on 512");
+        // Neither start is crowded by the new features.
+        foreach (var s in big.Starts)
+        {
+            Assert.Equal(Biome.Grassland, big.BiomeAt(s.X, s.Z));
+            foreach (var (rx, _, rz) in big.Ruins)
+                Assert.True(Math.Abs(rx - s.X) + Math.Abs(rz - s.Z) > RegionGenerator.StartResourceRadius, $"ruin at {rx},{rz} by a start");
+        }
+    }
+
+    /// <summary>
+    /// A ruin is a broken square of stone brick walls, with a doorway and a corner standing four high, on a cracked
+    /// floor, with fallen stone (rubble cleared for stone) lying in and around it.
+    /// </summary>
+    [Theory, MemberData(nameof(MapIndexes))]
+    public void RuinsAreBrokenStoneWallsWithFallenStone(int m)
+    {
+        var map = Maps[m].Value;
+        Assert.NotEmpty(map.Ruins);
+        var w = map.World;
+        int r = RegionGenerator.RuinHalf;
+        foreach (var (cx, g, cz) in map.Ruins)
+        {
+            int wall = 0, gaps = 0, tallest = 0, rubble = 0, floor = 0;
+            for (int dz = -r - 1; dz <= r + 1; dz++)
+            for (int dx = -r - 1; dx <= r + 1; dx++)
+            {
+                int x = cx + dx, z = cz + dz, ring = Math.Max(Math.Abs(dx), Math.Abs(dz));
+                if (w.Get(x, g + 1, z) == BlockType.StoneRubble) rubble++;
+                if (ring < r && w.Get(x, g, z) == BlockType.StoneBrick) floor++;
+                if (ring != r) continue;
+                int high = 0;
+                while (w.Get(x, g + high + 1, z) == BlockType.StoneBrick) high++;
+                if (high == 0) gaps++; else wall++;
+                tallest = Math.Max(tallest, high);
+            }
+            Assert.True(wall > 20, $"ruin at {cx},{cz}: only {wall} wall columns");
+            Assert.True(gaps >= 3, $"ruin at {cx},{cz}: no way in");
+            Assert.Equal(4, tallest);
+            Assert.True(rubble > 0 && floor > 10, $"ruin at {cx},{cz}: {rubble} rubble, {floor} floor");
+        }
+    }
+
     [Fact]
     public void SameSeedGivesSameMapAndDifferentSeedsDiffer()
     {
@@ -249,6 +376,8 @@ public class RegionGeneratorTests
         Assert.Equal(map.ComputeHash(), loaded.ComputeHash());
         Assert.Equal(map.Starts, loaded.Starts);
         Assert.Equal(map.Cavern, loaded.Cavern);
+        Assert.Equal(map.Caverns, loaded.Caverns);
+        Assert.Equal(map.Ruins, loaded.Ruins);
         Assert.Equal(map.Seed, loaded.Seed);
         Assert.Equal(new Simulation(map).StateHash(), new Simulation(loaded).StateHash());
     }

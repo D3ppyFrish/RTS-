@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Head to head between two computer player levels (issue #47): one match per seed on 512x64x512 maps from
+# Head to head between two computer player levels (issue #47): one match per seed on the default 768x64x768 map from
 # the usual start, with fog of war, at most 40 game minutes each. Level A plays player 0 on odd seeds and
 # player 1 on even seeds, so both sides of each map get played. Prints each match and the tally.
 # Usage: scripts/ai-versus.sh [A] [B] [SEEDS] [OUT_DIR]   (default: hard classic 20 build/ai-versus)

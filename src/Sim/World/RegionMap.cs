@@ -26,15 +26,32 @@ public readonly record struct StartArea(int Player, int X, int Y, int Z);
 /// </summary>
 public sealed class RegionMap
 {
-    public const int FormatVersion = 1;
+    public const int FormatVersion = 2;
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("RTSMAP");
 
     public ulong Seed { get; }
     public VoxelWorld World { get; }
     public List<StartArea> Starts { get; } = new();
 
-    /// <summary>Optional: where the generator put the cavern (centre, in blocks).</summary>
-    public (int X, int Y, int Z)? Cavern { get; set; }
+    /// <summary>
+    /// Optional: where the generator put the main cavern, under the main hill range (its first chamber, in
+    /// blocks): the first of <see cref="Caverns"/>.
+    /// </summary>
+    public (int X, int Y, int Z)? Cavern
+    {
+        get => Caverns.Count > 0 ? Caverns[0] : null;
+        set
+        {
+            if (value is { } c) { if (Caverns.Count > 0) Caverns[0] = c; else Caverns.Add(c); }
+            else Caverns.Clear();
+        }
+    }
+
+    /// <summary>Every cavern the generator carved, one under each hill range (issue #67), the main one first.</summary>
+    public List<(int X, int Y, int Z)> Caverns { get; } = new();
+
+    /// <summary>The middles of the old stone ruins the generator put up (issue #67), standing on the block at Y.</summary>
+    public List<(int X, int Y, int Z)> Ruins { get; } = new();
 
     private readonly Biome[] _biomes;
 
@@ -62,7 +79,8 @@ public sealed class RegionMap
 
     /// <summary>
     /// Binary format, little-endian: "RTSMAP", u16 version, u64 seed, i32 sizeX/Y/Z, i32 start count,
-    /// then (i32 player, x, y, z) per start, u8 hasCavern (+ i32 x, y, z), the biome map run-length
+    /// then (i32 player, x, y, z) per start, i32 cavern count then (i32 x, y, z) per cavern, the same for ruins
+    /// (version 1 had u8 hasCavern (+ i32 x, y, z) and no ruins; it still loads), the biome map run-length
     /// encoded, then every block in (y, z, x) order run-length encoded. Runs are (u16 length, u8 value).
     /// </summary>
     public void Save(Stream stream)
@@ -74,8 +92,11 @@ public sealed class RegionMap
         w.Write(World.SizeX); w.Write(World.SizeY); w.Write(World.SizeZ);
         w.Write(Starts.Count);
         foreach (var s in Starts) { w.Write(s.Player); w.Write(s.X); w.Write(s.Y); w.Write(s.Z); }
-        w.Write(Cavern.HasValue);
-        if (Cavern is { } c) { w.Write(c.X); w.Write(c.Y); w.Write(c.Z); }
+        foreach (var list in new[] { Caverns, Ruins })
+        {
+            w.Write(list.Count);
+            foreach (var c in list) { w.Write(c.X); w.Write(c.Y); w.Write(c.Z); }
+        }
 
         var rle = new RunWriter(w);
         foreach (var b in _biomes) rle.Add((byte)b);
@@ -93,7 +114,7 @@ public sealed class RegionMap
         var magic = r.ReadBytes(Magic.Length);
         if (!magic.AsSpan().SequenceEqual(Magic)) throw new InvalidDataException("Not an RTS map file");
         int version = r.ReadUInt16();
-        if (version != FormatVersion) throw new InvalidDataException($"Unsupported map version {version}");
+        if (version is < 1 or > FormatVersion) throw new InvalidDataException($"Unsupported map version {version}");
         ulong seed = r.ReadUInt64();
         int sx = r.ReadInt32(), sy = r.ReadInt32(), sz = r.ReadInt32();
         if (sx <= 0 || sy <= 0 || sz <= 0 || (long)sx * sy * sz > 1L << 28) throw new InvalidDataException("Bad map size");
@@ -101,7 +122,17 @@ public sealed class RegionMap
         int starts = r.ReadInt32();
         if (starts < 0 || starts > 64) throw new InvalidDataException("Bad start count");
         for (int i = 0; i < starts; i++) map.Starts.Add(new StartArea(r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32()));
-        if (r.ReadBoolean()) map.Cavern = (r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
+        if (version == 1)
+        {
+            if (r.ReadBoolean()) map.Cavern = (r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
+        }
+        else
+            foreach (var list in new[] { map.Caverns, map.Ruins })
+            {
+                int n = r.ReadInt32();
+                if (n < 0 || n > 1024) throw new InvalidDataException("Bad feature count");
+                for (int i = 0; i < n; i++) list.Add((r.ReadInt32(), r.ReadInt32(), r.ReadInt32()));
+            }
 
         var runs = new RunReader(r);
         for (int i = 0; i < map._biomes.Length; i++)

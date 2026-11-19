@@ -8,7 +8,10 @@ namespace Rts.Sim.World;
 /// ocean on the west and east edges with sandy coasts, a river running north to south through the
 /// middle (crossable at three shallow fords), rolling grassland with forests, a hill range with stone
 /// ridges in the north, a swamp in the south with patches of poison bog, one cavern with ore and crystal under the
-/// hills, and a few pools of lava up in the hills.
+/// hills, and a few pools of lava up in the hills. Bigger maps get more of them, not just bigger ones (issue #67):
+/// for each further 512 by 512 blocks of land, one more (smaller) hill range with its own cavern and lava in
+/// the swamp's half of the map, and one more swamp in the hills' half (see <see cref="FeatureSets"/>). Old stone
+/// ruins stand here and there in the open country, <see cref="RuinsPer512"/> for each 512 by 512 blocks.
 /// Each player starts on a flat clearing
 /// near their coast, with food, wood, stone and iron placed close by (mirrored, so the starts are balanced).
 ///
@@ -21,6 +24,19 @@ public static class RegionGenerator
     public const int StartResourceRadius = 40;
     /// <summary>Sinkholes (see <see cref="HazardSystem.MakeSinkhole"/>) per 512 by 512 blocks of map.</summary>
     public const int SinkholesPer512 = 12;
+    /// <summary>Ruins (see the builder's PlaceRuins) per 512 by 512 blocks of map.</summary>
+    public const int RuinsPer512 = 3;
+    /// <summary>A ruin's walls stand this many columns from its middle (so it is 2 * this + 1 across).</summary>
+    public const int RuinHalf = 4;
+    /// <summary>The most hill ranges (and swamps) a map gets, however big.</summary>
+    public const int MaxFeatureSets = 3;
+
+    /// <summary>
+    /// How many hill ranges a map of this size gets, and as many swamps (issue #67): one for each 512 by 512 blocks
+    /// of land (rounded down, at least one, at most <see cref="MaxFeatureSets"/>). The 512 map gets one of each,
+    /// the default 768 map two.
+    /// </summary>
+    public static int FeatureSets(int sizeX, int sizeZ) => Math.Clamp((int)((long)sizeX * sizeZ / (512 * 512)), 1, MaxFeatureSets);
 
     /// <summary>
     /// The default map's width and depth in blocks (issue #45: half again as wide as the first slice's 512, so
@@ -127,6 +143,8 @@ public static class RegionGenerator
         // Feature placement.
         private int _duskX = -1, _duskZ = -1;
         private readonly int _hillX, _hillZ, _hillR, _swampX, _swampZ, _swampR;
+        /// <summary>Every hill range and every swamp (centre and radius), the first of each being the main one above.</summary>
+        private readonly List<(int X, int Z, int R)> _hills = new(), _swamps = new();
         /// <summary>Rows (z) at the middle of each ford, the shallow stretches where the river can be waded.</summary>
         private readonly int[] _fordZ;
 
@@ -152,6 +170,19 @@ public static class RegionGenerator
             {
                 _hillZ = _sz - 1 - _hillZ;
                 _swampZ = _sz - 1 - _swampZ;
+            }
+            _hills.Add((_hillX, _hillZ, _hillR));
+            _swamps.Add((_swampX, _swampZ, _swampR));
+            // More hills and swamps on a bigger map, from a random stream of their own, so the 512 map is as it
+            // was. Each extra hill range is a smaller one in the swamp's half, off to one side of the river; each
+            // extra swamp a smaller one in the hills' half, off to the other side, so neither start gets both.
+            var more = new DeterministicRandom(seed ^ 0x3E1D5A11UL);
+            int side = more.Range(0, 2);
+            for (int k = 1; k < FeatureSets(_sx, _sz); k++, side ^= 1)
+            {
+                int hx = side == 0 ? _sx / 4 : _sx * 3 / 4, sx = side == 0 ? _sx * 4 / 5 : _sx / 5;
+                _hills.Add((hx + Sx(more.Range(-16, 17)), _swampZ + Sz(more.Range(-20, 21)), Math.Max(4, _hillR * 3 / 4)));
+                _swamps.Add((sx + Sx(more.Range(-12, 13)), _hillZ + Sz(more.Range(-20, 21)), Math.Max(3, _swampR * 3 / 4)));
             }
             // Three fords, roughly at a quarter, half and three quarters of the river's length. Their own
             // random stream, so adding them did not move anything else on existing seeds.
@@ -185,10 +216,11 @@ public static class RegionGenerator
                 Column(x, z);
             PlaceStarts();
             Fill();
-            CarveCavern();
+            CarveCaverns();
             PlaceLava();
             PlaceBogs();
             PlaceDuskTree();
+            PlaceRuins();
             PlantTrees();
             PlaceStartResources();
             PlaceSinkholes();
@@ -234,33 +266,41 @@ public static class RegionGenerator
             else
             {
                 // Hills: a dome of raised land with ridged stone crests.
-                int hd = Noise.Sqrt((long)(x - _hillX) * (x - _hillX) + (long)(z - _hillZ) * (z - _hillZ))
-                         + (Noise.Value(x, z, Math.Max(4, Sx(40)), _seed + 7) - 128) * Sx(36) / 128;
-                if (hd < _hillR)
+                int wobble = (Noise.Value(x, z, Math.Max(4, Sx(40)), _seed + 7) - 128) * Sx(36) / 128;
+                foreach (var (hx, hz, hr) in _hills)
                 {
-                    int ridge = Noise.Value(x, z, Math.Max(4, Sx(28)), _seed + 3);
-                    int crest = 255 - Math.Abs(2 * ridge - 255); // 255 on the noise mid-line
-                    int bump = (_hillR - hd) * Sy(24) / _hillR;
-                    int lift = bump * (96 + crest * 160 / 255) / 256;
-                    h += lift;
-                    if (lift >= Sy(3))
+                    int hd = Noise.Sqrt((long)(x - hx) * (x - hx) + (long)(z - hz) * (z - hz)) + wobble;
+                    if (hd < hr)
                     {
-                        biome = Biome.Hills;
-                        if (h >= _water + Sy(12) || crest > 215) surface = BlockType.Stone;
+                        int ridge = Noise.Value(x, z, Math.Max(4, Sx(28)), _seed + 3);
+                        int crest = 255 - Math.Abs(2 * ridge - 255); // 255 on the noise mid-line
+                        int bump = (hr - hd) * Sy(24) / hr;
+                        int lift = bump * (96 + crest * 160 / 255) / 256;
+                        h += lift;
+                        if (lift >= Sy(3))
+                        {
+                            biome = Biome.Hills;
+                            if (h >= _water + Sy(12) || crest > 215) surface = BlockType.Stone;
+                        }
                     }
                 }
 
-                // Swamp: low, flat, muddy ground with pools.
-                int sd = Noise.Sqrt((long)(x - _swampX) * (x - _swampX) + (long)(z - _swampZ) * (z - _swampZ))
-                         + (Noise.Value(x, z, Math.Max(4, Sx(32)), _seed + 8) - 128) * Sx(24) / 128;
-                if (sd < _swampR)
+                // Swamp: low, flat, muddy ground with pools. The nearest swamp (for its own radius) shapes the column.
+                int swampWobble = (Noise.Value(x, z, Math.Max(4, Sx(32)), _seed + 8) - 128) * Sx(24) / 128;
+                int sd = int.MaxValue, swampR = 1;
+                foreach (var (wx, wz, wr) in _swamps)
+                {
+                    int d = Noise.Sqrt((long)(x - wx) * (x - wx) + (long)(z - wz) * (z - wz)) + swampWobble;
+                    if ((long)d * swampR < (long)sd * wr || sd == int.MaxValue) (sd, swampR) = (d, wr);
+                }
+                if (sd < swampR)
                 {
                     int flat = _water + (Noise.Value(x, z, Math.Max(3, Sx(10)), _seed + 4) > 150 ? 1 : 0);
                     bool pool = Noise.Value(x, z, Math.Max(3, Sx(8)), _seed + 5) < 95;
                     if (pool) flat = _water - 1;
                     int edge = Math.Max(1, Sx(10));
-                    h = sd > _swampR - edge ? flat + (h - flat) * (sd - (_swampR - edge)) / edge : flat;
-                    if (sd <= _swampR - edge / 2)
+                    h = sd > swampR - edge ? flat + (h - flat) * (sd - (swampR - edge)) / edge : flat;
+                    if (sd <= swampR - edge / 2)
                     {
                         biome = Biome.Swamp;
                         surface = BlockType.Mud;
@@ -383,6 +423,14 @@ public static class RegionGenerator
                 int cz = _hillZ + rng.Range(-_hillR * 2 / 3, _hillR * 2 / 3 + 1);
                 if (TryPool(cx, cz, r)) placed++;
             }
+            // Two more in each further hill range (issue #67), from a stream of their own.
+            var more = new DeterministicRandom(_seed ^ 0x1A7A9002UL);
+            for (int k = 1; k < _hills.Count; k++)
+            {
+                var (hx, hz, hr) = _hills[k];
+                for (int tries = 0, got = 0; tries < 60 && got < 2; tries++)
+                    if (TryPool(hx + more.Range(-hr * 2 / 3, hr * 2 / 3 + 1), hz + more.Range(-hr * 2 / 3, hr * 2 / 3 + 1), r)) got++;
+            }
         }
 
         private bool TryPool(int cx, int cz, int r)
@@ -395,7 +443,8 @@ public static class RegionGenerator
                 long far = StartResourceRadius + ring + Sx(16);
                 if (dx * dx + dz * dz < far * far) return false;
             }
-            if (_map.Cavern is { } cave && Math.Abs(cave.X - cx) <= ring + 2 && Math.Abs(cave.Z - cz) <= ring + 2) return false;
+            foreach (var cave in _map.Caverns)
+                if (Math.Abs(cave.X - cx) <= ring + 2 && Math.Abs(cave.Z - cz) <= ring + 2) return false;
             int low = int.MaxValue;
             for (int dz = -ring; dz <= ring; dz++)
             for (int dx = -ring; dx <= ring; dx++)
@@ -497,16 +546,118 @@ public static class RegionGenerator
             return true;
         }
 
+        // --- Ruins ----------------------------------------------------------------------------------
+
+        /// <summary>Least distance between two ruins' middles, in blocks on a 512 map (scaled with the map).</summary>
+        private const int RuinGap = 96;
+
+        /// <summary>
+        /// Old stone ruins (issue #67), <see cref="RuinsPer512"/> for each 512 by 512 blocks: the broken walls of a
+        /// square stone hall on open, level grassland or forest, well away from the starts, the dusk tree and each
+        /// other. Each has a cracked stone brick floor, walls from one to three blocks high with a doorway and a
+        /// breach or two, a corner still standing four high, and fallen stone (<see cref="BlockType.StoneRubble"/>,
+        /// cleared for stone) inside and around it. From a random stream of their own; placed before the trees, so
+        /// grass inside grows a tree now and then.
+        /// </summary>
+        private void PlaceRuins()
+        {
+            var rng = new DeterministicRandom(_seed ^ 0x2B1A5UL);
+            int want = Math.Max(1, (int)((long)RuinsPer512 * _sx * _sz / (512 * 512)));
+            int keepOff = StartResourceRadius + Sx(24), gap = Sx(RuinGap), r = RuinHalf;
+            for (int tries = 0; tries < want * 60 && _map.Ruins.Count < want; tries++)
+            {
+                int cx = rng.Range(r + 3, _sx - r - 3), cz = rng.Range(r + 3, _sz - r - 3);
+                if (_map.BiomeAt(cx, cz) is not (Biome.Grassland or Biome.Forest) || NearStart(cx, cz, keepOff)) continue;
+                if (_duskX >= 0 && Math.Max(Math.Abs(cx - _duskX), Math.Abs(cz - _duskZ)) <= DuskClearing + r + 4) continue;
+                bool far = true;
+                foreach (var p in _map.Ruins)
+                    if ((long)(p.X - cx) * (p.X - cx) + (long)(p.Z - cz) * (p.Z - cz) < (long)gap * gap) far = false;
+                if (!far || !RuinFits(cx, cz, out int g)) continue;
+                BuildRuin(cx, g, cz, rng);
+                _map.Ruins.Add((cx, g, cz));
+            }
+        }
+
+        /// <summary>True if a ruin fits around (cx, cz): dry, natural, open ground within a block of level, under open sky.</summary>
+        private bool RuinFits(int cx, int cz, out int g)
+        {
+            g = _height[Idx(cx, cz)];
+            if (g <= _water + 1 || g + 6 >= _sy) return false;
+            int r = RuinHalf + 2;
+            for (int dz = -r; dz <= r; dz++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                int x = cx + dx, z = cz + dz, h = _height[Idx(x, z)];
+                if (Math.Abs(h - g) > 1 || _map.BiomeAt(x, z) is not (Biome.Grassland or Biome.Forest)) return false;
+                if (_w.Get(x, h, z) is not (BlockType.Grass or BlockType.Soil) || _w.Get(x, h + 1, z) != BlockType.Air) return false;
+            }
+            return true;
+        }
+
+        private void BuildRuin(int cx, int g, int cz, DeterministicRandom rng)
+        {
+            int r = RuinHalf;
+            // Level the ground under it to g.
+            for (int dz = -r - 1; dz <= r + 1; dz++)
+            for (int dx = -r - 1; dx <= r + 1; dx++)
+            {
+                int x = cx + dx, z = cz + dz, i = Idx(x, z), h = _height[i];
+                if (h > g) { for (int y = g + 1; y <= h; y++) _w.Set(x, y, z, BlockType.Air); _w.Set(x, g, z, BlockType.Grass); }
+                else if (h < g) { for (int y = h; y < g; y++) _w.Set(x, y, z, BlockType.Soil); _w.Set(x, g, z, BlockType.Grass); }
+                _height[i] = g;
+            }
+            int door = rng.Range(0, 4), corner = rng.Range(0, 4);
+            for (int dz = -r; dz <= r; dz++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                int x = cx + dx, z = cz + dz;
+                uint h = DeterministicRandom.Hash(x, z, _seed + 50);
+                bool edge = Math.Max(Math.Abs(dx), Math.Abs(dz)) == r;
+                if (!edge)
+                {
+                    // A cracked floor, grass coming through, and fallen stone lying on it.
+                    if (h % 10 < 6) _w.Set(x, g, z, BlockType.StoneBrick);
+                    if (h / 10 % 10 == 0) _w.Set(x, g + 1, z, BlockType.StoneRubble);
+                    continue;
+                }
+                // The wall: one to three high, a doorway in the middle of one side, now and then a breach.
+                int side = dz == -r ? 0 : dx == r ? 1 : dz == r ? 2 : 3;
+                bool doorway = side == door && Math.Abs(side % 2 == 0 ? dx : dz) <= 1 && Math.Max(Math.Abs(dx), Math.Abs(dz)) == r
+                               && !(Math.Abs(dx) == r && Math.Abs(dz) == r);
+                int high = doorway ? 0 : (int)(h % 7) switch { 0 => 0, 1 or 2 => 1, 3 or 4 => 2, _ => 3 };
+                bool tall = Math.Abs(dx) == r && Math.Abs(dz) == r && corner == (dx > 0 ? 1 : 0) + (dz > 0 ? 2 : 0);
+                if (tall) high = 4;
+                for (int y = 1; y <= high; y++) _w.Set(x, g + y, z, BlockType.StoneBrick);
+                // What fell off a broken stretch lies at its foot, outside.
+                if (high <= 1 && !doorway && h / 100 % 3 == 0)
+                {
+                    int ox = x + Math.Sign(dx) * (Math.Abs(dx) == r ? 1 : 0), oz = z + Math.Sign(dz) * (Math.Abs(dz) == r ? 1 : 0);
+                    if (_w.Get(ox, g + 1, oz) == BlockType.Air) _w.Set(ox, g + 1, oz, BlockType.StoneRubble);
+                }
+            }
+        }
+
         // --- Cavern ---------------------------------------------------------------------------------
 
-        private void CarveCavern()
+        /// <summary>
+        /// A cavern under each hill range: the main one's from the map's main random stream (as it always was), the
+        /// further ones' (issue #67) from a stream of their own. The first is <see cref="RegionMap.Cavern"/>.
+        /// </summary>
+        private void CarveCaverns()
+        {
+            CarveCavern(_hillX, _hillZ, _rng);
+            var more = new DeterministicRandom(_seed ^ 0xCA7E2UL);
+            for (int k = 1; k < _hills.Count; k++) CarveCavern(_hills[k].X, _hills[k].Z, more);
+        }
+
+        private void CarveCavern(int hillX, int hillZ, DeterministicRandom rng)
         {
             int floor = Math.Max(2, Sy(4));
             int cy = Math.Clamp(_water - Sy(3), floor + 2, _sy - 4);
-            int x = Math.Clamp(_hillX + Sx(_rng.Range(-30, 31)), 2, _sx - 3);
-            int z = Math.Clamp(_hillZ + Sz(_rng.Range(-20, 21)), 2, _sz - 3);
+            int x = Math.Clamp(hillX + Sx(rng.Range(-30, 31)), 2, _sx - 3);
+            int z = Math.Clamp(hillZ + Sz(rng.Range(-20, 21)), 2, _sz - 3);
             int y = cy;
-            _map.Cavern = (x, y, z);
+            _map.Caverns.Add((x, y, z));
 
             int minX = x, maxX = x, minY = y, maxY = y, minZ = z, maxZ = z;
             void Carve(int px, int py, int pz, int r, bool throughSurface)
@@ -529,23 +680,23 @@ public static class RegionGenerator
             }
 
             // A worm of overlapping chambers.
-            int dirX = _rng.Range(-4, 5), dirZ = _rng.Range(-4, 5);
+            int dirX = rng.Range(-4, 5), dirZ = rng.Range(-4, 5);
             if (dirX == 0 && dirZ == 0) dirX = 3;
             int steps = 14;
             for (int s = 0; s < steps; s++)
             {
-                int r = Math.Max(2, Sy(_rng.Range(4, 8)));
+                int r = Math.Max(2, Sy(rng.Range(4, 8)));
                 Carve(x, y, z, r, false);
-                dirX = Math.Clamp(dirX + _rng.Range(-2, 3), -4, 4);
-                dirZ = Math.Clamp(dirZ + _rng.Range(-2, 3), -4, 4);
+                dirX = Math.Clamp(dirX + rng.Range(-2, 3), -4, 4);
+                dirZ = Math.Clamp(dirZ + rng.Range(-2, 3), -4, 4);
                 int len = Math.Max(1, Noise.Sqrt(dirX * dirX + dirZ * dirZ));
                 x = Math.Clamp(x + dirX * r / len, 3, _sx - 4);
                 z = Math.Clamp(z + dirZ * r / len, 3, _sz - 4);
-                y = Math.Clamp(y + _rng.Range(-1, 2), floor + 2, Math.Max(floor + 2, _water - 1));
+                y = Math.Clamp(y + rng.Range(-1, 2), floor + 2, Math.Max(floor + 2, _water - 1));
             }
 
             // Entrance: a sloping tunnel from the first chamber up to the surface.
-            var (ex, ey, ez) = _map.Cavern.Value;
+            var (ex, ey, ez) = _map.Caverns[^1];
             int tx = ex, tz = ez, ty = ey;
             int sdx = ex < _sx / 2 ? 1 : -1;
             for (int s = 0; s < _sy * 3 && ty <= _height[Idx(tx, tz)] + 1; s++)
