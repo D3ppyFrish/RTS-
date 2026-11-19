@@ -34,11 +34,29 @@ public sealed class IceBridge
     public List<bool> Water { get; } = new();
 }
 
+/// <summary>
+/// A chasm opened by <see cref="SpellSystem"/>'s Chasm: the ground it took out, and when it closes again.
+/// </summary>
+public sealed class Chasm
+{
+    /// <summary>Who opened it.</summary>
+    public int Owner { get; internal set; }
+    /// <summary>The tick it opened.</summary>
+    public long Opened { get; internal set; }
+    /// <summary>The tick the ground closes over it again.</summary>
+    public long Closes { get; internal set; }
+    /// <summary>The blocks it took out, column by column along the line, each column top down.</summary>
+    public List<(int X, int Y, int Z)> Blocks { get; } = new();
+    /// <summary>For each block, what it was: the ground closes back as it was.</summary>
+    public List<BlockType> Was { get; } = new();
+}
+
 /// <summary>A terrain spell (see <see cref="SpellSystem"/>).</summary>
 public enum Spell
 {
     EarthWall,
     IceBridge,
+    Chasm,
 }
 
 /// <summary>
@@ -54,7 +72,12 @@ public enum Spell
 /// the caster freezes the water into a level deck of ice from bank to bank, like a bridge, up to
 /// <see cref="IceLength"/> columns long and <see cref="IceWidth"/> wide, that anyone can walk on. It melts after
 /// <see cref="IceLastsTicks"/>; a unit still on it then falls, and drowns where only deep water is under it.</para>
-/// A caster that cast either spell waits <see cref="CooldownTicks"/> before it casts again.
+/// <para>The third is <b>Chasm</b> (<see cref="ChasmCommand"/>, <see cref="UnitDef.Chasm"/>): the ground along
+/// a line as long and thick as an earth wall's opens <see cref="ChasmDepth"/> blocks deep, deeper than a unit
+/// climbs out of. Units standing on it fall in and take <see cref="FallDamage"/>, as from falling ground; they
+/// are stuck in it until it closes after <see cref="ChasmLastsTicks"/>, when the ground comes back as it was
+/// and lifts them out. Not under a building or a city-state's town, nor where water or ice is.</para>
+/// A caster that cast any spell waits <see cref="CooldownTicks"/> before it casts again.
 /// <para><b>Group spells</b>: every ready caster among the command's units (up to <see cref="MaxGroup"/>) casts
 /// together. The ones out of range walk up while the others wait, and the spell goes off once all of them are in
 /// range. Each helper beyond the first makes an earth wall one column thicker and <see cref="WallPerHelper"/>
@@ -82,6 +105,13 @@ public sealed class SpellSystem
     public const int IceLastsTicks = 30 * Simulation.TicksPerSecond;
     /// <summary>Ticks before it thaws that an ice bridge shows cracks: the last 5 seconds.</summary>
     public const int CrackTicks = 5 * Simulation.TicksPerSecond;
+    /// <summary>Blocks deep a chasm opens: more than a unit climbs, so whoever falls in is stuck.</summary>
+    public const int ChasmDepth = 3;
+    /// <summary>Damage to a unit that falls into a chasm as it opens.</summary>
+    public const int FallDamage = 15;
+    /// <summary>Ticks a chasm stays open before the ground closes over it: 30 seconds.</summary>
+    public const int ChasmLastsTicks = 30 * Simulation.TicksPerSecond;
+
     /// <summary>Most casters that join one group spell.</summary>
     public const int MaxGroup = 3;
     /// <summary>Columns each caster beyond the first adds to an earth wall's length.</summary>
@@ -108,6 +138,7 @@ public sealed class SpellSystem
     private readonly List<Pending> _pending = new();
     private readonly List<EarthWall> _walls = new();
     private readonly List<IceBridge> _ice = new();
+    private readonly List<Chasm> _chasms = new();
 
     private sealed class Pending
     {
@@ -136,6 +167,12 @@ public sealed class SpellSystem
     /// <summary>Ice bridges holding now, oldest first.</summary>
     public IReadOnlyList<IceBridge> IceBridges => _ice;
 
+    /// <summary>Chasms open now, oldest first.</summary>
+    public IReadOnlyList<Chasm> Chasms => _chasms;
+
+    /// <summary>The tick of the last chasm opened, or -1.</summary>
+    public long LastChasm { get; private set; } = -1;
+
     /// <summary>The tick of the last earth wall raised, or -1 (for drawing it going up).</summary>
     public long LastCast { get; private set; } = -1;
 
@@ -148,8 +185,16 @@ public sealed class SpellSystem
     /// <summary>Unit i's type can freeze ice bridges.</summary>
     public bool HasIceBridge(int i) => i >= 0 && _sim.Content.Units[U.Def[i]].IceBridge;
 
+    /// <summary>Unit i's type can open chasms.</summary>
+    public bool HasChasm(int i) => i >= 0 && _sim.Content.Units[U.Def[i]].Chasm;
+
     /// <summary>Unit i's type has the spell.</summary>
-    public bool Has(int i, Spell spell) => spell == Spell.IceBridge ? HasIceBridge(i) : HasEarthWall(i);
+    public bool Has(int i, Spell spell) => spell switch
+    {
+        Spell.IceBridge => HasIceBridge(i),
+        Spell.Chasm => HasChasm(i),
+        _ => HasEarthWall(i),
+    };
 
     /// <summary>The tick unit i can next cast a spell (now or earlier if it is ready).</summary>
     public long ReadyAt(int i) => i >= 0 && _ready.TryGetValue(U.Id[i], out long t) ? t : 0;
@@ -178,7 +223,21 @@ public sealed class SpellSystem
     /// <see cref="WallThickness"/> (the line, then one on each side in turn, across the line's longer axis). Each
     /// column has its ground level and whether earth can rise there. The game previews the same plan.
     /// </summary>
-    public void Plan(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1)
+    public void Plan(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1) =>
+        Line(x1, z1, x2, z2, columns, casters, Room);
+
+    /// <summary>
+    /// The columns a chasm from (x1, z1) to (x2, z2) opens, by <paramref name="casters"/> together: the same
+    /// columns as an earth wall (<see cref="Plan"/>). Each has its ground level and whether the ground there
+    /// opens: natural ground (not a building's, not a tree's trunk) down to <see cref="ChasmDepth"/> under it,
+    /// with no water or ice on or beside it, no building or city-state's town in the column. Units may stand on
+    /// it: they fall in. The game previews the same plan.
+    /// </summary>
+    public void PlanChasm(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1) =>
+        Line(x1, z1, x2, z2, columns, casters, ChasmRoom);
+
+    private void Line(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters,
+        Func<int, int, int, bool> room)
     {
         columns.Clear();
         int length = WallLength(casters), thick = WallThickness(casters), n = 0;
@@ -193,7 +252,7 @@ public sealed class SpellSystem
                 int x = alongX ? lx : lx + side, z = alongX ? lz + side : lz;
                 if (!seen.Add(((long)x << 32) | (uint)z)) continue;
                 int g = World.InBounds(x, 1, z) ? Walk.GroundLevel(World, x, z) : -1;
-                columns.Add((x, z, g, Room(x, z, g)));
+                columns.Add((x, z, g, room(x, z, g)));
             }
         }
     }
@@ -219,6 +278,28 @@ public sealed class SpellSystem
     }
 
     private static bool Fits(BlockType b) => b == BlockType.Air || BlockInfo.IsLeaves(b);
+
+    private bool ChasmRoom(int x, int z, int g)
+    {
+        var w = World;
+        if (g - ChasmDepth < 1 || x < 1 || z < 1 || x > w.SizeX - 2 || z > w.SizeZ - 2) return false;
+        if (_sim.Buildings.AtColumn(x, z) != null || _sim.Cities.Crowds(x, z, x, z)) return false;
+        for (int y = g - ChasmDepth; y < g; y++)
+            if (!Opens(w.Get(x, y, z))) return false;
+        // No water or ice on the ground or around the pit: a chasm is not a channel from the river.
+        for (int y = g - ChasmDepth; y <= g; y++)
+        {
+            if (w.Get(x, y, z) is BlockType.Water or BlockType.Ice) return false;
+            foreach (var (dx, dz) in Around)
+                if (w.Get(x + dx, y, z + dz) is BlockType.Water or BlockType.Ice) return false;
+        }
+        return true;
+    }
+
+    private static readonly (int X, int Z)[] Around = { (1, 0), (-1, 0), (0, 1), (0, -1) };
+
+    /// <summary>Natural ground a chasm opens through: earth, sand, stone, ore and rubble, but no trunk or building.</summary>
+    private static bool Opens(BlockType b) => BlockInfo.CanFall(b) && !BlockInfo.IsBuilt(b);
 
     /// <summary>
     /// Plans an ice bridge from column (x1, z1) to (x2, z2), frozen by <paramref name="casters"/> together, into
@@ -304,6 +385,12 @@ public sealed class SpellSystem
     /// </summary>
     internal void Apply(IceBridgeCommand c) => Order(c, Spell.IceBridge, c.X1, c.Z1, c.X2, c.Z2);
 
+    /// <summary>
+    /// The player's units that can open a chasm now (up to <see cref="MaxGroup"/>, ones already in range first)
+    /// open it together along the command's line, walking into range first where they are not.
+    /// </summary>
+    internal void Apply(ChasmCommand c) => Order(c, Spell.Chasm, c.X1, c.Z1, c.X2, c.Z2);
+
     private void Order(UnitsCommand c, Spell spell, int x1, int z1, int x2, int z2)
     {
         int mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
@@ -385,6 +472,7 @@ public sealed class SpellSystem
         int i = casters[0], n = casters.Count;
         // A plan that spans nothing (no ground at its ends, no water between) freezes nothing and costs nothing.
         if (spell == Spell.IceBridge && !Freeze(i, n, x1, z1, x2, z2)) return;
+        if (spell == Spell.Chasm && !Open(i, n, x1, z1, x2, z2)) return;
         if (spell == Spell.EarthWall) Raise(i, n, x1, z1, x2, z2);
         foreach (int k in casters) _ready[U.Id[k]] = _sim.Tick + CooldownTicks;
     }
@@ -409,6 +497,72 @@ public sealed class SpellSystem
     }
 
     private readonly List<(int X, int Z, int Y, bool Room)> _icePlan = new();
+
+    /// <summary>
+    /// The ground of each column of the plan with room opens <see cref="ChasmDepth"/> deep, top down. Units
+    /// standing on it fall in and take <see cref="FallDamage"/>. False (nothing opens, nothing is spent) if no
+    /// column has room.
+    /// </summary>
+    private bool Open(int i, int casters, int x1, int z1, int x2, int z2)
+    {
+        var w = World;
+        PlanChasm(x1, z1, x2, z2, _icePlan, casters);
+        var chasm = new Chasm { Owner = U.Owner[i], Opened = _sim.Tick, Closes = _sim.Tick + ChasmLastsTicks };
+        var opened = new HashSet<long>();
+        foreach (var (x, z, g, room) in _icePlan)
+        {
+            if (!room) continue;
+            for (int y = g - 1; y >= g - ChasmDepth; y--)
+            {
+                chasm.Blocks.Add((x, y, z));
+                chasm.Was.Add(w.Get(x, y, z));
+                w.Set(x, y, z, BlockType.Air);
+            }
+            opened.Add(((long)z << 20) | (long)x);
+        }
+        if (chasm.Blocks.Count == 0) return false;
+        LastChasm = _sim.Tick;
+        _chasms.Add(chasm);
+        // Whoever stood on the ground that opened falls in (they drop with the movement's falling, tick by tick).
+        var u = U;
+        for (int k = 0; k < u.Count; k++)
+        {
+            int x = u.X[k].FloorToInt(), z = u.Z[k].FloorToInt();
+            if (opened.Contains(((long)z << 20) | (long)x) && !Walk.CanStand(w, x, u.Y[k], z)) _sim.Combat.Crush(k, FallDamage);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The ground closes over the chasm as it was: each block it took out that is open again (air, or water that
+    /// ran in) comes back, bottom up; ground that fell in stays. Units in it are lifted out onto the ground.
+    /// </summary>
+    private void Close(Chasm chasm)
+    {
+        var w = World;
+        var closed = new HashSet<long>();
+        for (int k = chasm.Blocks.Count - 1; k >= 0; k--)
+        {
+            var (x, y, z) = chasm.Blocks[k];
+            if (w.Get(x, y, z) is not (BlockType.Air or BlockType.Water)) continue;
+            if (_sim.Buildings.At(x, y, z) != null) continue;
+            w.Set(x, y, z, chasm.Was[k]);
+            closed.Add(((long)z << 20) | (long)x);
+        }
+        if (closed.Count == 0) return;
+        var u = U;
+        for (int i = 0; i < u.Count; i++)
+        {
+            int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
+            if (!closed.Contains(((long)z << 20) | (long)x) || Walk.CanStand(w, x, y, z)) continue;
+            for (int up = y + 1; up <= y + ChasmDepth + Walk.Clearance && up < w.SizeY - 1; up++)
+                if (Walk.CanStand(w, x, up, z))
+                {
+                    u.Y[i] = up;
+                    break;
+                }
+        }
+    }
 
     /// <summary>Ice forms in each column of the plan with room, level with the deck; leaves in the way are pushed aside.</summary>
     private bool Freeze(int i, int casters, int x1, int z1, int x2, int z2)
@@ -490,6 +644,12 @@ public sealed class SpellSystem
             Thaw(_ice[k]);
             _ice.RemoveAt(k--);
         }
+        for (int k = 0; k < _chasms.Count; k++)
+        {
+            if (_sim.Tick < _chasms[k].Closes) continue;
+            Close(_chasms[k]);
+            _chasms.RemoveAt(k--);
+        }
         if (_sim.Tick % (60 * Simulation.TicksPerSecond) == 0) Forget();
     }
 
@@ -568,6 +728,17 @@ public sealed class SpellSystem
             foreach (var (x, y, z) in wall.Blocks)
             {
                 Mix(x); Mix(y); Mix(z);
+            }
+        }
+        Mix(LastChasm);
+        Mix(_chasms.Count);
+        foreach (var chasm in _chasms)
+        {
+            Mix(chasm.Owner); Mix(chasm.Opened); Mix(chasm.Closes); Mix(chasm.Blocks.Count);
+            for (int k = 0; k < chasm.Blocks.Count; k++)
+            {
+                var (x, y, z) = chasm.Blocks[k];
+                Mix(x); Mix(y); Mix(z); Mix((int)chasm.Was[k]);
             }
         }
         Mix(_ice.Count);

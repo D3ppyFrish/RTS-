@@ -968,7 +968,7 @@ All the numbers are first guesses for playtesting.
 ## Terrain magic
 
 `src/Sim/Units/SpellSystem.cs`: spells that reshape the ground, made of the same blocks digging and building
-use (the design doc's "Shape with magic"). A unit type has its spells in `data/units.json`; the mage has two.
+use (the design doc's "Shape with magic"). A unit type has its spells in `data/units.json`; the mage has three.
 
 - **Earth Wall** (`EarthWallCommand`, `"earthWall": true`: the mage): a wall of earth rises along a line
   (the line a wall is laid along) of up to 8 columns, 3 blocks high from the ground, so nobody walks through
@@ -1001,13 +1001,24 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
   cracks in its last 5, then melts, back into water where it was water and into air above that. A unit still
   on it falls to whatever is under it: into shallow water it wades on, but with only deep water under it, it
   drowns (as if crushed: nobody gets the kill).
+- **Chasm** (`ChasmCommand`, `"chasm": true`: the mage): the ground along a line (the line a wall is laid
+  along, as long as an earth wall) opens 3 blocks deep, deeper than a unit climbs out of. Whoever stands on it
+  falls in and takes 15 damage, as from falling ground (nobody gets the kill), and is stuck at the bottom,
+  where archers on the edge have them, until the chasm closes. The middle of the line must be within 12 blocks
+  of the mage, which otherwise walks up first.
+- **Where the ground opens**: natural ground (earth, sand, stone, ore, rubble) all the way down, so not a
+  tree's trunk, a building or a city-state's town, and not where water or ice is on, in or beside the pit
+  (a chasm is not a channel from the river). Loose ground around it may still fall in, as when digging. A line
+  with nothing to open costs nothing.
+- **Closing**: after 30 seconds the ground closes as it was (stone back as stone, ore as ore), bottom up,
+  wherever it is open again; ground that fell in stays. Units in it are lifted back out onto the top, unhurt.
 - **Group spells** (issue #39): every ready mage among the selected casts the spell together, up to 3. The
   ones in range wait while the others walk up, and the spell goes off once all of them are in range (one given
   another order on the way drops out, and the rest cast without it). Each mage beyond the first makes an earth
-  wall one column thicker (the line, then the column before it, then the one after) and 4 columns longer (8,
+  wall or a chasm one column thicker (the line, then the column before it, then the one after) and 4 columns longer (8,
   12, 16), and an ice bridge 2 columns wider (3, 5, 7 abreast). Every mage in the group then waits its 40
   seconds; a mage still waiting does not join.
-- **In the game**: the Earth Wall button (Shift+Y) and the Ice Bridge button (Shift+') show with a mage
+- **In the game**: the Earth Wall button (Shift+Y), the Ice Bridge button (Shift+') and the Chasm button (Shift+Z) show with a mage
   selected, greyed out with the wait while none of the selected is ready. All numbers are starting guesses to
   be tuned in playtests.
 

@@ -407,6 +407,17 @@ public sealed record IceBridgeCommand(int PlayerId, int[] Units, int X1, int Z1,
 }
 
 /// <summary>
+/// One of the units that can (see <see cref="Units.SpellSystem"/>) opens a chasm in the ground along the line
+/// from column (X1, Z1) to (X2, Z2), walking into range first if it has to.
+/// </summary>
+public sealed record ChasmCommand(int PlayerId, int[] Units, int X1, int Z1, int X2, int Z2) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(ChasmCommand? other) =>
+        base.Equals(other) && X1 == other!.X1 && Z1 == other.Z1 && X2 == other.X2 && Z2 == other.Z2;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X1, Z1, X2, Z2);
+}
+
+/// <summary>
 /// The caravans among the units trade with a city-state's town (by id): they carry loads of the good it
 /// buys there from the player's storage and bring back the good it sells, until given another order.
 /// </summary>

@@ -136,6 +136,12 @@ public static class UiIcons
             "v.........t.", "....t.......", "..........v.", "kkkkkkkkkkkk", "kwwlwwwwlwwk", "klwwtwwlwwtk",
             "ktttltttlttk", "kkkkkkkkkkkk", "nnnnnnnnnnnn", "nntnnnnnntnn", "nnnnnntnnnnn", "nnnnnnnnnnnn",
         },
+        // Chasm: the ground split open, too deep to climb out of, with sparks of magic.
+        ["chasm"] = new[]
+        {
+            "t.........v.", ".....t......", "kkkk....kkkk", "gggk....kggg", "GgGbk..kbGgG", "bbbbk..kbbbb",
+            "bBbbk..kbBbb", "bbbbbkkbbbbb", "bbBbbbbbbBbb", "bbbbbbBbbbbb", "BbbbbbbbbbbB", "kkkkkkkkkkkk",
+        },
         ["food"] = new[]
         {
             "............", "............", "....kkkkk...", "..kkoyoyokk.", ".koyoooyooyk", ".kooyooooyok",
