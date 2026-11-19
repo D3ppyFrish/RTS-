@@ -12,12 +12,12 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259; --houses=1 puts a house just north of it (85,244)
+# Seed 1234, west start: town hall at 128..134 x 381..387; --houses=1 puts a house just north of it (129,372)
 # and --raid=2 two enemy sappers beside it, already ordered to knock it down. The starting soldiers in
 # front of the hall deal with them once they come into sight.
 STEPS="
 wait 20
-camera 87,252 30 50 32
+camera 131,380 30 50 32
 wait 5
 key shift+p
 key shift+j
@@ -34,7 +34,7 @@ shot $OUT/ui-rebuild-again.png
 "
 LOG="$OUT/ui-rebuild.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --houses=1 --raid=2 --goods=200 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Raid)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --houses=1 --raid=2 --goods=200 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Raid)" | tee "$LOG"
 
 fail() { echo "UI rebuild test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

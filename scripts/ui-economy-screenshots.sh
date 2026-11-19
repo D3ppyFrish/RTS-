@@ -10,18 +10,18 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it, the
-# stone outcrop at 108..110 x 259..261 (top block 109,22,260) and open ground for a house at 94..97 x 264..267.
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it, the
+# stone outcrop at 163..165 x 389..391 (top block 164,22,390) and open ground for a house at 138..141 x 392..395.
 STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
 mouse 1080,640
 up 1080,640
 wait 2
-clickworld 109,22,260 right
+clickworld 164,22,390 right
 ticks 40
 print
 key k
@@ -33,34 +33,34 @@ print
 shot $OUT/ui-tech-tree.png
 key k
 key h
-mouseworld 96,g,266
+mouseworld 140,g,394
 wait 3
 print
 shot $OUT/ui-build-house.png
-clickworld 96,g,266
+clickworld 140,g,394
 ticks 4
 print
 key plus*2
 ticks 500
 shot $OUT/ui-house-built.png
 print
-clickworld 87,g,256
+clickworld 131,g,384
 key u
 ticks 4
 print
 shot $OUT/ui-town-hall.png
 key l
-clickworld 86,g,264
-mouseworld 86,g,276
+clickworld 130,g,392
+mouseworld 130,g,404
 wait 3
 shot $OUT/ui-road.png
-clickworld 86,g,276
+clickworld 130,g,404
 ticks 4
 print
 "
 LOG="$OUT/ui-economy.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI economy test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

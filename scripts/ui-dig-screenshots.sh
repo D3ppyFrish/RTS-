@@ -11,11 +11,11 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it, and open
-# ground at 92..103 x 262..269.
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it, and open
+# ground at 136..147 x 390..397.
 STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
@@ -27,9 +27,9 @@ key z
 key ]
 wait 2
 print
-mouseworld 92,g,262
+mouseworld 136,g,390
 down here
-mouseworld 103,g,269
+mouseworld 147,g,397
 wait 3
 print
 shot $OUT/ui-dig-drag.png
@@ -38,7 +38,7 @@ ticks 4
 print
 key plus*2
 ticks 300
-camera 97,266 30 50 18
+camera 141,394 30 50 18
 wait 5
 print
 shot $OUT/ui-dig-working.png
@@ -48,7 +48,7 @@ shot $OUT/ui-dig-done.png
 "
 LOG="$OUT/ui-dig.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI dig test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

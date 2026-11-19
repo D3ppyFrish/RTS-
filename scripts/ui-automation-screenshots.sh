@@ -11,11 +11,11 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, the starting units (four of each type, so four
+# Seed 1234, west start: town hall at 128..134 x 381..387, the starting units (four of each type, so four
 # workers) in rows just south of it, which is more people than the hall houses.
 STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
@@ -27,7 +27,7 @@ key v
 ticks 60
 print
 shot $OUT/ui-auto-workers.png
-clickworld 87,g,256
+clickworld 131,g,384
 key u
 key p
 ticks 4
@@ -36,14 +36,14 @@ shot $OUT/ui-repeat.png
 key shift+j
 key plus*2
 ticks 900
-camera 87,256 30 60 40
+camera 131,384 30 60 40
 wait 5
 print
 shot $OUT/ui-auto-house.png
 "
 LOG="$OUT/ui-automation.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI automation test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
