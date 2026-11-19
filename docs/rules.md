@@ -1015,7 +1015,7 @@ All the numbers are first guesses for playtesting.
 ## Terrain magic
 
 `src/Sim/Units/SpellSystem.cs`: spells that reshape the ground, made of the same blocks digging and building
-use (the design doc's "Shape with magic"). A unit type has its spells in `data/units.json`; the mage has three.
+use (the design doc's "Shape with magic"). A unit type has its spells in `data/units.json`; the mage has four.
 
 - **Earth Wall** (`EarthWallCommand`, `"earthWall": true`: the mage): a wall of earth rises along a line
   (the line a wall is laid along) of up to 8 columns, 3 blocks high from the ground, so nobody walks through
@@ -1059,14 +1059,25 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
   with nothing to open costs nothing.
 - **Closing**: after 30 seconds the ground closes as it was (stone back as stone, ore as ore), bottom up,
   wherever it is open again; ground that fell in stays. Units in it are lifted back out onto the top, unhurt.
+- **Grow Forest** (`GrowForestCommand`, `"growForest": true`: the mage): full-grown trees spring up along a line
+  (the line a wall is laid along, as long as an earth wall) on every other square of the tree grid (one column, or
+  2 by 2 on the default map), so the line becomes a row of trees with a gap between each two. Trunks stop arrows
+  and feet, so a grove is cover for archers and a screen an army files through a few at a time; the crowns are
+  high enough to walk under. The trees stay: they are ordinary broad-leaved trees, and wood cutters fell them for
+  wood. A tree grows where every column of its trunk is natural ground (earth, sand, stone, ore) at one level with
+  open air (or leaves, pushed aside) over it, and not on a building, a city-state's town, water, ice, a hazard or a
+  unit standing there. The middle of the line must be within 12 blocks of the mage, which otherwise walks up
+  first. A line with no room for a tree grows nothing and costs nothing.
 - **Group spells** (issue #39): every ready mage among the selected casts the spell together, up to 3. The
   ones in range wait while the others walk up, and the spell goes off once all of them are in range (one given
   another order on the way drops out, and the rest cast without it). Each mage beyond the first makes an earth
   wall or a chasm one column thicker (the line, then the column before it, then the one after) and 4 columns longer (8,
-  12, 16), and an ice bridge 2 columns wider (3, 5, 7 abreast). Every mage in the group then waits its 40
+  12, 16), an ice bridge 2 columns wider (3, 5, 7 abreast), and a grove a row of trees thicker: each new row two
+  squares of the tree grid to one side (then the other), its trees on the gaps between the first row's, so the grove
+  is staggered. Every mage in the group then waits its 40
   seconds; a mage still waiting does not join.
-- **In the game**: the Earth Wall button (Shift+Y), the Ice Bridge button (Shift+') and the Chasm button (Shift+Z) show with a mage
-  selected, greyed out with the wait while none of the selected is ready. All numbers are starting guesses to
+- **In the game**: the Earth Wall button (Shift+Y), the Ice Bridge button (Shift+'), the Chasm button (Shift+Z) and the Grow
+  Forest button (Shift+L) show with a mage selected, greyed out with the wait while none of the selected is ready. All numbers are starting guesses to
   be tuned in playtests.
 
 ## Fog of war

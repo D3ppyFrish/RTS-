@@ -84,6 +84,8 @@ public sealed class UnitDef
     public bool IceBridge { get; init; }
     /// <summary>It can open chasms in the ground (see <see cref="SpellSystem"/>).</summary>
     public bool Chasm { get; init; }
+    /// <summary>It can grow forests (see <see cref="SpellSystem"/>).</summary>
+    public bool GrowForest { get; init; }
 
     /// <summary>Hit points it gives back to the most hurt ally near it (<see cref="HealRange"/>) every <see cref="HealTicks"/>; 0 if it does not heal.</summary>
     public int Heal { get; init; }

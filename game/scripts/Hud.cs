@@ -74,6 +74,7 @@ public partial class Hud : CanvasLayer
     private Button _bloomButton = null!;
     private Button _earthWallButton = null!;
     private Button _chasmButton = null!;
+    private Button _growForestButton = null!;
     private Button _iceBridgeButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
@@ -609,6 +610,13 @@ public partial class Hud : CanvasLayer
         _chasmButton.Pressed += () => _control.ToggleChasm();
         column.AddChild(_chasmButton);
 
+        _growForestButton = MakeToolButton("Grow Forest  [Shift+L]");
+        _growForestButton.Name = "grow_forest";
+        _growForestButton.Icon = UiIcons.Get("grow_forest");
+        _growForestButton.Visible = false;
+        _growForestButton.Pressed += () => _control.ToggleGrowForest();
+        column.AddChild(_growForestButton);
+
         _cityBox = new VBoxContainer { Visible = false };
         _cityBox.AddThemeConstantOverride("separation", 4);
         _hireRow = new HBoxContainer();
@@ -1050,6 +1058,7 @@ public partial class Hud : CanvasLayer
         RefreshEarthWall();
         RefreshIceBridge();
         RefreshChasm();
+        RefreshGrowForest();
         RefreshCities();
     }
 
@@ -1290,6 +1299,28 @@ public partial class Hud : CanvasLayer
         _chasmButton.Disabled = ready == 0 && !tool;
     }
 
+    /// <summary>The Grow Forest button while a mage of yours is selected (greyed out while none is ready).</summary>
+    private void RefreshGrowForest()
+    {
+        bool tool = _control.Tool == PlayerControl.ToolMode.GrowForest;
+        _growForestButton.Visible = _control.OwnCasters(Spell.GrowForest).Count > 0 || tool;
+        _growForestButton.SetPressedNoSignal(tool);
+        if (!_growForestButton.Visible) return;
+        int ready = _control.ReadyCaster(spell: Spell.GrowForest);
+        int next = ready != 0 ? ready : _control.ReadyCaster(soonest: true, spell: Spell.GrowForest);
+        long wait = next == 0 ? 0 : Math.Max(0, _sim.Spells.ReadyAt(_sim.Units.IndexOf(next)) - _sim.Tick);
+        _growForestButton.Text = ready != 0 || next == 0 ? "Grow Forest  [Shift+L]"
+            : $"Grow Forest in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond} s";
+        _growForestButton.TooltipText = $"A mage grows full-grown trees along a line of up to {SpellSystem.MaxLength} columns, " +
+                                        $"within {SpellSystem.CastRange} blocks of it: a tree on every other spot, with a gap between each two. " +
+                                        "Trunks stop arrows and block the way, so the grove is cover for archers and a screen an army must file through. " +
+                                        "The trees stay, and woodcutters can fell them for wood. Not on buildings, water or units. " +
+                                        $"Then that mage waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s before its next spell. " +
+                                        $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage adds a row of trees " +
+                                        "on the gaps of the first and makes it " + $"{SpellSystem.WallPerHelper} columns longer.";
+        _growForestButton.Disabled = ready == 0 && !tool;
+    }
+
     private void RefreshRuin()
     {
         var ruin = _control.NearRuin();
@@ -1505,6 +1536,23 @@ public partial class Hud : CanvasLayer
                            : _control.ReadyCaster(spell: Spell.Chasm) == 0 ? "   (no selected mage is ready)" : "") +
                        "\nRight click or Esc to stop";
             }
+            case PlayerControl.ToolMode.GrowForest:
+            {
+                var preview = _control.WallPreview;
+                int ok = 0;
+                foreach (var c in preview)
+                    if (c.Ok) ok++;
+                int group = _control.GroupCasters(Spell.GrowForest);
+                int square = Math.Clamp(_sim.World.TreeScale, 1, Rts.Sim.World.Trees.MaxScale);
+                square *= square;
+                return (_control.WallStarted
+                           ? $"Grow Forest: let go to grow {ok / square} trees" + (ok < preview.Count ? $" ({(preview.Count - ok) / square} have a building, water, a unit or something in the way)" : "")
+                           : $"Grow Forest: drag a line of up to {SpellSystem.WallLength(group)} columns for a mage to grow trees along") +
+                       (group > 1 ? $"   ({group} mages together: {group} rows)" : "") +
+                       (_control.OwnCasters(Spell.GrowForest).Count == 0 ? "   (select a mage first)"
+                           : _control.ReadyCaster(spell: Spell.GrowForest) == 0 ? "   (no selected mage is ready)" : "") +
+                       "\nRight click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Bridge:
             {
                 var preview = _control.WallPreview;
@@ -1524,7 +1572,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Shift+L: grow forest";
         }
     }
 

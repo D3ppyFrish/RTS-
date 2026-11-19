@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Rts.Sim.World;
 
 namespace Rts.Sim.Units;
 
@@ -57,6 +58,7 @@ public enum Spell
     EarthWall,
     IceBridge,
     Chasm,
+    GrowForest,
 }
 
 /// <summary>
@@ -77,6 +79,12 @@ public enum Spell
 /// climbs out of. Units standing on it fall in and take <see cref="FallDamage"/>, as from falling ground; they
 /// are stuck in it until it closes after <see cref="ChasmLastsTicks"/>, when the ground comes back as it was
 /// and lifts them out. Not under a building or a city-state's town, nor where water or ice is.</para>
+/// <para>The fourth is <b>Grow Forest</b> (<see cref="GrowForestCommand"/>, <see cref="UnitDef.GrowForest"/>):
+/// full-grown trees spring up along a line as long as an earth wall's, a trunk on every other square of the tree
+/// grid, so the line becomes a row of trees with a gap between each two. Trunks stop arrows and feet, so a grove
+/// is cover for archers and a screen an army files through; the trees stay, and wood cutters fell them like any
+/// other. Not on a building or a city-state's town, water, ice or a unit, nor where something is already in the
+/// way above the ground.</para>
 /// A caster that cast any spell waits <see cref="CooldownTicks"/> before it casts again.
 /// <para><b>Group spells</b>: every ready caster among the command's units (up to <see cref="MaxGroup"/>) casts
 /// together. The ones out of range walk up while the others wait, and the spell goes off once all of them are in
@@ -111,6 +119,9 @@ public sealed class SpellSystem
     public const int FallDamage = 15;
     /// <summary>Ticks a chasm stays open before the ground closes over it: 30 seconds.</summary>
     public const int ChasmLastsTicks = 30 * Simulation.TicksPerSecond;
+
+    /// <summary>Columns across between the rows of a grove grown by several casters, in tree-grid squares (so a square's gap between rows).</summary>
+    public const int GroveRowStep = 2;
 
     /// <summary>Most casters that join one group spell.</summary>
     public const int MaxGroup = 3;
@@ -188,9 +199,19 @@ public sealed class SpellSystem
     /// <summary>Unit i's type can open chasms.</summary>
     public bool HasChasm(int i) => i >= 0 && _sim.Content.Units[U.Def[i]].Chasm;
 
+    /// <summary>Unit i's type can grow forests.</summary>
+    public bool HasGrowForest(int i) => i >= 0 && _sim.Content.Units[U.Def[i]].GrowForest;
+
+    /// <summary>The tick of the last grove grown, or -1.</summary>
+    public long LastGrove { get; private set; } = -1;
+
+    /// <summary>Trees grown by the spell this match.</summary>
+    public int GroveTrees { get; private set; }
+
     /// <summary>Unit i's type has the spell.</summary>
     public bool Has(int i, Spell spell) => spell switch
     {
+        Spell.GrowForest => HasGrowForest(i),
         Spell.IceBridge => HasIceBridge(i),
         Spell.Chasm => HasChasm(i),
         _ => HasEarthWall(i),
@@ -235,6 +256,77 @@ public sealed class SpellSystem
     /// </summary>
     public void PlanChasm(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1) =>
         Line(x1, z1, x2, z2, columns, casters, ChasmRoom);
+
+    /// <summary>
+    /// The trees a grove from (x1, z1) to (x2, z2), grown by <paramref name="casters"/> together, would have: the
+    /// squares of the tree grid (see <see cref="Trees.Footprint"/>: one column, or 2 by 2 on the default map) the
+    /// line passes through, at most <see cref="WallLength"/> columns of it, every other one taking a tree. Each
+    /// caster beyond the first adds a row beside it, <see cref="GroveRowStep"/> squares across (one side, then the
+    /// other), its trees on the squares between the first row's, so the grove is staggered. Every column of each
+    /// tree's trunk square goes into <paramref name="columns"/>, with its ground level (where units stand) and whether the tree grows
+    /// (see <see cref="GroveRoom"/>; a square grows all or nothing). The game previews the same plan.
+    /// </summary>
+    public void PlanGrove(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1)
+    {
+        columns.Clear();
+        var w = World;
+        int s = Math.Clamp(w.TreeScale, 1, Trees.MaxScale), length = WallLength(casters), n = 0;
+        bool alongX = Math.Abs(x2 - x1) >= Math.Abs(z2 - z1);
+        var squares = new List<(int X, int Z)>();
+        foreach (var (lx, lz) in Economy.EconomySystem.WallLine(x1, z1, x2, z2))
+        {
+            if (n++ == length) break;
+            var (sx, sz, _) = Trees.Footprint(w, lx, lz);
+            if (!squares.Contains((sx, sz))) squares.Add((sx, sz));
+        }
+        var seen = new HashSet<long>();
+        for (int r = 0; r < WallThickness(casters); r++)
+        {
+            int off = Side(r) * GroveRowStep * s;
+            for (int k = r % 2; k < squares.Count; k += 2)
+            {
+                int x0 = alongX ? squares[k].X : squares[k].X + off, z0 = alongX ? squares[k].Z + off : squares[k].Z;
+                if (!seen.Add(((long)x0 << 32) | (uint)z0)) continue;
+                bool room = GroveRoom(x0, z0, s);
+                for (int dz = 0; dz < s; dz++)
+                for (int dx = 0; dx < s; dx++)
+                {
+                    int x = x0 + dx, z = z0 + dz;
+                    columns.Add((x, z, w.InBounds(x, 1, z) ? Walk.GroundLevel(w, x, z) : -1, room));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// A tree's s-by-s trunk square at (x, z) can grow: every column natural ground (earth, sand, stone, ore; not
+    /// a trunk, building, water or ice) at one level g, with air or leaves over it for a unit's height, no building
+    /// or city-state's town on it, no hazard, nobody standing on it, and room for the tree under the top of the world.
+    /// </summary>
+    private bool GroveRoom(int x, int z, int s)
+    {
+        var w = World;
+        if (x < 1 || z < 1 || x + s > w.SizeX - 1 || z + s > w.SizeZ - 1) return false;
+        int level = Walk.GroundLevel(w, x, z) - 1;
+        if (level < 1 || level + 7 * s + 4 >= w.SizeY) return false;
+        for (int cz = z; cz < z + s; cz++)
+        for (int cx = x; cx < x + s; cx++)
+        {
+            if (Walk.GroundLevel(w, cx, cz) - 1 != level || !Opens(w.Get(cx, level, cz))) return false;
+            for (int y = level + 1; y <= level + Walk.Clearance; y++)
+                if (w.Get(cx, y, cz) is var b && b != BlockType.Air && !BlockInfo.IsLeaves(b)) return false;
+            if (HazardSystem.IsHazard(w, cx, level + 1, cz)) return false;
+            if (_sim.Buildings.AtColumn(cx, cz) != null) return false;
+        }
+        if (_sim.Cities.Crowds(x, z, x + s - 1, z + s - 1)) return false;
+        var u = U;
+        Fix64 lo = Fix64.FromInt(x) - Fix64.FromRatio(1, 4), hi = Fix64.FromInt(x + s) + Fix64.FromRatio(1, 4);
+        Fix64 loZ = Fix64.FromInt(z) - Fix64.FromRatio(1, 4), hiZ = Fix64.FromInt(z + s) + Fix64.FromRatio(1, 4);
+        for (int i = 0; i < u.Count; i++)
+            if (u.X[i] > lo && u.X[i] < hi && u.Z[i] > loZ && u.Z[i] < hiZ && u.Y[i] >= level - 1 && u.Y[i] <= level + 1 + Walk.Clearance)
+                return false;
+        return true;
+    }
 
     private void Line(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters,
         Func<int, int, int, bool> room)
@@ -391,6 +483,12 @@ public sealed class SpellSystem
     /// </summary>
     internal void Apply(ChasmCommand c) => Order(c, Spell.Chasm, c.X1, c.Z1, c.X2, c.Z2);
 
+    /// <summary>
+    /// The player's units that can grow a forest now (up to <see cref="MaxGroup"/>, ones already in range first)
+    /// grow it together along the command's line, walking into range first where they are not.
+    /// </summary>
+    internal void Apply(GrowForestCommand c) => Order(c, Spell.GrowForest, c.X1, c.Z1, c.X2, c.Z2);
+
     private void Order(UnitsCommand c, Spell spell, int x1, int z1, int x2, int z2)
     {
         int mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
@@ -473,6 +571,7 @@ public sealed class SpellSystem
         // A plan that spans nothing (no ground at its ends, no water between) freezes nothing and costs nothing.
         if (spell == Spell.IceBridge && !Freeze(i, n, x1, z1, x2, z2)) return;
         if (spell == Spell.Chasm && !Open(i, n, x1, z1, x2, z2)) return;
+        if (spell == Spell.GrowForest && !Grow(n, x1, z1, x2, z2)) return;
         if (spell == Spell.EarthWall) Raise(i, n, x1, z1, x2, z2);
         foreach (int k in casters) _ready[U.Id[k]] = _sim.Tick + CooldownTicks;
     }
@@ -497,6 +596,34 @@ public sealed class SpellSystem
     }
 
     private readonly List<(int X, int Z, int Y, bool Room)> _icePlan = new();
+
+    /// <summary>
+    /// A full-grown tree springs up on each square of the grove's plan with room (broad-leaved, its trunk 4 or 5
+    /// tall and its crown a hash of the square, as a forester's grown sapling); leaves in the way are pushed aside.
+    /// False (nothing grows, nothing is spent) if no square has room.
+    /// </summary>
+    private bool Grow(int casters, int x1, int z1, int x2, int z2)
+    {
+        var w = World;
+        int s = Math.Clamp(w.TreeScale, 1, Trees.MaxScale), grown = 0;
+        PlanGrove(x1, z1, x2, z2, _icePlan, casters);
+        for (int k = 0; k < _icePlan.Count; k += s * s)
+        {
+            var (x, z, stand, room) = _icePlan[k];
+            if (!room) continue;
+            int g = stand - 1; // the ground block the tree stands on
+            for (int dz = 0; dz < s; dz++)
+            for (int dx = 0; dx < s; dx++)
+            for (int y = g + 1; y <= g + Walk.Clearance; y++)
+                if (BlockInfo.IsLeaves(w.Get(x + dx, y, z + dz))) w.Set(x + dx, y, z + dz, BlockType.Air);
+            uint h = DeterministicRandom.Hash(x, z, _sim.Seed + 34);
+            if (Trees.Grow(w, x, g, z, 4 + (int)(h & 1), (int)(h >> 1 & 3), TreeKind.Broadleaf, _sim.Seed)) grown++;
+        }
+        if (grown == 0) return false;
+        GroveTrees += grown;
+        LastGrove = _sim.Tick;
+        return true;
+    }
 
     /// <summary>
     /// The ground of each column of the plan with room opens <see cref="ChasmDepth"/> deep, top down. Units
@@ -730,6 +857,8 @@ public sealed class SpellSystem
                 Mix(x); Mix(y); Mix(z);
             }
         }
+        Mix(LastGrove);
+        Mix(GroveTrees);
         Mix(LastChasm);
         Mix(_chasms.Count);
         foreach (var chasm in _chasms)

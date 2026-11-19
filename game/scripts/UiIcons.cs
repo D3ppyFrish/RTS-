@@ -142,6 +142,12 @@ public static class UiIcons
             "t.........v.", ".....t......", "kkkk....kkkk", "gggk....kggg", "GgGbk..kbGgG", "bbbbk..kbbbb",
             "bBbbk..kbBbb", "bbbbbkkbbbbb", "bbBbbbbbbBbb", "bbbbbbBbbbbb", "BbbbbbbbbbbB", "kkkkkkkkkkkk",
         },
+        // Grow Forest: trees sprung up from the ground, with sparks of magic.
+        ["grow_forest"] = new[]
+        {
+            "..kkk.....t.", ".kgggk......", "kggGggk.kkk.", "kgGggGkkgggk", "kggggGkgGggk", ".kkGkk.kgGk.",
+            "t..kbk..kbk.", "...kbk..kbk.", "...kbk..kbkv", "...kbk..kbk.", "kkkkkkkkkkkk", "gGgggGgggGgg",
+        },
         ["food"] = new[]
         {
             "............", "............", "....kkkkk...", "..kkoyoyokk.", ".koyoooyooyk", ".kooyooooyok",

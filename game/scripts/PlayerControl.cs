@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, IceBridge, Chasm, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, IceBridge, Chasm, GrowForest, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -260,7 +260,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Test:
@@ -278,7 +278,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -348,6 +348,7 @@ public partial class PlayerControl : Node
         }
         switch (key.Keycode)
         {
+            case Key.L when key.ShiftPressed: ToggleGrowForest(); break;
             case Key.L: StartRoad(); break;
             case Key.Comma: Bloom(); break;
             case Key.Y when key.ShiftPressed: ToggleEarthWall(); break;
@@ -1024,7 +1025,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1688,6 +1689,9 @@ public partial class PlayerControl : Node
     /// <summary>The Chasm button and key (Shift+Z): starts (or stops) drawing a chasm for a selected mage to open.</summary>
     public void ToggleChasm() => SetTool(Tool == ToolMode.Chasm ? ToolMode.Select : ToolMode.Chasm);
 
+    /// <summary>The Grow Forest button and key (Shift+L): starts (or stops) drawing a grove for a selected mage to grow.</summary>
+    public void ToggleGrowForest() => SetTool(Tool == ToolMode.GrowForest ? ToolMode.Select : ToolMode.GrowForest);
+
     /// <summary>
     /// The selected caster that would raise the next earth wall: the first ready one, or 0. With
     /// <paramref name="soonest"/>, the one ready soonest when none is ready.
@@ -1738,6 +1742,8 @@ public partial class PlayerControl : Node
                 _sim.Schedule(_sim.Tick, new IceBridgeCommand(LocalPlayer, OwnCasters(Spell.IceBridge).ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.Chasm)
                 _sim.Schedule(_sim.Tick, new ChasmCommand(LocalPlayer, OwnCasters(Spell.Chasm).ToArray(), _wallX, _wallZ, x2, z2));
+            else if (Tool == ToolMode.GrowForest)
+                _sim.Schedule(_sim.Tick, new GrowForestCommand(LocalPlayer, OwnCasters(Spell.GrowForest).ToArray(), _wallX, _wallZ, x2, z2));
             else _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
                 ? new BridgeCommand(LocalPlayer, workers, BridgeBuilding, _wallX, _wallZ, x2, z2)
                 : new WallCommand(LocalPlayer, workers, WallBuilding, _wallX, _wallZ, x2, z2));
@@ -1758,7 +1764,7 @@ public partial class PlayerControl : Node
             UpdateBridgePreview();
             return;
         }
-        if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm)
+        if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)
         {
             UpdateEarthWallPreview();
             return;
@@ -1792,6 +1798,7 @@ public partial class PlayerControl : Node
         if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
         if (Tool == ToolMode.IceBridge) _sim.Spells.PlanIce(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.IceBridge)); // empty if it cannot span
         else if (Tool == ToolMode.Chasm) _sim.Spells.PlanChasm(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.Chasm));
+        else if (Tool == ToolMode.GrowForest) _sim.Spells.PlanGrove(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.GrowForest));
         else _sim.Spells.Plan(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters());
         foreach (var (x, z, y, room) in _earthPlan)
             if (y >= 1) _wallPreview.Add((x, y, z, room));
@@ -1996,6 +2003,7 @@ public partial class PlayerControl : Node
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
+               $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
