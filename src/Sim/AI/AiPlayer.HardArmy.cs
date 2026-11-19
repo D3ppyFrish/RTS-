@@ -154,6 +154,7 @@ public sealed partial class AiPlayer
         Mend(sim, hall, issue);
         ScoutStep(sim, hall, home, issue);
         Explore(sim, hall, home, issue);
+        HuntStep(sim, hall, home, HomeGuardPercent(sim), issue);
 
         // Defence: enemies it sees by any of its buildings are met by everyone at home, and by the wave too
         // when those at home are not enough.

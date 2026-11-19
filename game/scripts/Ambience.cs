@@ -10,14 +10,14 @@ namespace Rts.Game;
 /// <summary>
 /// The life of the world, for the look only (the rules are in <see cref="Conditions"/>): flames on torches
 /// and campfires (out in a storm, and smoking), smoke from chimneys and, morning and evening, from the roofs
-/// of houses, the glow of lava, fireflies and mist over the swamp, stars at night, and rain that falls around
+/// of houses, the glow of lava, fireflies and mist over the swamp, bubbles and a sickly haze over poison bog, stars at night, and rain that falls around
 /// the camera. Trees sway and the ground gets wet through the terrain shader
 /// (<see cref="TerrainMaterials.SetWeather"/>). Everything moves on the graphics card from the time and a
 /// few numbers per instance, so it costs the main thread little: the lists of flames and smoke are rebuilt a
 /// few times a second, and the lights are moved to the nearest sources each frame.
 ///
 /// Flames, smoke and lava lights only show where the player can see (see <see cref="FogOfWar"/>), and the
-/// fireflies and the mist only on ground the player has seen.
+/// fireflies, the mist and the bog's bubbles and haze only on ground the player has seen.
 /// </summary>
 public partial class Ambience : Node3D
 {
@@ -41,6 +41,9 @@ public partial class Ambience : Node3D
     private MultiMeshInstance3D _flames = null!, _smoke = null!, _rain = null!, _stars = null!, _flies = null!;
     private ShaderMaterial _flameMat = null!, _smokeMat = null!, _rainMat = null!, _starMat = null!, _flyMat = null!, _mistMat = null!;
     private readonly List<MeshInstance3D> _mist = new();
+    // Poison bog (issue #78): bubbles that swell and pop, and a low haze over it.
+    private MultiMeshInstance3D? _bubbles;
+    private ShaderMaterial? _bogHazeMat;
     private readonly List<OmniLight3D> _fireLights = new();
     private readonly List<(Vector3 At, float Size, float Seed)> _fires = new();
     private readonly List<(Vector3 At, float Amount, float Seed)> _chimneys = new();
@@ -77,6 +80,7 @@ public partial class Ambience : Node3D
         PlaceStars();
         FindLava();
         PlaceSwamp();
+        PlaceBog();
         PlaceDuskMist();
         Rebuild();
     }
@@ -156,6 +160,9 @@ public partial class Ambience : Node3D
         _mistMat?.SetShaderParameter("amount", Mathf.Max(mist, look.Mist * 0.7f));
         _mistMat?.SetShaderParameter("tint", light.Haze.Lightened(0.25f));
         foreach (var m in _mist) m.Visible = mist > 0.01f || look.Mist > 0.01f;
+
+        // Poison bog: its haze lies thicker at night and in the mist, and stirs more in the wind.
+        _bogHazeMat?.SetShaderParameter("amount", 0.5f + 0.35f * Mathf.Max(dark, look.Mist));
 
         // The dusk tree: purple mist about its roots and a cold cyan glow, deeper at night, gone once it falls.
         if (_duskMistMat != null)
@@ -392,6 +399,77 @@ public partial class Ambience : Node3D
         }
     }
 
+    // --- Poison bog ---------------------------------------------------------------------------------
+
+    /// <summary>The most bubbles on the bog at once, and how many columns of bog there are to each.</summary>
+    private const int MostBubbles = 1600, BogColumnsPerBubble = 1;
+
+    /// <summary>
+    /// Poison bog (<see cref="BlockType.Bog"/>, issue #78) gets a look beyond its colour: bubbles that swell
+    /// on its surface and pop, each on its own beat, and a low sickly-green haze shaped by where the bog is.
+    /// Both show only on ground the player has seen.
+    /// </summary>
+    private void PlaceBog()
+    {
+        var w = _sim.World;
+        var columns = new List<(int X, int Y, int Z)>();
+        int minX = int.MaxValue, minZ = int.MaxValue, maxX = -1, maxZ = -1;
+        for (int z = 0; z < w.SizeZ; z++)
+        for (int x = 0; x < w.SizeX; x++)
+        {
+            int g = Rts.Sim.Units.Walk.GroundLevel(w, x, z);
+            if (g <= 0 || w.Get(x, g - 1, z) != BlockType.Bog) continue;
+            columns.Add((x, g, z));
+            minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
+            minZ = Math.Min(minZ, z); maxZ = Math.Max(maxZ, z);
+        }
+        if (columns.Count == 0) return;
+
+        var mat = new ShaderMaterial { Shader = new Shader { Code = BubbleCode } };
+        _terrain.Track(mat);
+        _bubbles = Instances(new SphereMesh { Radius = 0.11f, Height = 0.11f, IsHemisphere = true, RadialSegments = 8, Rings = 3 }, mat);
+        var r = new Random(5);
+        int count = Math.Min(MostBubbles, Math.Max(1, columns.Count / BogColumnsPerBubble));
+        var mm = _bubbles.Multimesh;
+        mm.InstanceCount = count;
+        for (int i = 0; i < count; i++)
+        {
+            var (x, g, z) = columns[r.Next(columns.Count)];
+            float fx = x + 0.15f + 0.7f * (float)r.NextDouble(), fz = z + 0.15f + 0.7f * (float)r.NextDouble();
+            var at = new Vector3(fx, g + ChunkRenderer.GroundDrop(fx, g, fz), fz) * Bs;
+            float size = 0.6f + 0.8f * (float)r.NextDouble();
+            mm.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(Vector3.One * size), at));
+            mm.SetInstanceCustomData(i, new Color((float)r.NextDouble(), 0.5f + (float)r.NextDouble(), (float)r.NextDouble(), 0));
+        }
+
+        // The haze: one low sheet over the bog, shaped by a picture of where the bog is.
+        int sx = maxX - minX + 7, sz = maxZ - minZ + 7;
+        var image = Image.CreateEmpty(sx, sz, false, Image.Format.R8);
+        long ySum = 0;
+        foreach (var (x, g, z) in columns)
+        {
+            image.SetPixel(x - minX + 3, z - minZ + 3, new Color(1, 1, 1));
+            ySum += g;
+        }
+        _bogHazeMat = new ShaderMaterial { Shader = new Shader { Code = MistCode } };
+        _bogHazeMat.SetShaderParameter("mask", ImageTexture.CreateFromImage(image));
+        _bogHazeMat.SetShaderParameter("mask_origin", new Vector2(minX - 3, minZ - 3) * Bs);
+        _bogHazeMat.SetShaderParameter("mask_size", new Vector2(sx, sz) * Bs);
+        _bogHazeMat.SetShaderParameter("tint", new Color(0.5f, 0.62f, 0.28f));
+        _bogHazeMat.SetShaderParameter("amount", 0.6f);
+        _terrain.Track(_bogHazeMat);
+        float ground = (float)ySum / columns.Count;
+        for (int k = 0; k < 2; k++)
+        {
+            AddChild(new MeshInstance3D
+            {
+                Mesh = new PlaneMesh { Size = new Vector2(sx, sz) * Bs, Material = _bogHazeMat },
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Position = new Vector3((minX - 3 + sx / 2f) * Bs, (ground + 0.25f + 0.45f * k) * Bs, (minZ - 3 + sz / 2f) * Bs),
+            });
+        }
+    }
+
     private ShaderMaterial? _duskMistMat;
     private readonly List<MeshInstance3D> _duskMist = new();
     private OmniLight3D? _duskLight;
@@ -561,6 +639,40 @@ void fragment() {
     float b = amount * v_blink * fog_at(v_fog_xz).y;
     if (b < 0.04) discard;
     ALBEDO = vec3(0.7, 0.95, 0.12) * b * 0.9;
+}
+";
+
+    // Bog bubbles: each swells out of the sludge over a few seconds, wobbles, and pops (a quick flash bigger,
+    // then gone), then waits its turn again; only on ground the player has seen.
+    private const string BubbleCode = @"
+shader_type spatial;
+render_mode shadows_disabled;
+" + TerrainMaterials.FogCode + @"
+varying float v_life;
+varying float v_pop;
+void vertex() {
+    vec4 c = INSTANCE_CUSTOM;
+    float t = fract(TIME / (2.5 + 3.5 * c.x) + c.z);
+    // Up from the surface over the first 70% of its beat, then a pop, then nothing until the next.
+    float grow = smoothstep(0.0, 0.7, t);
+    float pop = smoothstep(0.7, 0.76, t) * (1.0 - smoothstep(0.76, 0.8, t));
+    float alive = t < 0.8 ? 1.0 : 0.0;
+    float s = alive * (grow * c.y + pop * 0.5);
+    VERTEX *= s;
+    VERTEX.y += sin(TIME * 3.0 + c.x * 30.0) * 0.005 * grow;
+    v_life = alive;
+    v_pop = pop;
+    v_fog_xz = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xz;
+}
+void fragment() {
+    if (v_life < 0.5 || fog_at(v_fog_xz).x < 0.5) discard;
+    vec3 sludge = vec3(0.36, 0.22, 0.4);
+    vec3 sheen = vec3(0.62, 0.85, 0.35);
+    // A green sheen round the edge of each bubble, brighter as it pops.
+    float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.0);
+    ALBEDO = mix(sludge, sheen, clamp(0.15 + 0.5 * rim + 0.6 * v_pop, 0.0, 1.0));
+    ROUGHNESS = 0.2;
+    SPECULAR = 0.7;
 }
 ";
 

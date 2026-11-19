@@ -639,7 +639,8 @@ hurts the units on or near it.
 
 - **Poison bog**: patches of violet sludge (`BlockType.Bog`) on the swamp's dry mud, never near a start.
   Units walk on it, but each second on it costs 3 hit points. Workers dig it away like mud, which makes the
-  ground safe.
+  ground safe. In the game (#78) bubbles swell on it and pop, and a low sickly-green haze lies over it,
+  thicker at night and in the mist (a look only: `game/scripts/Ambience.cs`, `PlaceBog`).
 - **Lava heat**: a unit within a column of lava, at its feet's level or the one below, loses 6 hit points
   a second.
 - **Quicksand** (#78): patches of dark, wet sand (`BlockType.Quicksand`, five columns across) on the dry
@@ -770,7 +771,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   It keeps a minute's food in hand. When food runs short it moves a few workers onto food, and keeps
   wood for a farm rather than spending it; when wood runs short and the trees near its workers are gone,
   it sends workers to the trees nearest its town hall, out to 128 columns.
-- **Army**: its starting soldiers first clear the nearest wolf lair. Its barracks train a weighted mix
+- **Army**: its starting soldiers first clear the nearest wolf lair, if they outweigh its pack (see
+  "Hunting parties" below; a raid that is losing to the pack breaks off and comes home). Its barracks train a weighted mix
   of what they can (spearmen most, siege least). Soldiers at home gather 12 columns in front of the
   town hall. From 3 minutes on, when there are 12 more than the home guard (a fifth, at least 2), they
   go as a wave to the nearest enemy town hall, fighting what they meet on the way, then go for its
@@ -835,6 +837,17 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   builds nothing there, and from 16 workers on keeps two to five of them digging it while stone is
   short. While enemies are at its buildings, and for 20 seconds after, it saves for nothing but
   soldiers.
+- **Hunting parties** (Easy, Normal and Hard, issue #78; `AI/AiPlayer.Hunt.cs`, tests in `HuntTests`):
+  from 4 minutes on, with no wave out, it clears the lairs spread across the map (boar, stone giants, bog
+  horrors, crabs, wolves; not the cavern's or the dusk tree's) for their rewards and prizes, but weighs each
+  pack first. A pack is worth its monsters' hit points times their damage a second, as the computer weighs
+  soldiers. It goes for the nearest lair it has seen within 200 columns of its town hall that the soldiers it
+  can spare (all at home but the guard and the hurt) outweigh two to one, and sends just enough of them,
+  nearest the den first (at least 2). A lair too strong for what it can spare is left alone, however near.
+  The party goes for the pack where it sees one of them (packs roam), else the den. When what is left of the
+  party is worth less than what is left of the pack it breaks off and comes home, and that lair is left
+  alone for 10 minutes; it also comes home after 4 minutes. After a hunt the next may set out a minute
+  later. Its hurt go home to heal.
 - Hard's **army**: its starting soldiers clear the lair as the others' do, but its fastest stays to
   explore round its town (a 28-column grid out to 112 columns), which is how it finds trees, lairs and
   city-states. Its soldiers at home gather beside the town hall (6 columns out from its south side), not
