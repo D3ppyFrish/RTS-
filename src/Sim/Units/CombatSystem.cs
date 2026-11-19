@@ -126,9 +126,11 @@ public sealed partial class CombatSystem
     private Fix64[] _hitFrom = Array.Empty<Fix64>();
     private int[] _cheer = Array.Empty<int>();
     // This tick's steadying by heroes (see UnitDef.Rally): the percent less morale each unit loses to deaths,
-    // and the morale it gets back a second, the best of the heroes near it.
+    // the morale it gets back a second and, for a ranged unit, the percent more damage it deals, the best of
+    // the heroes near it.
     private int[] _steady = Array.Empty<int>();
     private int[] _inspire = Array.Empty<int>();
+    private int[] _volley = Array.Empty<int>();
     private bool _anyRally;
     // This tick's bleeding (see StepBleeding): hit points lost to wounds, landing with the tick's hits.
     private int[] _bled = Array.Empty<int>();
@@ -218,6 +220,7 @@ public sealed partial class CombatSystem
             _cheer = new int[u.Capacity];
             _steady = new int[u.Capacity];
             _inspire = new int[u.Capacity];
+            _volley = new int[u.Capacity];
             _bled = new int[u.Capacity];
         }
         Array.Clear(_pending, 0, u.Count);
@@ -904,8 +907,15 @@ public sealed partial class CombatSystem
         return Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * m).RoundToInt());
     }
 
-    /// <summary>Unit i's attack: its type's damage, and its relic's if it bears one.</summary>
-    public int AttackOf(int i, UnitDef def) => def.Damage + (_sim.RelicOf(i)?.Damage ?? 0);
+    /// <summary>
+    /// Unit i's attack: its type's damage and its relic's if it bears one, and for a ranged unit near a hero
+    /// that calls the volleys this tick, that many percent more (see <see cref="Rally"/>).
+    /// </summary>
+    public int AttackOf(int i, UnitDef def)
+    {
+        int attack = def.Damage + (_sim.RelicOf(i)?.Damage ?? 0);
+        return _anyRally && i < _volley.Length && _volley[i] > 0 ? attack * (100 + _volley[i]) / 100 : attack;
+    }
 
     /// <summary>The damage of unit i's hit on unit t landing on the part, after the part's multiplier and t's armour there.</summary>
     public int HitDamage(int i, UnitDef def, int t, BodyPart part) =>
@@ -1356,12 +1366,17 @@ public sealed partial class CombatSystem
     /// <summary>
     /// Works out which units this tick's heroes steady (<see cref="UnitDef.Rally"/>): each living hero that is
     /// not beaten steadies its own side's units within its rally range (and <see cref="MoraleHeight"/> levels),
-    /// itself included. A unit near several takes the best of each.
+    /// itself included, and calls the volleys of the ranged ones among them. A unit near several takes the best
+    /// of each.
     /// </summary>
     private void Rally()
     {
         var u = U;
-        if (_anyRally) Array.Clear(_steady);
+        if (_anyRally)
+        {
+            Array.Clear(_steady);
+            Array.Clear(_volley);
+        }
         _anyRally = false;
         for (int h = 0; h < u.Count; h++)
         {
@@ -1374,6 +1389,7 @@ public sealed partial class CombatSystem
             {
                 _steady[j] = Math.Max(_steady[j], def.Steady);
                 _inspire[j] = Math.Max(_inspire[j], def.Inspire);
+                if (Def(j).Role == UnitRole.Ranged) _volley[j] = Math.Max(_volley[j], def.Volley);
             }
         }
     }

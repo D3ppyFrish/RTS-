@@ -583,7 +583,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "upkeep", "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire");
+                "bleeds", "tracksBlood", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -630,6 +630,7 @@ public static class ContentLoader
                 Rally = o.Decimal("rally", Fix64.Zero, Fix64.FromInt(32), Fix64.Zero, required: false),
                 Steady = o.Int("steady", 0, 100, 0),
                 Inspire = o.Int("inspire", 1, 100, 1),
+                Volley = o.Int("volley", 0, 200, 0),
                 WorkPercent = o.Int("work", 10, 1000, 100),
                 Lair = Lair(o),
                 FromDen = o.Bool("fromDen"),
@@ -637,8 +638,8 @@ public static class ContentLoader
             };
             if (def.Heal == 0 && (o.Has("healTime") || o.Has("healRange")))
                 o.Error("has \"healTime\" or \"healRange\" but no \"heal\"");
-            if (def.Rally == Fix64.Zero && (o.Has("steady") || o.Has("inspire")))
-                o.Error("has \"steady\" or \"inspire\" but no \"rally\"");
+            if (def.Rally == Fix64.Zero && (o.Has("steady") || o.Has("inspire") || o.Has("volley")))
+                o.Error("has \"steady\", \"inspire\" or \"volley\" but no \"rally\"");
             _db.Add(def);
             var trainedAt = o.Str("trainedAt", false);
             var faction = o.Str("faction", false);
@@ -1362,6 +1363,7 @@ public static class ContentLoader
                 h.Add(u.Rally.Raw);
                 h.Add(u.Steady);
                 h.Add(u.Inspire);
+                h.Add(u.Volley);
                 h.Add(u.WorkPercent);
                 h.Add(u.EvolvesFrom?.Index ?? -1);
                 h.Add(u.FromDen ? 1 : 0);

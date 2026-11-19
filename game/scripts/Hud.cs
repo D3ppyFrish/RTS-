@@ -715,9 +715,12 @@ public partial class Hud : CanvasLayer
             if (form.WeaknessTo(role) != from.WeaknessTo(role))
                 lines.Add($"Takes {form.WeaknessTo(role)}% more damage from {RoleName(role)} attacks");
         if (form.Hero && !from.Hero) lines.Add("A hero: you can have only one at a time, and it never breaks and runs");
-        if (form.Rally > Fix64.Zero && (form.Rally != from.Rally || form.Steady != from.Steady || form.Inspire != from.Inspire))
+        if (form.Rally > Fix64.Zero && (form.Steady > 0 || form.Inspire > 1)
+            && (form.Rally != from.Rally || form.Steady != from.Steady || form.Inspire != from.Inspire))
             lines.Add($"Steadies your units within {Number(form.Rally)} blocks: they lose {form.Steady}% less morale to deaths " +
                       $"and get {form.Inspire} back a second instead of 1");
+        if (form.Rally > Fix64.Zero && form.Volley > 0 && (form.Rally != from.Rally || form.Volley != from.Volley))
+            lines.Add($"Calls the volleys: your ranged units within {Number(form.Rally)} blocks deal {form.Volley}% more damage");
         return string.Join("\n", lines);
     }
 

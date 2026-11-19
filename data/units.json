@@ -33,7 +33,8 @@
 // hero (optional): the unit is one of a kind: a player has at most one living, none of theirs evolves into
 // it while one lives, and it never breaks and runs. rally (optional, blocks): its own side's units within
 // that distance (itself included) are steadied: they lose steady percent less morale to deaths near them,
-// and get inspire morale back a second instead of 1 (see Morale in docs/rules.md).
+// and get inspire morale back a second instead of 1 (see Morale in docs/rules.md); the ranged ones among them
+// deal volley percent more damage.
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -125,6 +126,11 @@
     "description": "A tall bow that reaches a third further, and is slower on the march.",
     "speed": 3.5, "hp": 50, "model": "longbowman", "damage": 7, "attackTime": 1.2, "range": 12, "sight": 12,
     "attack": "pierce", "armor": { "torso": 1 } },
+  { "id": "bowmaster", "name": "Bowmaster", "evolvesFrom": "longbowman", "faction": "settlers", "role": "ranged",
+    "description": "A hero, one of a kind: the longbowmen's last form. It calls the volleys: your archers near the Bowmaster hit a quarter harder, and it never runs. Eats 3 food a minute.",
+    "speed": 3.5, "hp": 80, "model": "bowmaster", "damage": 9, "attackTime": 1.2, "range": 13, "sight": 14,
+    "attack": "pierce", "armor": { "head": 1, "torso": 2 },
+    "upkeep": 3, "hero": true, "rally": 10, "volley": 25 },
   { "id": "ranger", "name": "Ranger", "evolvesFrom": "archer", "faction": "settlers", "role": "ranged",
     "description": "Moves fast and spots the enemy first, but cannot stand up to spears.",
     "speed": 5.5, "hp": 55, "model": "ranger", "damage": 6, "attackTime": 1.2, "range": 9, "sight": 13,
