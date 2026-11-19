@@ -98,6 +98,23 @@ public sealed class UnitDef
     /// </summary>
     public int Regen { get; init; }
 
+    /// <summary>
+    /// A hero (the Settlers' last forms): one of a kind, so a player has at most one living unit of this type
+    /// and none evolves into it while one lives, and it never breaks and runs (see <see cref="EvolutionSystem"/>,
+    /// <c>CombatSystem</c>).
+    /// </summary>
+    public bool Hero { get; init; }
+    /// <summary>
+    /// How near (blocks) its own side's units have to be for it to steady them; 0 if it steadies nobody.
+    /// Steadied units lose <see cref="Steady"/> percent less morale to deaths near them and get
+    /// <see cref="Inspire"/> morale back a second instead of one (see <c>CombatSystem</c>).
+    /// </summary>
+    public Fix64 Rally { get; init; }
+    /// <summary>Percent less morale the units it steadies lose to deaths (see <see cref="Rally"/>).</summary>
+    public int Steady { get; init; }
+    /// <summary>Morale the units it steadies get back each second (see <see cref="Rally"/>); the usual is 1.</summary>
+    public int Inspire { get; init; } = 1;
+
     /// <summary>Food it eats each minute (see <see cref="Economy.EconomySystem.UpkeepInterval"/>).</summary>
     public int Upkeep { get; init; } = 1;
     /// <summary>How fast it gathers, builds, farms and digs tunnels, in percent of the usual.</summary>

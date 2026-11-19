@@ -125,6 +125,11 @@ public sealed partial class CombatSystem
     private int[] _hitBy = Array.Empty<int>();
     private Fix64[] _hitFrom = Array.Empty<Fix64>();
     private int[] _cheer = Array.Empty<int>();
+    // This tick's steadying by heroes (see UnitDef.Rally): the percent less morale each unit loses to deaths,
+    // and the morale it gets back a second, the best of the heroes near it.
+    private int[] _steady = Array.Empty<int>();
+    private int[] _inspire = Array.Empty<int>();
+    private bool _anyRally;
     // This tick's bleeding (see StepBleeding): hit points lost to wounds, landing with the tick's hits.
     private int[] _bled = Array.Empty<int>();
     private readonly List<int> _dead = new();
@@ -211,6 +216,8 @@ public sealed partial class CombatSystem
             _hitBy = new int[u.Capacity];
             _hitFrom = new Fix64[u.Capacity];
             _cheer = new int[u.Capacity];
+            _steady = new int[u.Capacity];
+            _inspire = new int[u.Capacity];
             _bled = new int[u.Capacity];
         }
         Array.Clear(_pending, 0, u.Count);
@@ -228,6 +235,7 @@ public sealed partial class CombatSystem
 
         StepBleeding();
         BuildGrid();
+        Rally();
         if (tick % Tps == 0) RecoverMorale();
         for (int i = 0; i < u.Count; i++) StepUnit(i);
         for (int i = 0; i < u.Count; i++)
@@ -238,7 +246,7 @@ public sealed partial class CombatSystem
         StepRecovery();
         DrainBlocks();
         for (int i = 0; i < u.Count; i++)
-            if (u.Rout[i] == 0 && u.Morale[i] <= BreakMorale && Def(i).Role != UnitRole.Monster) StartRout(i);
+            if (u.Rout[i] == 0 && u.Morale[i] <= BreakMorale && Def(i).Role != UnitRole.Monster && !Def(i).Hero) StartRout(i);
     }
 
     /// <summary>
@@ -1064,6 +1072,8 @@ public sealed partial class CombatSystem
             if (change == 0 || u.Hp[j] <= 0) continue;
             int m = u.Morale[j];
             // A gain lifts morale no higher than the cap, and never lowers morale that is over it.
+            // A hero near it takes some of the sting out of a loss (see Rally).
+            if (change < 0 && _anyRally) change = change * (100 - _steady[j]) / 100;
             u.Morale[j] = change < 0 ? Math.Max(0, m + change) : Math.Max(m, Math.Min(MoraleCap(u.Owner[j]), m + change));
         }
         // The dead drop the relics and the staff they bore where they fell; a tamed monster keeps its own.
@@ -1343,14 +1353,42 @@ public sealed partial class CombatSystem
     /// <summary>The most morale the player's units can have: less while they are starving.</summary>
     public int MoraleCap(int player) => _sim.Economy.Starving(player) ? StarvingMorale : MaxMorale;
 
-    /// <summary>Once a second: morale comes back a point, or sinks a point toward the cap while starving.</summary>
+    /// <summary>
+    /// Works out which units this tick's heroes steady (<see cref="UnitDef.Rally"/>): each living hero that is
+    /// not beaten steadies its own side's units within its rally range (and <see cref="MoraleHeight"/> levels),
+    /// itself included. A unit near several takes the best of each.
+    /// </summary>
+    private void Rally()
+    {
+        var u = U;
+        if (_anyRally) Array.Clear(_steady);
+        _anyRally = false;
+        for (int h = 0; h < u.Count; h++)
+        {
+            var def = Def(h);
+            if (def.Rally == Fix64.Zero || u.Hp[h] <= 0 || u.Subdued[h]) continue;
+            if (!_anyRally) Array.Fill(_inspire, 1, 0, u.Count);
+            _anyRally = true;
+            Near(u.X[h], u.Y[h], u.Z[h], def.Rally, MoraleHeight, u.Owner[h], allies: true, _near);
+            foreach (int j in _near)
+            {
+                _steady[j] = Math.Max(_steady[j], def.Steady);
+                _inspire[j] = Math.Max(_inspire[j], def.Inspire);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Once a second: morale comes back a point (more near a hero, see <see cref="Rally"/>), or sinks a point
+    /// toward the cap while starving.
+    /// </summary>
     private void RecoverMorale()
     {
         var u = U;
         for (int i = 0; i < u.Count; i++)
         {
             int cap = MoraleCap(u.Owner[i]);
-            if (u.Morale[i] < cap) u.Morale[i]++;
+            if (u.Morale[i] < cap) u.Morale[i] = Math.Min(cap, u.Morale[i] + (_anyRally ? _inspire[i] : 1));
             else if (u.Morale[i] > cap) u.Morale[i]--;
         }
     }

@@ -50,12 +50,35 @@ public sealed class EvolutionSystem
 
     /// <summary>
     /// True if unit i can take the form now: the form evolves from its type, it has a level for the step,
-    /// and its player may have the form (it is their faction's, and they have the techs it needs).
+    /// its player may have the form (it is their faction's, and they have the techs it needs), and for a hero
+    /// (<see cref="UnitDef.Hero"/>), its player has none of that hero already.
     /// </summary>
     public bool CanEvolve(int i, UnitDef form)
     {
         var def = Def(i);
-        return form.EvolvesFrom == def && !form.FromDen && Level(i) > def.Tier && Economy.Unlocked(U.Owner[i], form);
+        return form.EvolvesFrom == def && !form.FromDen && Level(i) > def.Tier && Economy.Unlocked(U.Owner[i], form)
+               && !(form.Hero && HasHero(U.Owner[i], form));
+    }
+
+    /// <summary>
+    /// True if unit i has the level for a hero form of its type but cannot take it only because its player
+    /// has that hero already (for the game, to say why).
+    /// </summary>
+    public bool WaitsForHero(int i)
+    {
+        var def = Def(i);
+        foreach (var form in def.Forms)
+            if (form.Hero && Level(i) > def.Tier && Economy.Unlocked(U.Owner[i], form) && HasHero(U.Owner[i], form)) return true;
+        return false;
+    }
+
+    /// <summary>True if the player has a living unit of this hero type, so none of theirs can become it now.</summary>
+    public bool HasHero(int player, UnitDef hero)
+    {
+        var u = U;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Def[i] == hero.Index && u.Owner[i] == player && u.Hp[i] > 0) return true;
+        return false;
     }
 
     /// <summary>True if unit i can take one of its forms now.</summary>

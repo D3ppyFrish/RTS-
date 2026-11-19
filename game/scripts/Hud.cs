@@ -714,6 +714,10 @@ public partial class Hud : CanvasLayer
         foreach (var role in Enum.GetValues<UnitRole>())
             if (form.WeaknessTo(role) != from.WeaknessTo(role))
                 lines.Add($"Takes {form.WeaknessTo(role)}% more damage from {RoleName(role)} attacks");
+        if (form.Hero && !from.Hero) lines.Add("A hero: you can have only one at a time, and it never breaks and runs");
+        if (form.Rally > Fix64.Zero && (form.Rally != from.Rally || form.Steady != from.Steady || form.Inspire != from.Inspire))
+            lines.Add($"Steadies your units within {Number(form.Rally)} blocks: they lose {form.Steady}% less morale to deaths " +
+                      $"and get {form.Inspire} back a second instead of 1");
         return string.Join("\n", lines);
     }
 
@@ -1400,7 +1404,7 @@ public partial class Hud : CanvasLayer
                 int i = u.IndexOf(id);
                 var def = _sim.Content.Units[u.Def[i]];
                 if (u.Owner[i] != player || def.Forms.Count == 0 || types.Contains(def)) continue;
-                if (evolution.CanEvolve(i) || evolution.AutoForm(player, def) != null) types.Add(def);
+                if (evolution.CanEvolve(i) || evolution.AutoForm(player, def) != null || evolution.WaitsForHero(i)) types.Add(def);
             }
             types.Sort((a, b) => a.Index.CompareTo(b.Index));
         }
@@ -1431,6 +1435,8 @@ public partial class Hud : CanvasLayer
             {
                 var (button, form) = row.Forms[k];
                 string? needs = Needs(form.Requires, form.Faction);
+                // A hero is one of a kind: none rises while yours lives.
+                if (needs == null && form.Hero && evolution.HasHero(player, form)) needs = "you have one";
                 button.Text = needs != null ? $"{form.Name}: {needs}" : form.Name;
                 button.Disabled = !canTake[k];
             }

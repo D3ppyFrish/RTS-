@@ -115,7 +115,8 @@ public class EvolutionTests
         foreach (var f in db.Units.Where(u => u.IsForm))
         {
             var from = f.EvolvesFrom!;
-            Assert.Equal(1, f.Tier);
+            // Heroes (HeroTests) are the last forms, a level further on; the rest are first forms.
+            Assert.Equal(f.Hero ? 2 : 1, f.Tier);
             Assert.Same(db.Faction("settlers"), f.Faction);
             Assert.Null(f.TrainedAt);
             bool drawback = f.Upkeep > from.Upkeep || f.Speed < from.Speed || f.WeakTo != null;
@@ -125,7 +126,7 @@ public class EvolutionTests
             Assert.True(drawback, $"{f.Id} has no drawback");
             Assert.True(gain, $"{f.Id} gains nothing");
         }
-        Assert.Equal(new[] { 150 }, db.Faction("settlers").Experience!.Levels);
+        Assert.Equal(new[] { 150, 500 }, db.Faction("settlers").Experience!.Levels);
         Assert.Null(db.Faction("orcs").Experience);
     }
 
@@ -401,7 +402,7 @@ public class EvolutionTests
     {
         var files = Files();
         Edit(files, "units.json", "\"id\": \"foreman\", \"name\": \"Foreman\", \"evolvesFrom\": \"worker\"", "\"id\": \"foreman\", \"name\": \"Foreman\", \"evolvesFrom\": \"peasant\"");
-        Edit(files, "units.json", "\"id\": \"militia\", \"name\": \"Militia\", \"evolvesFrom\": \"worker\"", "\"id\": \"militia\", \"name\": \"Militia\", \"evolvesFrom\": \"knight\"");
+        Edit(files, "units.json", "\"id\": \"militia\", \"name\": \"Militia\", \"evolvesFrom\": \"worker\"", "\"id\": \"militia\", \"name\": \"Militia\", \"evolvesFrom\": \"marshal\"");
         Edit(files, "units.json", "\"upkeep\": 3 }", "\"upkeep\": 3, \"cost\": { \"food\": 10 } }");
         Edit(files, "units.json", "\"id\": \"outrider\", \"name\": \"Outrider\", \"evolvesFrom\": \"rider\", \"faction\": \"settlers\"",
             "\"id\": \"outrider\", \"name\": \"Outrider\", \"evolvesFrom\": \"rider\", \"faction\": \"orcs\"");
@@ -409,7 +410,7 @@ public class EvolutionTests
         Edit(files, "units.json", "\"sight\": 15, \"splash\": 1.5,", "\"sight\": 15, \"splash\": 1.5, \"healTime\": 3,");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
         Assert.Contains("units.json: unit 'foreman': \"evolvesFrom\" is \"peasant\", which is not a unit", e.Errors);
-        Assert.Contains("units.json: unit 'militia' is 2 evolutions from a trained unit, so it needs level 2, but settlers units have only 1", e.Errors);
+        Assert.Contains("units.json: unit 'militia' is 3 evolutions from a trained unit, so it needs level 3, but settlers units have only 2", e.Errors);
         Assert.Contains("units.json: unit 'lancer': is a form units evolve into, so it is not trained: it cannot have \"trainedAt\", \"cost\" or \"trainTime\"", e.Errors);
         Assert.Contains("units.json: unit 'outrider' evolves from 'rider', but orcs units do not earn experience (no \"experience\" in factions.json)", e.Errors);
         Assert.Contains(e.Errors, m => m.StartsWith("units.json: unit 'ranger': \"weakTo\" has \"spears\", which is not a role (roles: worker, "));
@@ -420,7 +421,7 @@ public class EvolutionTests
         Edit(files, "units.json", "\"id\": \"knight\", \"name\": \"Knight\", \"evolvesFrom\": \"spearman\"", "\"id\": \"knight\", \"name\": \"Knight\", \"evolvesFrom\": \"pathfinder\"");
         Edit(files, "units.json", "\"id\": \"pathfinder\", \"name\": \"Pathfinder\", \"evolvesFrom\": \"spearman\"", "\"id\": \"pathfinder\", \"name\": \"Pathfinder\", \"evolvesFrom\": \"knight\"");
         Edit(files, "units.json", "\"id\": \"seer\", \"name\": \"Seer\", \"evolvesFrom\": \"mage\"", "\"id\": \"seer\", \"name\": \"Seer\", \"evolvesFrom\": \"seer\"");
-        Edit(files, "factions.json", "\"levels\": [150]", "\"levels\": [150, 100]");
+        Edit(files, "factions.json", "\"levels\": [150, 500]", "\"levels\": [150, 100]");
         e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
         Assert.Contains("units.json: evolution loop, each evolves from the next: knight -> pathfinder -> knight", e.Errors);
         Assert.Contains("units.json: unit 'seer': cannot evolve from itself", e.Errors);
