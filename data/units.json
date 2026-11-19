@@ -8,8 +8,8 @@
 // makes it a ranged unit), sight how far it spots enemies to fight on its own, and splash (optional)
 // hits every enemy that close to the target too. weakTo (optional) lists roles whose attacks deal it
 // that many percent more damage, as in { "caster": 50 }. heal (optional) is the hit points it gives back
-// to the most hurt ally within healRange blocks every healTime seconds. earthWall, iceBridge and chasm (optional) let it cast
-// Earth Wall, Ice Bridge and Chasm (see Terrain magic in docs/rules.md).
+// to the most hurt ally within healRange blocks every healTime seconds. earthWall, iceBridge, chasm and growForest (optional) let it cast
+// Earth Wall, Ice Bridge, Chasm and Grow Forest (see Terrain magic in docs/rules.md).
 // Armour (see Combat in docs/rules.md): attack (optional, default slash) is the kind of the unit's attack:
 // slash (swords, axes, claws), pierce (spears, arrows, lances) or crush (hammers, clubs, stones, blasts).
 // Armour stops slash best and crush least, and slash and pierce wounds bleed. body (optional) is humanoid
@@ -75,7 +75,7 @@
     "cost": { "food": 40, "wood": 20, "stone": 10 }, "trainTime": 15, "trainedAt": "barracks", "requires": "sapping" },
   { "id": "mage", "name": "Mage", "role": "caster", "speed": 4, "hp": 45, "model": "mage",
     "damage": 10, "attackTime": 2, "range": 8, "sight": 9, "splash": 1.5,
-    "attack": "crush", "earthWall": true, "iceBridge": true, "chasm": true,
+    "attack": "crush", "earthWall": true, "iceBridge": true, "chasm": true, "growForest": true,
     "cost": { "food": 50, "stone": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" },
   { "id": "healer", "name": "Healer", "role": "caster", "speed": 4, "hp": 45, "model": "healer",
     "description": "Tends the most hurt ally nearby and stems its bleeding; a poor fighter, best kept behind the line.",
