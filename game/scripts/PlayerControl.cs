@@ -81,7 +81,7 @@ public partial class PlayerControl : Node
     public static readonly (Key Key, string Building)[] BuildKeys =
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
-        (Key.None, "quarry"), (Key.None, "mine"),
+        (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"),
         (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
@@ -1935,6 +1935,7 @@ public partial class PlayerControl : Node
                $"governor={(sel?.Governor ?? GovernorFocus.None).ToString().ToLowerInvariant()} town_guard={(sel != null ? _sim.Combat.TownGuardCount(sel) : 0)} " +
                $"houses={OwnKind(BuildingKind.House)} quarries={OwnKind(BuildingKind.Quarry)} " +
                $"quarrying={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Quarry)} " +
+               $"fishing={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Quarry && _sim.Buildings.Get(u.JobTarget[i])?.Def.Shore == true)} " +
                $"ore={stock[(int)Good.IronOre]} coal={stock[(int)Good.Coal]} " +
                $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +

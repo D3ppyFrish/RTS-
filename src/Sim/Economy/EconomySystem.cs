@@ -20,6 +20,8 @@ public enum PlaceResult : byte
     CannotAfford,
     /// <summary>The player lacks a tech it needs, or it is another faction's.</summary>
     Locked,
+    /// <summary>A building that must stand at the water's edge (<see cref="BuildingDef.Shore"/>) has no water beside it.</summary>
+    NoWater,
 }
 
 /// <summary>Per-player economy state and running totals.</summary>
@@ -399,8 +401,35 @@ public sealed partial class EconomySystem
             for (int y = from; y < baseY + clear; y++)
                 if (w.Get(cx, y, cz) is var c && c != BlockType.Air && !BlockInfo.IsLeaves(c)) return PlaceResult.Blocked;
         }
+        if (def.Shore && !BesideWater(w, x, z, x1, z1, baseY)) return PlaceResult.NoWater;
         if (checkPlayer && !CanAfford(player, def.Cost)) return PlaceResult.CannotAfford;
         return PlaceResult.Ok;
+    }
+
+    /// <summary>How far below the level a building stands at the water beside it may lie and still count (see <see cref="BesideWater"/>).</summary>
+    public const int ShoreDrop = 4;
+
+    /// <summary>
+    /// True if a column just outside the footprint (x0..x1, z0..z1), in the ring one column round it, has water on
+    /// top at most <see cref="ShoreDrop"/> blocks below <paramref name="baseY"/>, or up to its level: open water,
+    /// not water under ground, nor far down a cliff.
+    /// </summary>
+    public static bool BesideWater(VoxelWorld w, int x0, int z0, int x1, int z1, int baseY)
+    {
+        for (int cz = z0 - 1; cz <= z1 + 1; cz++)
+        for (int cx = x0 - 1; cx <= x1 + 1; cx++)
+        {
+            if (cx >= x0 && cx <= x1 && cz >= z0 && cz <= z1) continue;
+            if (cx < 0 || cz < 0 || cx >= w.SizeX || cz >= w.SizeZ) continue;
+            for (int y = baseY + 1; y >= Math.Max(0, baseY - ShoreDrop); y--)
+            {
+                var b = w.Get(cx, y, cz);
+                if (b == BlockType.Air) continue;
+                if (b == BlockType.Water) return true;
+                break;
+            }
+        }
+        return false;
     }
 
     /// <summary>

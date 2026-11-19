@@ -18,7 +18,8 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
 # Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it, and open
-# ground at 136..147 x 390..397.
+# ground at 136..147 x 390..397. The camera moves west while the units are drag-selected, so none of them
+# stand behind the build panel.
 STEPS="
 wait 20
 camera 141,392 30 50 20
@@ -67,8 +68,12 @@ shot $OUT/ui-wall-upgrade-button.png
 clickui wall_upgrade
 ticks 2
 print
+camera 133,390 20 40 16
+wait 3
 dragworld 128,g,386 148,g,398
 wait 2
+camera 141,390 20 40 16
+wait 3
 clickworld 137,g,394 right
 ticks 1300
 key k
@@ -88,8 +93,12 @@ wait 3
 clickui wall_upgrade
 ticks 2
 print
+camera 133,390 20 40 16
+wait 3
 dragworld 128,g,386 148,g,398
 wait 2
+camera 141,390 20 40 16
+wait 3
 clickworld 137,g,394 right
 ticks 3600
 wait 5

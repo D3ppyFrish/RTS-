@@ -38,6 +38,8 @@
 // works is what a round of work gives and workTime the seconds a round takes (both needed, and only for a
 // quarry); with several goods, each worker's rounds give them in turn (iron_ore 4 then coal 2, and again), so
 // the list sets both which goods and how much of each. Gathering techs make the rounds quicker.
+// shore: true means it must stand at the water's edge, with open water in a column right beside its footprint
+// (the fishing hut, a quarry whose rounds give food).
 [
   { "id": "town_hall", "name": "Town hall", "kind": "town_hall", "size": [7, 7], "wallHeight": 4,
     "wall": "planks", "footing": "stone_brick", "roof": "roof_tile",
@@ -90,6 +92,9 @@
     "wall": "stone_brick", "roof": "planks", "chimney": true, "icon": "iron_ore", "requires": "smelting",
     "cost": { "wood": 60, "stone": 40 }, "buildTime": 40, "workerSlots": 2, "works": { "iron_ore": 4, "coal": 2 },
     "workTime": 15 },
+  { "id": "fishing_hut", "name": "Fishing hut", "kind": "quarry", "size": [4, 4], "wallHeight": 2,
+    "wall": "planks", "roof": "thatch", "shore": true,
+    "cost": { "wood": 40 }, "buildTime": 15, "workerSlots": 2, "works": { "food": 4 }, "workTime": 15 },
   { "id": "barrier", "name": "Wooden barrier", "kind": "wall", "size": [1, 1], "wallHeight": 2, "wall": "palisade",
     "cost": { "wood": 1 }, "buildTime": 1, "sight": 2, "sturdy": 2, "icon": "wall", "upgrade": "wooden_wall" },
   { "id": "wooden_wall", "name": "Wooden wall", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "planks",

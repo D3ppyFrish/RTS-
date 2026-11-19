@@ -454,7 +454,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime");
+                "sturdy", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -503,7 +503,10 @@ public static class ContentLoader
                 Speed = o.Int("speed", 100, 1000, 100),
                 Works = o.Cost("works"),
                 WorkTicks = o.Int("workTime", 1, MaxSeconds, 0) * Tps,
+                Shore = o.Bool("shore"),
             };
+            if (def.Shore && kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.Bridge or BuildingKind.Tower or BuildingKind.Totem)
+                o.Error($"a {SnakeName(kind)} cannot need the water's edge (\"shore\")");
             if (kind == BuildingKind.Quarry && (def.Works.Length == 0 || def.WorkTicks == 0))
                 o.Error("a quarry needs \"works\" (the goods a round of work gives) and \"workTime\" (the seconds a round takes)");
             if (kind != BuildingKind.Quarry && (def.Works.Length > 0 || def.WorkTicks > 0))
@@ -1281,6 +1284,7 @@ public static class ContentLoader
                 h.Add(b.Aim);
                 h.Add(b.Works);
                 h.Add(b.WorkTicks);
+                h.Add(b.Shore ? 1 : 0);
             }
             h.Add(db.Units.Count);
             foreach (var u in db.Units)
