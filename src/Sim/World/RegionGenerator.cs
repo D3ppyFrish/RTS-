@@ -555,7 +555,8 @@ public static class RegionGenerator
 
         /// <summary>
         /// Old stone ruins (issue #67), <see cref="RuinsPer512"/> for each 512 by 512 blocks: the broken walls of a
-        /// square stone hall on open, level grassland or forest, well away from the starts, the dusk tree and each
+        /// square stone hall on open, level grassland (not forest, whose wood the players want), well away from the
+        /// starts (further than their wood and stone), the dusk tree and each
         /// other. Each has a cracked stone brick floor, walls from one to three blocks high with a doorway and a
         /// breach or two, a corner still standing four high, and fallen stone (<see cref="BlockType.StoneRubble"/>,
         /// cleared for stone) inside and around it, in a clearing no tree grows in. From a random stream of their own.
@@ -564,11 +565,11 @@ public static class RegionGenerator
         {
             var rng = new DeterministicRandom(_seed ^ 0x2B1A5UL);
             int want = Math.Max(1, (int)((long)RuinsPer512 * _sx * _sz / (512 * 512)));
-            int keepOff = StartResourceRadius + Sx(24), gap = Sx(RuinGap), r = RuinHalf;
+            int keepOff = StartResourceRadius + Sx(64), gap = Sx(RuinGap), r = RuinHalf;
             for (int tries = 0; tries < want * 60 && _map.Ruins.Count < want; tries++)
             {
                 int cx = rng.Range(r + 3, _sx - r - 3), cz = rng.Range(r + 3, _sz - r - 3);
-                if (_map.BiomeAt(cx, cz) is not (Biome.Grassland or Biome.Forest) || NearStart(cx, cz, keepOff)) continue;
+                if (_map.BiomeAt(cx, cz) != Biome.Grassland || NearStart(cx, cz, keepOff)) continue;
                 if (_duskX >= 0 && Math.Max(Math.Abs(cx - _duskX), Math.Abs(cz - _duskZ)) <= DuskClearing + r + 4) continue;
                 bool far = true;
                 foreach (var p in _map.Ruins)
@@ -589,7 +590,7 @@ public static class RegionGenerator
             for (int dx = -r; dx <= r; dx++)
             {
                 int x = cx + dx, z = cz + dz, h = _height[Idx(x, z)];
-                if (Math.Abs(h - g) > 1 || _map.BiomeAt(x, z) is not (Biome.Grassland or Biome.Forest)) return false;
+                if (Math.Abs(h - g) > 1 || _map.BiomeAt(x, z) != Biome.Grassland) return false;
                 if (_w.Get(x, h, z) is not (BlockType.Grass or BlockType.Soil) || _w.Get(x, h + 1, z) != BlockType.Air) return false;
             }
             return true;

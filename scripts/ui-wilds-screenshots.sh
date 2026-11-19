@@ -19,7 +19,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # two columns north of it), a boar herd's den at 453,386, a bog horrors' den at 414,174 and a giant crabs'
 # den at 103,67. Under the hills the cavern's crawler nests are at 351,625, 352,645 and 333,667 and the
 # cave wyrm's den at 316,672, at levels 5 to 9 (the ground above is at about 26). A sinkhole's crust is
-# centred on 365,350 (its top at 20). A ruin stands round 341,261 (its floor at 20).
+# centred on 365,350 (its top at 20). A ruin stands round 574,157 (its floor at 19).
 STEPS="
 wait 20
 print
@@ -44,7 +44,7 @@ shot $OUT/ui-wilds-crabs.png
 camera 365,350 30 45 16
 wait 15
 shot $OUT/ui-wilds-sinkhole.png
-camera 341,261 30 55 16
+camera 574,157 30 55 16
 wait 15
 shot $OUT/ui-wilds-ruin.png
 camera 317,671 30 60 9
