@@ -174,6 +174,7 @@ public partial class Alerts : VBoxContainer
     {
         var below = _sim.World.Get(e.X, e.Y - 1, e.Z);
         if (below == BlockType.Bog) return "died in the poison bog";
+        if (below == BlockType.Quicksand) return "was dragged under by quicksand";
         if (Rts.Sim.World.HazardSystem.DamageAt(_sim.World, e.X, e.Y, e.Z) >= Rts.Sim.World.HazardSystem.LavaDamage) return "burned beside the lava";
         return "fell into a sinkhole";
     }

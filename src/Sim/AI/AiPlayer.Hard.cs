@@ -576,6 +576,7 @@ public sealed partial class AiPlayer
             int top = w.SurfaceHeight(x, z);
             if (top < 1 || w.Get(x, top, z) is not (BlockType.Grass or BlockType.Soil or BlockType.Sand)) return null;
             if (w.Get(x, top + 1, z) != BlockType.Air) return null; // a bush, a field, a road
+            if (World.HazardSystem.IsHazard(w, x, top + 1, z)) return null; // the lava's heat
             low = Math.Min(low, top);
             high = Math.Max(high, top);
         }
@@ -612,14 +613,15 @@ public sealed partial class AiPlayer
 
     /// <summary>
     /// Room for the building near the point (see <see cref="Automation.AutomationSystem.FindRoom"/>), clear of
-    /// its quarry pits, of the line of its wall (see <see cref="ClearOfWall(BuildingDef, int, int)"/>) and of
-    /// where its soldiers gather (see <see cref="RallyClear"/>).
+    /// its quarry pits, of the line of its wall (see <see cref="ClearOfWall(BuildingDef, int, int)"/>), of hazard
+    /// ground (see <see cref="SafeGround"/>) and of where its soldiers gather (see <see cref="RallyClear"/>).
     /// </summary>
     private bool Room(Simulation sim, BuildingDef def, (int X, int Z) at, int radius, out int x, out int z)
     {
         var rally = GatheringGround(sim);
         return sim.Automation.FindRoom(Player, def, at.X, at.Z, radius, out x, out z, (bx, bz) => ClearOfPits(def, bx, bz)
             && ClearOfWall(def, bx, bz)
+            && SafeGround(sim, def, bx, bz)
             && (rally is not var (rx, rz) || bx > rx + RallyClear || bx + def.SizeX - 1 < rx - RallyClear
                 || bz > rz + RallyClear || bz + def.SizeZ - 1 < rz - RallyClear));
     }

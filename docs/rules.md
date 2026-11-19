@@ -103,7 +103,7 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   full speed instead and takes its place again once it can. Near the end it walks straight to its place if
   nothing is in the way, else to the middle first, and stops there if its place still cannot be reached.
   A formation gets anywhere about as soon as the same units sent with a plain move.
-- **Hazards** (#66): a step onto ground that hurts or traps (poison bog, beside lava, a sinkhole's crust)
+- **Hazards** (#66, #78): a step onto ground that hurts or traps (poison bog, quicksand, beside lava, a sinkhole's crust)
   costs eight times plain ground, so a unit on a move order walks up to seven blocks out of its way for
   each such block it keeps off, and crosses when there is no other way.
 - **Crowds**: units push each other apart, but a unit with no order is never pushed off a drop of more
@@ -634,7 +634,7 @@ Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the bl
 
 ## Natural hazards
 
-`src/Sim/World/HazardSystem.cs` (tests in `WildsTests` and `HazardTests`, issues #45 and #66): ground that
+`src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, `HazardTests` and `QuicksandTests`, issues #45, #66 and #78): ground that
 hurts the units on or near it.
 
 - **Poison bog**: patches of violet sludge (`BlockType.Bog`) on the swamp's dry mud, never near a start.
@@ -642,17 +642,24 @@ hurts the units on or near it.
   ground safe.
 - **Lava heat**: a unit within a column of lava, at its feet's level or the one below, loses 6 hit points
   a second.
-- Both land like falling ground does, by no one: armour does not help and nobody gets the kill. Wild
-  monsters are hurt the same. A unit's panel says "(poisoned by the bog)" or "(scorched by lava)" while it
+- **Quicksand** (#78): patches of dark, wet sand (`BlockType.Quicksand`, five columns across) on the dry
+  sand at the water's edge on the beaches (and on a river bank low enough for it), never near a start or by a ford, 10 per 512 by
+  512 blocks of map. Units walk on it at a third of their speed, and each second on it costs 2 hit points.
+  Workers dig it away like sand (it gives nothing); monster lairs are not put on it.
+- All three land like falling ground does, by no one: armour does not help and nobody gets the kill. Wild
+  monsters are hurt the same. A unit's panel says "(poisoned by the bog)", "(caught in quicksand)" or "(scorched by lava)" while it
   is. The numbers are first guesses for playtesting.
 - **Sinkholes** (#66): round lids of pale, cracked crust (`BlockType.Crust`, five columns across) over a
   hollow, on flat grassland, forest and hill ground away from the starts, 12 per 512 by 512 blocks of map.
   The tick a unit stands on one the whole lid gives way: the units on it drop in and lose 20 hit points
   (by no one). The hole is a block deep at its edge and two in its middle, so they climb back out. Workers
   can dig the crust away (it gives nothing); monster lairs are not put on it.
-- **Keeping off**: move orders path around all three where there is another way (see Moving).
+- **Keeping off**: move orders path around all of them where there is another way (see Moving). Computer
+  players (every level) keep their workers off them too: they never send wood cutters to a tree whose work
+  spot is hazard ground, nor lay out a building whose footprint, or the ring round it where its builders
+  stand, has any (`HazardSystem.HazardNear`), and Hard digs no quarry within a lava's heat.
 - **Alert**: a unit of yours killed by the ground alone raises an alert, "Your worker died in the poison
-  bog", "burned beside the lava" or "fell into a sinkhole" (`GameEventKind.UnitLostToHazard`).
+  bog", "was dragged under by quicksand", "burned beside the lava" or "fell into a sinkhole" (`GameEventKind.UnitLostToHazard`).
 
 ## City-states
 

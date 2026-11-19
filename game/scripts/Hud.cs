@@ -1480,7 +1480,8 @@ public partial class Hud : CanvasLayer
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Z[i].FloorToInt()) is { } camp
                     ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
-            if (hurt > 0) heals += hurt >= Rts.Sim.World.HazardSystem.LavaDamage ? " (scorched by lava)" : " (poisoned by the bog)";
+            if (hurt > 0) heals += hurt >= Rts.Sim.World.HazardSystem.LavaDamage ? " (scorched by lava)"
+                : _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] - 1, u.Z[i].FloorToInt()) == BlockType.Quicksand ? " (caught in quicksand)" : " (poisoned by the bog)";
             string staff = _sim.DuskTree.HasStaff(i) ? " with the Dusk Staff" : "";
             if (_sim.RelicOf(i) is { } relic) staff += $" with the {relic.Name}";
             int tend = _sim.DuskTree.TendProgress(u.Id[i]);

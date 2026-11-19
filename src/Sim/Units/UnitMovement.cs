@@ -128,6 +128,7 @@ public sealed class UnitMovement
         var underfoot = _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] - 1, u.Z[i].FloorToInt());
         if (underfoot == BlockType.Road) { speed *= 2; full *= 2; }
         else if (BlockInfo.IsRubble(underfoot)) { speed /= 2; full /= 2; } // picking a way over a heap of rubble
+        else if (underfoot == BlockType.Quicksand) { speed /= Rts.Sim.World.HazardSystem.QuicksandSlow; full /= Rts.Sim.World.HazardSystem.QuicksandSlow; } // the sand grips
         if (formation)
         {
             SteerFormation(u, i, speed, full, ref vx, ref vz);

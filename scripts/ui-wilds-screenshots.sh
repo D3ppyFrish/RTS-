@@ -4,7 +4,7 @@
 # swamp, a stone giant in the hills (clicked, so its panel shows), a herd of wild boar, a pair of bog horrors
 # in the swamp, a pair of giant crabs on a beach, and (issue #65) the cavern under the hills cut open by the
 # height slice, with a cave crawler nest and the cave wyrm at its far end, and (issue #66) a sinkhole's pale
-# crust in the grassland, and (issue #67) one of the old stone ruins in the open country. Saves PNGs to
+# crust in the grassland, (issue #78) a patch of quicksand on the west beach, and (issue #67) one of the old stone ruins in the open country. Saves PNGs to
 # OUT_DIR and fails if the map is not the default size or its lairs are missing.
 # Usage: scripts/ui-wilds-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -19,7 +19,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # two columns north of it), a boar herd's den at 453,386, a bog horrors' den at 414,174 and a giant crabs'
 # den at 103,67. Under the hills the cavern's crawler nests are at 351,625, 352,645 and 333,667 and the
 # cave wyrm's den at 316,672, at levels 5 to 9 (the ground above is at about 26). A sinkhole's crust is
-# centred on 365,350 (its top at 20). A ruin stands round 574,157 (its floor at 19).
+# centred on 365,350 (its top at 20). A patch of quicksand lies on the west beach round 71,307 (at 14). A ruin stands round 574,157 (its floor at 19).
 STEPS="
 wait 20
 print
@@ -44,6 +44,9 @@ shot $OUT/ui-wilds-crabs.png
 camera 365,350 30 45 16
 wait 15
 shot $OUT/ui-wilds-sinkhole.png
+camera 71,307 30 45 16
+wait 15
+shot $OUT/ui-wilds-quicksand.png
 camera 574,157 30 55 16
 wait 15
 shot $OUT/ui-wilds-ruin.png
@@ -67,5 +70,5 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 lairs="$(field "${UI[0]}" lair_kinds)"
 for kind in boar stone_giant wolf bog_horror giant_crab cave_crawler cave_wyrm; do [[ ",$lairs," == *",$kind:"* ]] || fail "no $kind lair on the map: $lairs"; done
 [ "$(field "${UI[1]}" unit)" = stone_giant ] || fail "the stone giant was not selected: ${UI[1]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 8 ] || fail "missing screenshots"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 9 ] || fail "missing screenshots"
 echo "UI wilds screenshot test OK: $OUT"

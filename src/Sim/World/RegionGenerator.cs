@@ -24,6 +24,10 @@ public static class RegionGenerator
     public const int StartResourceRadius = 40;
     /// <summary>Sinkholes (see <see cref="HazardSystem.MakeSinkhole"/>) per 512 by 512 blocks of map.</summary>
     public const int SinkholesPer512 = 12;
+    /// <summary>Patches of quicksand (see <see cref="HazardSystem.MakeQuicksand"/>) per 512 by 512 blocks of map.</summary>
+    public const int QuicksandPer512 = 10;
+    /// <summary>Columns from a quicksand patch's middle to its edge.</summary>
+    public const int QuicksandRadius = 2;
     /// <summary>Ruins (see the builder's PlaceRuins) per 512 by 512 blocks of map.</summary>
     public const int RuinsPer512 = 3;
     /// <summary>A ruin's walls stand this many columns from its middle (so it is 2 * this + 1 across).</summary>
@@ -224,6 +228,7 @@ public static class RegionGenerator
             PlantTrees();
             PlaceStartResources();
             PlaceSinkholes();
+            PlaceQuicksand();
             return _map;
         }
 
@@ -544,6 +549,50 @@ public static class RegionGenerator
                     return false;
             }
             return true;
+        }
+
+        // --- Quicksand ------------------------------------------------------------------------------
+
+        /// <summary>Least distance between two quicksand patches' middles.</summary>
+        private const int QuicksandGap = 20;
+
+        /// <summary>
+        /// Patches of quicksand (issue #78, see <see cref="HazardSystem.MakeQuicksand"/>) on the dry sand at the water's
+        /// edge, on the beaches and the river banks: well away from the starts and each other, as many as
+        /// <see cref="QuicksandPer512"/> per 512 by 512 blocks. Placed after everything else, from a random stream
+        /// of their own, so nothing else on existing seeds moves.
+        /// </summary>
+        private void PlaceQuicksand()
+        {
+            var rng = new DeterministicRandom(_seed ^ 0x9C1C5A2DUL);
+            int want = Math.Max(1, (int)((long)QuicksandPer512 * _sx * _sz / (512 * 512)));
+            int keepOff = StartResourceRadius + Sx(24), r = QuicksandRadius;
+            var placed = new List<(int X, int Z)>();
+            for (int tries = 0; tries < want * 200 && placed.Count < want; tries++)
+            {
+                int cx = rng.Range(r + 4, _sx - r - 4), cz = rng.Range(r + 4, _sz - r - 4);
+                if (!QuicksandFits(cx, cz) || NearStart(cx, cz, keepOff)) continue;
+                bool far = true;
+                foreach (var p in placed)
+                    if ((p.X - cx) * (p.X - cx) + (p.Z - cz) * (p.Z - cz) < QuicksandGap * QuicksandGap) far = false;
+                if (!far) continue;
+                HazardSystem.MakeQuicksand(_w, cx, _height[Idx(cx, cz)], cz, r);
+                placed.Add((cx, cz));
+            }
+        }
+
+        /// <summary>True if (cx, cz) is dry, open sand just above the water, with the water within three columns of it, and not by a ford.</summary>
+        private bool QuicksandFits(int cx, int cz)
+        {
+            int h = _height[Idx(cx, cz)];
+            if (h < _water || h > _water + 1) return false;
+            for (int dz = -QuicksandRadius - 3; dz <= QuicksandRadius + 3; dz++)
+                if (IsFord(cz + dz)) return false; // never across the way over a ford
+            if (_w.Get(cx, h, cz) != BlockType.Sand || _w.Get(cx, h + 1, cz) != BlockType.Air) return false;
+            for (int dz = -3; dz <= 3; dz++)
+            for (int dx = -3; dx <= 3; dx++)
+                if (_height[Idx(cx + dx, cz + dz)] < _water && _w.Get(cx + dx, _water, cz + dz) == BlockType.Water) return true;
+            return false;
         }
 
         // --- Ruins ----------------------------------------------------------------------------------
