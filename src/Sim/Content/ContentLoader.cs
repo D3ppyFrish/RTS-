@@ -42,7 +42,7 @@ public static class ContentLoader
 {
     /// <summary>The data files, in the order they are read.</summary>
     public static readonly IReadOnlyList<string> Files =
-        new[] { "factions.json", "techs.json", "buildings.json", "units.json", "roles.json", "citystates.json", "relics.json" };
+        new[] { "factions.json", "techs.json", "buildings.json", "units.json", "roles.json", "citystates.json", "relics.json", "ruins.json" };
 
     private const int Tps = Simulation.TicksPerSecond;
     private const int MaxSeconds = 3600;
@@ -156,6 +156,7 @@ public static class ContentLoader
                 ReadRoles("roles.json");
                 ReadFile("citystates.json", "city-state", ReadCityState);
                 ReadFile("relics.json", "relic", ReadRelic);
+                ReadFile("ruins.json", "find", ReadRuinFind);
                 foreach (var resolve in _resolve) resolve();
                 CheckTree();
                 CheckFactions();
@@ -700,6 +701,32 @@ public static class ContentLoader
                 Hp = o.Int("hp", 0, 10000, 0),
                 Damage = o.Int("damage", 0, 1000, 0),
                 Armour = o.Int("armor", 0, 100, 0),
+            });
+        }
+
+        private void ReadRuinFind(Obj o)
+        {
+            var id = o.Id();
+            o.Keys("id", "name", "lore", "goods", "relic");
+            if (id == null) return;
+            foreach (var f in _db.RuinFinds)
+                if (f.Id == id)
+                {
+                    o.Error("another find already has this id");
+                    return;
+                }
+            var goods = o.Cost("goods");
+            var relicId = o.Str("relic", false);
+            RelicDef? relic = null;
+            if (relicId != null && !_db.TryGetRelic(relicId, out relic)) o.Error($"\"relic\" is \"{relicId}\", which is not in relics.json");
+            if (goods.Length == 0 && relicId == null) o.Error("needs \"goods\", a \"relic\" or both: what the ruin holds");
+            _db.Add(new RuinFindDef
+            {
+                Id = id,
+                Name = o.Str("name", true) ?? id,
+                Lore = o.Str("lore", false) ?? "",
+                Goods = goods,
+                Relic = relic,
             });
         }
 
@@ -1405,6 +1432,13 @@ public static class ContentLoader
                 h.Add(r.Hp);
                 h.Add(r.Damage);
                 h.Add(r.Armour);
+            }
+            h.Add(db.RuinFinds.Count);
+            foreach (var f in db.RuinFinds)
+            {
+                h.Add(f.Id);
+                h.Add(f.Relic?.Index ?? -1);
+                h.Add(f.Goods);
             }
             return h.Value;
         }

@@ -35,6 +35,11 @@ public enum GameEventKind : byte
     /// (see <see cref="World.HazardSystem"/>). <see cref="GameEvent.Def"/> is its unit type.
     /// </summary>
     UnitLostToHazard,
+    /// <summary>
+    /// The player's units searched an old ruin and found what it held (see <see cref="World.RuinSystem"/>).
+    /// <see cref="GameEvent.Subject"/> is the unit that found it, <see cref="GameEvent.Def"/> the ruin's index.
+    /// </summary>
+    RuinSearched,
 }
 
 /// <summary>
@@ -144,6 +149,10 @@ public sealed class EventLog
     /// <summary>The ground killed a unit of the player's at (x, y, z) (see <see cref="World.HazardSystem"/>).</summary>
     internal void UnitLostToHazard(int player, int unitId, int def, int x, int y, int z) =>
         Add(player, GameEventKind.UnitLostToHazard, x, y, z, unitId, def);
+
+    /// <summary>The player's unit (id) found what the ruin held.</summary>
+    internal void RuinSearched(int player, World.AncientRuin ruin, int unitId) =>
+        Add(player, GameEventKind.RuinSearched, ruin.X, ruin.Y + 1, ruin.Z, unitId, ruin.Index);
 
     /// <summary>True (and remembered) if no attack on the player was reported near (x, z) lately.</summary>
     private bool Throttle(int player, int x, int z)

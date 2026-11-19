@@ -26,6 +26,7 @@ public sealed class ContentDb
     private readonly Dictionary<string, CityStateDef> _cityStatesById = new(StringComparer.Ordinal);
     private readonly List<RelicDef> _relics = new();
     private readonly Dictionary<string, RelicDef> _relicsById = new(StringComparer.Ordinal);
+    private readonly List<RuinFindDef> _ruinFinds = new();
 
     internal ContentDb() { }
 
@@ -58,6 +59,8 @@ public sealed class ContentDb
     public IReadOnlyList<CityStateDef> CityStates => _cityStates;
     /// <summary>The relics units can take up as monster lairs' prizes (see <see cref="RelicDef"/>).</summary>
     public IReadOnlyList<RelicDef> Relics => _relics;
+    /// <summary>What the map's old ruins hold, one find to a ruin (see <see cref="RuinFindDef"/>, <see cref="World.RuinSystem"/>).</summary>
+    public IReadOnlyList<RuinFindDef> RuinFinds => _ruinFinds;
 
     /// <summary>
     /// The side of the wild monsters (<see cref="Simulation.WildPlayer"/>): not a playable faction and not in
@@ -175,5 +178,11 @@ public sealed class ContentDb
         def.Index = _relics.Count;
         _relicsById.Add(def.Id, def);
         _relics.Add(def);
+    }
+
+    internal void Add(RuinFindDef def)
+    {
+        def.Index = _ruinFinds.Count;
+        _ruinFinds.Add(def);
     }
 }

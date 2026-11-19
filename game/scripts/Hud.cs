@@ -9,6 +9,7 @@ using Rts.Sim.Automation;
 using Rts.Sim.Content;
 using Rts.Sim.Economy;
 using Rts.Sim.Units;
+using Rts.Sim.World;
 
 namespace Rts.Game;
 
@@ -69,6 +70,7 @@ public partial class Hud : CanvasLayer
     private Label _tameLabel = null!;
     private Button _rideButton = null!, _recruitButton = null!, _beatenButton = null!;
     private Button _denButton = null!;
+    private Button _ruinButton = null!;
     private Button _bloomButton = null!;
     private Button _earthWallButton = null!;
     private Button _chasmButton = null!;
@@ -570,6 +572,14 @@ public partial class Hud : CanvasLayer
         _denButton.Pressed += () => _control.UseDen();
         column.AddChild(_denButton);
 
+        _ruinButton = MakeToolButton("Search the ruin");
+        _ruinButton.Name = "ruin_search";
+        _ruinButton.Icon = UiIcons.Get("ruin");
+        _ruinButton.ToggleMode = false;
+        _ruinButton.Visible = false;
+        _ruinButton.Pressed += () => _control.SearchRuin();
+        column.AddChild(_ruinButton);
+
         _bloomButton = MakeToolButton("Dusk Bloom [,]");
         _bloomButton.Name = "dusk_bloom";
         _bloomButton.Icon = UiIcons.Get("dusk_bloom");
@@ -1035,6 +1045,7 @@ public partial class Hud : CanvasLayer
         RefreshEvolveRows();
         RefreshTaming();
         RefreshDen();
+        RefreshRuin();
         RefreshBloom();
         RefreshEarthWall();
         RefreshIceBridge();
@@ -1277,6 +1288,18 @@ public partial class Hud : CanvasLayer
                                    $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage makes the chasm " +
                                    $"a column wider and {SpellSystem.WallPerHelper} columns longer.";
         _chasmButton.Disabled = ready == 0 && !tool;
+    }
+
+    private void RefreshRuin()
+    {
+        var ruin = _control.NearRuin();
+        _ruinButton.Visible = ruin != null;
+        if (ruin == null) return;
+        int done = _sim.Ruins.Progress(PlayerControl.LocalPlayer, ruin.Index) * 100 / RuinSystem.SearchTicks;
+        _ruinButton.Text = done > 0 ? $"Search the old ruin ({done}% searched)" : "Search the old ruin";
+        _ruinButton.TooltipText = "Your selected units walk into the old ruin and search it for what its builders left behind: " +
+                                  $"{RuinSystem.SearchTicks / Simulation.TicksPerSecond} s for one, faster with up to {RuinSystem.MaxHands} together. " +
+                                  "The first side to finish gets it, once a match. Right click on the ruin does the same.";
     }
 
     private void RefreshDen()
@@ -1542,6 +1565,9 @@ public partial class Hud : CanvasLayer
             string staff = _sim.DuskTree.HasStaff(i) ? " with the Dusk Staff" : "";
             if (_sim.RelicOf(i) is { } relic) staff += $" with the {relic.Name}";
             int tend = _sim.DuskTree.TendProgress(u.Id[i]);
+            int searching = _sim.Ruins.Searching(u.Id[i]);
+            if (searching >= 0)
+                heals += $" (searching the ruin, {_sim.Ruins.Progress(u.Owner[i], searching) * 100 / RuinSystem.SearchTicks}%)";
             if (tend > 0)
                 heals += _sim.DuskTree.Razing(u.Id[i])
                     ? $" (hacking at the dusk tree, {_sim.DuskTree.RazeWork * 100 / DuskTreeSystem.RazeTicks}%)"

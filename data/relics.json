@@ -1,7 +1,8 @@
 // Relics: one-of-a-kind things a unit takes up as the prize for beating a monster (a lair's "prizes" in
-// units.json, { "relic": id }). The nearest of the player's fighting units near the cleared den, without a
-// relic already, takes it up. It keeps it when it evolves; when it dies it drops it where it fell, and any
-// player's fighting unit without a relic that walks over it picks it up. A unit bears at most one.
+// units.json, { "relic": id }), or finds in an old ruin (ruins.json). The nearest of the player's fighting
+// units near the cleared den, without a relic already, takes it up. It keeps it when it evolves; when it
+// dies it drops it where it fell, and any player's fighting unit without a relic that walks over it picks
+// it up. A unit bears at most one.
 //   hp: hit points added to the bearer's most (it gets them at once too)
 //   damage: added to each of the bearer's hits
 //   armor: added on every part of the bearer
@@ -18,5 +19,8 @@
     "armor": 3 },
   { "id": "wyrm_crystal", "name": "Wyrm crystal", "icon": "wyrm_crystal",
     "description": "The crystal that grew in a cave wyrm's skull, still humming. Its bearer is harder to fell and hits harder.",
-    "hp": 40, "damage": 6, "armor": 1 }
+    "hp": 40, "damage": 6, "armor": 1 },
+  { "id": "sunstone_circlet", "name": "Sunstone circlet", "icon": "sunstone_circlet",
+    "description": "A warden's circlet of the old builders, found in a ruin, its stone still warm. Its bearer stands and strikes like one who has seen worse.",
+    "hp": 30, "damage": 2, "armor": 1 }
 ]

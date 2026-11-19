@@ -44,6 +44,8 @@ public sealed class Simulation
     public MonsterSystem Monsters { get; }
     /// <summary>The map's dusk tree, its warden, healing it or hacking it down, and the Dusk Staff.</summary>
     public DuskTreeSystem DuskTree { get; }
+    /// <summary>The map's old ruins and what players find searching them.</summary>
+    public RuinSystem Ruins { get; }
     /// <summary>Relics and the Dusk Staff lying where their bearers fell, until a unit picks them up.</summary>
     public DroppedItemSystem Items { get; }
     /// <summary>Terrain magic: earth walls (see <see cref="SpellSystem"/>).</summary>
@@ -95,6 +97,8 @@ public sealed class Simulation
         Evolution = new EvolutionSystem(this);
         Monsters = new MonsterSystem(this);
         DuskTree = new DuskTreeSystem(this);
+        Ruins = new RuinSystem(this);
+        Ruins.Place();
         Items = new DroppedItemSystem(this);
         Spells = new SpellSystem(this);
         Cities = new CityStateSystem(this);
@@ -327,6 +331,7 @@ public sealed class Simulation
         Evolution.Step();
         Monsters.Step();
         DuskTree.Step();
+        Ruins.Step();
         Items.Step();
         Spells.Step();
         Cities.Step();
@@ -352,6 +357,7 @@ public sealed class Simulation
         ^ Cities.ComputeHash() * 0xA24BAED4963EE407UL ^ Match.ComputeHash() * 0x9FB21C651E98DF25UL
         ^ Physics.ComputeHash() * 0x61C8864680B583EBUL
         ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL ^ DuskTree.ComputeHash() * 0x3C6EF372FE94F82BUL
+        ^ Ruins.ComputeHash() * 0xC6BC279692B5C323UL
         ^ Spells.ComputeHash() * 0x2127599BF4325C37UL ^ Items.ComputeHash() * 0x5851F42D4C957F2DUL
         ^ (_fog ? Vision.ComputeHash() * 0xBF58476D1CE4E5B9UL : 0)
         ^ (_testMode ? 0x7A3E1C5B9D2F4E61UL ^ Sandbox.ComputeHash() * 0xE7037ED1A0B428DBUL : 0)
@@ -363,6 +369,8 @@ public sealed class Simulation
         // Any other order stops units working on the dusk tree.
         if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or AutomateCommand or PriorityCommand))
             DuskTree.Release(this, released);
+        if (command is UnitsCommand left and not (SearchRuinCommand or BloomCommand or StanceCommand or AutomateCommand or PriorityCommand))
+            Ruins.Release(left);
         if (command is UnitsCommand stopped and not (EarthWallCommand or IceBridgeCommand or ChasmCommand or StanceCommand or AutomateCommand or PriorityCommand))
             Spells.Release(stopped);
         switch (command)
@@ -432,6 +440,7 @@ public sealed class Simulation
             case DenCommand d: Monsters.Apply(d); break;
             case DuskTreeCommand dt: DuskTree.Apply(dt); break;
             case BloomCommand bl: DuskTree.Apply(bl); break;
+            case SearchRuinCommand sr: Ruins.Apply(sr); break;
             case EarthWallCommand ew: Spells.Apply(ew); break;
             case IceBridgeCommand ib: Spells.Apply(ib); break;
             case ChasmCommand ch: Spells.Apply(ch); break;

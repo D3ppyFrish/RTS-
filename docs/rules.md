@@ -649,6 +649,37 @@ Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the bl
 - **In the game**: the item stands over the ground as its pixel icon (the relic's, or Dusk Bloom's for the
   staff), bobbing in a soft light, where you can see. Computer players do not go after dropped items yet.
 
+## Old ruins and what they hold
+
+`src/Sim/World/RuinSystem.cs` (tests in `RuinTests`): the broken stone halls the map generator puts up in the
+open grassland (`RegionGenerator.PlaceRuins`, 3 per 512 by 512 blocks, 6 on the default map) still hold what their
+builders left, and a line of their writing, so the land tells its own story (the design doc's discoveries).
+
+- **Finds** (`data/ruins.json`, `RuinFindDef`): each ruin is given one find at match start, shuffled by the map's
+  seed. A find is goods, a relic or both, with a name and the words found with it: a mason's store (150 stone,
+  30 iron), a sealed granary (200 food, 60 wood), an old armoury (80 iron, 40 coal), a toolmaker's chest (100
+  wood, 60 stone, 40 iron) and a warden's tomb (the **Sunstone circlet**, a relic: +30 hit points, +2 damage, +1
+  armour). A find with a relic goes to one ruin at most; once every find is dealt, the further ruins go round the
+  ones without a relic.
+- **Searching** (`SearchRuinCommand`): any player's units (not beaten, not running away) walk into the ruin, to
+  the floor within a column of its middle, and search it while they stand inside its walls (within 3 columns of
+  the middle). Each tick each searcher adds a tick of work to its player's search of that ruin, up to 3 of a
+  player's at a time; at 12 seconds of work (12 for one unit, 4 for three) the player finds what it holds. An
+  order of any other kind, a fight, running away or being beaten stops a unit searching; the work its player has
+  done stays, so coming back finishes the rest.
+- **Who gets it**: the first player to finish, once a match (two finishing on the same tick: the lower player
+  number). Rivals' searches of it end. The goods go into the finder's storage nearest the ruin (none if they have
+  no storage). The relic goes to the unit that finished the search if it can bear one (a fighting unit, not a
+  worker, without a relic yet); otherwise it is left lying at that unit's feet, for any fighting unit to pick up
+  (see "Dropped relics and the Dusk Staff").
+- **In the game**: an unsearched ruin you have seen has a carved stone tablet floating over it, in a warm light;
+  it is gone once you search it, or once you see that someone else has. Right click on the ruin (its walls, floor
+  or fallen stone) sends the selected units to search it; with your units selected within 24 columns of one, a
+  "Search the old ruin" button does the same and says how far your search has got. A searching unit's panel says
+  "(searching the ruin, 40%)". The find comes up as an alert ("Found a sealed granary in the ruin: 200 food, 60
+  wood"); hover it to read the words found with it. Computer players leave ruins be for now. All numbers are first
+  guesses for playtesting.
+
 ## Natural hazards
 
 `src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, `HazardTests`, `QuicksandTests` and `RockfallTests`, issues #45, #66 and #78): ground that
