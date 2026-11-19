@@ -213,7 +213,7 @@ unit of it carried by a worker or held in a building. A player's stock is what t
 - **Morale**: a death costs each ally near it a share of 150 morale (a bigger share the fewer they are)
   and gives each enemy near it a share of 60. At 25 a unit breaks: it runs to its town hall, or away from
   the enemy, for 8 seconds, ignoring orders, then rallies. Morale comes back a point a second; a hungry
-  army has at most 50.
+  army has at most 50. Units near a hero hold longer (see [Evolution](#evolution), "Heroes").
 - **Healing**: a unit that has not hit anything or been hit for 10 seconds gets back a quarter of a
   percent of its hit points a second (from half health, full in 3 minutes 20 seconds), or 2% a second
   within 12 columns of a town hall or house of its own, or near a goblin town it holds (full in 25 seconds), so a wounded army is
@@ -479,7 +479,18 @@ Orc units earn none.
   | Rider | lancer (18 damage, eats 3), outrider (speed 10, sight 14, +50% from ranged) |
   | Sapper | tunneller (digs tunnels twice as fast, eats 2), demolisher (9 damage, slower) |
   | Mage | battle mage (14 damage over a 2-block blast, eats 2), seer (range 11, sight 15, slower) |
+  | Knight (level 2) | the **Marshal**, a hero (below) |
 
+- **Heroes** (`"hero": true` in `data/units.json`, `HeroTests`): the last forms are heroes, one of a kind. The
+  first is the **Marshal**, the knight's form at level 2 (500 experience): 200 hit points, 14 damage, a knight's
+  armour and shield, and it eats 4 food a minute. A player has at most one living Marshal: while it lives no
+  knight of theirs can take the form (the button says "you have one"), and once it falls the next knight with
+  the experience can. A hero never breaks and runs. The Marshal **steadies** its own side's units within 8 blocks
+  (and 4 levels), itself included (`"rally": 8`): a death near them costs them half the morale it would
+  (`"steady": 50`), and they get 3 morale back a second instead of 1 (`"inspire": 3`). Enemies near it gain
+  nothing. In the game the Marshal wears a crown on its helm, gilded pauldrons and a tall banner in its
+  owner's colour on its back. The design doc's other heroes (one for each line, with abilities of their own)
+  come later.
 - **Evolving** (`EvolveCommand`) is immediate and free. The unit keeps its id, place, orders, experience
   and the same share of its hit points; a worker that becomes militia drops its job and load and is no
   longer automatic. Experience is never spent, so a form of a form needs only the next level.
@@ -491,7 +502,7 @@ Orc units earn none.
   takes on its own. A single unit's panel shows its level and experience. Forms wear a gold belt.
   `--xp=N` starts your units with N experience, to try the forms at once.
 
-`EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
+`--xp=500` starts your units at the second level, to try the Marshal at once. `EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
 a knight, which hits an orc spearman three times as hard as before (heavy infantry beats line infantry)
 but walks a quarter slower. All the numbers are first guesses for playtesting.
 

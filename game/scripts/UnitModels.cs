@@ -318,6 +318,20 @@ public static class UnitModels
             .Box(-4, 9, -2, -3, 10, 1, Steel).Box(2, 9, -2, 3, 10, 1, Steel)             // broad pauldrons
             .Box(3, 4, 1, 3, 5, 1, Dark).Box(3, 6, 0, 3, 6, 2, Steel).Box(3, 7, 1, 3, 15, 1, Steel) // longsword
             .Box(-4, 4, -2, -4, 11, 2, TeamDark),                                        // big shield
+        // A hero: a knight in gilded armour with a crown on the helm and a tall banner on its back, so the
+        // army sees where it stands.
+        "marshal" => new Builder().Humanoid().Rank().Cape(bottom: 1)
+            .Box(-2, 10, -2, 1, 14, 1, Steel).Box(-2, 11, 1, 1, 11, 1, Dark)             // great helm and visor
+            .Box(-2, 15, -2, 1, 15, 1, Gold)                                             // crown band
+            .Box(-2, 16, -2, -2, 16, -2, Gold).Box(1, 16, -2, 1, 16, -2, Gold)
+            .Box(-2, 16, 1, -2, 16, 1, Gold).Box(1, 16, 1, 1, 16, 1, Gold)               // crown points
+            .Box(-2, 7, 1, 1, 9, 1, Steel).Box(-1, 8, 1, 0, 8, 1, Gold)                  // breastplate with a gold boss
+            .Box(-4, 9, -2, -3, 10, 1, Gold).Box(2, 9, -2, 3, 10, 1, Gold)               // gilded pauldrons
+            .Box(3, 4, 1, 3, 5, 1, Dark).Box(3, 6, 0, 3, 6, 2, Gold).Box(3, 7, 1, 3, 15, 1, Steel) // longsword
+            .Box(-4, 4, -2, -4, 11, 2, TeamDark)                                         // big shield
+            .Box(0, 4, -3, 0, 26, -3, Wood).Box(0, 27, -3, 0, 27, -3, Gold)              // banner pole on the back
+            .Box(1, 19, -3, 6, 25, -3, Team).Box(1, 25, -3, 6, 25, -3, Gold)             // the banner
+            .Box(3, 21, -3, 4, 23, -3, Gold),                                            // its device
         "pathfinder" => new Builder().Humanoid().Rank()
             .Box(-2, 13, -2, 1, 13, 1, Leaf).Box(-2, 13, 2, 1, 13, 2, Leaf)              // cap with a brim
             .Box(1, 14, -2, 1, 16, -2, Team)                                             // feather

@@ -41,7 +41,7 @@ public class ContentTests
         Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "barracks", "great_barracks", "smelter", "foundry", "quarry", "mine", "fishing_hut", "forester_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "boar_pen", "crab_pots", "goblin_totem", "ogre_idol", "bridge" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "healer" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
-        Assert.Equal(new[] { "foreman", "militia", "knight", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
+        Assert.Equal(new[] { "foreman", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
             "ranger", "lancer", "outrider", "tunneller", "demolisher", "battle_mage", "seer", "wolfheart" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
         Assert.Equal(15, db.Techs.Count);
 

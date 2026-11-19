@@ -20,7 +20,7 @@
 // "Winning and computer players" in docs/rules.md for what each level makes of it.
 [
   { "id": "settlers", "name": "Settlers", "uiLook": "stone", "description": "Humans who grow their units into new forms through experience.",
-    "experience": { "levels": [150], "perDamage": 1, "perKill": 10, "perBuildSecond": 1, "perMinute": 5 },
+    "experience": { "levels": [150, 500], "perDamage": 1, "perKill": 10, "perBuildSecond": 1, "perMinute": 5 },
     "duskTree": "heal", "aiStyle": "balanced" },
   { "id": "orcs", "name": "Orcs", "uiLook": "timber", "description": "Clans who tame and ride the monsters they defeat.", "tamesMonsters": true,
     "duskTree": "raze", "aiStyle": "waves" }

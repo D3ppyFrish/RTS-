@@ -30,6 +30,10 @@
 // form gives something and takes something: here every form has one drawback, more upkeep, less speed
 // or a weakness (weakTo). A form with fromDen (optional) is not reached through experience: a unit takes it
 // only at a cleared monster den, for a faction whose prize there names it ("prizes" in a lair, below).
+// hero (optional): the unit is one of a kind: a player has at most one living, none of theirs evolves into
+// it while one lives, and it never breaks and runs. rally (optional, blocks): its own side's units within
+// that distance (itself included) are steadied: they lose steady percent less morale to deaths near them,
+// and get inspire morale back a second instead of 1 (see Morale in docs/rules.md).
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -98,6 +102,11 @@
     "description": "Heavy armour and a longsword: breaks spear lines, but slow.",
     "speed": 3, "hp": 130, "model": "knight", "damage": 12, "attackTime": 1, "range": 1.5, "sight": 8,
     "attack": "slash", "armor": { "head": 4, "torso": 5, "arms": 3, "legs": 3 }, "shield": 30 },
+  { "id": "marshal", "name": "Marshal", "evolvesFrom": "knight", "faction": "settlers", "role": "heavy_infantry",
+    "description": "A hero, one of a kind: the knights' last form. Your soldiers near the Marshal lose half the heart they would at a death, get it back three times as fast, and the Marshal never runs. Eats 4 food a minute.",
+    "speed": 3, "hp": 200, "model": "marshal", "damage": 14, "attackTime": 1, "range": 1.5, "sight": 10,
+    "attack": "slash", "armor": { "head": 4, "torso": 5, "arms": 3, "legs": 3 }, "shield": 30,
+    "upkeep": 4, "hero": true, "rally": 8, "steady": 50, "inspire": 3 },
   { "id": "pathfinder", "name": "Pathfinder", "evolvesFrom": "spearman", "faction": "settlers", "role": "line_infantry",
     "description": "Runs ahead and sees far, but magic tears through light leather.",
     "speed": 6, "hp": 80, "model": "pathfinder", "damage": 8, "attackTime": 1, "range": 1.5, "sight": 14,
