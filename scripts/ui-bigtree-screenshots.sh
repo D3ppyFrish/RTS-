@@ -36,10 +36,10 @@ mouse 1080,640
 up 1080,640
 wait 2
 print
-clickworld 155,20,363 right
-ticks 300
 camera 152,367 200 35 18
 wait 10
+clickworld 155,19,363 right
+ticks 300
 shot $OUT/trees-$s-workers.png
 ticks 1600
 print
