@@ -511,7 +511,8 @@ areas, and Orcs who beat a wolf keep it.
   bites) is weak alone, but a nest of five comes at once; a nest pays 30 iron and 40 coal and leaves no den. The
   wyrm is the cavern's boss: 700 hit points, slow, armoured all over, with a crushing bite; it pays 150 stone and
   120 iron, and its den gives the **wyrm crystal**. In the data, `cavern` in a `lair` is `along` or `deepest`, with
-  `count` lairs.
+  `count` lairs. A bigger map's further hill ranges each have a cavern of their own (issue #67; two on the
+  default map), with the crawler nests but no wyrm: the wyrm lives in the main one only.
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.

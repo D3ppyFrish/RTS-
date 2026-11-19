@@ -49,14 +49,21 @@ for 512 and scale with it):
 ocean and beaches on the west and east edges, a river running north–south that can be waded at three
 shallow fords (about a quarter, half and three quarters of the way down), grassland and forests,
 a hill range with stone ridges and pools of lava, a swamp with patches of poison bog (see
-[Natural hazards](docs/rules.md#natural-hazards)), and a cavern with ore and crystal under the hills. Each
+[Natural hazards](docs/rules.md#natural-hazards)), a cavern with ore and crystal under the hills, and old
+stone ruins (broken stone brick walls and fallen stone to clear for stone, `RegionGenerator.RuinsPer512` for
+each 512×512 blocks). A bigger map gets more features, not just bigger ones (issue #67,
+`RegionGenerator.FeatureSets`): one more, smaller hill range (with its own cavern, crawler nests and lava) in
+the swamp's half and one more swamp in the hills' half for each further 512×512 blocks of land, so the 768
+map has two of each. `RegionMap.Caverns` and `RegionMap.Ruins` list where they are. Each
 player starts in a clearing near their coast with berry bushes, a grove, a stone outcrop and an iron
 outcrop mirrored around it. Each biome grows its own trees (`RegionGenerator.KindFor`): broad-leaved
 trees and birches in the grassland, those and pines in the forest, pines in the hills (plus the one dusk tree, see
 `docs/rules.md`), and willows and giant mushrooms in the swamp; the start grove has two birches and a pine.
 Every kind is its own trunk and leaf block (`BlockInfo.IsTrunk`, `BlockInfo.IsLeaves`). `RegionMap.Save`/`Load` read and write a run-length-encoded binary map,
-so handmade maps can be loaded with `--map=PATH`. The `ui-*` screenshot scripts run on the 512 map
-(`--world=512x64x512`), which their coordinates were written for; `ui-wilds-screenshots.sh` looks at the default one. `--focus=start0|start1|cavern|dusk|X,Z` points the camera; `--dusk-party=N` puts a party of yours near the dusk tree.
+so handmade maps can be loaded with `--map=PATH` (format 2 lists every cavern and ruin; format 1 still loads).
+The `ui-*` screenshot scripts and CI's AI matches play the default map (issue #67); the ones CI skips
+(`ui-structure`, `ui-tree`, `ui-collapse-detail`, `ui-lineup`, `ui-sculpt`, `ui-detail`) still pin
+`--world=512x64x512`, which their coordinates were written for. `--focus=start0|start1|cavern|dusk|X,Z` points the camera; `--dusk-party=N` puts a party of yours near the dusk tree.
 
 ### Units
 

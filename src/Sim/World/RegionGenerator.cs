@@ -548,6 +548,8 @@ public static class RegionGenerator
 
         // --- Ruins ----------------------------------------------------------------------------------
 
+        /// <summary>Columns round a ruin's walls that no tree grows in, so the ruin stays in sight.</summary>
+        private const int RuinClearing = 6;
         /// <summary>Least distance between two ruins' middles, in blocks on a 512 map (scaled with the map).</summary>
         private const int RuinGap = 96;
 
@@ -556,8 +558,7 @@ public static class RegionGenerator
         /// square stone hall on open, level grassland or forest, well away from the starts, the dusk tree and each
         /// other. Each has a cracked stone brick floor, walls from one to three blocks high with a doorway and a
         /// breach or two, a corner still standing four high, and fallen stone (<see cref="BlockType.StoneRubble"/>,
-        /// cleared for stone) inside and around it. From a random stream of their own; placed before the trees, so
-        /// grass inside grows a tree now and then.
+        /// cleared for stone) inside and around it, in a clearing no tree grows in. From a random stream of their own.
         /// </summary>
         private void PlaceRuins()
         {
@@ -820,8 +821,10 @@ public static class RegionGenerator
         /// </summary>
         private void TryTree(int x, int z, int trunk, int crown = 0, TreeKind kind = TreeKind.Broadleaf)
         {
-            // The dusk tree stands alone in its clearing.
+            // The dusk tree stands alone in its clearing, and no tree hides a ruin.
             if (_duskX >= 0 && Math.Max(Math.Abs(x - _duskX), Math.Abs(z - _duskZ)) <= DuskClearing) return;
+            foreach (var (rx, _, rz) in _map.Ruins)
+                if (Math.Max(Math.Abs(x - rx), Math.Abs(z - rz)) <= RuinHalf + RuinClearing) return;
             if (!GroundOk(x, z, out int g)) return;
             // A bigger tree's trunk (see VoxelWorld.TreeScale) only stands on ground that is level under it.
             var (x0, z0, s) = Trees.Footprint(_w, x, z);
