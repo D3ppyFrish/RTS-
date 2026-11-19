@@ -201,6 +201,12 @@ public static class UiIcons
             ".....kk.....", "....krrk....", "...krrrrk...", "..krrrrrrk..", ".krrrrrrrrk.", "kkkkkkkkkkkk",
             ".kwwwwwwwwk.", ".kwnnwwbbwk.", ".kwnnwwbbwk.", ".kwwwwwbbwk.", ".kwwwwwbbwk.", ".kkkkkkkkkk.",
         },
+        // Fishing hut: a fish leaping over blue water.
+        ["fishing_hut"] = new[]
+        {
+            "............", "....kkkk....", "..kkllllk.kk", ".klklllllkik", "kllllllllkik", ".kiiiiiiikik",
+            "..kkkkkkk.kk", "............", "nnnnnnnnnnnn", "ntnnnntnnnnt", "nnnntnnnnnnn", "nnnnnnnnnnnn",
+        },
         ["farm"] = new[]
         {
             "..y...y...y.", ".yyy.yyy.yyy", ".yYy.yYy.yYy", ".yyy.yyy.yyy", "..Y...Y...Y.", "..g...g...g.",

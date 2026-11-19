@@ -70,6 +70,13 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   worker's work speed counts. Automatic workers work one when the good it gives is the one the player needs most
   and it has a free place (a mine's ore and coal, like dug ore and coal, only once there is a smelter); otherwise
   they gather block by block as before.
+- **Fishing huts** (kind `quarry` with `"shore": true` in `data/buildings.json`): a 4 by 4 hut of planks and thatch
+  (40 wood, no tech) that must stand at the water's edge: a column right beside its footprint must have open water
+  on top, at most 4 blocks below where the hut stands (water under ground, or far down a cliff, does not count).
+  Elsewhere it does not fit (`PlaceResult.NoWater`; the ghost is red and says it must stand right beside water).
+  Two workers fish there, each bringing 4 food every 15 seconds of work, like a quarry that gives food: it never runs
+  out, gathering techs make the rounds quicker, and automatic workers fish there when food is the good needed most.
+  It gives a town by a lake or the sea food before Farming, a little slower than a farm.
 - **Population**: the town hall houses 25 (every town hall, including one built later) and each house 5; the town hall trains workers for 30 food
   and the barracks trains soldiers (`TrainCommand`) while there is room. A building that trains units can have a
   rally point (`RallyCommand`, snapped to ground a unit can stand on): each unit it trains walks there

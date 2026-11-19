@@ -55,9 +55,9 @@ public enum BuildingKind : byte
     /// </summary>
     Tower,
     /// <summary>
-    /// A quarry or mine: workers work it, as they work a farm, for the goods in its <see cref="BuildingDef.Works"/>
+    /// A quarry, mine or fishing hut: workers work it, as they work a farm, for the goods in its <see cref="BuildingDef.Works"/>
     /// list, one round of work (<see cref="BuildingDef.WorkTicks"/>) at a time, taking each good of the list in turn,
-    /// and carry them to storage. It never runs out, wherever it stands.
+    /// and carry them to storage. It never runs out. A fishing hut must stand at the water's edge (<see cref="BuildingDef.Shore"/>).
     /// </summary>
     Quarry,
 }
@@ -115,6 +115,11 @@ public sealed class BuildingDef
     public GoodAmount[] Works { get; init; } = Array.Empty<GoodAmount>();
     /// <summary>Worker-ticks of one round of work at a quarry or mine; 0 for other buildings.</summary>
     public int WorkTicks { get; init; }
+    /// <summary>
+    /// It must stand at the water's edge: open water in a column right beside its footprint (a fishing hut; see
+    /// <see cref="Economy.EconomySystem.BesideWater"/>).
+    /// </summary>
+    public bool Shore { get; init; }
     /// <summary>Unit ids this building trains (the units whose <c>trainedAt</c> names it), in data order.</summary>
     public string[] Trains { get; internal set; } = Array.Empty<string>();
     /// <summary>Techs the player must have before placing it.</summary>
