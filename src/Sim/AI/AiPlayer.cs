@@ -468,7 +468,8 @@ public sealed partial class AiPlayer
                     if (enemy is { } e && Dist2(cx, cz, e.X, e.Z) <= d) continue;
                     if (NearLair(sim, cx, cz) || NearBadForest(cx, cz)) continue;
                     var (baseY, topY) = Harvest.Span(w, cx, ty, cz);
-                    if (!Harvest.WorkSpot(w, cx, baseY, topY, cz, hx, hall.Y, hz, out _, out _, out _)) continue;
+                    if (!Harvest.WorkSpot(w, cx, baseY, topY, cz, hx, hall.Y, hz, out int sx, out int sy, out int sz)) continue;
+                    if (World.HazardSystem.IsHazard(w, sx, sy, sz)) continue; // not into the bog, the quicksand or the lava's heat
                     bestD = d;
                     (x, y, z) = (cx, ty, cz);
                 }
@@ -593,10 +594,17 @@ public sealed partial class AiPlayer
         return n == 0 ? null : ((int)(sx / n), (int)(sz / n), n);
     }
 
-    /// <summary>Lays out a site for the building near the point, for the automatic workers to build.</summary>
+    /// <summary>
+    /// True if a building with its corner at (x, z) keeps its builders off hazard ground: no bog, quicksand,
+    /// sinkhole or lava heat under it or in the ring round it (see <see cref="World.HazardSystem.HazardNear"/>).
+    /// </summary>
+    private static bool SafeGround(Simulation sim, BuildingDef def, int x, int z) =>
+        !World.HazardSystem.HazardNear(sim.World, x, z, def.SizeX, def.SizeZ);
+
+    /// <summary>Lays out a site for the building near the point (on safe ground), for the automatic workers to build.</summary>
     private void PlaceNear(Simulation sim, BuildingDef def, (int X, int Z) at, int radius, Action<Command> issue)
     {
-        if (sim.Automation.FindRoom(Player, def, at.X, at.Z, radius, out int x, out int z))
+        if (sim.Automation.FindRoom(Player, def, at.X, at.Z, radius, out int x, out int z, (bx, bz) => SafeGround(sim, def, bx, bz)))
             issue(new BuildCommand(Player, Array.Empty<int>(), def.Id, x, z));
     }
 

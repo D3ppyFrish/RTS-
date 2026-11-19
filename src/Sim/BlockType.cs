@@ -119,12 +119,18 @@ public enum BlockType : byte
     /// the hole. It is held up by its rim, so it never falls on its own. Workers dig it away (it gives nothing).
     /// </summary>
     Crust,
+    /// <summary>
+    /// Quicksand: wet, loose sand on the beaches and river banks (see <see cref="World.HazardSystem"/>). Units can
+    /// walk on it, but it grips them (they move at a third of their speed) and drags at them, hurting them while
+    /// they stand on it. It looks like darker, wetter sand. Workers dig it away like sand (it gives nothing).
+    /// </summary>
+    Quicksand,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Crust;
+    public const BlockType Last = BlockType.Quicksand;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
@@ -170,7 +176,7 @@ public static class BlockInfo
     /// </summary>
     public static bool CanFall(BlockType t) => t is BlockType.Grass or BlockType.Soil or BlockType.Sand
         or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.Mud or BlockType.Bog
-        || IsRubble(t);
+        or BlockType.Quicksand || IsRubble(t);
 
     /// <summary>Any tree's trunk: workers cut it for wood, and it topples when its foot is cut.</summary>
     public static bool IsTrunk(BlockType t) => t is BlockType.Wood or BlockType.PineWood or BlockType.BirchWood or BlockType.MushroomStem;
@@ -198,5 +204,5 @@ public static class BlockInfo
 
     /// <summary>Natural ground a building site can be levelled through or a road laid on.</summary>
     public static bool IsGround(BlockType t) =>
-        t is BlockType.Grass or BlockType.Soil or BlockType.Sand or BlockType.Mud or BlockType.Bog or BlockType.Stone;
+        t is BlockType.Grass or BlockType.Soil or BlockType.Sand or BlockType.Mud or BlockType.Bog or BlockType.Quicksand or BlockType.Stone;
 }

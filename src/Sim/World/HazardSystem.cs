@@ -5,11 +5,13 @@ using Rts.Sim.Units;
 namespace Rts.Sim.World;
 
 /// <summary>
-/// Natural hazards: ground that hurts the units on or near it (issues #45 and #66).
+/// Natural hazards: ground that hurts the units on or near it (issues #45, #66 and #78).
 ///
 /// Once a second (spread over units by id) every unit standing on poison bog (<see cref="BlockType.Bog"/>)
 /// loses <see cref="BogDamage"/> hit points, and every unit standing next to lava (within one column, at its
-/// feet's level or the one below) loses <see cref="LavaDamage"/>. Both land with the tick's hits, by no one, so
+/// feet's level or the one below) loses <see cref="LavaDamage"/>, and every unit standing on quicksand
+/// (<see cref="BlockType.Quicksand"/>) loses <see cref="QuicksandDamage"/> and walks at a
+/// <see cref="QuicksandSlow"/>th of its speed while it is on it. Both land with the tick's hits, by no one, so
 /// no one gets the kill and armour does not help. Wild monsters are hurt the same. Digging the bog away (it is
 /// gathered like mud) makes the ground safe.
 ///
@@ -28,6 +30,10 @@ public sealed class HazardSystem
     public const int BogDamage = 3;
     /// <summary>Hit points a second lost standing next to lava.</summary>
     public const int LavaDamage = 6;
+    /// <summary>Hit points a second lost standing on quicksand.</summary>
+    public const int QuicksandDamage = 2;
+    /// <summary>Units on quicksand move this many times slower.</summary>
+    public const int QuicksandSlow = 3;
     /// <summary>Hit points lost dropping through a sinkhole's crust.</summary>
     public const int SinkholeDamage = 20;
     /// <summary>Columns from a sinkhole's middle to the edge of its crust (see <see cref="MakeSinkhole"/>).</summary>
@@ -51,7 +57,9 @@ public sealed class HazardSystem
     public static int DamageAt(VoxelWorld w, int x, int y, int z)
     {
         int damage = 0;
-        if (w.Get(x, y - 1, z) == BlockType.Bog) damage += BogDamage;
+        var under = w.Get(x, y - 1, z);
+        if (under == BlockType.Bog) damage += BogDamage;
+        else if (under == BlockType.Quicksand) damage += QuicksandDamage;
         for (int dz = -1; dz <= 1; dz++)
         for (int dx = -1; dx <= 1; dx++)
             if (w.Get(x + dx, y, z + dz) == BlockType.Lava || w.Get(x + dx, y - 1, z + dz) == BlockType.Lava)
@@ -141,6 +149,41 @@ public sealed class HazardSystem
             if (dx * dx + dz * dz > r * r + 1) continue;
             w.Set(cx + dx, top, cz + dz, BlockType.Crust);
             if (Math.Abs(dx) <= 1 && Math.Abs(dz) <= 1) w.Set(cx + dx, top - 1, cz + dz, BlockType.Air);
+        }
+    }
+
+    /// <summary>
+    /// True if a building with its corner at (x, z) and that footprint, or a worker at work around it, would be in
+    /// danger (see <see cref="IsHazard"/>): any column of the footprint, or of the ring of columns round it where
+    /// the builders stand, is hazard ground at its surface. Computer players keep their sites off such ground.
+    /// </summary>
+    public static bool HazardNear(VoxelWorld w, int x, int z, int sizeX, int sizeZ)
+    {
+        for (int cz = z - 1; cz <= z + sizeZ; cz++)
+        for (int cx = x - 1; cx <= x + sizeX; cx++)
+        {
+            if (cx < 0 || cz < 0 || cx >= w.SizeX || cz >= w.SizeZ) continue;
+            if (IsHazard(w, cx, w.SurfaceHeight(cx, cz) + 1, cz)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Makes a patch of quicksand around column (cx, cz): every column within <paramref name="radius"/> (corners
+    /// cut) whose top block is sand open to the sky, at <paramref name="top"/> or a level either side of it, turns
+    /// to quicksand.
+    /// </summary>
+    public static void MakeQuicksand(VoxelWorld w, int cx, int top, int cz, int radius)
+    {
+        for (int dz = -radius; dz <= radius; dz++)
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            if (dx * dx + dz * dz > radius * radius + 1) continue;
+            int x = cx + dx, z = cz + dz;
+            if (x < 0 || z < 0 || x >= w.SizeX || z >= w.SizeZ) continue;
+            int h = w.SurfaceHeight(x, z);
+            if (Math.Abs(h - top) > 1 || w.Get(x, h, z) != BlockType.Sand || w.Get(x, h + 1, z) != BlockType.Air) continue;
+            w.Set(x, h, z, BlockType.Quicksand);
         }
     }
 
