@@ -677,7 +677,8 @@ builders left, and a line of their writing, so the land tells its own story (the
   or fallen stone) sends the selected units to search it; with your units selected within 24 columns of one, a
   "Search the old ruin" button does the same and says how far your search has got. A searching unit's panel says
   "(searching the ruin, 40%)". The find comes up as an alert ("Found a sealed granary in the ruin: 200 food, 60
-  wood"); hover it to read the words found with it. Computer players leave ruins be for now. All numbers are first
+  wood"); hover it to read the words found with it. Computer players from Easy up search them too, and go looking for them in the fog (see "Ruin parties" under
+  the computer players). The classic level leaves ruins be. All numbers are first
   guesses for playtesting.
 
 ## Natural hazards
@@ -896,6 +897,21 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   party is worth less than what is left of the pack it breaks off and comes home, and that lair is left
   alone for 10 minutes; it also comes home after 4 minutes. After a hunt the next may set out a minute
   later. Its hurt go home to heal.
+- **Ruin parties** (Easy, Normal and Hard; `AI/AiPlayer.Ruins.cs`, tests in `AiRuinTests`): from 6 minutes
+  on (after the early rushes; a pair out looking sooner found lairs that drew Hard's hunting party away just
+  as Classic's first attack came), never while it sees enemy soldiers within 64 columns of its town hall (Hard:
+  nor for 20 seconds after an attack), and with 2 soldiers to spare (fit, not the scout or explorer, beyond the
+  guard; a wave may be out), it
+  sends those 2 to search the nearest old ruin it has seen within 240 columns of its town hall (see "Old
+  ruins and what they hold"). It passes a ruin with a lair it knows of within 20 columns, or where what it
+  sees within 20 columns outweighs the pair. Any of the pair a fight took off the search is sent back to it.
+  The party comes home once the ruin is searched (by it or anyone it sees), after 3 minutes, or when it is
+  outweighed there: then that ruin is left alone for 10 minutes. With no ruin seen, the pair goes looking,
+  as a player would: it sweeps round the town hall in rings from 128 columns out (ruins stand at least 136
+  from a start on the default map), to the unseen ground nearest it on a 24-column grid, and searches the
+  first ruin it sees (a ruin counts as seen once its middle or a corner of its floor is). It comes home
+  after 3 minutes of looking, or when what it sees around it outweighs it. The next party may set out 20
+  seconds after one ends.
 - Hard's **army**: its starting soldiers clear the lair as the others' do, but its fastest stays to
   explore round its town (a 28-column grid out to 112 columns), which is how it finds trees, lairs and
   city-states. Its soldiers at home gather beside the town hall (6 columns out from its south side), not
