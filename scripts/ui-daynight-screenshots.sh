@@ -21,7 +21,7 @@ LOG="$OUT/daynight.log"
 run() {
   local name=$1 hour=$2 steps=$3; shift 3
   xvfb-run -a -s "-screen 0 1600x900x24" \
-    timeout 600 godot --path game --rendering-driver opengl3 -- --world=512x64x512 --seed=1234 --focus=start0 --houses=3 --lights=6 \
+    timeout 600 godot --path game --rendering-driver opengl3 -- --seed=1234 --focus=start0 --houses=3 --lights=6 \
       --cam-yaw=45 --cam-pitch=35 --cam-distance=30 --time-of-day="$hour" "$@" --input="$steps" 2>&1 \
     | grep -E "^(Saved|Input script)" | tee -a "$LOG"
 }

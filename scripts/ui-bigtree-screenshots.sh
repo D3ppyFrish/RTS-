@@ -16,19 +16,19 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 for s in $SIZES; do
 STEPS="
 wait 20
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 10
 shot $OUT/trees-$s-town.png
-camera 92,252 35 40 34
+camera 136,380 35 40 34
 wait 10
 shot $OUT/trees-$s-town-wide.png
-camera 106,241 20 30 16
+camera 158,362 20 30 16
 wait 10
 shot $OUT/trees-$s-grove.png
-camera 140,200 30 30 26
+camera 200,325 30 30 26
 wait 10
 shot $OUT/trees-$s-forest.png
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 10
 down 520,260
 mouse 800,450
@@ -36,16 +36,16 @@ mouse 1080,640
 up 1080,640
 wait 2
 print
-clickworld 103,20,242 right
+clickworld 155,20,363 right
 ticks 300
-camera 100,246 200 35 18
+camera 152,367 200 35 18
 wait 10
 shot $OUT/trees-$s-workers.png
 ticks 1600
 print
 "
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --trees=$s --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --trees=$s --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" > "$OUT/ui-bigtree-$s.log" || true
 grep -E "^(Saved|Input script)" "$OUT/ui-bigtree-$s.log" || true
 fail() { echo "UI big tree test failed at size $s: $1" >&2; exit 1; }

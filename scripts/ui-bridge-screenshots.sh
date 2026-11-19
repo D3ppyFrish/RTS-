@@ -10,11 +10,12 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 84..90 x 253..259, starting units in rows just south of it. A deep river
-# crosses x = 216 between z = 124 and 135, with a drop to it on the near side: the deck spans it.
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it. The deep
+# river crosses z = 342 between x = 407 and 419, its banks level at x = 405 and 421: the deck spans it. The
+# units walk north to 150,342 first, so the builders keep well clear of the wolf den 40 columns east of the start.
 STEPS="
 wait 20
-camera 97,264 30 50 20
+camera 141,392 30 50 20
 wait 5
 down 520,260
 mouse 800,450
@@ -22,13 +23,15 @@ mouse 1080,640
 up 1080,640
 wait 2
 print
-camera 216,130 100 45 14
+clickworld 150,g,342 right
+ticks 600
+camera 413,342 10 45 18
 wait 5
 key apostrophe
 wait 2
-mouseworld 216,g,124
+mouseworld 405,g,342
 down here
-mouseworld 216,g,135
+mouseworld 421,g,342
 wait 3
 print
 shot $OUT/ui-bridge-drag.png
@@ -46,7 +49,7 @@ shot $OUT/ui-bridge-done.png
 "
 LOG="$OUT/ui-bridge.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI bridge test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

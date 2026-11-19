@@ -14,38 +14,38 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234: the goblin town's market at 261,21,204 (the totem on it), the west start's town hall at
-# 84..90 x 253..259 with the starting units in rows just south of it, and the wolf lair 40 blocks east
-# (den at 127,256), which a lone caravan would not get past. --goods gives enough for the hires and the
+# Seed 1234: the goblin town's market at 393,20,296 (the totem on it), the west start's town hall at
+# 128..134 x 381..387 with the starting units in rows just south of it, and the wolf lair 40 blocks east
+# (den at 171,384), which a lone caravan would not get past. --goods gives enough for the hires and the
 # caravan; --houses makes room for them behind the hall (the start has more people than its hall houses).
-# The ogres' hold has its market at 261,456.
+# The ogres' hold has its market at 393,632.
 STEPS="
 wait 20
 clickui city_goblins
 wait 5
 print
-camera 261,204 20 40 24
+camera 393,296 20 40 24
 wait 5
 shot $OUT/ui-city.png
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
 down 520,260
 mouse 800,450
 mouse 1080,640
 up 1080,640
 wait 2
-camera 121,257 45 50 30
+camera 165,385 45 50 30
 wait 5
-clickworld 124,g,257 right ctrl
+clickworld 168,g,385 right ctrl
 key plus*2
 ticks 510
 print
-camera 261,204 20 40 30
+camera 393,296 20 40 30
 wait 5
-clickworld 261,g,204 right
-ticks 1800
+clickworld 393,g,296 right
+ticks 3000
 print
-camera 261,204 20 40 24
+camera 393,296 20 40 24
 wait 5
 shot $OUT/ui-city-yours.png
 clickui city_goblins
@@ -54,44 +54,44 @@ clickui hire_goblin_cutthroat
 clickui hire_goblin_slinger
 ticks 6
 print
-camera 262,205 -30 40 9
+camera 394,297 -30 40 9
 wait 5
 shot $OUT/ui-goblins.png
-camera 87,261 45 55 22
+camera 131,389 45 55 22
 wait 5
-clickworld 87,g,256
+clickworld 131,g,384
 wait 2
 clickui train_caravan
 ticks 420
-camera 87,260 70 30 7
+camera 131,388 70 30 7
 wait 5
-clickworld 87,g+1,260
+clickworld 131,g+1,388
 wait 2
 print
 shot $OUT/ui-caravan.png
-camera 261,204 20 50 40
+camera 393,296 20 50 40
 wait 5
-clickworld 263,g,207 right
+clickworld 395,g,299 right
 ticks 4
 print
-ticks 1500
+ticks 2400
 print
-camera 261,204 20 50 30
+camera 393,296 20 50 30
 wait 5
 shot $OUT/ui-caravan-trade.png
 clickui city_ogres
 wait 5
 print
-camera 261,456 20 40 26
+camera 393,632 20 40 26
 wait 5
 shot $OUT/ui-ogres.png
-camera 262,457 -30 40 11
+camera 394,633 -30 40 11
 wait 5
 shot $OUT/ui-ogres-close.png
 "
 LOG="$OUT/ui-citystate.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --goods=1000 --houses=4 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --goods=1000 --houses=4 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script|City-state)" | tee "$LOG"
 
 fail() { echo "UI city-state test failed: $1" >&2; exit 1; }
