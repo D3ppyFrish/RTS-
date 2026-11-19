@@ -413,6 +413,12 @@ public partial class Hud : CanvasLayer
                                 (def.Shore ? "It must stand at the water's edge, with open water right beside it, and never runs out. "
                                            : "It never runs out, wherever it stands. ") +
                                 "Automatic workers work it when its goods are needed.";
+            if (def.Plants > 0)
+                b.TooltipText = $"Right click it with workers: up to {def.WorkerSlots} foresters work it, each round of " +
+                                $"{def.WorkTicks / Simulation.TicksPerSecond} seconds planting a sapling on open grass within {def.Plants} " +
+                                $"columns of it, clear of buildings and other trees. A sapling grows into a tree in " +
+                                $"{EconomySystem.SaplingGrowTicks / Simulation.TicksPerSecond / 60} minutes, for your wood cutters to fell. " +
+                                "Automatic workers leave it to you.";
             if (def.IsTower)
                 b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +
@@ -1595,6 +1601,7 @@ public partial class Hud : CanvasLayer
                     if (u.Job[i] == job && u.JobTarget[i] == b.Id) n++;
                 parts.Add($"{n} of {b.Def.WorkerSlots} workers (right click it with workers)");
             }
+            if (b.Def.Plants > 0) parts.Add($"{_sim.Economy.SaplingsOf(b)} saplings growing");
             if (b.Def.Kind == BuildingKind.Smelter && b.SmeltTicks > 0)
                 parts.Add($"smelting {100 - 100L * b.SmeltTicks / EconomySystem.SmeltTicks}%");
             text.Append(string.Join("    ", parts));
@@ -1826,7 +1833,7 @@ public partial class Hud : CanvasLayer
         },
         UnitJob.Build => "building",
         UnitJob.Farm => "farming",
-        UnitJob.Quarry => _sim.Buildings.Get(u.JobTarget[i]) is { } q ? q.Def.Shore ? "fishing" : $"working the {q.Def.Name.ToLowerInvariant()}" : "quarrying",
+        UnitJob.Quarry => _sim.Buildings.Get(u.JobTarget[i]) is { } q ? q.Def.Shore ? "fishing" : q.Def.Plants > 0 ? "planting trees" : $"working the {q.Def.Name.ToLowerInvariant()}" : "quarrying",
         UnitJob.Haul => "supplying the smelter",
         UnitJob.Supply => u.Phase[i] switch
         {

@@ -454,7 +454,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore");
+                "sturdy", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -504,11 +504,14 @@ public static class ContentLoader
                 Works = o.Cost("works"),
                 WorkTicks = o.Int("workTime", 1, MaxSeconds, 0) * Tps,
                 Shore = o.Bool("shore"),
+                Plants = o.Int("plants", 0, 32, 0),
             };
             if (def.Shore && kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.Bridge or BuildingKind.Tower or BuildingKind.Totem)
                 o.Error($"a {SnakeName(kind)} cannot need the water's edge (\"shore\")");
-            if (kind == BuildingKind.Quarry && (def.Works.Length == 0 || def.WorkTicks == 0))
-                o.Error("a quarry needs \"works\" (the goods a round of work gives) and \"workTime\" (the seconds a round takes)");
+            if (def.Plants > 0 && kind != BuildingKind.Quarry) o.Error("only a quarry \"plants\" trees");
+            if (def.Plants > 0 && def.Works.Length > 0) o.Error("a quarry that \"plants\" trees gives no \"works\"");
+            if (kind == BuildingKind.Quarry && def.WorkTicks == 0 || kind == BuildingKind.Quarry && def.Works.Length == 0 && def.Plants == 0)
+                o.Error("a quarry needs \"works\" (the goods a round of work gives) or \"plants\", and \"workTime\" (the seconds a round takes)");
             if (kind != BuildingKind.Quarry && (def.Works.Length > 0 || def.WorkTicks > 0))
                 o.Error("only a quarry has \"works\" and \"workTime\"");
             bool wall = kind is BuildingKind.Wall or BuildingKind.Gate, tower = kind == BuildingKind.Tower;
@@ -1285,6 +1288,7 @@ public static class ContentLoader
                 h.Add(b.Works);
                 h.Add(b.WorkTicks);
                 h.Add(b.Shore ? 1 : 0);
+                h.Add(b.Plants);
             }
             h.Add(db.Units.Count);
             foreach (var u in db.Units)

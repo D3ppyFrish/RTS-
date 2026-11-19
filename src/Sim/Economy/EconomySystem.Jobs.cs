@@ -299,6 +299,13 @@ public sealed partial class EconomySystem
             return;
         }
         if (++u.JobTimer[i] < ByWork(i, QuarryTicks(u.Owner[i], quarry.Def))) return;
+        if (quarry.Def.Plants > 0)
+        {
+            // A forester: the round plants a sapling, and the next begins (or, with no room left, after a wait).
+            u.JobTimer[i] = 0;
+            if (!Plant(quarry)) Wait(i);
+            return;
+        }
         var works = quarry.Def.Works;
         var next = works[u.JobX[i] % works.Length];
         u.JobX[i] = (u.JobX[i] + 1) % works.Length;

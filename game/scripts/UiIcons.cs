@@ -207,6 +207,12 @@ public static class UiIcons
             "............", "....kkkk....", "..kkllllk.kk", ".klklllllkik", "kllllllllkik", ".kiiiiiiikik",
             "..kkkkkkk.kk", "............", "nnnnnnnnnnnn", "ntnnnntnnnnt", "nnnntnnnnnnn", "nnnnnnnnnnnn",
         },
+        // Forester's lodge: a young tree with a spade beside it.
+        ["forester_lodge"] = new[]
+        {
+            "....kkkk....", "...kggggk...", "..kgGggGgk..", "..kggGgggk.k", "..kgggGggkkk", "...kgggk.kbk",
+            "....kbk..kb.", "....kbk..kb.", "....kbk.kSSk", "..kkkbkkkSSk", ".kGGGGGGGkkk", "kkkkkkkkkkkk",
+        },
         ["farm"] = new[]
         {
             "..y...y...y.", ".yyy.yyy.yyy", ".yYy.yYy.yYy", ".yyy.yyy.yyy", "..Y...Y...Y.", "..g...g...g.",

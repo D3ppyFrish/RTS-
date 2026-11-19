@@ -77,6 +77,16 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   Two workers fish there, each bringing 4 food every 15 seconds of work, like a quarry that gives food: it never runs
   out, gathering techs make the rounds quicker, and automatic workers fish there when food is the good needed most.
   It gives a town by a lake or the sea food before Farming, a little slower than a farm.
+- **Forester's lodges** (kind `quarry` with `"plants"` in `data/buildings.json`; `EconomySystem.Forest.cs`): a 4 by 4
+  lodge (30 wood, 10 stone, no tech) whose two foresters grow the woods back. Each round of 20 seconds of work plants a
+  sapling, a single leaf block, on open grass or soil within 10 columns of the lodge: the free spot nearest to it,
+  far enough from every building (3 columns) that the grown crown does not hang over it, clear of city-states, off
+  hazards, with nobody standing there and no trunk or other sapling within 4 columns (twice that, and on the tree
+  grid, where trees grow big). It takes the kind of the nearest
+  tree round the lodge (a pine, a birch, otherwise broad-leaved). Two minutes later it grows into a full tree, once
+  nobody stands on its trunk's columns, and wood cutters fell it like any other. A sapling dug up, built over or
+  knocked off by a tree felled beside it is gone. When there is no room left the foresters wait and try again. The
+  rounds give no goods, so automatic workers leave the lodge alone.
 - **Population**: the town hall houses 25 (every town hall, including one built later) and each house 5; the town hall trains workers for 30 food
   and the barracks trains soldiers (`TrainCommand`) while there is room. A building that trains units can have a
   rally point (`RallyCommand`, snapped to ground a unit can stand on): each unit it trains walks there

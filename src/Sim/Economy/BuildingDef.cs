@@ -120,6 +120,11 @@ public sealed class BuildingDef
     /// <see cref="Economy.EconomySystem.BesideWater"/>).
     /// </summary>
     public bool Shore { get; init; }
+    /// <summary>
+    /// A forester's lodge: a quarry whose rounds give no goods but plant a sapling within this many columns of it
+    /// (see <see cref="Economy.EconomySystem.Plant"/>); 0 for every other building.
+    /// </summary>
+    public int Plants { get; init; }
     /// <summary>Unit ids this building trains (the units whose <c>trainedAt</c> names it), in data order.</summary>
     public string[] Trains { get; internal set; } = Array.Empty<string>();
     /// <summary>Techs the player must have before placing it.</summary>
