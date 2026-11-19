@@ -16,8 +16,8 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 fail() { echo "UI fog of war test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 
-# Seed 1234, map centre: with --battle=16 your army stands in two ranks at x 241..242, z 211..225, and the
-# enemy's twelve columns east at x 254..255, beyond the sight of every soldier in your front rank.
+# Seed 1234, map centre: with --battle=16 your army stands in two ranks at x 369..370, z 353..367, and the
+# enemy's twelve columns east at x 382..383, beyond the sight of every soldier in your front rank.
 STEPS="
 wait 10
 print
@@ -31,25 +31,25 @@ print
 clickui start_button
 waitmatch
 wait 20
-camera 248,218 0 55 22
+camera 376,360 0 55 22
 wait 5
 print
 shot $OUT/ui-fog-start.png
-camera 248,218 0 70 150
+camera 376,360 0 70 150
 wait 5
 shot $OUT/ui-fog-above.png
-camera 248,218 0 55 22
+camera 376,360 0 55 22
 wait 3
-dragworld 236,g,208 245,g,229
+dragworld 364,g,350 373,g,371
 wait 2
-clickworld 262,g,222 right ctrl
+clickworld 390,g,364 right ctrl
 ticks 60
 print
 shot $OUT/ui-fog-contact.png
 "
 LOG="$OUT/ui-fog.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --menu --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --menu --seed=1234 --focus=376,360 --battle=16 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
@@ -72,14 +72,14 @@ seen="$(field "${UI[3]}" seen)"
 # Without fog of war (the default from the command line), every enemy unit shows from the start.
 STEPS="
 wait 20
-camera 248,218 0 55 22
+camera 376,360 0 55 22
 wait 5
 print
 shot $OUT/ui-fog-off.png
 "
 LOG="$OUT/ui-fog-off.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --world=512x64x512 --seed=1234 --focus=248,218 --battle=16 --input="$STEPS" 2>&1 \
+  godot --path game --rendering-driver opengl3 -- --seed=1234 --focus=376,360 --battle=16 --input="$STEPS" 2>&1 \
   | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "${#UI[@]}" -eq 1 ] || fail "expected 1 UI line without fog of war, got ${#UI[@]}"
