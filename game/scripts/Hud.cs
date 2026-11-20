@@ -723,6 +723,8 @@ public partial class Hud : CanvasLayer
             lines.Add($"Calls the volleys: your ranged units within {Number(form.Rally)} blocks deal {form.Volley}% more damage");
         if (form.Rally > Fix64.Zero && form.Spur > 0 && (form.Rally != from.Rally || form.Spur != from.Spur))
             lines.Add($"Leads the charge: your riders within {Number(form.Rally)} blocks move {form.Spur}% faster");
+        if (form.Rally > Fix64.Zero && form.Undermine > 0 && (form.Rally != from.Rally || form.Undermine != from.Undermine))
+            lines.Add($"Works the breach: your sappers within {Number(form.Rally)} blocks hit buildings and dig {form.Undermine}% faster");
         return string.Join("\n", lines);
     }
 

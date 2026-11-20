@@ -10,7 +10,7 @@ namespace Rts.Sim.Tests;
 /// <summary>
 /// Heroes: the Settlers' last forms, one of a kind, that steady the soldiers around them (the design doc's
 /// "units near a hero hold longer"). The first is the Marshal, a knight's form at level 2; then the Bowmaster
-/// (longbowmen) and the Horselord (lancers).
+/// (longbowmen), the Horselord (lancers) and the Breachmaster (demolishers).
 /// </summary>
 public class HeroTests
 {
@@ -193,11 +193,12 @@ public class HeroTests
         var files = Files();
         Edit(files, "units.json", "\"hero\": true, \"rally\": 8, ", "\"hero\": true, ");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
-        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\", \"volley\" or \"spur\" but no \"rally\"", e.Errors);
+        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\", \"volley\", \"spur\" or \"undermine\" but no \"rally\"", e.Errors);
         Assert.Single(e.Errors);
 
         foreach (var (old, changed) in new[] { ("\"rally\": 8", "\"rally\": 9"), ("\"steady\": 50", "\"steady\": 40"),
-                                                ("\"inspire\": 3", "\"inspire\": 2"), ("\"hero\": true", "\"hero\": false") })
+                                                ("\"inspire\": 3", "\"inspire\": 2"), ("\"hero\": true", "\"hero\": false"),
+                                                ("\"undermine\": 50", "\"undermine\": 40") })
         {
             files = Files();
             Edit(files, "units.json", old, changed);
@@ -397,6 +398,161 @@ public class HeroTests
         }
         int with = TicksToArrive(true), without = TicksToArrive(false);
         Assert.True(with * 100 < without * 90, $"with the Horselord {with} ticks, without {without}");
+    }
+
+    /// <summary>The Breachmaster: the demolisher's form at level 2, the sappers' hero.</summary>
+    [Fact]
+    public void TheBreachmasterIsADemolishersFormAtTheSecondLevelAndIsAHero()
+    {
+        var db = ContentDb.Default;
+        var master = db.Unit("breachmaster");
+        var demolisher = db.Unit("demolisher");
+        Assert.Same(demolisher, master.EvolvesFrom);
+        Assert.Equal(2, master.Tier);
+        Assert.True(master.Hero);
+        Assert.Equal(UnitRole.Sapper, master.Role);
+        Assert.Equal(Fix64.FromInt(10), master.Rally);
+        Assert.Equal(50, master.Undermine);
+        Assert.Equal(0, master.Spur);
+        Assert.Equal(0, master.Volley);
+        Assert.Equal(0, master.Steady);
+        Assert.Contains(master, demolisher.Forms);
+        // Its gain is hit points and damage; its drawback is upkeep.
+        Assert.True(master.MaxHp > demolisher.MaxHp && master.Damage > demolisher.Damage);
+        Assert.True(master.Upkeep > demolisher.Upkeep);
+
+        var sim = Flat();
+        int a = sim.SpawnUnit(Settlers, "demolisher", 20, 30), b = sim.SpawnUnit(Settlers, "demolisher", 20, 34);
+        sim.Units.Xp[Index(sim, a)] = 499;
+        Assert.False(sim.Evolution.CanEvolve(Index(sim, a), master)); // level 1 only
+        sim.Units.Xp[Index(sim, a)] = 500;
+        sim.Units.Xp[Index(sim, b)] = 500;
+        // The other heroes do not stand in its way: each is one of a kind on its own.
+        Evolve(sim, Veteran(sim, 40, 40), "marshal");
+        sim.Schedule(sim.Tick, new EvolveCommand(Settlers, new[] { a, b }, "breachmaster"));
+        sim.Step();
+        Assert.Equal("breachmaster", DefId(sim, a));
+        Assert.Equal("demolisher", DefId(sim, b));
+        Assert.True(sim.Evolution.WaitsForHero(Index(sim, b)));
+        Assert.Equal(120, sim.Units.Hp[Index(sim, a)]);
+    }
+
+    /// <summary>A demolisher with the experience, made the Breachmaster.</summary>
+    private static int Breachmaster(Simulation sim, int x, int z)
+    {
+        int id = sim.SpawnUnit(Settlers, "demolisher", x, z);
+        sim.Units.Xp[Index(sim, id)] = 500;
+        Evolve(sim, id, "breachmaster");
+        Assert.Equal("breachmaster", DefId(sim, id));
+        return id;
+    }
+
+    /// <summary>
+    /// Sappers of its own side near the Breachmaster (itself included) work half as fast again; foot soldiers
+    /// beside it, sappers out of its reach and the enemy's sappers work as before, and it ends when it falls.
+    /// </summary>
+    [Fact]
+    public void SappersNearTheBreachmasterWorkTheBreach()
+    {
+        var sim = Flat();
+        int bm = Breachmaster(sim, 30, 30);
+        int near = sim.SpawnUnit(Settlers, "sapper", 35, 30);
+        int tunneller = sim.SpawnUnit(Settlers, "tunneller", 30, 35);
+        int spear = sim.SpawnUnit(Settlers, "spearman", 30, 33);
+        int far = sim.SpawnUnit(Settlers, "sapper", 70, 70);
+        int enemy = sim.SpawnUnit(Orcs, "sapper", 27, 30);
+        foreach (int id in new[] { bm, near, tunneller, spear, far })
+            sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { id }, UnitStance.Hold));
+        sim.Schedule(sim.Tick, new StanceCommand(Orcs, new[] { enemy }, UnitStance.Hold));
+        sim.Step(); // worked out with the tick
+        int Undermine(int id) => sim.Combat.UndermineOf(Index(sim, id));
+        Assert.Equal(50, Undermine(near));
+        Assert.Equal(50, Undermine(tunneller));
+        Assert.Equal(50, Undermine(bm));
+        Assert.Equal(0, Undermine(far));
+        Assert.Equal(0, Undermine(spear));
+        Assert.Equal(0, Undermine(enemy));
+
+        Kill(sim, bm);
+        sim.Step();
+        Assert.Equal(0, Undermine(near));
+    }
+
+    /// <summary>
+    /// A real siege: the same sappers bring a house down sooner with the Breachmaster standing by (holding its
+    /// ground out of reach, so it only works the breach).
+    /// </summary>
+    [Fact]
+    public void TheBreachmastersSappersBringAHouseDownSooner()
+    {
+        int TicksToRaze(bool withMaster)
+        {
+            var sim = Flat();
+            var house = sim.Economy.PlaceFinished(Orcs, sim.Content.Building("house"), 30, 30)!;
+            Assert.NotNull(house);
+            var sappers = new[] { sim.SpawnUnit(Settlers, "sapper", 29, 31), sim.SpawnUnit(Settlers, "sapper", 29, 32) };
+            if (withMaster)
+            {
+                int bm = Breachmaster(sim, 24, 31);
+                sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { bm }, UnitStance.Hold));
+            }
+            sim.Schedule(sim.Tick, new AttackBuildingCommand(Settlers, sappers, house.Id));
+            long start = sim.Tick;
+            while (sim.Buildings.Get(house.Id) != null && sim.Tick - start < 300 * Tps) sim.Step();
+            Assert.Null(sim.Buildings.Get(house.Id));
+            return (int)(sim.Tick - start);
+        }
+        int with = TicksToRaze(true), without = TicksToRaze(false);
+        Assert.True(with * 100 < without * 80, $"with the Breachmaster {with} ticks, without {without}");
+    }
+
+    /// <summary>The Breachmaster digs a tunnel through a ridge sooner than a plain demolisher (it works the breach itself).</summary>
+    [Fact]
+    public void TheBreachmasterTunnelsFasterThanADemolisher()
+    {
+        int TicksToTunnel(bool master)
+        {
+            var w = TestWorlds.Flat(64, 16, 64, Ground);
+            int y = Ground + 1;
+            TestWorlds.Box(w, 30, y, 0, 37, y + 5, 63, BlockType.Stone); // a ridge, wall to wall
+            var sim = TestWorlds.Sim(w);
+            sim.TestMode = true;
+            int id = master ? Breachmaster(sim, 26, 30) : sim.SpawnUnit(Settlers, "demolisher", 26, 30);
+            sim.Schedule(sim.Tick, new TunnelCommand(Settlers, new[] { id }, 42, y, 30));
+            sim.Step();
+            long start = sim.Tick;
+            while (sim.Units.Job[Index(sim, id)] == UnitJob.Tunnel && sim.Tick - start < 120 * Tps) sim.Step();
+            Assert.Equal(42, sim.Units.X[Index(sim, id)].FloorToInt());
+            return (int)(sim.Tick - start);
+        }
+        int with = TicksToTunnel(true), without = TicksToTunnel(false);
+        Assert.True(with * 100 < without * 80, $"the Breachmaster {with} ticks, a demolisher {without}");
+    }
+
+    /// <summary>Sappers digging out an area beside the Breachmaster finish sooner.</summary>
+    [Fact]
+    public void SappersDigAnAreaFasterBesideTheBreachmaster()
+    {
+        int TicksToDig(bool withMaster)
+        {
+            var sim = Flat();
+            var sappers = new[] { sim.SpawnUnit(Settlers, "sapper", 22, 22), sim.SpawnUnit(Settlers, "sapper", 22, 23) };
+            if (withMaster)
+            {
+                int bm = Breachmaster(sim, 21, 25);
+                sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { bm }, UnitStance.Hold));
+            }
+            sim.Schedule(sim.Tick, new DigAreaCommand(Settlers, sappers, 23, 20, 26, 26, Ground));
+            sim.Step();
+            long start = sim.Tick;
+            bool Done() => Array.TrueForAll(sappers, id => sim.Units.Job[Index(sim, id)] == UnitJob.None);
+            while (!Done() && sim.Tick - start < 300 * Tps) sim.Step();
+            Assert.True(Done());
+            Assert.Equal(BlockType.Air, sim.World.Get(25, Ground, 23));
+            return (int)(sim.Tick - start);
+        }
+        int with = TicksToDig(true), without = TicksToDig(false);
+        Assert.True(with * 100 < without * 90, $"with the Breachmaster {with} ticks, without {without}");
     }
 
     private static Dictionary<string, string> Files()

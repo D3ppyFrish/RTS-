@@ -34,7 +34,8 @@
 // it while one lives, and it never breaks and runs. rally (optional, blocks): its own side's units within
 // that distance (itself included) are steadied: they lose steady percent less morale to deaths near them,
 // and get inspire morale back a second instead of 1 (see Morale in docs/rules.md); the ranged ones among them
-// deal volley percent more damage, and the cavalry among them move spur percent faster.
+// deal volley percent more damage, the cavalry among them move spur percent faster, and the sappers among them
+// work undermine percent faster: their blows on buildings land that much harder and they dig that much faster.
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -160,6 +161,11 @@
     "description": "Powder charges bring buildings down faster, and are heavy to carry.",
     "speed": 3.5, "hp": 70, "model": "demolisher", "damage": 9, "attackTime": 1.5, "range": 1.25, "sight": 7,
     "attack": "crush", "armor": { "head": 1, "torso": 2 } },
+  { "id": "breachmaster", "name": "Breachmaster", "evolvesFrom": "demolisher", "faction": "settlers", "role": "sapper",
+    "description": "A hero, one of a kind: the demolishers' last form. It works the breach: your sappers near the Breachmaster bring buildings down and dig half as fast again, and it never runs. Eats 3 food a minute.",
+    "speed": 3.5, "hp": 120, "model": "breachmaster", "damage": 12, "attackTime": 1.5, "range": 1.25, "sight": 8,
+    "attack": "crush", "armor": { "head": 2, "torso": 3, "arms": 1 },
+    "upkeep": 3, "hero": true, "rally": 10, "undermine": 50 },
   { "id": "battle_mage", "name": "Battle mage", "evolvesFrom": "mage", "faction": "settlers", "role": "caster",
     "description": "Bigger blasts over a wider area, fed by a bigger appetite.",
     "speed": 4, "hp": 45, "model": "battle_mage", "damage": 14, "attackTime": 2, "range": 8, "sight": 9, "splash": 2,

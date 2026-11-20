@@ -108,7 +108,8 @@ public sealed class UnitDef
     /// How near (blocks) its own side's units have to be for it to steady them; 0 if it steadies nobody.
     /// Steadied units lose <see cref="Steady"/> percent less morale to deaths near them and get
     /// <see cref="Inspire"/> morale back a second instead of one, and ranged ones deal <see cref="Volley"/>
-    /// percent more damage and cavalry ones move <see cref="Spur"/> percent faster (see <c>CombatSystem</c>).
+    /// percent more damage, cavalry ones move <see cref="Spur"/> percent faster and sappers work
+    /// <see cref="Undermine"/> percent faster (see <c>CombatSystem</c>).
     /// </summary>
     public Fix64 Rally { get; init; }
     /// <summary>Percent less morale the units it steadies lose to deaths (see <see cref="Rally"/>).</summary>
@@ -125,6 +126,12 @@ public sealed class UnitDef
     /// within its <see cref="Rally"/> range: the Horselord leads the charge (see <c>CombatSystem.SpurOf</c>).
     /// </summary>
     public int Spur { get; init; }
+    /// <summary>
+    /// Percent faster its own side's sappers (<see cref="UnitRole.Sapper"/>, itself included) work while within
+    /// its <see cref="Rally"/> range: their blows on buildings land that much harder and they dig tunnels and
+    /// dig areas that much faster. The Breachmaster works the breach (see <c>CombatSystem.UndermineOf</c>).
+    /// </summary>
+    public int Undermine { get; init; }
 
     /// <summary>Food it eats each minute (see <see cref="Economy.EconomySystem.UpkeepInterval"/>).</summary>
     public int Upkeep { get; init; } = 1;
