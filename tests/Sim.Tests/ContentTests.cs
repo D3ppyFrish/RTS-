@@ -275,7 +275,7 @@ public class ContentTests
     [InlineData("\"upgrade\": \"wooden_wall\"", "\"upgrade\": \"wooden_gate\"", "building 'barrier': \"upgrade\": \"wooden_gate\" must be of the same kind and size")]
     [InlineData("\"upgrade\": \"stone_wall\"", "\"upgrade\": \"barrier\"", "building 'wooden_wall': \"upgrade\": \"barrier\" must be at least as tall")]
     [InlineData("\"upgrade\": \"wooden_gate\"", "\"upgrade\": \"stone_gate\"", "building 'wooden_gate': \"upgrade\": \"stone_gate\" is already the upgrade of \"barrier_gate\"")]
-    [InlineData("\"wallHeight\": 4, \"wall\": \"planks\",\n    \"cost\": { \"wood\": 5 }, \"buildTime\": 4, \"sight\": 2, \"sturdy\": 4, \"walkway\": true, \"icon\": \"gate\", \"upgrade\": \"stone_gate\"",
+    [InlineData("\"wallHeight\": 4, \"wall\": \"planks\",\n    \"cost\": { \"wood\": 5 }, \"buildTime\": 4, \"sight\": 2, \"thick\": true, \"sturdy\": 4, \"walkway\": true, \"icon\": \"gate\", \"upgrade\": \"stone_gate\"",
         "\"wallHeight\": 3, \"wall\": \"planks\", \"cost\": { \"wood\": 5 }, \"buildTime\": 4, \"icon\": \"gate\", \"upgrade\": \"barrier_gate\"",
         "building 'barrier_gate' is its own upgrade, by way of 'wooden_gate'")]
     [InlineData("\"light\": 7", "\"light\": 7, \"upgrade\": \"campfire\"", "building 'torch': a light has no \"upgrade\"")]
@@ -284,6 +284,7 @@ public class ContentTests
         "\"size\": [3, 6], \"wallHeight\": 4,\n    \"wall\": \"planks\", \"footing\": \"stone_brick\", \"roof\": \"thatch\"",
         "building 'house': \"upgrade\": \"large_house\" must be of the same kind and at least as big")]
     [InlineData("\"light\": 7", "\"light\": 7, \"walkway\": true", "building 'torch': only a wall, gate or tower has a \"walkway\"")]
+    [InlineData("\"light\": 7", "\"light\": 7, \"thick\": true", "building 'torch': only a wall, gate or tower is \"thick\"")]
     [InlineData("\"sturdy\": 2, \"icon\": \"wall\"", "\"sturdy\": 2, \"walkway\": true, \"icon\": \"wall\"",
         "building 'barrier': a \"walkway\" needs \"wallHeight\" of 3 or more, or blows from the ground reach the units on it")]
     [InlineData("\"sturdy\": 2, \"icon\": \"wall\"", "\"sturdy\": 0, \"icon\": \"wall\"", "building 'barrier': \"sturdy\" is 0; it should be from 1 to 1000")]
@@ -300,6 +301,7 @@ public class ContentTests
     [InlineData("\"sturdy\": 4, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"", "\"sturdy\": 5, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"")]
     [InlineData("\"sturdy\": 4, \"walkway\": true, \"icon\": \"wall\", \"upgrade\"", "\"sturdy\": 4, \"icon\": \"wall\", \"upgrade\"")]
     [InlineData("\"aim\": 50", "\"aim\": 40")]
+    [InlineData("\"sight\": 14, \"thick\": true", "\"sight\": 14")]
     [InlineData("\"facing\": \"stone_facing\" },", "\"facing\": \"stone_spare\" },\n  { \"id\": \"stone_spare\", \"name\": \"Spare\", \"kind\": \"wall\", \"size\": [1, 1], \"wallHeight\": 6, \"wall\": \"rampart\", \"buildTime\": 4 },")]
     public void ChangingATierChangesTheContentHash(string old, string replacement)
     {

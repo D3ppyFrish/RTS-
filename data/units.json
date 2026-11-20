@@ -6,7 +6,9 @@
 // Combat: damage is the hit points one hit takes off (a unit without damage cannot attack), attackTime
 // the seconds between hits, range how far it hits (in blocks, from the middle of the unit; more than 2
 // makes it a ranged unit), sight how far it spots enemies to fight on its own, and splash (optional)
-// hits every enemy that close to the target too. weakTo (optional) lists roles whose attacks deal it
+// hits every enemy that close to the target too. blast (optional; siege, boulders, strong magic) deals full
+// damage to a thick wall, gate or tower (see buildings.json) and topples what stands above and beside a block
+// it knocks out of one, away from the blast, onto whoever is behind. weakTo (optional) lists roles whose attacks deal it
 // that many percent more damage, as in { "caster": 50 }. heal (optional) is the hit points it gives back
 // to the most hurt ally within healRange blocks every healTime seconds. earthWall, iceBridge, chasm and growForest (optional) let it cast
 // Earth Wall, Ice Bridge, Chasm and Grow Forest (see Terrain magic in docs/rules.md).
@@ -123,7 +125,7 @@
   { "id": "siege_engineer", "name": "Siege engineer", "evolvesFrom": "spearman", "faction": "settlers", "role": "siege",
     "description": "Hurls fire pots that bring walls down from afar; slow to move.",
     "speed": 3, "hp": 80, "model": "siege_engineer", "damage": 12, "attackTime": 2.5, "range": 7, "sight": 9,
-    "attack": "crush", "armor": { "torso": 1 } },
+    "blast": true, "attack": "crush", "armor": { "torso": 1 } },
   { "id": "longbowman", "name": "Longbowman", "evolvesFrom": "archer", "faction": "settlers", "role": "ranged",
     "description": "A tall bow that reaches a third further, and is slower on the march.",
     "speed": 3.5, "hp": 50, "model": "longbowman", "damage": 7, "attackTime": 1.2, "range": 12, "sight": 12,
@@ -170,12 +172,12 @@
   { "id": "battle_mage", "name": "Battle mage", "evolvesFrom": "mage", "faction": "settlers", "role": "caster",
     "description": "Bigger blasts over a wider area, fed by a bigger appetite.",
     "speed": 4, "hp": 45, "model": "battle_mage", "damage": 14, "attackTime": 2, "range": 8, "sight": 9, "splash": 2,
-    "attack": "crush",
+    "blast": true, "attack": "crush",
     "upkeep": 2 },
   { "id": "archmage", "name": "Archmage", "evolvesFrom": "battle_mage", "faction": "settlers", "role": "caster",
     "description": "A hero, one of a kind: the battle mages' last form. It casts all four terrain spells again and quickens the spells: your casters near the Archmage are ready to cast again in half the time, and it never runs. Eats 3 food a minute.",
     "speed": 4, "hp": 90, "model": "archmage", "damage": 16, "attackTime": 2, "range": 9, "sight": 10, "splash": 2,
-    "attack": "crush", "armor": { "torso": 1 },
+    "blast": true, "attack": "crush", "armor": { "torso": 1 },
     "earthWall": true, "iceBridge": true, "chasm": true, "growForest": true,
     "upkeep": 3, "hero": true, "rally": 10, "quicken": 100 },
   { "id": "seer", "name": "Seer", "evolvesFrom": "mage", "faction": "settlers", "role": "caster",
@@ -274,6 +276,6 @@
   { "id": "ogre_hurler", "name": "Ogre hurler", "role": "ranged", "hiredFrom": "ogres",
     "description": "Heaves boulders over the line: slow to throw, hard on walls and on anyone standing near where it lands.",
     "speed": 3.5, "hp": 160, "model": "ogre_hurler", "damage": 16, "attackTime": 3, "range": 9, "sight": 11,
-    "attack": "crush", "splash": 1, "armor": { "torso": 1 }, "regen": 1, "upkeep": 3,
+    "blast": true, "attack": "crush", "splash": 1, "armor": { "torso": 1 }, "regen": 1, "upkeep": 3,
     "cost": { "food": 120, "stone": 60 } }
 ]

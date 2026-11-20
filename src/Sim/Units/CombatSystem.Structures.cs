@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Rts.Sim.Content;
 using Rts.Sim.Economy;
 
 namespace Rts.Sim.Units;
@@ -44,19 +46,36 @@ public sealed partial class CombatSystem
     private static long Key(int x, int y, int z) => ((long)y << 40) | ((long)z << 20) | (long)x;
 
     /// <summary>
+    /// What a hit by a unit of this type on this building is multiplied by: full for a role strong against
+    /// structures, and for a blast on a thick wall, gate or tower; a quarter (<see cref="CombatRules.Structures"/>)
+    /// for everyone else, and less again (<see cref="CombatRules.Thick"/>) for a blow struck close up at a thick
+    /// one, where hacking at solid stone or timber gets little done.
+    /// </summary>
+    public Fix64 StructureMultiplier(UnitDef def, BuildingDef b)
+    {
+        if (b.Thick && def.Blast) return Fix64.One;
+        var m = Rules.StructureMultiplier(def.Role);
+        if (b.Thick && !def.IsRanged && !Rules.StrongAgainstStructures(def.Role)) m *= Rules.Thick;
+        return m;
+    }
+
+    /// <summary>
     /// The building takes a hit from unit i. Enough damage knocks out a block from the column nearest the
     /// unit: the top one, or with <paramref name="undermine"/> the bottom one, so the rest of the column falls.
+    /// A <paramref name="blast"/> on a thick wall, gate or tower knocks out the block under the top one, and what
+    /// stands on it and beside it topples away from the blast (see <see cref="Topple"/>).
     /// A site with nothing standing yet is wrecked by any hit.
     /// </summary>
-    private void HitBuilding(Building b, int damage, int i, bool undermine)
+    private void HitBuilding(Building b, int damage, int i, bool undermine, bool blast = false)
     {
+        bool topple = blast && !undermine && b.Def.Thick;
         if (_sim.Sandbox.Invulnerable(b.Owner)) return;
         b.Damage += damage;
         _sim.Events.BuildingAttacked(b, U.Owner[i]);
         if (b.Def.Kind == BuildingKind.Totem) _sim.Cities.TotemHit(b, U.Owner[i]);
         while (b.Damage >= BlockInfo.MinToughness)
         {
-            int k = Pick(b, U.X[i], U.Z[i], undermine);
+            int k = Pick(b, U.X[i], U.Z[i], undermine, topple);
             if (k < 0)
             {
                 Collapse(b);
@@ -65,15 +84,20 @@ public sealed partial class CombatSystem
             int tough = b.Def.BlockToughness(k);
             if (b.Damage < tough) return;
             b.Damage -= tough;
-            KnockOut(b, k, U.X[i].FloorToInt(), U.Z[i].FloorToInt());
+            int ax = U.X[i].FloorToInt(), az = U.Z[i].FloorToInt();
+            KnockOut(b, k, ax, az);
+            if (!topple) continue;
+            Topple(b, k, ax, az);
+            return; // the rest of the blast went into what fell
         }
     }
 
     /// <summary>
     /// The block a hit from (x, z) knocks out: in the building's standing column nearest to that point (ties
-    /// to the first in build order), the top block, or the bottom one when undermining. -1 if none stands.
+    /// to the first in build order), the top block, or the bottom one when undermining, or for a blast the one
+    /// under the top (the top itself when it stands alone). -1 if none stands.
     /// </summary>
-    private int Pick(Building b, Fix64 x, Fix64 z, bool undermine)
+    private int Pick(Building b, Fix64 x, Fix64 z, bool undermine, bool blast = false)
     {
         var blocks = b.Def.Blocks;
         int bestX = 0, bestZ = 0;
@@ -99,8 +123,61 @@ public sealed partial class CombatSystem
             if (b.X + t.X != bestX || b.Z + t.Z != bestZ || World.Get(bestX, b.Y + t.Y, bestZ) != t.Block) continue;
             if (pick < 0 || (undermine ? t.Y < blocks[pick].Y : t.Y > blocks[pick].Y)) pick = k;
         }
-        return pick;
+        if (!blast) return pick;
+        int under = -1;
+        for (int k = 0; k < b.Placed; k++)
+        {
+            var t = blocks[k];
+            if (b.X + t.X != bestX || b.Z + t.Z != bestZ || t.Y >= blocks[pick].Y || World.Get(bestX, b.Y + t.Y, bestZ) != t.Block) continue;
+            if (under < 0 || t.Y > blocks[under].Y) under = k;
+        }
+        return under >= 0 ? under : pick;
     }
+
+    /// <summary>Most columns deep, the way a blast goes, that the thick wall (or tower) toppling from it reaches.</summary>
+    public const int ToppleDepth = 6;
+
+    /// <summary>
+    /// A blast from (fromX, fromZ) has knocked block k out of the thick building b. What it held up topples away
+    /// from the blast: the rest of its column above it, and the columns beside it (one each side, across the way
+    /// the blast went) from its level up, each together with the columns behind it the way the blast went, as
+    /// far as the thickness of the wall (or tower) goes, at most <see cref="ToppleDepth"/>. Only thick blocks of
+    /// the same owner's buildings go. They come away as one piece, thrown up and outwards (see
+    /// <see cref="World.PhysicsSystem.Topple"/>), and come down past the far side of the wall on whoever stands
+    /// there.
+    /// </summary>
+    private void Topple(Building b, int k, int fromX, int fromZ)
+    {
+        var t = b.Def.Blocks[k];
+        int hx = b.X + t.X, hy = b.Y + t.Y, hz = b.Z + t.Z;
+        int ddx = hx - fromX, ddz = hz - fromZ;
+        if (ddx == 0 && ddz == 0) ddx = 1;
+        var (dx, dz) = Math.Abs(ddx) >= Math.Abs(ddz) ? (Math.Sign(ddx), 0) : (0, Math.Sign(ddz));
+        int px = dz, pz = dx; // across the way the blast went
+        _topple.Clear();
+        for (int side = -1; side <= 1; side++)
+        for (int along = 0; along < ToppleDepth; along++)
+        {
+            int x = hx + dx * along + px * side, z = hz + dz * along + pz * side;
+            bool hit = side == 0 && along == 0;
+            // The wall goes on this deep only where it stands at the blast's level.
+            if (!hit && !Thick(b.Owner, x, hy, z)) break;
+            for (int y = hit ? hy + 1 : hy; y < World.SizeY && Thick(b.Owner, x, y, z); y++) _topple.Add((x, y, z));
+        }
+        if (_topple.Count > 0) _sim.Physics.Topple(_topple, fromX, fromZ);
+    }
+
+    /// <summary>True if the block at (x, y, z) is a standing block of a thick building of the owner.</summary>
+    private bool Thick(int owner, int x, int y, int z)
+    {
+        if (!World.InBounds(x, y, z)) return false;
+        var w = Buildings.At(x, y, z);
+        if (w == null || w.Owner != owner || !w.Def.Thick) return false;
+        int k = w.Def.BlockAt(x - w.X, y - w.Y, z - w.Z);
+        return k >= 0 && k < w.Placed && World.Get(x, y, z) == w.Def.Blocks[k].Block;
+    }
+
+    private readonly List<(int X, int Y, int Z)> _topple = new();
 
     /// <summary>Speed (64ths of a block per tick) a knocked-out block flies off at, away from the blow.</summary>
     public const int KnockSpeed = 12;

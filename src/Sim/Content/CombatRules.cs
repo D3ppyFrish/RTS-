@@ -29,6 +29,13 @@ public sealed class CombatRules
     /// <summary>Damage multiplier for attacks on buildings by roles not strong against structures.</summary>
     public Fix64 Structures { get; internal set; } = Fix64.FromRatio(1, 4);
 
+    /// <summary>
+    /// What a close-up blow on a thick wall, gate or tower (see <see cref="Economy.BuildingDef.Thick"/>) is
+    /// multiplied by on top of <see cref="Structures"/>, for every role not strong against structures: hacking at
+    /// solid stone or timber gets little done.
+    /// </summary>
+    public Fix64 Thick { get; internal set; } = Fix64.One;
+
     /// <summary>Ticks a unit must go without hitting anything or being hit before it heals on its own.</summary>
     public int RecoveryDelayTicks { get; internal set; } = 10 * Simulation.TicksPerSecond;
 
