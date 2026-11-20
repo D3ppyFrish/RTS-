@@ -146,8 +146,6 @@ public sealed class UnitDef
     /// </summary>
     public int Quicken { get; init; }
 
-    /// <summary>Food it eats each minute (see <see cref="Economy.EconomySystem.UpkeepInterval"/>).</summary>
-    public int Upkeep { get; init; } = 1;
     /// <summary>How fast it gathers, builds, farms and digs tunnels, in percent of the usual.</summary>
     public int WorkPercent { get; init; } = 100;
 

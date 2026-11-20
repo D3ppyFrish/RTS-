@@ -91,8 +91,8 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   and the barracks trains soldiers (`TrainCommand`) while there is room. A building that trains units can have a
   rally point (`RallyCommand`, snapped to ground a unit can stand on): each unit it trains walks there
   when it steps out, stopping within 1.5 blocks. Setting it on the building itself clears it, and a
-  captured building loses it. Every minute each unit eats its
-  upkeep (1 food, more for some forms: see [Evolution](#evolution)); a player who cannot pay is hungry and cannot train.
+  captured building loses it. Food is paid once, when a unit is trained: units eat nothing after that,
+  and housing is the only cap on how many a player has (issue #21).
 - **Roads** (`RoadCommand`, after the Roads tech): a line of road up to 64 blocks, 1 stone per block,
   laid at once on open ground. Units on a road move twice as fast, and paths prefer roads when they save time.
 - **Raids** (`CaptureCommand`, `BurnCommand`): units at an enemy storehouse capture it with its goods
@@ -164,7 +164,7 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   `data/units.json`, per part) takes points off, by the attack's kind (`"attack"`): slash (swords, axes,
   claws) is stopped by one and a half times the armour, pierce (spears, arrows, lances) by the armour,
   crush (hammers, clubs, stones, blasts) by half of it. A hit always does at least a quarter of what it
-  would do with no armour, and at least 1. Armour has no upkeep. A unit can carry armour of its own on
+  would do with no armour, and at least 1. A unit can carry armour of its own on
   top of its type's (`UnitStore.ExtraArmour`, for pieces found later); it keeps it when it evolves.
 - **Shields** (`"shield"`, a percent chance): a shield stops a whole hit from in front of its bearer
   (within a quarter turn of the way it faces: towards its target, the way its formation faces, or where it
@@ -212,8 +212,8 @@ unit of it carried by a worker or held in a building. A player's stock is what t
 - **Casters**: the mage's blast hits every enemy within 1.5 blocks of its target, so it breaks packed groups.
 - **Morale**: a death costs each ally near it a share of 150 morale (a bigger share the fewer they are)
   and gives each enemy near it a share of 60. At 25 a unit breaks: it runs to its town hall, or away from
-  the enemy, for 8 seconds, ignoring orders, then rallies. Morale comes back a point a second; a hungry
-  army has at most 50. Units near a hero hold longer (see [Evolution](#evolution), "Heroes").
+  the enemy, for 8 seconds, ignoring orders, then rallies. Morale comes back a point a second, up
+  to 100. Units near a hero hold longer (see [Evolution](#evolution), "Heroes").
 - **Healing**: a unit that has not hit anything or been hit for 10 seconds gets back a quarter of a
   percent of its hit points a second (from half health, full in 3 minutes 20 seconds), or 2% a second
   within 12 columns of a town hall or house of its own, or near a goblin town it holds (full in 25 seconds), so a wounded army is
@@ -392,7 +392,7 @@ its commands played back ends the same. An order of the player's always comes fi
   otherwise gather within 40 columns what is needed most, or, once nothing is left to gather that close,
   the nearest of anything within 128 columns. Food and wood are wanted 3 parts each and
   stone 2 (iron ore and coal 1 each once you have a smelter), spread over the workers already on each;
-  food counts four times as much while you are hungry or have less than two minutes' food, and a good
+  food counts four times as much while you have less than 30 food, and a good
   you have 500 of hardly at all. A worker the player orders to move, stop or fight waits for orders
   until it is given work again or made automatic again. A job given up within 15 seconds without
   anything done is not given out again for a minute, and the worker who gave it up keeps away from the
@@ -471,8 +471,8 @@ its commands played back ends the same. An order of the player's always comes fi
   they walk back to the nearest town hall).
 
 `AutomationTests` has the issue's check: a town hall and five workers, given orders only at the start
-(all workers automatic, train workers on repeat, research farming), grow for 10 minutes without going
-hungry, from 5 to 40 people with 7 houses and 7 farms, and the same game replayed from its recorded
+(all workers automatic, train workers on repeat, research farming), grow for 10 minutes without running out
+of food, from 5 to 40 people with 7 houses and 7 farms, and the same game replayed from its recorded
 commands with automation off ends in the same state. All the numbers are first guesses for playtesting.
 
 ## Evolution
@@ -484,17 +484,17 @@ Orc units earn none.
   units and buildings, 10 for each enemy unit it kills, 1 for each second of building and 5 for each
   minute it stays alive. The first level needs 150. The rates and levels are in `data/factions.json`.
 - **Forms**: at each level a unit can take its next form: one of the unit types in `data/units.json`
-  whose `evolvesFrom` names its type. Forms are not trained. Each gives something and takes something:
-  more upkeep, less speed, or a weakness (`weakTo`: that many percent more damage from one role's attacks).
+  whose `evolvesFrom` names its type. Forms are not trained. Most simply grow stronger; some give something
+  and take something: less speed, or a weakness (`weakTo`: that many percent more damage from one role's attacks).
 
   | From | Forms |
   | --- | --- |
-  | Worker | foreman (works half as fast again, eats 2), militia (line infantry, slower than a spearman; it stops working) |
-  | Spearman | knight (heavy infantry, 130 hit points and 12 damage, slow), pathfinder (speed 6, sight 14, +50% from casters), battle priest (heals the most hurt ally within 5 blocks by 4 every 2 seconds, eats 2), siege engineer (siege: fire pots from 7 blocks that hit buildings at full damage, slow); at a cleared wolf den only, the Wolfheart (see [Cleared dens](#cleared-dens)) |
+  | Worker | foreman (works half as fast again), militia (line infantry, slower than a spearman; it stops working) |
+  | Spearman | knight (heavy infantry, 130 hit points and 12 damage, slow), pathfinder (speed 6, sight 14, +50% from casters), battle priest (heals the most hurt ally within 5 blocks by 4 every 2 seconds), siege engineer (siege: fire pots from 7 blocks that hit buildings at full damage, slow); at a cleared wolf den only, the Wolfheart (see [Cleared dens](#cleared-dens)) |
   | Archer | longbowman (range 12, slower), ranger (speed 5.5, sight 13, +50% from line infantry) |
-  | Rider | lancer (18 damage, eats 3), outrider (speed 10, sight 14, +50% from ranged) |
-  | Sapper | tunneller (digs tunnels twice as fast, eats 2), demolisher (9 damage, slower) |
-  | Mage | battle mage (14 damage over a 2-block blast, eats 2), seer (range 11, sight 15, slower) |
+  | Rider | lancer (18 damage), outrider (speed 10, sight 14, +50% from ranged) |
+  | Sapper | tunneller (digs tunnels twice as fast), demolisher (9 damage, slower) |
+  | Mage | battle mage (14 damage over a 2-block blast), seer (range 11, sight 15, slower) |
   | Knight (level 2) | the **Marshal**, a hero (below) |
   | Longbowman (level 2) | the **Bowmaster**, a hero (below) |
   | Lancer (level 2) | the **Horselord**, a hero (below) |
@@ -503,7 +503,7 @@ Orc units earn none.
 
 - **Heroes** (`"hero": true` in `data/units.json`, `HeroTests`): the last forms are heroes, one of a kind. The
   first is the **Marshal**, the knight's form at level 2 (500 experience): 200 hit points, 14 damage, a knight's
-  armour and shield, and it eats 4 food a minute. A player has at most one living Marshal: while it lives no
+  armour and shield. A player has at most one living Marshal: while it lives no
   knight of theirs can take the form (the button says "you have one"), and once it falls the next knight with
   the experience can. A hero never breaks and runs. The Marshal **steadies** its own side's units within 8 blocks
   (and 4 levels), itself included (`"rally": 8`): a death near them costs them half the morale it would
@@ -511,14 +511,14 @@ Orc units earn none.
   nothing. In the game the Marshal wears a crown on its helm, gilded pauldrons and a tall banner in its
   owner's colour on its back.
   The second is the **Bowmaster**, the longbowman's form at level 2 (500 experience): 80 hit points, 9 damage,
-  range 13 and sight 14, and it eats 3 food a minute. It is one of a kind like the Marshal (each hero on its
+  range 13 and sight 14. It is one of a kind like the Marshal (each hero on its
   own: having a Marshal does not stop a Bowmaster) and never breaks. It **calls the volleys**: its own side's
   ranged units within 10 blocks (and 4 levels), itself included, deal a quarter more damage
   (`"rally": 10`, `"volley": 25`), to units and buildings alike; foot soldiers, other players' archers and
   archers out of its reach gain nothing, and the bonus ends when it falls. In the game it wears a gold
   circlet over its hood, carries a gilded great bow and a short pennant in its owner's colour on its back.
   The third is the **Horselord**, the lancer's form at level 2 (500 experience): 180 hit points, 22 damage,
-  sight 11, heavy barding, and it eats 4 food a minute. It is one of a kind on its own like the others and never
+  sight 11, heavy barding. It is one of a kind on its own like the others and never
   breaks. It **leads the charge**: its own side's cavalry within 12 blocks (and 4 levels), itself included,
   move a quarter faster (`"rally": 12`, `"spur": 25`), on roads too. A formation keeps its slowest member's pace,
   spurred for the riders near the Horselord, so riders riding with it stay together and arrive sooner. Foot
@@ -526,7 +526,7 @@ Orc units earn none.
   In the game it rides a barded horse with gilded trim, wears a gold helm with a crest in its owner's colour
   and carries a gilded lance with a pennon.
   The fourth is the **Breachmaster**, the demolisher's form at level 2 (500 experience): 120 hit points, 12 damage,
-  sight 8, a heavier helm and leather, and it eats 3 food a minute. It is one of a kind on its own like the others
+  sight 8, a heavier helm and leather. It is one of a kind on its own like the others
   and never breaks. It **works the breach**: its own side's sappers within 10 blocks (and 4 levels), itself
   included, work half as fast again (`"rally": 10`, `"undermine": 50`): their blows on buildings and walls land
   half as hard again, and they dig tunnels and dig areas in two thirds of the time. Soldiers, other players'
@@ -534,7 +534,7 @@ Orc units earn none.
   gold-banded helm with a lamp at the brow, carries a great powder keg bound in gold with a pennant in its owner's
   colour on its back, and a gilded war pick.
   The fifth is the **Archmage**, the battle mage's form at level 2 (500 experience): 90 hit points, 16 damage over
-  a 2-block blast, range 9 and sight 10, a little cloth armour, and it eats 3 food a minute. The battle mage gave
+  a 2-block blast, range 9 and sight 10, a little cloth armour. The battle mage gave
   up the terrain spells for its blasts; the Archmage casts all four again (Earth Wall, Ice Bridge, Chasm and Grow
   Forest, see [Terrain magic](#terrain-magic)). It is one of a kind on its own like the others and never breaks.
   It **quickens the spells**: a spell cast by its own side's casters within 10 blocks (and 4 levels), itself
@@ -567,7 +567,7 @@ areas, and Orcs who beat a wolf keep it.
 - **Lairs**: at match start a lair lies on the way from each start area to the map centre, 40 blocks
   out (at most two thirds of the way and at least 20, on dry ground away from buildings), with a pack
   of four wolves around its den. Monsters belong to the wild side (player 7), everyone's enemy, which
-  earns no experience and pays no upkeep.
+  earns no experience.
 - **Across the map** (issue #45): more lairs are spread over the map by biome, for each 512 by 512 blocks
   of it: a wolf pack in the grassland, two herds of **wild boar** in the forests and a **stone giant** in the
   hills, two pairs of **bog horrors** in the swamp and two pairs of **giant crabs** on the beaches (on the
@@ -643,7 +643,7 @@ The den is gone from the map either way.
   in `units.json`): the selected spearman nearest the den becomes a **Wolfheart** at once, free. It is a
   form no spearman reaches through experience, and it is not among the forms in the evolve row or for
   Auto. A Wolfheart wears the pelt of the pack: 110 hit points, 12 damage, speed 5.5, sight 12 and a
-  little more armour (head 1, torso 2), and it eats 3 food a minute. With no spearman near the den, the
+  little more armour (head 1, torso 2). With no spearman near the den, the
   den cannot be used. The numbers are first guesses for playtesting.
 - **Anyone: the boar pen.** At a cleared boar wallow either faction's workers can put up a boar pen
   (25 wood, 12 seconds): it houses 2 and its boars bring in 8 food every 15 seconds.
@@ -847,8 +847,7 @@ holds for both, with the goblins' numbers unless the ogres' section says otherwi
   - **Ogre hurler**: 160 hit points, throws boulders 9 columns that crush (16 damage every 3 seconds, a
     little splash); 120 food and 60 stone.
   - Both **regenerate**: they heal 1% of their hit points every second even in a fight (`"regen"` in
-    `units.json`), and out of the fight at that rate or the usual one, whichever is faster. Each eats 3
-    food a minute.
+    `units.json`), and out of the fight at that rate or the usual one, whichever is faster.
 
 This replaced the earlier influence alliance (gifts, influence from trade and lairs, raiding caravans
 for influence), which is gone. `CityStateTests` has the issue's checks: breaking the totem makes the
@@ -872,7 +871,7 @@ two points and kept as it was to measure the others by; **Easy** and **Normal** 
 (Normal unless changed), and so does `--ai-level` in the game and `--levels` in the match runner.
 
 No level is given anything a player does not get: each starts with the same town and soldiers, pays the
-same prices and upkeep, and has only the goods its own workers bring in. Classic sees through the fog of
+same prices, and has only the goods its own workers bring in. Classic sees through the fog of
 war; from Easy up a computer player knows only what its own units and buildings have seen, at Hard as
 much as at Easy. The two things the fair levels take from the shape of the map rather than from sight are
 ones a player knows too: the enemy starts across the map, and there is a lair on the way to the middle.
@@ -944,8 +943,7 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   the side away from the enemy once it has 30 workers and 2 barracks; and soldiers again with whatever
   is left. While it has not the stone for something it is saving for, it keeps only the stone in hand
   and goes on spending its food and wood: stone comes in slowly, and what waited for it would be soldiers
-  not trained. Upkeep is paid once a minute, so it puts the next payment's food by over the minute and is
-  never caught short. For stone it marks out a quarry early (a pit 14 by 6 dug 12 deep, 14 to 30
+  not trained. For stone it marks out a quarry early (a pit 14 by 6 dug 12 deep, 14 to 30
   columns from the town hall; a smaller or further one if after 2 minutes there is no such ground),
   builds nothing there, and from 16 workers on keeps two to five of them digging it while stone is
   short. While enemies are at its buildings, and for 20 seconds after, it saves for nothing but

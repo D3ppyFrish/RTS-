@@ -36,7 +36,6 @@ public partial class Hud : CanvasLayer
     private readonly Label[] _stockLabels = new Label[Goods.Count];
     private Label _popLabel = null!;
     private Label _foodRateLabel = null!;
-    private Label _hungryLabel = null!;
     private Label _clockLabel = null!;
     private WorldLighting _lighting = null!;
     private Button _dayButton = null!;
@@ -183,15 +182,11 @@ public partial class Hud : CanvasLayer
             // Beside the food stock: food gained or lost a minute.
             _foodRateLabel = MakeLabel("", 16);
             _foodRateLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-            _foodRateLabel.TooltipText = "Food a minute: what was gathered in the last minute less what your people eat each minute";
+            _foodRateLabel.TooltipText = "Food a minute: what was gathered in the last minute";
             _foodRateLabel.MouseFilter = Control.MouseFilterEnum.Pass;
             _stockLabels[(int)good].GetParent().AddChild(_foodRateLabel);
         }
         _popLabel = Stat(row, UiIcons.Get("people"), "People over housing");
-        _hungryLabel = MakeLabel("hungry", 18);
-        _hungryLabel.AddThemeColorOverride("font_color", new Color(1f, 0.45f, 0.35f));
-        _hungryLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-        row.AddChild(_hungryLabel);
         row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
         _clockLabel = Stat(row, UiIcons.Get("time"), "Match time and game speed");
         // The time of day (see DayCycle): click to keep it day.
@@ -707,7 +702,6 @@ public partial class Hud : CanvasLayer
         Change("Blast", Number(from.Splash), Number(form.Splash));
         Change("Sight", Number(from.Sight), Number(form.Sight));
         Change("Speed", Number(from.Speed), Number(form.Speed));
-        Change("Food a minute", $"{from.Upkeep}", $"{form.Upkeep}");
         Change("Work speed", $"{from.WorkPercent}%", $"{form.WorkPercent}%");
         if (form.Heal > 0 && (form.Heal != from.Heal || form.HealTicks != from.HealTicks || form.HealRange != from.HealRange))
             lines.Add($"Heals the most hurt ally within {Number(form.HealRange)} blocks by {form.Heal} hit points every {Seconds(form.HealTicks)}");
@@ -1768,7 +1762,6 @@ public partial class Hud : CanvasLayer
                 text.Append($"\nTraining a {first.Name.ToLowerInvariant()}: {100L * b.TrainTicks / Math.Max(1, first.TrainTicks)}%");
                 if (b.Queue.Count > 1) text.Append($", {b.Queue.Count - 1} more queued");
                 if (_sim.Economy.Population(b.Owner) >= _sim.Economy.Housing(b.Owner)) text.Append("   (needs more houses)");
-                else if (_sim.Economy.Starving(b.Owner)) text.Append("   (needs food)");
             }
             if (b.Def.IsRampart) text.Append(DescribeWall(b));
             else text.Append(DescribeUpgrade(b));
@@ -2030,9 +2023,7 @@ public partial class Hud : CanvasLayer
         _popLabel.Text = $"{econ.Population(player)} / {econ.Housing(player)}";
         int rate = econ.FoodPerMinute(player);
         _foodRateLabel.Text = (rate > 0 ? "+" : "") + rate.ToString(CultureInfo.InvariantCulture) + "/min";
-        _foodRateLabel.AddThemeColorOverride("font_color",
-            rate < 0 ? new Color(1f, 0.45f, 0.35f) : rate > 0 ? new Color(0.55f, 0.9f, 0.45f) : new Color(0.8f, 0.8f, 0.75f));
-        _hungryLabel.Visible = econ.Starving(player);
+        _foodRateLabel.AddThemeColorOverride("font_color", rate > 0 ? new Color(0.55f, 0.9f, 0.45f) : new Color(0.8f, 0.8f, 0.75f));
     }
 
     /// <summary>A picture and a number beside it in the top bar; <paramref name="tooltip"/> says what it counts.</summary>

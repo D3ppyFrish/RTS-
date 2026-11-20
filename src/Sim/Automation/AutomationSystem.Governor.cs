@@ -121,7 +121,7 @@ public sealed partial class AutomationSystem
         if (hall.Queue.Count == 0 && s.Workers + WorkersQueued(p) < WorkerTarget(focus) && HasRoom(s))
         {
             var worker = TrainableAt(hall, p, d => d.Role == UnitRole.Worker);
-            if (worker != null && CanPayKeepingFood(s, worker.Cost))
+            if (worker != null && CanPay(s, worker.Cost))
             {
                 Issue(new TrainCommand(p, hall.Id, worker.Id));
                 Refresh();
@@ -141,7 +141,7 @@ public sealed partial class AutomationSystem
             if (b.CentreDistance2(cx, cz) > 4 * r2) continue; // CentreDistance2 is in half-columns
             if (!HasRoom(s)) return;
             var soldier = NextSoldier(b, p, focus);
-            if (soldier == null || !CanPayKeepingFood(s, soldier.Cost)) continue;
+            if (soldier == null || !CanPay(s, soldier.Cost)) continue;
             Issue(new TrainCommand(p, b.Id, soldier.Id));
             Refresh();
         }
@@ -160,7 +160,7 @@ public sealed partial class AutomationSystem
         {
             var tech = FirstMissing(p, want);
             if (tech == null || Economy.CanResearch(p, tech, checkCost: false) != ResearchResult.Ok) continue;
-            if (!CanPayKeepingFood(s, tech.Cost)) return; // saves up for it rather than skipping ahead
+            if (!CanPay(s, tech.Cost)) return; // saves up for it rather than skipping ahead
             Issue(new ResearchCommand(p, tech.Id));
             Refresh();
             return;
@@ -262,7 +262,7 @@ public sealed partial class AutomationSystem
         if (s.Housing - (s.Population + s.Waiting) < HouseHeadroom && (def = Unlocked(p, BuildingKind.House)) != null
             && Room(p, def, hall, out x, out z))
             return (def, x, z);
-        bool foodShort = s.Starving || s.Stock[(int)Good.Food] < 100 + 2 * s.Upkeep;
+        bool foodShort = s.Stock[(int)Good.Food] < FoodShort;
         if (foodShort && s.FreeFarmSlots == 0 && s.FarmSlots < Math.Max(2, s.Workers / 3)
             && (def = Unlocked(p, BuildingKind.Farm)) != null && Room(p, def, hall, out x, out z))
             return (def, x, z);
@@ -302,16 +302,13 @@ public sealed partial class AutomationSystem
     }
 
     /// <summary>True if there is room in the player's housing for one more unit beyond those waiting.</summary>
-    private static bool HasRoom(Stats s) => !s.Starving && s.Population + s.Waiting < s.Housing;
+    private static bool HasRoom(Stats s) => s.Population + s.Waiting < s.Housing;
 
-    /// <summary>True if the player can pay and still have a minute's food for everyone (as repeating training does).</summary>
-    private static bool CanPayKeepingFood(Stats s, GoodAmount[] cost)
+    /// <summary>True if the player can pay (as repeating training checks).</summary>
+    private static bool CanPay(Stats s, GoodAmount[] cost)
     {
         foreach (var c in cost)
-        {
-            int left = s.Stock[(int)c.Good] - c.Amount;
-            if (left < 0 || (c.Good == Good.Food && left < s.Upkeep)) return false;
-        }
+            if (s.Stock[(int)c.Good] < c.Amount) return false;
         return true;
     }
 

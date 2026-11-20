@@ -742,9 +742,8 @@ public sealed class CityStateSystem
         town.Ready--;
     }
 
-    /// <summary>True if the player has room for another unit and is not starving (a hire needs both, as training does).</summary>
-    public bool CanHire(int player) =>
-        !Economy.Starving(player) && Economy.Population(player) < Economy.Housing(player);
+    /// <summary>True if the player has room for another unit (a hire needs it, as training does).</summary>
+    public bool CanHire(int player) => Economy.Population(player) < Economy.Housing(player);
 
     /// <summary>Where a hired mercenary steps out: the first free spot to stand two columns from the market, starting with a different one each hire.</summary>
     private bool MarketSpot(CityState town, out int x, out int y, out int z)

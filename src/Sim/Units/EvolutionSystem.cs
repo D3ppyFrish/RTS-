@@ -11,8 +11,8 @@ namespace Rts.Sim.Units;
 /// can take its next form: one of the unit types that evolve from its own (<see cref="UnitDef.Forms"/>),
 /// picked by the player (<see cref="EvolveCommand"/>) or by automation, on a standing choice the player
 /// made for that unit type (<see cref="AutoEvolveCommand"/>). A form is a unit type of its own with its own
-/// numbers, and each gives something and takes something: more upkeep, less speed, or a weakness to one
-/// role's attacks.
+/// numbers, and most simply grow stronger; some give something and take something: less speed, or a
+/// weakness to one role's attacks.
 ///
 /// Evolving is immediate and free. The unit keeps its id, place, orders, experience and the same share of
 /// its hit points. A worker that becomes a soldier stops working: it drops its job and what it carries, and
@@ -112,11 +112,14 @@ public sealed class EvolutionSystem
 
     // --- Earning experience ------------------------------------------------------------------------
 
+    /// <summary>Ticks in a minute: how often units earn experience for staying alive.</summary>
+    public const int Minute = 60 * Simulation.TicksPerSecond;
+
     /// <summary>Once a minute, every unit that earns experience earns some for staying alive.</summary>
     public void Step()
     {
         long tick = _sim.Tick;
-        if (tick == 0 || tick % EconomySystem.UpkeepInterval != 0) return;
+        if (tick == 0 || tick % Minute != 0) return;
         var u = U;
         for (int i = 0; i < u.Count; i++)
             if (Rules(u.Owner[i]) is { PerMinute: > 0 } rules) Add(i, rules.PerMinute);

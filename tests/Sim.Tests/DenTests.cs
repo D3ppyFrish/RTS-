@@ -100,9 +100,8 @@ public class DenTests
 
         // Its wolves bring in five food every fifteen seconds.
         int food = hall.Stock[(int)Good.Food];
-        sim.Run(60 * Tps - 1); // the minute's upkeep is eaten at the next minute mark; stop short of any
-        int upkeep = sim.Economy.Player(Orcs).Eaten[(int)Good.Food];
-        Assert.InRange(hall.Stock[(int)Good.Food] - food + upkeep, 20, 20);
+        sim.Run(60 * Tps - 1);
+        Assert.Equal(20, hall.Stock[(int)Good.Food] - food);
 
         // Using it again does nothing.
         sim.Schedule(sim.Tick, new DenCommand(Orcs, users, lair.Id));
@@ -252,7 +251,7 @@ public class DenTests
         Assert.Equal("worker", db.Units[sim.Units.Def[Index(sim, worker)]].Id);
     }
 
-    /// <summary>The Wolfheart is data: what it gives over a spearman, and its one drawback, upkeep.</summary>
+    /// <summary>The Wolfheart is data: what it gives over a spearman.</summary>
     [Fact]
     public void TheWolfheartIsData()
     {
@@ -263,7 +262,6 @@ public class DenTests
         Assert.Same(spearman, wolfheart.EvolvesFrom);
         Assert.Same(db.Faction("settlers"), wolfheart.Faction);
         Assert.True(wolfheart.MaxHp > spearman.MaxHp && wolfheart.Damage > spearman.Damage && wolfheart.Speed > spearman.Speed && wolfheart.Sight > spearman.Sight);
-        Assert.Equal(3, wolfheart.Upkeep);
         Assert.Null(wolfheart.TrainedAt);
     }
 

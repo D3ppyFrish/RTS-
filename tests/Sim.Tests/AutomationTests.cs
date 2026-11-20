@@ -38,7 +38,7 @@ public class AutomationTests
 
     // --- Issue #11's check -------------------------------------------------------------------------
 
-    private readonly record struct Minute(int Population, int Gathered, int Houses, int Farms, bool Starving);
+    private readonly record struct Minute(int Population, int Gathered, int Houses, int Farms);
 
     /// <summary>
     /// From a generated region's real start (a town hall with the starting goods, and five workers) the
@@ -77,7 +77,7 @@ public class AutomationTests
     {
         int houses = sim.Buildings.All.Count(b => b.Owner == 0 && b.Active && b.Def.Kind == BuildingKind.House);
         int farms = sim.Buildings.All.Count(b => b.Owner == 0 && b.Active && b.Def.Kind == BuildingKind.Farm);
-        return new Minute(sim.Economy.Population(0), sim.Economy.Player(0).Gathered.Sum(), houses, farms, sim.Economy.Starving(0));
+        return new Minute(sim.Economy.Population(0), sim.Economy.Player(0).Gathered.Sum(), houses, farms);
     }
 
     /// <summary>
@@ -94,7 +94,6 @@ public class AutomationTests
         {
             Assert.True(minutes[m].Population >= minutes[m - 1].Population, $"the population fell in minute {m}");
             Assert.True(minutes[m].Gathered >= minutes[m - 1].Gathered + 80, $"little was gathered in minute {m}");
-            Assert.False(minutes[m].Starving, $"starving after minute {m}");
             if (m >= 2) Assert.True(minutes[m].Population > minutes[m - 2].Population, $"no growth in minutes {m - 1} and {m}");
         }
         Assert.InRange(minutes[10].Population, 30, 200);
@@ -489,12 +488,12 @@ public class AutomationTests
     // --- Repeat ------------------------------------------------------------------------------------
 
     [Fact]
-    public void ARepeatingQueueTrainsAgainWhileThePlayerCanPayAndEat()
+    public void ARepeatingQueueTrainsAgainWhileThePlayerCanPay()
     {
         var sim = Flat();
         var hall = Place(sim, 0, "town_hall", 10, 10);
         int Food() => hall.Stock[(int)Good.Food];
-        hall.Stock[(int)Good.Food] = 61; // two workers, and then a minute's food for the one already out
+        hall.Stock[(int)Good.Food] = 61; // two workers, and one left over
         sim.Schedule(0, new TrainCommand(0, hall.Id, "worker"));
         sim.Schedule(0, new RepeatCommand(0, hall.Id, true));
         RunUntil(sim, () => sim.Economy.Population(0) == 1, 15 * Tps, "the first worker");
@@ -507,13 +506,13 @@ public class AutomationTests
         Assert.Empty(hall.Queue); // it cannot pay
         Assert.Equal(new[] { sim.Content.Unit("worker").Index }, hall.Owed);
 
-        hall.Stock[(int)Good.Food] = 31; // enough to pay, but then the two out there would go hungry
+        hall.Stock[(int)Good.Food] = 29; // a food short of a worker
         sim.Run(2 * Tps);
         Assert.Empty(hall.Queue);
-        hall.Stock[(int)Good.Food] = 32;
+        hall.Stock[(int)Good.Food] = 30; // just enough: units eat nothing once trained (issue #21)
         sim.Run(2 * Tps);
         Assert.Single(hall.Queue);
-        Assert.Equal(2, Food());
+        Assert.Equal(0, Food());
         Assert.Empty(hall.Owed);
 
         // Off: the worker in training is the last.

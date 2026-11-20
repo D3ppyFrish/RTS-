@@ -205,7 +205,6 @@ public sealed partial class AiPlayer
     {
         var econ = sim.Economy;
         Array.Clear(_keep);
-        _keep[(int)Good.Food] = FoodReserve(sim);
         Feed(sim, issue);
         AutomateNew(sim, issue);
         var c = Count(sim);

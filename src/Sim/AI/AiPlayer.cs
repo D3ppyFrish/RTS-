@@ -387,7 +387,7 @@ public sealed partial class AiPlayer
         bool woodShort = sim.Economy.Stock(Player, Good.Wood) < (later ? 2 * WoodShort : WoodShort);
         if ((!woodShort && !Smart) || sim.Tick < _woodAt) return;
         var u = sim.Units;
-        bool foodRich = later && sim.Economy.Stock(Player, Good.Food) >= FoodRich + FoodReserve(sim);
+        bool foodRich = later && sim.Economy.Stock(Player, Good.Food) >= FoodRich;
         if (_woodSent.Count > 0)
         {
             bool cutting = false;
@@ -512,7 +512,7 @@ public sealed partial class AiPlayer
     }
 
     /// <summary>
-    /// While food is short (less than a minute's worth in hand, or starving), frees up to
+    /// While food is short (less than <see cref="FoodShort"/> in hand), frees up to
     /// <see cref="MovedAtOnce"/> workers gathering something else (stone first, then ore and coal, then
     /// wood) for automation to send to food, every <see cref="FeedTicks"/>, until
     /// <see cref="FoodWorkersPercent"/> of the workers are on food. If none of the last ones it freed went to
@@ -523,7 +523,7 @@ public sealed partial class AiPlayer
         var econ = sim.Economy;
         var u = sim.Units;
         long tick = sim.Tick;
-        if (!econ.Starving(Player) && econ.Stock(Player, Good.Food) >= FoodReserve(sim))
+        if (econ.Stock(Player, Good.Food) >= FoodShort)
         {
             _fed.Clear();
             return;
@@ -611,21 +611,14 @@ public sealed partial class AiPlayer
             issue(new BuildCommand(Player, Array.Empty<int>(), def.Id, x, z));
     }
 
-    /// <summary>Food to keep in hand: a minute's upkeep for everyone, and some (Hard: what the next payment takes, saved up over the minute).</summary>
-    private int FoodReserve(Simulation sim)
-    {
-        int upkeep = sim.Economy.Upkeep(Player);
-        if (!Hard) return upkeep + 20;
-        // Hard: upkeep is paid once a minute, so it puts the food by over the minute rather than keeping a
-        // whole minute's worth idle all the time. All of it has to be there on the tick it is paid: a
-        // player who cannot pay starves, and trains nothing, until the next payment.
-        long phase = (sim.Tick + EconomySystem.UpkeepInterval - 1) % EconomySystem.UpkeepInterval + 1;
-        return (int)((upkeep + 6) * phase / EconomySystem.UpkeepInterval) + 10;
-    }
+    /// <summary>
+    /// Food below which it moves workers to food (<see cref="Feed"/>): about a soldier's price. Units eat
+    /// nothing once trained, so no food is held back from spending.
+    /// </summary>
+    public const int FoodShort = 40;
 
     /// <summary>
-    /// Works out what to keep in hand when spending: <see cref="FoodReserve"/> food, and while food is
-    /// short (as automation sees it) with no farm that has room or is being built, the price of a farm,
+    /// Works out what to keep in hand when spending: while food is short (as automation sees it) with no farm that has room or is being built, the price of a farm,
     /// so that automation can put one up (it does when the player can pay; see
     /// <see cref="Automation.AutomationSystem"/>).
     /// </summary>
@@ -633,10 +626,8 @@ public sealed partial class AiPlayer
     {
         Array.Clear(_keep);
         var econ = sim.Economy;
-        int upkeep = econ.Upkeep(Player);
-        _keep[(int)Good.Food] = FoodReserve(sim);
         var farm = FirstBuilding(sim, BuildingKind.Farm);
-        if (farm == null || (!econ.Starving(Player) && econ.Stock(Player, Good.Food) >= 100 + 2 * upkeep)) return;
+        if (farm == null || econ.Stock(Player, Good.Food) >= 100) return;
         var u = sim.Units;
         int workers = 0, slots = 0, farmers = 0;
         for (int i = 0; i < u.Count; i++)

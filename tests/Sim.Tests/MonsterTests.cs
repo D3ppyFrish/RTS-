@@ -262,7 +262,7 @@ public class MonsterTests
         Assert.True(sim.Units.Rout[Index(sim, spearman)] > 0, "a spearman breaks");
     }
 
-    /// <summary>Wild monsters belong to no player: their own side, which eats nothing and earns no experience.</summary>
+    /// <summary>Wild monsters belong to no player: their own side, which earns no experience.</summary>
     [Fact]
     public void TheWildSideIsNoPlayer()
     {
@@ -271,8 +271,7 @@ public class MonsterTests
         Assert.Same(sim.Content.Wild, sim.Economy.Faction(Wild));
         Assert.DoesNotContain(sim.Content.Wild, sim.Content.Factions);
         Assert.Null(sim.Evolution.Rules(Wild));
-        sim.Run(EconomySystem.UpkeepInterval + 1);
-        Assert.False(sim.Economy.Starving(Wild));
+        sim.Run(EvolutionSystem.Minute + 1);
         Assert.Equal(4, sim.Economy.Population(Wild));
         Assert.Equal(0, sim.Economy.Population(Settlers));
         Assert.All(lair.Pack, w => Assert.Equal(0, sim.Units.Xp[Index(sim, w)]));

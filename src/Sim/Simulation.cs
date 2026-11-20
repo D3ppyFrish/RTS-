@@ -32,7 +32,7 @@ public sealed class Simulation
     /// <summary>Flow fields for move orders.</summary>
     public PathService Paths { get; }
     public BuildingStore Buildings { get; } = new();
-    /// <summary>Goods, buildings, worker jobs, upkeep and raids.</summary>
+    /// <summary>Goods, buildings, worker jobs and raids.</summary>
     public EconomySystem Economy { get; }
     /// <summary>Fighting, morale, damage to buildings and sapper tunnels.</summary>
     public CombatSystem Combat { get; }

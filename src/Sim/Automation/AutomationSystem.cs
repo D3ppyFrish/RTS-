@@ -68,6 +68,10 @@ public sealed partial class AutomationSystem
     public const int MaxBackOffTicks = 60 * Tps;
     /// <summary>A good the player has this much of is gathered only when no other good is wanted.</summary>
     public const int Plenty = 500;
+    /// <summary>Food below which automatic workers favour food four to one: a worker's price.</summary>
+    public const int FoodLow = 30;
+    /// <summary>Food below which automation (and the governor) puts up another farm when every farm is fully worked.</summary>
+    public const int FoodShort = 100;
     /// <summary>Most automatic workers on supply duty at one storage building at a time.</summary>
     public const int SupplyWorkers = 2;
     /// <summary>Ticks between a player's checks for a house or farm to build.</summary>
@@ -127,19 +131,17 @@ public sealed partial class AutomationSystem
         /// <summary>Workers gathering each good (farmers count for food).</summary>
         public readonly int[] Gatherers = new int[Goods.Count];
         public int Population, Workers, Housing;
-        /// <summary>Food the player's units eat each minute.</summary>
-        public int Upkeep;
         /// <summary>Units waiting to be trained: queued, or owed to a queue on repeat.</summary>
         public int Waiting;
         public int FarmSlots, FreeFarmSlots;
-        public bool Smelter, Starving, HouseSite, FarmSite;
+        public bool Smelter, HouseSite, FarmSite;
 
         public void Clear()
         {
             Array.Clear(Stock);
             Array.Clear(Gatherers);
-            Population = Workers = Housing = Upkeep = Waiting = FarmSlots = FreeFarmSlots = 0;
-            Smelter = Starving = HouseSite = FarmSite = false;
+            Population = Workers = Housing = Waiting = FarmSlots = FreeFarmSlots = 0;
+            Smelter = HouseSite = FarmSite = false;
         }
     }
 
@@ -436,7 +438,7 @@ public sealed partial class AutomationSystem
             var (good, _, share) = Gatherable[k];
             if (only >= 0 ? k != only : good is Good.IronOre or Good.Coal && !s.Smelter) continue;
             long n = share * 1000L / (s.Gatherers[(int)good] + 1);
-            if (good == Good.Food && (s.Starving || s.Stock[(int)Good.Food] < 2 * s.Upkeep))
+            if (good == Good.Food && s.Stock[(int)Good.Food] < FoodLow)
                 n *= 4;
             if (s.Stock[(int)good] >= Plenty) n /= 16;
             need[k] = Math.Max(1, n);
@@ -472,7 +474,7 @@ public sealed partial class AutomationSystem
     /// of its trunk). With <paramref name="only"/> (an index in <see cref="Gatherable"/>) it looks for that
     /// good alone, smelter or not; with -1, for all of them by need. A good's need is its share of the gatherers (food and wood 3, stone 2, iron ore and
     /// coal 1, those two only with a smelter) over its gatherers plus one; four times that for food when
-    /// the player has less than two minutes' worth or is starving, and a sixteenth for a good they have
+    /// the player has less than <see cref="FoodLow"/>, and a sixteenth for a good they have
     /// <see cref="Plenty"/> of. The search goes out ring by ring and stops once the most needed good is found.
     /// If there is nothing to gather within <see cref="SearchRadius"/> it goes on out to
     /// <see cref="FarSearchRadius"/>, and takes the first ring with anything in it.
@@ -635,7 +637,7 @@ public sealed partial class AutomationSystem
         foreach (var c in def.Cost)
         {
             int left = s.Stock[(int)c.Good] - c.Amount;
-            if (left < 0 || (c.Good == Good.Food && left < s.Upkeep)) return;
+            if (left < 0) return;
         }
         Issue(new TrainCommand(b.Owner, b.Id, def.Id));
     }
@@ -659,7 +661,7 @@ public sealed partial class AutomationSystem
         var s = _stats[p];
         BuildingDef? def = null;
         if (!s.HouseSite && s.Waiting > 0 && s.Population + s.Waiting >= s.Housing) def = Unlocked(p, BuildingKind.House);
-        bool foodShort = s.Starving || s.Stock[(int)Good.Food] < 100 + 2 * s.Upkeep;
+        bool foodShort = s.Stock[(int)Good.Food] < FoodShort;
         if (def == null && !s.FarmSite && foodShort && s.FreeFarmSlots == 0 && s.FarmSlots < Math.Max(2, s.Workers / 3))
             def = Unlocked(p, BuildingKind.Farm);
         if (def == null || !Economy.CanAfford(p, def.Cost)) return;
@@ -824,7 +826,6 @@ public sealed partial class AutomationSystem
         {
             var s = _stats[u.Owner[i]];
             s.Population++;
-            s.Upkeep += _sim.Content.Units[u.Def[i]].Upkeep;
             if (!IsWorker(i)) continue;
             s.Workers++;
             if (u.Job[i] == UnitJob.Gather && Harvest.Yields(u.JobBlock[i], out var good)) s.Gatherers[(int)good]++;
@@ -855,7 +856,6 @@ public sealed partial class AutomationSystem
             }
             if (b.Def.Kind == BuildingKind.Smelter) s.Smelter = true;
         }
-        for (int p = 0; p < _stats.Count; p++) _stats[p].Starving = Economy.Starving(p);
     }
 
     /// <summary>Forgets workers that are gone and places that may be tried again.</summary>

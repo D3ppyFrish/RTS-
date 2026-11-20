@@ -66,9 +66,8 @@ public class HeroTests
         Assert.Equal(50, marshal.Steady);
         Assert.Equal(3, marshal.Inspire);
         Assert.Contains(marshal, db.Unit("knight").Forms);
-        // Its gain is hit points and damage; its drawback is upkeep.
+        // Its gain is hit points and damage.
         Assert.True(marshal.MaxHp > db.Unit("knight").MaxHp && marshal.Damage > db.Unit("knight").Damage);
-        Assert.True(marshal.Upkeep > db.Unit("knight").Upkeep);
 
         var sim = Flat();
         int fresh = sim.SpawnUnit(Settlers, "knight", 20, 30);
@@ -222,9 +221,8 @@ public class HeroTests
         Assert.Equal(0, bowmaster.Steady);
         Assert.Equal(1, bowmaster.Inspire);
         Assert.Contains(bowmaster, longbow.Forms);
-        // Its gain is hit points, damage and reach; its drawback is upkeep.
+        // Its gain is hit points, damage and reach.
         Assert.True(bowmaster.MaxHp > longbow.MaxHp && bowmaster.Damage > longbow.Damage && bowmaster.Range > longbow.Range);
-        Assert.True(bowmaster.Upkeep > longbow.Upkeep);
 
         var sim = Flat();
         int a = sim.SpawnUnit(Settlers, "longbowman", 20, 30), b = sim.SpawnUnit(Settlers, "longbowman", 20, 34);
@@ -317,9 +315,8 @@ public class HeroTests
         Assert.Equal(0, lord.Volley);
         Assert.Equal(0, lord.Steady);
         Assert.Contains(lord, lancer.Forms);
-        // Its gain is hit points and damage; its drawback is upkeep.
+        // Its gain is hit points and damage.
         Assert.True(lord.MaxHp > lancer.MaxHp && lord.Damage > lancer.Damage);
-        Assert.True(lord.Upkeep > lancer.Upkeep);
 
         var sim = Flat();
         int a = sim.SpawnUnit(Settlers, "lancer", 20, 30), b = sim.SpawnUnit(Settlers, "lancer", 20, 34);
@@ -417,9 +414,8 @@ public class HeroTests
         Assert.Equal(0, master.Volley);
         Assert.Equal(0, master.Steady);
         Assert.Contains(master, demolisher.Forms);
-        // Its gain is hit points and damage; its drawback is upkeep.
+        // Its gain is hit points and damage.
         Assert.True(master.MaxHp > demolisher.MaxHp && master.Damage > demolisher.Damage);
-        Assert.True(master.Upkeep > demolisher.Upkeep);
 
         var sim = Flat();
         int a = sim.SpawnUnit(Settlers, "demolisher", 20, 30), b = sim.SpawnUnit(Settlers, "demolisher", 20, 34);
@@ -576,9 +572,8 @@ public class HeroTests
         // The battle mage gave up the terrain spells for its blasts; the Archmage has all four again.
         Assert.False(battle.EarthWall || battle.IceBridge || battle.Chasm || battle.GrowForest);
         Assert.True(arch.EarthWall && arch.IceBridge && arch.Chasm && arch.GrowForest);
-        // Its gain is hit points, damage and range; its drawback is upkeep.
+        // Its gain is hit points, damage and range.
         Assert.True(arch.MaxHp > battle.MaxHp && arch.Damage > battle.Damage && arch.Range > battle.Range);
-        Assert.True(arch.Upkeep > battle.Upkeep);
 
         var sim = Flat();
         int a = sim.SpawnUnit(Settlers, "mage", 20, 30), b = sim.SpawnUnit(Settlers, "mage", 20, 34);
