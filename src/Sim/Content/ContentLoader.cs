@@ -584,7 +584,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
-                "upkeep", "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
+                "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
                 "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
@@ -627,7 +627,6 @@ public static class ContentLoader
                 Heal = o.Int("heal", 0, 100000, 0),
                 HealTicks = Math.Max(1, (healTime * Tps).RoundToInt()),
                 HealRange = o.Decimal("healRange", Fix64.One, Fix64.FromInt(32), Fix64.FromInt(5), required: false),
-                Upkeep = o.Int("upkeep", 0, 100, 1),
                 Regen = o.Int("regen", 0, 100, 0),
                 Hero = o.Bool("hero"),
                 Rally = o.Decimal("rally", Fix64.Zero, Fix64.FromInt(32), Fix64.Zero, required: false),
@@ -1366,7 +1365,6 @@ public static class ContentLoader
                 h.Add(u.Heal);
                 h.Add(u.HealTicks);
                 h.Add(u.HealRange.Raw);
-                h.Add(u.Upkeep);
                 h.Add(u.Regen);
                 h.Add(u.Hero ? 1 : 0);
                 h.Add(u.Rally.Raw);

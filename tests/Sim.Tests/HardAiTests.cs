@@ -365,8 +365,7 @@ public class HardAiTests
             sim.Economy.PlaceFinished(0, sim.Content.Building("house"), hall.X - 12, hall.Z + 10);
             for (int k = 0; k < 8; k++) sim.SpawnUnit(0, "spearman", hall.X + k, hall.MaxZ + 4);
             for (int k = 0; k < workers; k++) sim.SpawnUnit(0, "worker", hall.X + k % 6, hall.MaxZ + 8 + k / 6);
-            for (int t = 0; t < 61 * Tps; t++) sim.Step(); // the first minute passes, and its upkeep is paid
-            Assert.False(sim.Economy.Starving(0));
+            for (int t = 0; t < 61 * Tps; t++) sim.Step(); // the first minute passes
             Array.Clear(hall.Stock);
             var ai = new AiPlayer(0, 1, AiLevel.Hard);
             var players = new[] { ai };
@@ -385,20 +384,14 @@ public class HardAiTests
     }
 
     [Fact]
-    public void HardRunsItsTownItselfAndNeverStarvesIt()
+    public void HardRunsItsTownItself()
     {
         // Two Hard players on a generated map for ten minutes.
         Simulation? last = null;
         IReadOnlyList<AiPlayer>? ais = null;
-        var starving = new List<long>();
         var result = AiMatch.Play(3, 256, 64, 256, 10 * 60 * Tps, levels: new[] { AiLevel.Hard }, fog: true, watch: (sim, players) =>
-        {
-            (last, ais) = (sim, players);
-            foreach (var ai in players)
-                if (sim.Economy.Starving(ai.Player)) starving.Add(sim.Tick);
-        });
+            (last, ais) = (sim, players));
         Assert.NotNull(last);
-        Assert.Empty(starving); // the food for each payment is put by in time
         var log = result.Log.Commands;
         // It lays out every building itself and makes each new worker automatic, rather than all of them for good.
         Assert.DoesNotContain(log, c => c.Command is AutomateAllCommand);

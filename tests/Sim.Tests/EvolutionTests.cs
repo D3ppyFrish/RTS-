@@ -105,7 +105,7 @@ public class EvolutionTests
     // --- The forms -----------------------------------------------------------------------------------
 
     [Fact]
-    public void EveryFormGivesSomethingAndTakesSomething()
+    public void EveryFormGivesSomething()
     {
         var db = ContentDb.Default;
         Assert.Equal(new[] { "knight", "pathfinder", "battle_priest", "siege_engineer" }, db.Unit("spearman").Forms.Select(f => f.Id));
@@ -119,11 +119,9 @@ public class EvolutionTests
             Assert.Equal(f.Hero ? 2 : 1, f.Tier);
             Assert.Same(db.Faction("settlers"), f.Faction);
             Assert.Null(f.TrainedAt);
-            bool drawback = f.Upkeep > from.Upkeep || f.Speed < from.Speed || f.WeakTo != null;
             bool gain = f.MaxHp > from.MaxHp || f.Damage > from.Damage || f.Range > from.Range || f.Sight > from.Sight
                         || f.Speed > from.Speed || f.Splash > from.Splash || f.Heal > 0 || f.WorkPercent > from.WorkPercent
                         || f.Role != from.Role;
-            Assert.True(drawback, $"{f.Id} has no drawback");
             Assert.True(gain, $"{f.Id} gains nothing");
         }
         Assert.Equal(new[] { 150, 500 }, db.Faction("settlers").Experience!.Levels);
@@ -175,11 +173,6 @@ public class EvolutionTests
         Assert.Equal(30, Hp(sim, priest)); // not itself
         sim.Run(2 * Tps);
         Assert.Equal(48, Hp(sim, wounded)); // still the most hurt, as a share of its hit points
-
-        // Upkeep: the priest eats 2 a minute, the spearmen 1 each.
-        Assert.Equal(5, sim.Economy.Upkeep(Settlers));
-        sim.Run(60 * Tps);
-        Assert.Equal(5, sim.Economy.Player(Settlers).Eaten[(int)Good.Food]);
     }
 
     [Fact]
@@ -273,7 +266,7 @@ public class EvolutionTests
         Assert.Equal(0, Xp(sim, orc));
 
         int soldier = sim.SpawnUnit(Settlers, "spearman", 20, 30);
-        sim.Run((int)(EconomySystem.UpkeepInterval - sim.Tick % EconomySystem.UpkeepInterval) + 1); // past the next minute
+        sim.Run((int)(EvolutionSystem.Minute - sim.Tick % EvolutionSystem.Minute) + 1); // past the next minute
         Assert.Equal(15 + 5, Xp(sim, settler));
         Assert.Equal(5, Xp(sim, soldier));
         Assert.Equal(0, Xp(sim, orc));
@@ -403,7 +396,7 @@ public class EvolutionTests
         var files = Files();
         Edit(files, "units.json", "\"id\": \"foreman\", \"name\": \"Foreman\", \"evolvesFrom\": \"worker\"", "\"id\": \"foreman\", \"name\": \"Foreman\", \"evolvesFrom\": \"peasant\"");
         Edit(files, "units.json", "\"id\": \"militia\", \"name\": \"Militia\", \"evolvesFrom\": \"worker\"", "\"id\": \"militia\", \"name\": \"Militia\", \"evolvesFrom\": \"marshal\"");
-        Edit(files, "units.json", "\"upkeep\": 3 }", "\"upkeep\": 3, \"cost\": { \"food\": 10 } }");
+        Edit(files, "units.json", "\"arms\": 2, \"legs\": 2 } },", "\"arms\": 2, \"legs\": 2 }, \"cost\": { \"food\": 10 } },");
         Edit(files, "units.json", "\"id\": \"outrider\", \"name\": \"Outrider\", \"evolvesFrom\": \"rider\", \"faction\": \"settlers\"",
             "\"id\": \"outrider\", \"name\": \"Outrider\", \"evolvesFrom\": \"rider\", \"faction\": \"orcs\"");
         Edit(files, "units.json", "\"weakTo\": { \"line_infantry\": 50 }", "\"weakTo\": { \"spears\": 50 }");
@@ -433,7 +426,7 @@ public class EvolutionTests
     public void EvolutionDataIsPartOfTheContentHash()
     {
         var files = Files();
-        Edit(files, "units.json", "\"work\": 150, \"upkeep\": 2", "\"work\": 150, \"upkeep\": 3");
+        Edit(files, "units.json", "\"work\": 150", "\"work\": 160");
         Assert.NotEqual(ContentDb.Default.Hash, ContentLoader.Load(files).Hash);
         files = Files();
         Edit(files, "factions.json", "\"perKill\": 10", "\"perKill\": 11");

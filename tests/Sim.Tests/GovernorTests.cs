@@ -197,7 +197,6 @@ public class GovernorTests
         Assert.True(Count(sim, 0, BuildingKind.Farm, built: true) >= 2, "farms");
         Assert.True(Count(sim, 0, BuildingKind.Storehouse) >= 1, "a storehouse");
         Assert.Equal(0, Count(sim, 0, BuildingKind.Barracks));
-        Assert.False(sim.Economy.Starving(0));
         Assert.Contains(given, g => g.Command is AutomateCommand);
         Assert.Contains(given, g => g.Command is TrainCommand { Unit: "worker" });
     }
@@ -213,7 +212,6 @@ public class GovernorTests
         Assert.True(kinds.Count >= 4, $"only {kinds.Count} soldiers");
         Assert.True(kinds.Distinct().Count() >= 2, "one kind of soldier only");
         Assert.Contains(given, g => g.Command is ResearchCommand);
-        Assert.False(sim.Economy.Starving(0));
 
         // The governor acts only through orders: replaying them with automation off ends the same.
         var (again, _) = RunGoverned(GovernorFocus.Army, 10, automation: false, replay: given);

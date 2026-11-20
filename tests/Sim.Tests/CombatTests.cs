@@ -485,18 +485,16 @@ public class CombatTests
     }
 
     [Fact]
-    public void HungryArmiesHaveLessMorale()
+    public void AnArmyWithNoFoodKeepsItsMorale()
     {
+        // Units eat nothing once trained (issue #21): with no food at all, morale stays full.
         var sim = Flat();
-        Place(sim, 0, "town_hall", 10, 10); // and no food
+        var hall = Place(sim, 0, "town_hall", 10, 10);
+        Array.Clear(hall.Stock);
         int spear = sim.SpawnUnit(0, "spearman", 30, 30);
-        Assert.Equal(CombatSystem.MaxMorale, sim.Combat.MoraleCap(0));
-        sim.Run(EconomySystem.UpkeepInterval + 1);
-        Assert.True(sim.Economy.Starving(0));
-        Assert.Equal(CombatSystem.StarvingMorale, sim.Combat.MoraleCap(0));
-        // It sinks a point a second down to the cap.
-        sim.Run((CombatSystem.MaxMorale - CombatSystem.StarvingMorale + 2) * Tps);
-        Assert.Equal(CombatSystem.StarvingMorale, sim.Units.Morale[Index(sim, spear)]);
+        sim.Run(3 * 60 * Tps);
+        Assert.Equal(0, sim.Economy.Stock(0, Good.Food));
+        Assert.Equal(CombatSystem.MaxMorale, sim.Units.Morale[Index(sim, spear)]);
     }
 
     // --- Buildings ---------------------------------------------------------------------------------

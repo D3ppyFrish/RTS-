@@ -130,7 +130,6 @@ public class CityStateTests
 
         // Housing: only the Settlers' own units count, not the goblins'.
         Assert.Equal(0, sim.Economy.Population(Settlers));
-        Assert.Equal(0, sim.Economy.Upkeep(Settlers));
 
         // Tribute: a caravan sets out a minute after the town was taken, with 15 iron for the town hall.
         RunUntil(sim, () => town.Caravans.Count > 0, goblins.TributeTicks + Tps, "a tribute caravan sets out");
@@ -421,7 +420,6 @@ public class CityStateTests
         var hall = Hall(sim, Settlers, food: 2000, wood: 500, iron: 500);
         var town = PlaceTown(sim);
         Conquer(sim, town, Settlers);
-        int eaten = sim.Economy.Player(Settlers).Eaten[(int)Good.Food];
         Assert.Equal(0, sim.Economy.Population(Settlers));
 
         Do(sim, new HireCommand(Settlers, town.Id, "spearman")); // not one of the goblins'
@@ -447,7 +445,7 @@ public class CityStateTests
         Do(sim, new HireCommand(Settlers, town.Id, "goblin_slinger"));
         Assert.Equal(1, town.Ready);
         Assert.Equal(25, sim.Economy.Population(Settlers));
-        Assert.Equal(2000 - 6 * 40, hall.Stock[(int)Good.Food] + sim.Economy.Player(Settlers).Eaten[(int)Good.Food] - eaten);
+        Assert.Equal(2000 - 6 * 40, hall.Stock[(int)Good.Food]);
     }
 
     // --- The town ----------------------------------------------------------------------------------
@@ -659,7 +657,6 @@ public class CityStateTests
             Assert.True(u.MaxHp > 3 * spearman.MaxHp / 2);
             Assert.True(u.Speed < spearman.Speed);
             Assert.True(u.Regen > 0);
-            Assert.Equal(3, u.Upkeep);
         });
         // Only the ogres and the swamp's bog horrors, which heal in the muck, regenerate.
         Assert.All(db.Units.Where(u => u.HiredFrom != ogres && u.Id != "bog_horror"), u => Assert.Equal(0, u.Regen));

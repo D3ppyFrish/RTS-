@@ -41,8 +41,6 @@ public sealed class PlayerEconomy
 
     /// <summary>The player's faction.</summary>
     public FactionDef Faction { get; }
-    /// <summary>The last upkeep could not feed everyone: training stops until food is back.</summary>
-    public bool Starving { get; internal set; }
     /// <summary>Workers it trains take jobs on their own (see <see cref="AutomateAllCommand"/>).</summary>
     public bool AutoWorkers { get; internal set; }
     /// <summary>The priority list its workers follow unless they have one of their own (see <see cref="Automation.WorkPriorities"/>).</summary>
@@ -53,8 +51,6 @@ public sealed class PlayerEconomy
     public int[] Gathered { get; } = new int[Goods.Count];
     /// <summary>Goods paid for buildings, roads and training.</summary>
     public int[] Spent { get; } = new int[Goods.Count];
-    /// <summary>Food eaten as upkeep (only food, but kept per good for symmetry).</summary>
-    public int[] Eaten { get; } = new int[Goods.Count];
     /// <summary>Food gathered in the last minute (see <see cref="EconomySystem.FoodPerMinute"/>).</summary>
     public int FoodGathered { get; internal set; }
 
@@ -91,8 +87,6 @@ public sealed partial class EconomySystem
 
     /// <summary>Most goods one worker carries, before techs (see <see cref="Capacity"/>).</summary>
     public const int CarryCapacity = 5;
-    /// <summary>Ticks between upkeep payments; each unit eats its type's <see cref="UnitDef.Upkeep"/> in food per payment.</summary>
-    public const int UpkeepInterval = 60 * Tps;
     /// <summary>An owner's unit within this many columns of a building stops raids on it.</summary>
     public const int GuardRadius = 8;
     public const int CaptureTicks = 10 * Tps;
@@ -127,7 +121,6 @@ public sealed partial class EconomySystem
     private readonly Simulation _sim;
     private readonly List<PlayerEconomy> _players = new();
     private int[] _population = Array.Empty<int>();
-    private int[] _upkeep = Array.Empty<int>();
     // Raiders standing at their target this tick: (building id, unit index), in unit order.
     private readonly List<(int Building, int Unit)> _raiders = new();
     // Gather targets claimed by some unit, so workers spread over a resource; rebuilt once a tick when used.
@@ -184,14 +177,9 @@ public sealed partial class EconomySystem
         return n;
     }
 
-    public bool Starving(int player) => player < _players.Count && _players[player].Starving;
-
-    /// <summary>
-    /// How much food the player gains (or, below zero, loses) a minute: the food gathered in the last
-    /// minute less what their people eat each minute (<see cref="Upkeep"/>).
-    /// </summary>
+    /// <summary>How much food the player gathered in the last minute (units eat nothing once trained).</summary>
     public int FoodPerMinute(int player) =>
-        (player >= 0 && player < _players.Count ? _players[player].FoodGathered : 0) - Upkeep(player);
+        player >= 0 && player < _players.Count ? _players[player].FoodGathered : 0;
 
     /// <summary>True if the player's workers are all automatic, those they train included (see <see cref="AutomateAllCommand"/>).</summary>
     public bool AutoWorkers(int player) => player >= 0 && player < _players.Count && _players[player].AutoWorkers;
@@ -246,7 +234,6 @@ public sealed partial class EconomySystem
         void Mix(long v) { h = (h ^ (ulong)v) * 1099511628211UL; }
         foreach (var p in _players)
         {
-            Mix(p.Starving ? 1 : 0);
             Mix(p.AutoWorkers ? 1 : 0);
             Mix(p.Rebuild ? 1 : 0);
             Mix((long)p.DefaultPriorities);
@@ -291,7 +278,6 @@ public sealed partial class EconomySystem
         }
 
         StepResearch();
-        if (_sim.Tick > 0 && _sim.Tick % UpkeepInterval == 0) PayUpkeep();
         if (_sim.Tick % Tps == 0) SampleFood();
     }
 
@@ -301,24 +287,11 @@ public sealed partial class EconomySystem
         for (int i = 0; i < U.Count; i++) players = Math.Max(players, U.Owner[i] + 1);
         foreach (var b in Buildings.All) players = Math.Max(players, b.Owner + 1);
         if (players > _players.Count) Player(players - 1);
-        if (_population.Length < players)
-        {
-            _population = new int[players];
-            _upkeep = new int[players];
-        }
+        if (_population.Length < players) _population = new int[players];
         Array.Clear(_population);
-        Array.Clear(_upkeep);
-        var defs = Content.Units;
         for (int i = 0; i < U.Count; i++)
-        {
-            if (U.Town[i] != 0) continue; // a city-state's own: no housing, no food
-            _population[U.Owner[i]]++;
-            _upkeep[U.Owner[i]] += defs[U.Def[i]].Upkeep;
-        }
+            if (U.Town[i] == 0) _population[U.Owner[i]]++; // a city-state's own take no housing
     }
-
-    /// <summary>The food the player's units eat each minute, as of the start of this tick.</summary>
-    public int Upkeep(int player) => player >= 0 && player < _upkeep.Length ? _upkeep[player] : 0;
 
     /// <summary>Once a second: what each player gathered in food since the same second a minute ago.</summary>
     private void SampleFood()
@@ -329,18 +302,6 @@ public sealed partial class EconomySystem
             int now = p.Gathered[(int)Good.Food];
             p.FoodGathered = now - p.FoodSamples[slot];
             p.FoodSamples[slot] = now;
-        }
-    }
-
-    private void PayUpkeep()
-    {
-        for (int p = 0; p < _upkeep.Length && p < _players.Count; p++)
-        {
-            int need = _upkeep[p];
-            if (need == 0 || p == Simulation.WildPlayer) continue; // wild monsters feed themselves
-            int paid = Take(p, Good.Food, need, null);
-            _players[p].Eaten[(int)Good.Food] += paid;
-            _players[p].Starving = paid < need;
         }
     }
 
@@ -696,13 +657,13 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>
-    /// Trains the first unit in the queue while the owner has room and food; it steps out at the door. A
+    /// Trains the first unit in the queue while the owner has room; it steps out at the door. A
     /// worker comes out automatic if its player has said so; on repeat, the unit is owed to the queue again.
     /// </summary>
     private void StepTraining(Building b)
     {
         int owner = b.Owner;
-        if (Starving(owner) || _population[owner] >= Housing(owner)) return;
+        if (_population[owner] >= Housing(owner)) return;
         var def = _sim.Content.Units[b.Queue[0]];
         if (b.TrainTicks < def.TrainTicks) b.TrainTicks = Math.Min(b.TrainTicks + Steps(b), def.TrainTicks);
         if (b.TrainTicks < def.TrainTicks || !AccessSpot(b, out int x, out int z, out int y)) return;

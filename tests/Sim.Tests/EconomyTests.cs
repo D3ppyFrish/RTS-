@@ -404,21 +404,19 @@ public class EconomyTests
         var p = sim.Economy.Player(0);
         int carried = 0;
         foreach (int id in ids) carried += sim.Units.CarryAmount[Index(sim, id)];
-        Assert.Equal(p.Gathered[(int)Good.Food] - p.Eaten[(int)Good.Food], store.Stock[(int)Good.Food] + carried);
+        Assert.Equal(p.Gathered[(int)Good.Food], store.Stock[(int)Good.Food] + carried);
     }
 
     [Fact]
-    public void FoodPerMinuteIsTheLastMinutesFoodLessUpkeep()
+    public void FoodPerMinuteIsTheLastMinutesFood()
     {
         var sim = Flat();
         Place(sim, 0, "storehouse", 10, 10);
         var farm = Place(sim, 0, "farm", 24, 10);
         var ids = new[] { Worker(sim, 0, 18, 20), Worker(sim, 0, 19, 20) };
         sim.Step();
-        int upkeep = sim.Economy.Upkeep(0);
-        Assert.True(upkeep > 0);
-        // Nothing gathered yet: only what the people eat.
-        Assert.Equal(-upkeep, sim.Economy.FoodPerMinute(0));
+        // Nothing gathered yet, and units eat nothing.
+        Assert.Equal(0, sim.Economy.FoodPerMinute(0));
 
         sim.Schedule(sim.Tick, new WorkCommand(0, ids, farm.Id));
         sim.Run(2 * 60 * Tps); // farmers working for a while
@@ -428,7 +426,7 @@ public class EconomyTests
         sim.Run(60 * Tps);
         int gained = p.Gathered[(int)Good.Food] - before;
         Assert.True(gained > 0, "the farm brings food in");
-        Assert.Equal(gained - sim.Economy.Upkeep(0), sim.Economy.FoodPerMinute(0));
+        Assert.Equal(gained, sim.Economy.FoodPerMinute(0));
     }
 
     [Fact]
@@ -538,28 +536,24 @@ public class EconomyTests
     }
 
     [Fact]
-    public void UnitsEatEveryMinuteAndHungerStopsTraining()
+    public void UnitsEatNothingOnceTrained()
     {
+        // Issue #21: food is a training cost only; housing is the one cap on an army.
         var sim = Flat();
         var hall = Place(sim, 0, "town_hall", 10, 10);
         hall.Stock[(int)Good.Food] = 5;
         for (int k = 0; k < 3; k++) sim.SpawnUnit(0, "spearman", 30 + k, 30);
-        sim.Run(EconomySystem.UpkeepInterval + 1);
-        Assert.Equal(2, hall.Stock[(int)Good.Food]);
-        Assert.False(sim.Economy.Starving(0));
-        sim.Run(EconomySystem.UpkeepInterval);
-        Assert.Equal(0, hall.Stock[(int)Good.Food]);
-        Assert.True(sim.Economy.Starving(0));
-        Assert.Equal(5, sim.Economy.Player(0).Eaten[(int)Good.Food]);
+        sim.Run(3 * 60 * Tps);
+        Assert.Equal(5, hall.Stock[(int)Good.Food]);
 
+        // With the food for one worker and no more, it is still trained.
         hall.Stock[(int)Good.Food] = 30;
         sim.Schedule(sim.Tick, new TrainCommand(0, hall.Id, "worker"));
-        sim.Run(400);
-        Assert.Equal(3, sim.Economy.Population(0)); // paid for, but nobody is trained while people go hungry
-        Assert.Single(hall.Queue);
-        hall.Stock[(int)Good.Food] = 100;
-        RunUntil(sim, () => sim.Economy.Population(0) == 4, 2000, "training to resume once everyone is fed");
-        Assert.False(sim.Economy.Starving(0));
+        RunUntil(sim, () => sim.Economy.Population(0) == 4, 2000, "a worker trained with no food left over");
+        Assert.Equal(0, hall.Stock[(int)Good.Food]);
+        sim.Run(2 * 60 * Tps);
+        Assert.Equal(0, hall.Stock[(int)Good.Food]);
+        Assert.Equal(4, sim.Economy.Population(0));
     }
 
     [Fact]
@@ -640,7 +634,7 @@ public class EconomyTests
 
     /// <summary>
     /// Issue #8's check: five workers gather for five minutes from the real start area of a generated
-    /// region, and every good is accounted for (stored, carried or eaten).
+    /// region, and every good is accounted for (stored or carried).
     /// </summary>
     [Fact]
     public void FiveWorkersForFiveMinutesFillTheStockpile()
@@ -655,7 +649,7 @@ public class EconomyTests
         foreach (var good in Goods.All)
         {
             int k = (int)good;
-            Assert.Equal(start[k] + p.Gathered[k] - p.Spent[k] - p.Eaten[k], totals[k]);
+            Assert.Equal(start[k] + p.Gathered[k] - p.Spent[k], totals[k]);
         }
         // Two on wood, one each on stone, iron ore and berries. Measured (wood 210 from the start's grove of
         // trees twice the size, 67 with the first trees; and the start's stone outcrop, ore outcrop and berry
@@ -664,7 +658,6 @@ public class EconomyTests
         Assert.InRange(p.Gathered[(int)Good.Stone], 8, 60);
         Assert.InRange(p.Gathered[(int)Good.IronOre], 5, 60);
         Assert.InRange(p.Gathered[(int)Good.Food], 25, 30);
-        Assert.Equal(4 * 5, p.Eaten[(int)Good.Food]); // five workers, upkeep at minutes one to four
     }
 
     private static (Simulation Sim, int[] Totals) RunFiveWorkers()

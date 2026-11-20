@@ -23,14 +23,14 @@
 // blood in it.
 // start (optional, default true): false keeps a trained unit out of the units matches start with, so it is
 // only ever trained (the healer).
-// upkeep (optional, default 1) is the food it eats a minute; work (optional, default 100) is how fast
-// it gathers, builds, farms and digs tunnels, in percent. regen (optional, default 0) is the percent of its
+// work (optional, default 100) is how fast it gathers, builds, farms and digs tunnels, in percent. regen
+// (optional, default 0) is the percent of its
 // hit points it heals each second even in a fight (the ogres); out of the fight it heals at this rate or the
 // usual one, whichever is faster.
 // Evolution: a unit with evolvesFrom is a form that unit can take once it has the experience (see
-// "experience" in factions.json): it is not trained, and a form of a form needs one level more. Each
-// form gives something and takes something: here every form has one drawback, more upkeep, less speed
-// or a weakness (weakTo). A form with fromDen (optional) is not reached through experience: a unit takes it
+// "experience" in factions.json): it is not trained, and a form of a form needs one level more. Most
+// forms simply grow stronger; some give something and take something: less speed or a weakness (weakTo).
+// A form with fromDen (optional) is not reached through experience: a unit takes it
 // only at a cleared monster den, for a faction whose prize there names it ("prizes" in a lair, below).
 // hero (optional): the unit is one of a kind: a player has at most one living, none of theirs evolves into
 // it while one lives, and it never breaks and runs. rally (optional, blocks): its own side's units within
@@ -95,10 +95,10 @@
 
   // Settler forms, first tier.
   { "id": "foreman", "name": "Foreman", "evolvesFrom": "worker", "faction": "settlers", "role": "worker",
-    "description": "A master of the trades: gathers, builds and farms half as fast again, and eats for two.",
+    "description": "A master of the trades: gathers, builds and farms half as fast again.",
     "speed": 4, "hp": 50, "model": "foreman", "damage": 3, "attackTime": 1.5, "range": 1.25, "sight": 6,
     "attack": "crush", "armor": { "torso": 1 },
-    "work": 150, "upkeep": 2 },
+    "work": 150 },
   { "id": "militia", "name": "Militia", "evolvesFrom": "worker", "faction": "settlers", "role": "line_infantry",
     "description": "A worker who has taken up the spear for good: line infantry, a little slower than a spearman. It no longer works.",
     "speed": 3.5, "hp": 70, "model": "militia", "damage": 7, "attackTime": 1, "range": 1.5, "sight": 8,
@@ -108,10 +108,9 @@
     "speed": 3, "hp": 130, "model": "knight", "damage": 12, "attackTime": 1, "range": 1.5, "sight": 8,
     "attack": "slash", "armor": { "head": 4, "torso": 5, "arms": 3, "legs": 3 }, "shield": 30 },
   { "id": "marshal", "name": "Marshal", "evolvesFrom": "knight", "faction": "settlers", "role": "heavy_infantry",
-    "description": "A hero, one of a kind: the knights' last form. Your soldiers near the Marshal lose half the heart they would at a death, get it back three times as fast, and the Marshal never runs. Eats 4 food a minute.",
+    "description": "A hero, one of a kind: the knights' last form. Your soldiers near the Marshal lose half the heart they would at a death, get it back three times as fast, and the Marshal never runs.",
     "speed": 3, "hp": 200, "model": "marshal", "damage": 14, "attackTime": 1, "range": 1.5, "sight": 10,
-    "attack": "slash", "armor": { "head": 4, "torso": 5, "arms": 3, "legs": 3 }, "shield": 30,
-    "upkeep": 4, "hero": true, "rally": 8, "steady": 50, "inspire": 3 },
+    "attack": "slash", "armor": { "head": 4, "torso": 5, "arms": 3, "legs": 3 }, "shield": 30, "hero": true, "rally": 8, "steady": 50, "inspire": 3 },
   { "id": "pathfinder", "name": "Pathfinder", "evolvesFrom": "spearman", "faction": "settlers", "role": "line_infantry",
     "description": "Runs ahead and sees far, but magic tears through light leather.",
     "speed": 6, "hp": 80, "model": "pathfinder", "damage": 8, "attackTime": 1, "range": 1.5, "sight": 14,
@@ -121,7 +120,7 @@
     "description": "Fights in the line and heals the most hurt ally nearby, and must be fed for it.",
     "speed": 4, "hp": 80, "model": "battle_priest", "damage": 8, "attackTime": 1, "range": 1.5, "sight": 8,
     "attack": "crush", "armor": { "head": 1, "torso": 3, "arms": 1, "legs": 1 },
-    "heal": 4, "healTime": 2, "healRange": 5, "upkeep": 2 },
+    "heal": 4, "healTime": 2, "healRange": 5 },
   { "id": "siege_engineer", "name": "Siege engineer", "evolvesFrom": "spearman", "faction": "settlers", "role": "siege",
     "description": "Hurls fire pots that bring walls down from afar; slow to move.",
     "speed": 3, "hp": 80, "model": "siege_engineer", "damage": 12, "attackTime": 2.5, "range": 7, "sight": 9,
@@ -131,64 +130,58 @@
     "speed": 3.5, "hp": 50, "model": "longbowman", "damage": 7, "attackTime": 1.2, "range": 12, "sight": 12,
     "attack": "pierce", "armor": { "torso": 1 } },
   { "id": "bowmaster", "name": "Bowmaster", "evolvesFrom": "longbowman", "faction": "settlers", "role": "ranged",
-    "description": "A hero, one of a kind: the longbowmen's last form. It calls the volleys: your archers near the Bowmaster hit a quarter harder, and it never runs. Eats 3 food a minute.",
+    "description": "A hero, one of a kind: the longbowmen's last form. It calls the volleys: your archers near the Bowmaster hit a quarter harder, and it never runs.",
     "speed": 3.5, "hp": 80, "model": "bowmaster", "damage": 9, "attackTime": 1.2, "range": 13, "sight": 14,
-    "attack": "pierce", "armor": { "head": 1, "torso": 2 },
-    "upkeep": 3, "hero": true, "rally": 10, "volley": 25 },
+    "attack": "pierce", "armor": { "head": 1, "torso": 2 }, "hero": true, "rally": 10, "volley": 25 },
   { "id": "ranger", "name": "Ranger", "evolvesFrom": "archer", "faction": "settlers", "role": "ranged",
     "description": "Moves fast and spots the enemy first, but cannot stand up to spears.",
     "speed": 5.5, "hp": 55, "model": "ranger", "damage": 6, "attackTime": 1.2, "range": 9, "sight": 13,
     "attack": "pierce", "armor": { "torso": 1 },
     "weakTo": { "line_infantry": 50 } },
   { "id": "lancer", "name": "Lancer", "evolvesFrom": "rider", "faction": "settlers", "role": "cavalry",
-    "description": "A heavy lance on a heavy horse, which eats a great deal.",
+    "description": "A heavy lance on a heavy horse: hits harder than any rider.",
     "speed": 8, "hp": 130, "model": "lancer", "damage": 18, "attackTime": 1, "range": 1.5, "sight": 10,
-    "attack": "pierce", "armor": { "head": 2, "torso": 4, "arms": 2, "legs": 2 },
-    "upkeep": 3 },
+    "attack": "pierce", "armor": { "head": 2, "torso": 4, "arms": 2, "legs": 2 } },
   { "id": "horselord", "name": "Horselord", "evolvesFrom": "lancer", "faction": "settlers", "role": "cavalry",
-    "description": "A hero, one of a kind: the lancers' last form. It leads the charge: your riders near the Horselord ride a quarter faster, and it never runs. Eats 4 food a minute.",
+    "description": "A hero, one of a kind: the lancers' last form. It leads the charge: your riders near the Horselord ride a quarter faster, and it never runs.",
     "speed": 8, "hp": 180, "model": "horselord", "damage": 22, "attackTime": 1, "range": 1.5, "sight": 11,
-    "attack": "pierce", "armor": { "head": 3, "torso": 5, "arms": 3, "legs": 3 },
-    "upkeep": 4, "hero": true, "rally": 12, "spur": 25 },
+    "attack": "pierce", "armor": { "head": 3, "torso": 5, "arms": 3, "legs": 3 }, "hero": true, "rally": 12, "spur": 25 },
   { "id": "outrider", "name": "Outrider", "evolvesFrom": "rider", "faction": "settlers", "role": "cavalry",
     "description": "A light horse that outruns everything and sees far, but arrows find it easily.",
     "speed": 10, "hp": 120, "model": "outrider", "damage": 12, "attackTime": 1, "range": 1.5, "sight": 14,
     "attack": "slash", "armor": { "torso": 1 },
     "weakTo": { "ranged": 50 } },
   { "id": "tunneller", "name": "Tunneller", "evolvesFrom": "sapper", "faction": "settlers", "role": "sapper",
-    "description": "Digs tunnels twice as fast. Hungry work.",
+    "description": "Digs tunnels twice as fast.",
     "speed": 4, "hp": 60, "model": "tunneller", "damage": 5, "attackTime": 1.5, "range": 1.25, "sight": 7,
     "attack": "crush", "armor": { "head": 1, "torso": 1 },
-    "work": 200, "upkeep": 2 },
+    "work": 200 },
   { "id": "demolisher", "name": "Demolisher", "evolvesFrom": "sapper", "faction": "settlers", "role": "sapper",
     "description": "Powder charges bring buildings down faster, and are heavy to carry.",
     "speed": 3.5, "hp": 70, "model": "demolisher", "damage": 9, "attackTime": 1.5, "range": 1.25, "sight": 7,
     "attack": "crush", "armor": { "head": 1, "torso": 2 } },
   { "id": "breachmaster", "name": "Breachmaster", "evolvesFrom": "demolisher", "faction": "settlers", "role": "sapper",
-    "description": "A hero, one of a kind: the demolishers' last form. It works the breach: your sappers near the Breachmaster bring buildings down and dig half as fast again, and it never runs. Eats 3 food a minute.",
+    "description": "A hero, one of a kind: the demolishers' last form. It works the breach: your sappers near the Breachmaster bring buildings down and dig half as fast again, and it never runs.",
     "speed": 3.5, "hp": 120, "model": "breachmaster", "damage": 12, "attackTime": 1.5, "range": 1.25, "sight": 8,
-    "attack": "crush", "armor": { "head": 2, "torso": 3, "arms": 1 },
-    "upkeep": 3, "hero": true, "rally": 10, "undermine": 50 },
+    "attack": "crush", "armor": { "head": 2, "torso": 3, "arms": 1 }, "hero": true, "rally": 10, "undermine": 50 },
   { "id": "battle_mage", "name": "Battle mage", "evolvesFrom": "mage", "faction": "settlers", "role": "caster",
     "description": "Bigger blasts over a wider area, fed by a bigger appetite.",
     "speed": 4, "hp": 45, "model": "battle_mage", "damage": 14, "attackTime": 2, "range": 8, "sight": 9, "splash": 2,
-    "blast": true, "attack": "crush",
-    "upkeep": 2 },
+    "blast": true, "attack": "crush" },
   { "id": "archmage", "name": "Archmage", "evolvesFrom": "battle_mage", "faction": "settlers", "role": "caster",
-    "description": "A hero, one of a kind: the battle mages' last form. It casts all four terrain spells again and quickens the spells: your casters near the Archmage are ready to cast again in half the time, and it never runs. Eats 3 food a minute.",
+    "description": "A hero, one of a kind: the battle mages' last form. It casts all four terrain spells again and quickens the spells: your casters near the Archmage are ready to cast again in half the time, and it never runs.",
     "speed": 4, "hp": 90, "model": "archmage", "damage": 16, "attackTime": 2, "range": 9, "sight": 10, "splash": 2,
     "blast": true, "attack": "crush", "armor": { "torso": 1 },
-    "earthWall": true, "iceBridge": true, "chasm": true, "growForest": true,
-    "upkeep": 3, "hero": true, "rally": 10, "quicken": 100 },
+    "earthWall": true, "iceBridge": true, "chasm": true, "growForest": true, "hero": true, "rally": 10, "quicken": 100 },
   { "id": "seer", "name": "Seer", "evolvesFrom": "mage", "faction": "settlers", "role": "caster",
     "description": "Sees and strikes from far off, but walks slowly.",
     "speed": 3.5, "hp": 45, "model": "seer", "damage": 10, "attackTime": 2, "range": 11, "sight": 15, "splash": 1.5,
     "attack": "crush" },
   // Taken only at a cleared wolf den (see "den" in factions.json).
   { "id": "wolfheart", "name": "Wolfheart", "evolvesFrom": "spearman", "faction": "settlers", "role": "line_infantry", "fromDen": true,
-    "description": "Wears the pelt of the pack it beat: hunts fast and hits hard, and eats like a wolf.",
+    "description": "Wears the pelt of the pack it beat: hunts fast and hits hard.",
     "speed": 5.5, "hp": 110, "model": "wolfheart", "damage": 12, "attackTime": 1, "range": 1.5, "sight": 12,
-    "attack": "pierce", "upkeep": 3, "armor": { "head": 1, "torso": 2 } },
+    "attack": "pierce", "armor": { "head": 1, "torso": 2 } },
 
   // Monsters.
   { "id": "wolf", "name": "Wolf", "role": "monster",
@@ -243,10 +236,9 @@
 
   // Orc units that come from taming.
   { "id": "wolf_rider", "name": "Wolf rider", "faction": "orcs", "role": "cavalry",
-    "description": "An orc spearman on a wolf it beat: twice as fast, and the wolf eats too.",
+    "description": "An orc spearman on a wolf it beat: twice as fast.",
     "speed": 9, "hp": 110, "model": "wolf_rider", "damage": 11, "attackTime": 1, "range": 1.5, "sight": 11,
-    "attack": "pierce", "armor": { "head": 1, "torso": 2, "legs": 1 },
-    "upkeep": 2 },
+    "attack": "pierce", "armor": { "head": 1, "torso": 2, "legs": 1 } },
 
   // Trade with the city-states.
   { "id": "caravan", "name": "Caravan", "role": "trader",
@@ -271,11 +263,11 @@
   { "id": "ogre_brute", "name": "Ogre brute", "role": "line_infantry", "hiredFrom": "ogres",
     "description": "Twice a man's height with a tree-trunk club: slow, but each blow crushes, and its wounds close as it fights.",
     "speed": 3.5, "hp": 260, "model": "ogre_brute", "damage": 18, "attackTime": 1.6, "range": 1.5, "sight": 9,
-    "attack": "crush", "armor": { "head": 1, "torso": 2, "arms": 1, "legs": 1 }, "regen": 1, "upkeep": 3,
+    "attack": "crush", "armor": { "head": 1, "torso": 2, "arms": 1, "legs": 1 }, "regen": 1,
     "cost": { "food": 120, "iron": 30 } },
   { "id": "ogre_hurler", "name": "Ogre hurler", "role": "ranged", "hiredFrom": "ogres",
     "description": "Heaves boulders over the line: slow to throw, hard on walls and on anyone standing near where it lands.",
     "speed": 3.5, "hp": 160, "model": "ogre_hurler", "damage": 16, "attackTime": 3, "range": 9, "sight": 11,
-    "blast": true, "attack": "crush", "splash": 1, "armor": { "torso": 1 }, "regen": 1, "upkeep": 3,
+    "blast": true, "attack": "crush", "splash": 1, "armor": { "torso": 1 }, "regen": 1,
     "cost": { "food": 120, "stone": 60 } }
 ]

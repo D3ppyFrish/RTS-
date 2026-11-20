@@ -40,8 +40,8 @@ public readonly record struct Shot(long Tick, int Attacker, Fix64 FromX, int Fro
 /// Morale: when a unit dies, every ally near it loses a share of <see cref="Shock"/> (a bigger share the
 /// fewer they are) and every enemy near it gains a share of <see cref="Cheer"/>. A unit whose morale falls
 /// to <see cref="BreakMorale"/> routs: it drops what it was doing and runs home, or away from the enemy, for
-/// <see cref="RoutTicks"/>, ignoring orders, then rallies. Morale comes back a point a second, but no higher
-/// than <see cref="StarvingMorale"/> while its player is starving. Monsters never break.
+/// <see cref="RoutTicks"/>, ignoring orders, then rallies. Morale comes back a point a second, up to
+/// <see cref="MaxMorale"/>. Monsters never break.
 ///
 /// Healing over time: a unit that has gone a while without hitting anything or being hit gets back a share of
 /// its most hit points every second, a bigger share at home, near a town hall or house of its own (the role
@@ -90,8 +90,6 @@ public sealed partial class CombatSystem
     public const int BreakMorale = 25;
     /// <summary>Morale a unit has at least when it rallies after routing.</summary>
     public const int RallyMorale = 50;
-    /// <summary>The most morale units have while their player is starving.</summary>
-    public const int StarvingMorale = 50;
     /// <summary>Morale lost, shared among the allies near a unit that dies (itself included).</summary>
     public const int Shock = 150;
     /// <summary>Morale gained, shared among the enemies near a unit that dies.</summary>
@@ -1095,7 +1093,7 @@ public sealed partial class CombatSystem
             // A gain lifts morale no higher than the cap, and never lowers morale that is over it.
             // A hero near it takes some of the sting out of a loss (see Rally).
             if (change < 0 && _anyRally) change = change * (100 - _steady[j]) / 100;
-            u.Morale[j] = change < 0 ? Math.Max(0, m + change) : Math.Max(m, Math.Min(MoraleCap(u.Owner[j]), m + change));
+            u.Morale[j] = change < 0 ? Math.Max(0, m + change) : Math.Max(m, Math.Min(MaxMorale, m + change));
         }
         // The dead drop the relics and the staff they bore where they fell; a tamed monster keeps its own.
         for (int k = _dead.Count - 1; k >= 0; k--)
@@ -1371,9 +1369,6 @@ public sealed partial class CombatSystem
         foreach (int j in _near) _cheer[j] += gain;
     }
 
-    /// <summary>The most morale the player's units can have: less while they are starving.</summary>
-    public int MoraleCap(int player) => _sim.Economy.Starving(player) ? StarvingMorale : MaxMorale;
-
     /// <summary>
     /// Works out which units this tick's heroes steady (<see cref="UnitDef.Rally"/>): each living hero that is
     /// not beaten steadies its own side's units within its rally range (and <see cref="MoraleHeight"/> levels),
@@ -1451,15 +1446,15 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>
-    /// Once a second: morale comes back a point (more near a hero, see <see cref="Rally"/>), or sinks a point
-    /// toward the cap while starving.
+    /// Once a second: morale comes back a point (more near a hero, see <see cref="Rally"/>), up to
+    /// <see cref="MaxMorale"/>.
     /// </summary>
     private void RecoverMorale()
     {
         var u = U;
         for (int i = 0; i < u.Count; i++)
         {
-            int cap = MoraleCap(u.Owner[i]);
+            const int cap = MaxMorale;
             if (u.Morale[i] < cap) u.Morale[i] = Math.Min(cap, u.Morale[i] + (_anyRally ? _inspire[i] : 1));
             else if (u.Morale[i] > cap) u.Morale[i]--;
         }
