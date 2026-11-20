@@ -845,6 +845,14 @@ public partial class Main : Node3D
         Put("wolf_rider", 0.4f, 6.4f, 5);
         Put("knight", -1.6f, 8.6f, 0);
         Put("knight", 1.8f, 8.4f, -35);
+        // Sawyer's Meshy AI troops in a row behind the knights.
+        Put("worker", -6f, 11.5f, 0);
+        Put("militia", -4f, 11.5f, 0);
+        Put("spearman", -2f, 11.5f, 0);
+        Put("pathfinder", 0f, 11.5f, 0);
+        Put("archer", 2f, 11.5f, 0);
+        Put("mage", 4f, 11.5f, 0);
+        Put("rider", 6.5f, 11.5f, 0);
         Put("dusk_warden", -8.5f, -1.5f, 40);
         GD.Print($"Showcase at {cx},{cz}");
     }

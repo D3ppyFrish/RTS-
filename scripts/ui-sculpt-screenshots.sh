@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Close-up look check for the sculpted, finely detailed models (game/scripts/Detail/Sculpted.cs): --showcase
 # stands a stone golem with an orc on its back, an orc spearman, an orc worker, two wolves, a wolf rider and
-# two knights (imported from a GLB) together, and the shots go from far (plain models) through the middle level to the finest voxels.
+# two knights and a row of troops imported from GLBs (Meshy AI) together, and the shots go from far (plain models) through the middle level to the finest voxels.
 # Saves PNGs to OUT_DIR, and the same shots with detail off (the plain models) as *-plain.png.
 # Usage: scripts/ui-sculpt-screenshots.sh [OUT_DIR]
 # CI: skip (close-up look checks, run by hand when the looks change)
@@ -29,6 +29,9 @@ shot $OUT/sculpt-spearman$suffix.png
 camera 107,285 -25 18 6
 wait 5
 shot $OUT/sculpt-rider$suffix.png
+camera 106,290 -8 14 8
+wait 5
+shot $OUT/sculpt-imported$suffix.png
 camera 106,281 15 35 45
 wait 5
 shot $OUT/sculpt-far$suffix.png
@@ -44,5 +47,5 @@ LOG="$OUT/ui-sculpt.log"
 
 fail() { echo "UI sculpt test failed: $1" >&2; exit 1; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step failed: $(grep '^Input script' "$LOG")"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 10 ] || fail "missing screenshots"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 12 ] || fail "missing screenshots"
 echo "UI sculpt screenshot test OK: $OUT"
