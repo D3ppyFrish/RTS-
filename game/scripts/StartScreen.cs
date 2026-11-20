@@ -14,7 +14,7 @@ namespace Rts.Game;
 /// <see cref="Rts.Sim.Conditions"/>), and whether it is a test mode match (see <see cref="TestPanel"/>).
 /// </summary>
 public sealed record MatchSetup(ulong Seed, int Player, bool Computer, bool Fog, AiLevel Level = AiLevel.Normal, bool DayNight = false,
-    bool TestMode = false);
+    bool TestMode = false, bool Dominion = false);
 
 /// <summary>
 /// The start screen: pick your faction, the world seed, whether a computer player plays the other side and
@@ -22,7 +22,7 @@ public sealed record MatchSetup(ulong Seed, int Player, bool Computer, bool Fog,
 /// east, and each player has their faction (see <see cref="ContentDb.Factions"/>), so picking a faction
 /// picks the player and the start too. Shown when the game starts without command-line options (or with
 /// --menu), and again from the end of a match. Its controls are named for scripted input: start_ plus the
-/// faction id (start_settlers, start_orcs), start_seed, start_new_seed, start_computer, start_level, start_fog, start_daynight, start_test,
+/// faction id (start_settlers, start_orcs), start_seed, start_new_seed, start_computer, start_level, start_fog, start_daynight, start_dominion, start_test,
 /// start_button and start_quit.
 /// </summary>
 public partial class StartScreen : CanvasLayer
@@ -43,6 +43,7 @@ public partial class StartScreen : CanvasLayer
     private CheckButton _fog = null!;
     private CheckButton _dayNight = null!;
     private CheckButton _test = null!;
+    private CheckButton _dominion = null!;
     private OptionButton _level = null!;
 
     /// <summary>The computer player's levels on the start screen, in the order shown.</summary>
@@ -182,6 +183,20 @@ public partial class StartScreen : CanvasLayer
         _dayNight.AddThemeFontSizeOverride("font_size", 16);
         column.AddChild(_dayNight);
 
+        _dominion = new CheckButton
+        {
+            Name = "start_dominion",
+            Text = "Win by holding the ancient sites",
+            ButtonPressed = setup.Dominion,
+            FocusMode = Control.FocusModeEnum.None,
+            SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin,
+            TooltipText = "The old ruins are ancient sites. Soldiers standing alone in one for 15 seconds take it, and it stays yours " +
+                          "until a rival takes it. Hold more than half of them for 3 minutes and you win. " +
+                          "Off: only knocking down every rival town hall wins.",
+        };
+        _dominion.AddThemeFontSizeOverride("font_size", 16);
+        column.AddChild(_dominion);
+
         _test = new CheckButton
         {
             Name = "start_test",
@@ -235,7 +250,7 @@ public partial class StartScreen : CanvasLayer
     /// <summary>The choices as they stand, for scripted tests.</summary>
     public string Describe() =>
         $"player={_player} seed={(_seed.Text.Length > 0 ? _seed.Text : "random")} computer={(_computer.ButtonPressed ? 1 : 0)} " +
-        $"level={SelectedLevel.ToString().ToLowerInvariant()} fog={(_fog.ButtonPressed ? 1 : 0)} test={(_test.ButtonPressed ? 1 : 0)}";
+        $"level={SelectedLevel.ToString().ToLowerInvariant()} fog={(_fog.ButtonPressed ? 1 : 0)} test={(_test.ButtonPressed ? 1 : 0)} dominion={(_dominion.ButtonPressed ? 1 : 0)}";
 
     private AiLevel SelectedLevel => _level.Selected >= 0 ? Levels[_level.Selected].Level : AiLevel.Normal;
 
@@ -248,7 +263,8 @@ public partial class StartScreen : CanvasLayer
     private MatchSetup CurrentSetup()
     {
         ulong seed = ulong.TryParse(_seed.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var s) ? s : RandomSeed();
-        return new MatchSetup(seed, _player, _computer.ButtonPressed, _fog.ButtonPressed, SelectedLevel, _dayNight.ButtonPressed, _test.ButtonPressed);
+        return new MatchSetup(seed, _player, _computer.ButtonPressed, _fog.ButtonPressed, SelectedLevel, _dayNight.ButtonPressed, _test.ButtonPressed,
+            _dominion.ButtonPressed);
     }
 
     private Button FactionButton(FactionDef faction, int player)

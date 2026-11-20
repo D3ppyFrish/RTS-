@@ -8,7 +8,9 @@ namespace Rts.Sim;
 /// (<see cref="Simulation.PlaceStartingBuildings"/>) is in the match. A player with no finished town hall
 /// left standing is out, and so is a player who surrenders (<see cref="SurrenderCommand"/>). When one
 /// player is left in, they win. If the last players go out on the same tick, the match ends in a draw. A
-/// match with fewer than two players (a sandbox, most tests) never ends. Checked at the end of every tick.
+/// match with fewer than two players (a sandbox, most tests) never ends. Checked at the end of every tick. With
+/// <see cref="Simulation.Dominion"/> on, a player holding most of the ancient sites long enough wins at once
+/// (<see cref="World.DominionSystem"/>).
 /// </summary>
 public sealed class MatchSystem
 {
@@ -29,6 +31,8 @@ public sealed class MatchSystem
     public bool Over { get; private set; }
     /// <summary>The player who won, or -1 (no result yet, or a draw).</summary>
     public int Winner { get; private set; } = -1;
+    /// <summary>True if the winner won by dominion, holding most of the ancient sites (see <see cref="World.DominionSystem"/>).</summary>
+    public bool ByDominion { get; private set; }
     /// <summary>The tick the match ended on, or -1.</summary>
     public long EndTick { get; private set; } = -1;
 
@@ -64,6 +68,18 @@ public sealed class MatchSystem
         if (k >= 0 && _outAt[k] < 0) _outAt[k] = _sim.Tick;
     }
 
+    /// <summary>The player held most of the ancient sites long enough: they win, and every other player still in goes out.</summary>
+    internal void WinByDominion(int player)
+    {
+        if (Over || !InPlay(player)) return;
+        for (int k = 0; k < _players.Count; k++)
+            if (_players[k] != player && _outAt[k] < 0) _outAt[k] = _sim.Tick;
+        Over = true;
+        Winner = player;
+        ByDominion = true;
+        EndTick = _sim.Tick;
+    }
+
     internal void Step()
     {
         if (Over || _players.Count < 2) return;
@@ -93,6 +109,6 @@ public sealed class MatchSystem
         ulong h = 0xCBF29CE484222325UL;
         for (int k = 0; k < _players.Count; k++)
             h = (h ^ (ulong)_players[k] ^ (ulong)_outAt[k] << 8) * 0x100000001B3UL;
-        return h ^ (ulong)(Winner + 1) << 56 ^ (ulong)EndTick;
+        return h ^ (ulong)(Winner + 1) << 56 ^ (ulong)EndTick ^ (ByDominion ? 0x40000000000000UL : 0);
     }
 }

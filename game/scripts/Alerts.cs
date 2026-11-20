@@ -169,9 +169,18 @@ public partial class Alerts : VBoxContainer
             GameEventKind.TributeSent => ($"Tribute is on its way from the {Lower(content.CityStates[e.Def].Name)}", Hud.PlainColour),
             GameEventKind.UnitLostToHazard => ($"Your {Lower(content.Units[e.Def].Name)} {HazardDeath(e)}", AttackColour),
             GameEventKind.RuinSearched => (RuinFound(e), GoodColour),
+            GameEventKind.SiteTaken => ($"You took an ancient site: you hold {_sim.Sites.Held(e.Player)} of {_sim.Ruins.Ruins.Count}", GoodColour),
+            GameEventKind.SiteLost => ($"The {Faction(e.Subject)} took one of your ancient sites", AttackColour),
+            GameEventKind.DominionStarted => e.Subject == e.Player
+                ? ($"You hold most of the ancient sites: hold them {Minutes(e.Def)} minutes to win", GoodColour)
+                : ($"The {Faction(e.Subject)} hold most of the ancient sites: they win in {Minutes(e.Def)} minutes", AttackColour),
             _ => (null, Hud.PlainColour),
         };
     }
+
+    private string Faction(int player) => _sim.Economy.Player(player).Faction.Name;
+
+    private static int Minutes(int ticks) => ticks / (60 * Simulation.TicksPerSecond);
 
     /// <summary>What your units found in a ruin: "Found a sealed granary in the ruin: 200 food, 60 wood".</summary>
     private string? RuinFound(GameEvent e)

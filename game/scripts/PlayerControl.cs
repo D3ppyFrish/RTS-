@@ -1433,6 +1433,14 @@ public partial class PlayerControl : Node
         _rig.Position = new Vector3(town.X + 0.5f, town.Y, town.Z + 0.5f) * ChunkMesher.BlockSize;
     }
 
+    /// <summary>Moves the camera to the ancient site (ruin index).</summary>
+    public void FocusSite(int index)
+    {
+        if (index < 0 || index >= _sim.Ruins.Ruins.Count) return;
+        var ruin = _sim.Ruins.Ruins[index];
+        _rig.Position = new Vector3(ruin.X + 0.5f, ruin.Y + 1, ruin.Z + 0.5f) * ChunkMesher.BlockSize;
+    }
+
     /// <summary>Starts researching a tech at your town hall.</summary>
     public void Research(TechDef tech) => _sim.Schedule(_sim.Tick, new ResearchCommand(LocalPlayer, tech.Id));
 
@@ -2019,6 +2027,8 @@ public partial class PlayerControl : Node
                $"saplings={_sim.Economy.Saplings.Count} trees_grown={_sim.Economy.TreesGrown} " +
                $"ruin_near={NearRuin()?.Index ?? -1} ruin_searching={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Ruins.Searching(u.Id[i]) >= 0)} " +
                $"ruins_found={_sim.Ruins.Ruins.Count(r => r.SearchedBy == LocalPlayer)} " +
+               $"sites_active={(_sim.Sites.Active ? 1 : 0)} sites_held={_sim.Sites.Held(LocalPlayer)} sites_leader={_sim.Sites.Leader} " +
+               $"sites_left={_sim.Sites.TicksLeft} sites_claim={_sim.Ruins.Ruins.Max(r => (int?)r.Claim) ?? 0} " +
                $"ore={stock[(int)Good.IronOre]} coal={stock[(int)Good.Coal]} " +
                $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +

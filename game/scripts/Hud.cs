@@ -78,6 +78,11 @@ public partial class Hud : CanvasLayer
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
+    // The ancient sites, with dominion on: who holds how many, and the dominion clock (click to look at the next site).
+    private Button _sitesButton = null!;
+    private int _nextSite;
+    // The leader the sites button was last framed for (-1 nobody, -2 not yet).
+    private int _sitesFramedFor = -2;
     private VBoxContainer _cityBox = null!;
     private HBoxContainer _hireRow = null!;
     private readonly List<(Button Button, UnitDef Unit)> _hireButtons = new();
@@ -239,6 +244,23 @@ public partial class Hud : CanvasLayer
             row.AddChild(b);
             _cityButtons.Add((b, town));
         }
+
+        _sitesButton = MakeButton("");
+        _sitesButton.Name = "sites_button";
+        _sitesButton.ToggleMode = false;
+        _sitesButton.Icon = UiIcons.Get("ruin");
+        _sitesButton.Visible = false;
+        _sitesButton.Pressed += () =>
+        {
+            int n = _sim.Ruins.Ruins.Count;
+            if (n == 0) return;
+            _control.FocusSite(_nextSite % n);
+            _nextSite = (_nextSite + 1) % n;
+        };
+        // Under the middle of the top bar, which is full.
+        Place(_sitesButton, Control.LayoutPreset.CenterTop, 0, 54);
+        _sitesButton.GrowHorizontal = Control.GrowDirection.Both;
+        bar.GetParent().AddChild(_sitesButton);
 
         _pauseButton = MakeButton("Pause");
         _pauseButton.Pressed += () => _clock.TogglePause();
@@ -1081,6 +1103,7 @@ public partial class Hud : CanvasLayer
         RefreshChasm();
         RefreshGrowForest();
         RefreshCities();
+        RefreshSites();
     }
 
     /// <summary>A build key as it is written on its button.</summary>
@@ -1194,6 +1217,38 @@ public partial class Hud : CanvasLayer
             button.Text = !yours ? $"{unit.Name}: break the totem first" : $"Hire {unit.Name.ToLowerInvariant()}   {CostText(unit.Cost)}";
             button.Disabled = !yours || selected.Ready == 0 || !room || !econ.CanAfford(player, unit.Cost);
         }
+    }
+
+    /// <summary>
+    /// The ancient sites button: how many you hold of how many, or, while someone's dominion clock runs, who wins in
+    /// how long. Its tooltip says what everyone holds and how dominion works.
+    /// </summary>
+    private void RefreshSites()
+    {
+        var sites = _sim.Sites;
+        _sitesButton.Visible = sites.Active;
+        if (!sites.Active) return;
+        int me = PlayerControl.LocalPlayer, count = _sim.Ruins.Ruins.Count;
+        if (sites.Leader >= 0)
+        {
+            int left = (sites.TicksLeft + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
+            string who = sites.Leader == me ? "You win" : $"{_sim.Economy.Player(sites.Leader).Faction.Name} win";
+            _sitesButton.Text = $"{who} in {left / 60}:{left % 60:00}";
+        }
+        else _sitesButton.Text = $"Sites {sites.Held(me)}/{count}";
+        if (_sitesFramedFor != sites.Leader)
+        {
+            _sitesFramedFor = sites.Leader;
+            Frame(_sitesButton, sites.Leader < 0 ? PlainColour
+                : sites.Leader == me ? MatchEndPanel.VictoryColor.Darkened(0.45f) : MatchEndPanel.DefeatColor.Darkened(0.45f));
+        }
+        var held = new StringBuilder();
+        foreach (int p in _sim.Match.Players)
+            held.Append($"\n{(p == me ? "You" : _sim.Economy.Player(p).Faction.Name)}: {sites.Held(p)}");
+        _sitesButton.TooltipText =
+            $"Ancient sites: the {count} old ruins. Soldiers standing alone inside one for {DominionSystem.ClaimTicks / Simulation.TicksPerSecond} s take it, " +
+            $"and it stays yours until a rival does the same. Hold {sites.Needed} of them for {DominionSystem.DominionTicks / (60 * Simulation.TicksPerSecond)} minutes and you win." +
+            $"\nHeld:{held}\nClick to look at the next site.";
     }
 
     /// <summary>Who holds the town, as the player sees it: neutral, yours, or another player's.</summary>

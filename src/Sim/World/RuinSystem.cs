@@ -26,6 +26,15 @@ public sealed class AncientRuin
     internal readonly int[] Work = new int[Simulation.WildPlayer + 1];
 
     public bool Searched => SearchedBy >= 0;
+
+    /// <summary>As an ancient site (see <see cref="DominionSystem"/>): the player who holds it, or -1.</summary>
+    public int Holder { get; internal set; } = -1;
+    /// <summary>The tick the holder took it, or -1.</summary>
+    public long HeldSince { get; internal set; } = -1;
+    /// <summary>The player whose fighting units are taking it, or -1.</summary>
+    public int Claimant { get; internal set; } = -1;
+    /// <summary>Ticks the claimant has had it to themselves, of <see cref="DominionSystem.ClaimTicks"/>.</summary>
+    public int Claim { get; internal set; }
 }
 
 /// <summary>
