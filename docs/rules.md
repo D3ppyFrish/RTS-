@@ -483,6 +483,7 @@ Orc units earn none.
   | Longbowman (level 2) | the **Bowmaster**, a hero (below) |
   | Lancer (level 2) | the **Horselord**, a hero (below) |
   | Demolisher (level 2) | the **Breachmaster**, a hero (below) |
+  | Battle mage (level 2) | the **Archmage**, a hero (below) |
 
 - **Heroes** (`"hero": true` in `data/units.json`, `HeroTests`): the last forms are heroes, one of a kind. The
   first is the **Marshal**, the knight's form at level 2 (500 experience): 200 hit points, 14 damage, a knight's
@@ -516,7 +517,17 @@ Orc units earn none.
   sappers and sappers out of its reach gain nothing, and it ends when it falls. In the game it wears a
   gold-banded helm with a lamp at the brow, carries a great powder keg bound in gold with a pennant in its owner's
   colour on its back, and a gilded war pick.
-  The design doc's other heroes (the mage and worker lines', with abilities of their own) come later.
+  The fifth is the **Archmage**, the battle mage's form at level 2 (500 experience): 90 hit points, 16 damage over
+  a 2-block blast, range 9 and sight 10, a little cloth armour, and it eats 3 food a minute. The battle mage gave
+  up the terrain spells for its blasts; the Archmage casts all four again (Earth Wall, Ice Bridge, Chasm and Grow
+  Forest, see [Terrain magic](#terrain-magic)). It is one of a kind on its own like the others and never breaks.
+  It **quickens the spells**: a spell cast by its own side's casters within 10 blocks (and 4 levels), itself
+  included, is ready again in half the time, 20 seconds instead of 40 (`"rally": 10`, `"quicken": 100`; where the
+  Archmage stood when the tick began counts). A mage that casts out of its reach, other players' casters and
+  soldiers gain nothing, a wait already begun keeps its length, and it ends when the Archmage falls. In the game it
+  wears a tall hat banded in gold, a mantle in its owner's colour with gilded pauldrons, and carries a gold-shod
+  staff crowned with a gold ring round a shining crystal.
+  The design doc's other heroes (the worker line's, with abilities of its own) come later.
 - **Evolving** (`EvolveCommand`) is immediate and free. The unit keeps its id, place, orders, experience
   and the same share of its hit points; a worker that becomes militia drops its job and load and is no
   longer automatic. Experience is never spent, so a form of a form needs only the next level.
@@ -528,7 +539,7 @@ Orc units earn none.
   takes on its own. A single unit's panel shows its level and experience. Forms wear a gold belt.
   `--xp=N` starts your units with N experience, to try the forms at once.
 
-`--xp=500` starts your units at the second level, to try the Marshal, the Bowmaster, the Horselord and the Breachmaster at once. `EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
+`--xp=500` starts your units at the second level, to try the Marshal, the Bowmaster, the Horselord, the Breachmaster and the Archmage at once. `EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
 a knight, which hits an orc spearman three times as hard as before (heavy infantry beats line infantry)
 but walks a quarter slower. All the numbers are first guesses for playtesting.
 

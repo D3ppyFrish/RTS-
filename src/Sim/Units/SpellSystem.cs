@@ -217,6 +217,12 @@ public sealed class SpellSystem
         _ => HasEarthWall(i),
     };
 
+    /// <summary>
+    /// Ticks unit i waits after casting a spell now: <see cref="CooldownTicks"/>, cut near a hero that quickens
+    /// the spells (see <see cref="UnitDef.Quicken"/>).
+    /// </summary>
+    public int WaitAfterSpell(int i) => CooldownTicks * 100 / (100 + _sim.Combat.QuickenOf(i));
+
     /// <summary>The tick unit i can next cast a spell (now or earlier if it is ready).</summary>
     public long ReadyAt(int i) => i >= 0 && _ready.TryGetValue(U.Id[i], out long t) ? t : 0;
 
@@ -573,7 +579,8 @@ public sealed class SpellSystem
         if (spell == Spell.Chasm && !Open(i, n, x1, z1, x2, z2)) return;
         if (spell == Spell.GrowForest && !Grow(n, x1, z1, x2, z2)) return;
         if (spell == Spell.EarthWall) Raise(i, n, x1, z1, x2, z2);
-        foreach (int k in casters) _ready[U.Id[k]] = _sim.Tick + CooldownTicks;
+        // A caster near a hero that quickens the spells (as it stood when the tick began) waits less.
+        foreach (int k in casters) _ready[U.Id[k]] = _sim.Tick + WaitAfterSpell(k);
     }
 
     private void Raise(int i, int casters, int x1, int z1, int x2, int z2)
