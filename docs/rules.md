@@ -481,6 +481,7 @@ Orc units earn none.
   | Mage | battle mage (14 damage over a 2-block blast, eats 2), seer (range 11, sight 15, slower) |
   | Knight (level 2) | the **Marshal**, a hero (below) |
   | Longbowman (level 2) | the **Bowmaster**, a hero (below) |
+  | Lancer (level 2) | the **Horselord**, a hero (below) |
 
 - **Heroes** (`"hero": true` in `data/units.json`, `HeroTests`): the last forms are heroes, one of a kind. The
   first is the **Marshal**, the knight's form at level 2 (500 experience): 200 hit points, 14 damage, a knight's
@@ -498,6 +499,14 @@ Orc units earn none.
   (`"rally": 10`, `"volley": 25`), to units and buildings alike; foot soldiers, other players' archers and
   archers out of its reach gain nothing, and the bonus ends when it falls. In the game it wears a gold
   circlet over its hood, carries a gilded great bow and a short pennant in its owner's colour on its back.
+  The third is the **Horselord**, the lancer's form at level 2 (500 experience): 180 hit points, 22 damage,
+  sight 11, heavy barding, and it eats 4 food a minute. It is one of a kind on its own like the others and never
+  breaks. It **leads the charge**: its own side's cavalry within 12 blocks (and 4 levels), itself included,
+  move a quarter faster (`"rally": 12`, `"spur": 25`), on roads too. A formation keeps its slowest member's pace,
+  spurred for the riders near the Horselord, so riders riding with it stay together and arrive sooner. Foot
+  soldiers, other players' riders and riders out of its reach gain nothing, and the spur ends when it falls.
+  In the game it rides a barded horse with gilded trim, wears a gold helm with a crest in its owner's colour
+  and carries a gilded lance with a pennon.
   The design doc's other heroes (one for each line, with abilities of their own) come later.
 - **Evolving** (`EvolveCommand`) is immediate and free. The unit keeps its id, place, orders, experience
   and the same share of its hit points; a worker that becomes militia drops its job and load and is no
@@ -510,7 +519,7 @@ Orc units earn none.
   takes on its own. A single unit's panel shows its level and experience. Forms wear a gold belt.
   `--xp=N` starts your units with N experience, to try the forms at once.
 
-`--xp=500` starts your units at the second level, to try the Marshal and the Bowmaster at once. `EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
+`--xp=500` starts your units at the second level, to try the Marshal, the Bowmaster and the Horselord at once. `EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
 a knight, which hits an orc spearman three times as hard as before (heavy infantry beats line infantry)
 but walks a quarter slower. All the numbers are first guesses for playtesting.
 

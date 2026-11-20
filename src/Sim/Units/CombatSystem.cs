@@ -132,6 +132,9 @@ public sealed partial class CombatSystem
     private int[] _inspire = Array.Empty<int>();
     private int[] _volley = Array.Empty<int>();
     private bool _anyRally;
+    // This tick's heroes that lead the charge (see UnitDef.Spur), with where they stood when the tick began:
+    // the movement after combat speeds up their own side's cavalry near them.
+    private readonly List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Spur)> _spurs = new();
     // This tick's bleeding (see StepBleeding): hit points lost to wounds, landing with the tick's hits.
     private int[] _bled = Array.Empty<int>();
     private readonly List<int> _dead = new();
@@ -1366,8 +1369,8 @@ public sealed partial class CombatSystem
     /// <summary>
     /// Works out which units this tick's heroes steady (<see cref="UnitDef.Rally"/>): each living hero that is
     /// not beaten steadies its own side's units within its rally range (and <see cref="MoraleHeight"/> levels),
-    /// itself included, and calls the volleys of the ranged ones among them. A unit near several takes the best
-    /// of each.
+    /// itself included, calls the volleys of the ranged ones among them and spurs on the cavalry (see
+    /// <see cref="SpurOf"/>). A unit near several takes the best of each.
     /// </summary>
     private void Rally()
     {
@@ -1378,12 +1381,14 @@ public sealed partial class CombatSystem
             Array.Clear(_volley);
         }
         _anyRally = false;
+        _spurs.Clear();
         for (int h = 0; h < u.Count; h++)
         {
             var def = Def(h);
             if (def.Rally == Fix64.Zero || u.Hp[h] <= 0 || u.Subdued[h]) continue;
             if (!_anyRally) Array.Fill(_inspire, 1, 0, u.Count);
             _anyRally = true;
+            if (def.Spur > 0) _spurs.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Spur));
             Near(u.X[h], u.Y[h], u.Z[h], def.Rally, MoraleHeight, u.Owner[h], allies: true, _near);
             foreach (int j in _near)
             {
@@ -1392,6 +1397,27 @@ public sealed partial class CombatSystem
                 if (Def(j).Role == UnitRole.Ranged) _volley[j] = Math.Max(_volley[j], def.Volley);
             }
         }
+    }
+
+    /// <summary>
+    /// Percent faster unit i moves this tick because a hero of its own side that leads the charge
+    /// (<see cref="UnitDef.Spur"/>) stood within its rally range (and <see cref="MoraleHeight"/> levels) when
+    /// the tick began: cavalry only, the best of the heroes near it, else 0. Read by the movement after combat.
+    /// </summary>
+    public int SpurOf(int i)
+    {
+        if (_spurs.Count == 0) return 0;
+        var u = U;
+        if ((uint)i >= (uint)u.Count || Def(i).Role != UnitRole.Cavalry) return 0;
+        int best = 0;
+        foreach (var s in _spurs)
+        {
+            if (s.Owner != u.Owner[i] || s.Spur <= best || Math.Abs(u.Y[i] - s.Y) > MoraleHeight) continue;
+            Fix64 dx = u.X[i] - s.X, dz = u.Z[i] - s.Z;
+            if (Fix64.Abs(dx) > s.Range || Fix64.Abs(dz) > s.Range) continue;
+            if (dx * dx + dz * dz <= s.Range * s.Range) best = s.Spur;
+        }
+        return best;
     }
 
     /// <summary>

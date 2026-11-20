@@ -122,9 +122,14 @@ public sealed class UnitMovement
     private void Steer(UnitStore u, int i, ref Fix64 vx, ref Fix64 vz)
     {
         var full = _sim.Economy.SpeedPerTick(u.Owner[i], _sim.Content.Units[u.Def[i]]);
+        int spur = _sim.Combat.SpurOf(i); // a hero leading the charge near it
+        if (spur > 0) full = full * (100 + spur) / 100;
         var speed = full;
         bool formation = u.Formation[i] && u.Order[i] == UnitOrder.Move;
-        if (formation && u.SpeedCap[i] > Fix64.Zero) speed = Fix64.Min(speed, u.SpeedCap[i]);
+        // A spurred formation keeps the slowest member's pace, a spurred one's faster (riders round the hero
+        // stay together).
+        if (formation && u.SpeedCap[i] > Fix64.Zero)
+            speed = Fix64.Min(speed, spur > 0 ? u.SpeedCap[i] * (100 + spur) / 100 : u.SpeedCap[i]);
         var underfoot = _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] - 1, u.Z[i].FloorToInt());
         if (underfoot == BlockType.Road) { speed *= 2; full *= 2; }
         else if (BlockInfo.IsRubble(underfoot)) { speed /= 2; full /= 2; } // picking a way over a heap of rubble
