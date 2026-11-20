@@ -232,7 +232,7 @@ public sealed partial class EconomySystem
         // A tick of work for each 100 of the unit's work speed (JobTimer keeps the rest): on the site, or on
         // the upgrade of a building that stands.
         var u = U;
-        u.JobTimer[i] += Content.Units[u.Def[i]].WorkPercent;
+        u.JobTimer[i] += WorkOf(i);
         for (; u.JobTimer[i] >= 100; u.JobTimer[i] -= 100)
         {
             if (b.Upgrade != null) b.UpgradeWork = Math.Min(b.UpgradeWork + 1, b.Upgrade.BuildTicks);
@@ -577,7 +577,13 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>Ticks of work that take unit i, at its work speed, what take others <paramref name="ticks"/>.</summary>
-    private int ByWork(int i, int ticks) => Math.Max(1, ticks * 100 / Content.Units[U.Def[i]].WorkPercent);
+    private int ByWork(int i, int ticks) => Math.Max(1, ticks * 100 / WorkOf(i));
+
+    /// <summary>
+    /// Unit i's work speed in percent: its own (<see cref="UnitDef.WorkPercent"/>), driven faster near a hero that
+    /// drives the work (see <see cref="CombatSystem.HasteOf"/>, as the hero stood last tick).
+    /// </summary>
+    public int WorkOf(int i) => Content.Units[U.Def[i]].WorkPercent * (100 + _sim.Combat.HasteOf(i)) / 100;
 
     private void SetPhase(int i, JobPhase phase)
     {

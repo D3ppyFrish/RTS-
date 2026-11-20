@@ -10,7 +10,7 @@ namespace Rts.Sim.Tests;
 /// <summary>
 /// Heroes: the Settlers' last forms, one of a kind, that steady the soldiers around them (the design doc's
 /// "units near a hero hold longer"). The first is the Marshal, a knight's form at level 2; then the Bowmaster
-/// (longbowmen), the Horselord (lancers), the Breachmaster (demolishers) and the Archmage (battle mages).
+/// (longbowmen), the Horselord (lancers), the Breachmaster (demolishers), the Archmage (battle mages) and the Master Builder (foremen).
 /// </summary>
 public class HeroTests
 {
@@ -192,12 +192,13 @@ public class HeroTests
         var files = Files();
         Edit(files, "units.json", "\"hero\": true, \"rally\": 8, ", "\"hero\": true, ");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
-        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\", \"volley\", \"spur\", \"undermine\" or \"quicken\" but no \"rally\"", e.Errors);
+        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\", \"volley\", \"spur\", \"undermine\", \"quicken\" or \"hasten\" but no \"rally\"", e.Errors);
         Assert.Single(e.Errors);
 
         foreach (var (old, changed) in new[] { ("\"rally\": 8", "\"rally\": 9"), ("\"steady\": 50", "\"steady\": 40"),
                                                 ("\"inspire\": 3", "\"inspire\": 2"), ("\"hero\": true", "\"hero\": false"),
-                                                ("\"undermine\": 50", "\"undermine\": 40"), ("\"quicken\": 100", "\"quicken\": 50") })
+                                                ("\"undermine\": 50", "\"undermine\": 40"), ("\"quicken\": 100", "\"quicken\": 50"),
+                                                ("\"hasten\": 50", "\"hasten\": 40") })
         {
             files = Files();
             Edit(files, "units.json", old, changed);
@@ -687,5 +688,147 @@ public class HeroTests
         int at = text.IndexOf(old, StringComparison.Ordinal);
         Assert.True(at >= 0, $"{file} does not contain {old}");
         files[file] = text[..at] + replacement + text[(at + old.Length)..];
+    }
+
+    /// <summary>The Master Builder: the foreman's form at level 2, the workers' hero, who still works.</summary>
+    [Fact]
+    public void TheMasterBuilderIsAForemansFormAtTheSecondLevelAndIsAHero()
+    {
+        var db = ContentDb.Default;
+        var master = db.Unit("master_builder");
+        var foreman = db.Unit("foreman");
+        Assert.Same(foreman, master.EvolvesFrom);
+        Assert.Equal(2, master.Tier);
+        Assert.True(master.Hero);
+        Assert.Equal(UnitRole.Worker, master.Role);
+        Assert.Equal(Fix64.FromInt(10), master.Rally);
+        Assert.Equal(50, master.Hasten);
+        Assert.Equal(0, master.Undermine);
+        Assert.Equal(0, master.Quicken);
+        Assert.Equal(0, master.Steady);
+        Assert.Contains(master, foreman.Forms);
+        // Its gain is hit points and work speed, and it still works.
+        Assert.True(master.MaxHp > foreman.MaxHp && master.WorkPercent > foreman.WorkPercent);
+
+        var sim = Flat();
+        int a = sim.SpawnUnit(Settlers, "foreman", 20, 30), b = sim.SpawnUnit(Settlers, "foreman", 20, 34);
+        sim.Units.Xp[Index(sim, a)] = 499;
+        Assert.False(sim.Evolution.CanEvolve(Index(sim, a), master)); // level 1 only
+        sim.Units.Xp[Index(sim, a)] = 500;
+        sim.Units.Xp[Index(sim, b)] = 500;
+        // The other heroes do not stand in its way: each is one of a kind on its own.
+        Evolve(sim, Veteran(sim, 40, 40), "marshal");
+        sim.Schedule(sim.Tick, new EvolveCommand(Settlers, new[] { a, b }, "master_builder"));
+        sim.Step();
+        Assert.Equal("master_builder", DefId(sim, a));
+        Assert.Equal("foreman", DefId(sim, b));
+        Assert.True(sim.Evolution.WaitsForHero(Index(sim, b)));
+        Assert.Equal(80, sim.Units.Hp[Index(sim, a)]);
+    }
+
+    /// <summary>A foreman with the experience, made the Master Builder.</summary>
+    private static int MasterBuilder(Simulation sim, int x, int z)
+    {
+        int id = sim.SpawnUnit(Settlers, "foreman", x, z);
+        sim.Units.Xp[Index(sim, id)] = 500;
+        Evolve(sim, id, "master_builder");
+        Assert.Equal("master_builder", DefId(sim, id));
+        return id;
+    }
+
+    /// <summary>
+    /// Workers of its own side near the Master Builder (itself included) work half as fast again, on top of their
+    /// own work speed; soldiers beside it, workers out of its reach and the enemy's workers work as before, and it
+    /// ends when it falls.
+    /// </summary>
+    [Fact]
+    public void WorkersNearTheMasterBuilderWorkFaster()
+    {
+        var sim = Flat();
+        int mb = MasterBuilder(sim, 30, 30);
+        int near = sim.SpawnUnit(Settlers, "worker", 35, 30);
+        int foreman = sim.SpawnUnit(Settlers, "foreman", 30, 35);
+        int spear = sim.SpawnUnit(Settlers, "spearman", 30, 33);
+        int far = sim.SpawnUnit(Settlers, "worker", 70, 70);
+        int enemy = sim.SpawnUnit(Orcs, "worker", 27, 30);
+        foreach (int id in new[] { mb, near, foreman, spear, far })
+            sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { id }, UnitStance.Hold));
+        sim.Schedule(sim.Tick, new StanceCommand(Orcs, new[] { enemy }, UnitStance.Hold));
+        sim.Step(); // worked out with the tick
+        int Haste(int id) => sim.Combat.HasteOf(Index(sim, id));
+        int Work(int id) => sim.Economy.WorkOf(Index(sim, id));
+        Assert.Equal(50, Haste(near));
+        Assert.Equal(50, Haste(foreman));
+        Assert.Equal(50, Haste(mb));
+        Assert.Equal(0, Haste(far));
+        Assert.Equal(0, Haste(spear));
+        Assert.Equal(0, Haste(enemy));
+        Assert.Equal(150, Work(near));
+        Assert.Equal(225, Work(foreman));
+        Assert.Equal(300, Work(mb));
+        Assert.Equal(100, Work(far));
+        Assert.Equal(100, Work(enemy));
+
+        Kill(sim, mb);
+        sim.Step();
+        Assert.Equal(0, Haste(near));
+        Assert.Equal(100, Work(near));
+    }
+
+    /// <summary>
+    /// A real job: the same two workers put up a house sooner with the Master Builder standing by (idle, so it
+    /// only drives the work).
+    /// </summary>
+    [Fact]
+    public void WorkersBesideTheMasterBuilderBuildAHouseSooner()
+    {
+        int TicksToBuild(bool withMaster)
+        {
+            var sim = Flat();
+            var hall = sim.Economy.PlaceFinished(Settlers, sim.Content.Building("town_hall"), 10, 10)!;
+            hall.Stock[(int)Rts.Sim.Economy.Good.Wood] = 100;
+            var workers = new[] { sim.SpawnUnit(Settlers, "worker", 28, 29), sim.SpawnUnit(Settlers, "worker", 29, 29) };
+            if (withMaster)
+            {
+                int mb = MasterBuilder(sim, 27, 35);
+                sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { mb }, UnitStance.Hold));
+            }
+            sim.Schedule(sim.Tick, new BuildCommand(Settlers, workers, "house", 30, 30));
+            sim.Step();
+            var site = Assert.Single(sim.Buildings.All, b => b.Def.Id == "house");
+            long start = sim.Tick;
+            while (!site.Active && sim.Tick - start < 300 * Tps) sim.Step();
+            Assert.True(site.Active);
+            return (int)(sim.Tick - start);
+        }
+        int with = TicksToBuild(true), without = TicksToBuild(false);
+        Assert.True(with * 100 < without * 85, $"with the Master Builder {with} ticks, without {without}");
+    }
+
+    /// <summary>A worker digging out a stone mound beside the Master Builder finishes sooner.</summary>
+    [Fact]
+    public void AWorkerBesideTheMasterBuilderDigsOutAMoundSooner()
+    {
+        int TicksToGather(bool withMaster)
+        {
+            var sim = Flat();
+            var hall = sim.Economy.PlaceFinished(Settlers, sim.Content.Building("town_hall"), 20, 20)!;
+            int before = hall.Stock[(int)Rts.Sim.Economy.Good.Stone];
+            int w = sim.SpawnUnit(Settlers, "worker", 27, 22);
+            if (withMaster)
+            {
+                int mb = MasterBuilder(sim, 26, 26);
+                sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { mb }, UnitStance.Hold));
+            }
+            TestWorlds.Box(sim.World, 29, Ground + 1, 21, 30, Ground + 2, 22, BlockType.Stone);
+            sim.Schedule(sim.Tick, new GatherCommand(Settlers, new[] { w }, 29, Ground + 2, 21));
+            sim.Step();
+            long start = sim.Tick;
+            while (sim.Units.Job[Index(sim, w)] != UnitJob.None && sim.Tick - start < 300 * Tps) sim.Step();
+            Assert.Equal(8, hall.Stock[(int)Rts.Sim.Economy.Good.Stone] - before);
+            return (int)(sim.Tick - start);
+        }
+        int with = TicksToGather(true), without = TicksToGather(false);
+        Assert.True(with * 100 < without * 90, $"with the Master Builder {with} ticks, without {without}");
     }
 }
