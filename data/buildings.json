@@ -41,6 +41,9 @@
 // works is what a round of work gives and workTime the seconds a round takes (both needed, and only for a
 // quarry); with several goods, each worker's rounds give them in turn (iron_ore 4 then coal 2, and again), so
 // the list sets both which goods and how much of each. Gathering techs make the rounds quicker.
+// Kind shrine: its worker (up to workerSlots) brings it crystal from storage, and it channels each crystal
+// into mana for its owner, channelTime seconds a crystal (at its speed). Spells cost mana. mana (a shrine
+// only, needed) is the mana one crystal gives.
 // shore: true means it must stand at the water's edge, with open water in a column right beside its footprint
 // (the fishing hut, a quarry whose rounds give food).
 [
@@ -88,6 +91,14 @@
   { "id": "foundry", "name": "Foundry", "kind": "smelter", "size": [5, 5], "wallHeight": 4,
     "wall": "stone_brick", "roof": "stone_brick", "chimney": true, "icon": "smelter",
     "cost": { "stone": 60, "wood": 20 }, "buildTime": 30, "workerSlots": 2, "light": 4, "sturdy": 2, "speed": 200 },
+  { "id": "shrine", "name": "Shrine", "kind": "shrine", "size": [3, 3], "wallHeight": 3,
+    "wall": "stone_brick", "roof": "roof_tile",
+    "cost": { "stone": 40, "wood": 20 }, "buildTime": 25, "workerSlots": 1, "requires": "basic_magic", "light": 3,
+    "mana": 10, "channelTime": 4, "upgrade": "sanctum" },
+  { "id": "sanctum", "name": "Crystal sanctum", "kind": "shrine", "size": [5, 5], "wallHeight": 4,
+    "wall": "stone_brick", "roof": "roof_tile", "icon": "shrine",
+    "cost": { "stone": 80, "wood": 30 }, "buildTime": 40, "workerSlots": 2, "light": 4, "sturdy": 2, "speed": 200,
+    "mana": 10, "channelTime": 4 },
   { "id": "quarry", "name": "Quarry", "kind": "quarry", "size": [5, 5], "wallHeight": 2,
     "wall": "planks", "footing": "stone_brick", "roof": "thatch", "icon": "stone",
     "cost": { "wood": 60 }, "buildTime": 30, "workerSlots": 3, "works": { "stone": 5 }, "workTime": 12 },

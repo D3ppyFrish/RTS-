@@ -60,6 +60,12 @@ public enum BuildingKind : byte
     /// and carry them to storage. It never runs out. A fishing hut must stand at the water's edge (<see cref="BuildingDef.Shore"/>).
     /// </summary>
     Quarry,
+    /// <summary>
+    /// A shrine: its worker brings it crystal from storage, and it channels each crystal into
+    /// <see cref="BuildingDef.Mana"/> mana for its owner over <see cref="BuildingDef.ChannelTicks"/>. Mana is what
+    /// spells cost (see <see cref="Units.SpellSystem.ManaCost"/>).
+    /// </summary>
+    Shrine,
 }
 
 /// <summary>One block of a building, relative to its footprint corner and base level.</summary>
@@ -125,6 +131,10 @@ public sealed class BuildingDef
     /// (see <see cref="Economy.EconomySystem.Plant"/>); 0 for every other building.
     /// </summary>
     public int Plants { get; init; }
+    /// <summary>A shrine: mana each crystal it channels gives its owner; 0 for every other building.</summary>
+    public int Mana { get; init; }
+    /// <summary>A shrine: ticks it takes to channel one crystal (before its <see cref="Speed"/>); 0 for every other building.</summary>
+    public int ChannelTicks { get; init; }
     /// <summary>Unit ids this building trains (the units whose <c>trainedAt</c> names it), in data order.</summary>
     public string[] Trains { get; internal set; } = Array.Empty<string>();
     /// <summary>Techs the player must have before placing it.</summary>

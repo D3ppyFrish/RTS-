@@ -43,6 +43,7 @@ public static class Harvest
             case BlockType.LooseRock: good = Good.Stone; return true;
             case BlockType.IronOre: good = Good.IronOre; return true;
             case BlockType.Coal: good = Good.Coal; return true;
+            case BlockType.Crystal: good = Good.Crystal; return true;
             case BlockType.BerryBush: good = Good.Food; return true;
             // Rubble gives back what it was made of.
             case BlockType.StoneRubble: good = Good.Stone; return true;
@@ -93,7 +94,7 @@ public static class Harvest
     /// made of), until the heap is gone.
     /// Digging plain ground is a one-off.
     /// </summary>
-    public static bool Repeats(BlockType b) => b is BlockType.Stone or BlockType.IronOre or BlockType.Coal
+    public static bool Repeats(BlockType b) => b is BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal
         or BlockType.BerryBush || BlockInfo.IsTrunk(b) || BlockInfo.IsRubble(b);
 
     /// <summary>Taken whole and carried away in one load (a bush), rather than a block at a time.</summary>

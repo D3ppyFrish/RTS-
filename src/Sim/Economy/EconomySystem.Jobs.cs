@@ -315,7 +315,8 @@ public sealed partial class EconomySystem
 
     /// <summary>
     /// A smelter's hauler: brings its iron to storage, and keeps it supplied with ore and coal from storage
-    /// (enough for two ingots), one load at a time.
+    /// (enough for two ingots), one load at a time. A shrine's keeper keeps it supplied with crystal the same
+    /// way (<see cref="ShrineCrystal"/> at a time); a shrine makes no goods to carry back.
     /// </summary>
     private void StepHaul(int i)
     {
@@ -345,7 +346,7 @@ public sealed partial class EconomySystem
             return;
         }
         // At the smelter: drop off ore or coal, or pick up iron.
-        if (u.CarryAmount[i] > 0 && u.Carry[i] is Good.IronOre or Good.Coal)
+        if (u.CarryAmount[i] > 0 && Feeds(smelter, u.Carry[i]))
         {
             smelter.Stock[(int)u.Carry[i]] += u.CarryAmount[i];
             u.CarryAmount[i] = 0;
@@ -360,12 +361,19 @@ public sealed partial class EconomySystem
         DecideHaul(i, smelter);
     }
 
+    /// <summary>Crystal a shrine's keeper keeps in it: one load.</summary>
+    public const int ShrineCrystal = CarryCapacity;
+
+    /// <summary>The good goes into the building to be worked: ore and coal into a smelter, crystal into a shrine.</summary>
+    private static bool Feeds(Building b, Good g) =>
+        b.Def.Kind == BuildingKind.Shrine ? g == Good.Crystal : g is Good.IronOre or Good.Coal;
+
     private void DecideHaul(int i, Building smelter)
     {
         var u = U;
         if (u.CarryAmount[i] > 0)
         {
-            if (u.Carry[i] is Good.IronOre or Good.Coal) SetPhase(i, JobPhase.ToWork);
+            if (Feeds(smelter, u.Carry[i])) SetPhase(i, JobPhase.ToWork);
             else GoToStorage(i);
             return;
         }
@@ -377,9 +385,14 @@ public sealed partial class EconomySystem
         int ux = u.X[i].FloorToInt(), uz = u.Z[i].FloorToInt();
         Building? from = null;
         var need = Good.IronOre;
-        if (smelter.Stock[(int)Good.IronOre] < 2 * OrePerIngot)
+        if (smelter.Def.Kind == BuildingKind.Shrine)
+        {
+            need = Good.Crystal;
+            if (smelter.Stock[(int)Good.Crystal] < ShrineCrystal) from = NearestStorage(u.Owner[i], ux, uz, Good.Crystal);
+        }
+        else if (smelter.Stock[(int)Good.IronOre] < 2 * OrePerIngot)
             from = NearestStorage(u.Owner[i], ux, uz, Good.IronOre);
-        if (from == null && smelter.Stock[(int)Good.Coal] < 2 * CoalPerIngot)
+        if (from == null && smelter.Def.Kind == BuildingKind.Smelter && smelter.Stock[(int)Good.Coal] < 2 * CoalPerIngot)
         {
             need = Good.Coal;
             from = NearestStorage(u.Owner[i], ux, uz, Good.Coal);

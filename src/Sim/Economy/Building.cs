@@ -71,7 +71,7 @@ public sealed class Building
     public RaidKind Raid { get; internal set; }
     public int RaidTicks { get; internal set; }
 
-    /// <summary>Ticks left on the ingot being smelted, or 0.</summary>
+    /// <summary>Ticks left on the ingot being smelted (at a shrine, the crystal being channelled), or 0.</summary>
     public int SmeltTicks { get; internal set; }
 
     /// <summary>Units waiting to be trained (unit definition indexes), first in front.</summary>

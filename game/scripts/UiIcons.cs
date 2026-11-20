@@ -36,6 +36,7 @@ public static class UiIcons
         Good.Stone => "stone",
         Good.IronOre => "iron_ore",
         Good.Coal => "coal",
+        Good.Crystal => "crystal",
         _ => "iron",
     });
 
@@ -177,6 +178,24 @@ public static class UiIcons
         {
             "............", "............", "............", "....kkkkkk..", "...kllllllk.", "..kliiiiilk.",
             ".kkkkkkkkIk.", ".kliiiiilkIk", ".kiiiiiiikk.", ".kIIIIIIIk..", ".kkkkkkkkk..", "............",
+        },
+        // Crystal: a cluster of cyan points growing from a rock.
+        ["crystal"] = new[]
+        {
+            "............", ".....kk.....", "....ktwk....", "..k.ktwk.k..", ".ktkkttkktk.", ".ktwkttkwtk.",
+            ".kttkttktvk.", "..ktkvtkvk..", "..kvkvvkvk..", ".kkkkkkkkkk.", "kSsssssssSSk", ".kkkkkkkkkk.",
+        },
+        // Mana: a glowing violet drop with a spark in it.
+        ["mana"] = new[]
+        {
+            ".....kk.....", ".....kvk....", "....kvvk....", "...kvvvvk...", "...kvwvvk...", "..kvwtvvvk..",
+            "..kvttvvvk..", ".kvvtvvvvvk.", ".kvvvvvvvvk.", "..kvvvvvvk..", "...kkvvkk...", ".....kk.....",
+        },
+        // Shrine: a stone plinth under a pointed roof, a crystal glowing in it.
+        ["shrine"] = new[]
+        {
+            ".....kk.....", "....kSSk....", "...kSSSSk...", "..kkkkkkkk..", "..ks.kk.sk..", "..ks.kt.sk..",
+            "..kskttksk..", "..kskwtksk..", "..ks.kk.sk..", ".kkkkkkkkkk.", "kSsssssssSSk", "kkkkkkkkkkkk",
         },
         ["people"] = new[]
         {
