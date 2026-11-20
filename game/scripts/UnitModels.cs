@@ -377,6 +377,17 @@ public static class UnitModels
             .Humanoid(lift: 6, legs: false).Rank(6).Cape(6, 4)
             .Box(-2, 16, -2, 1, 20, 1, Steel).Box(-2, 17, 1, 1, 17, 1, Dark)             // helm and visor
             .Box(3, 12, 1, 3, 28, 1, Wood).Box(3, 29, 1, 3, 31, 1, Steel).Box(3, 12, 0, 3, 13, 2, Steel), // heavy lance
+        // A hero: a lancer on a barded horse with gilded trim, a crested gold helm, a long cape and a
+        // gilded lance flying a pennon in its owner's colour, so its riders see whom to follow.
+        "horselord" => new Builder().Mount(Horse)
+            .Box(-3, 5, 2, 2, 9, 5, Steel).Box(-3, 9, 2, 2, 9, 5, Gold)                  // barding with a gold rim
+            .Box(-1, 11, 7, 0, 12, 9, Steel).Box(-1, 13, 8, 0, 13, 8, Gold)              // chanfron and its spike
+            .Box(-3, 4, -6, 2, 9, 1, Team).Box(-3, 4, -6, 2, 4, 1, Gold)                 // caparison with a gold hem
+            .Humanoid(lift: 6, legs: false).Rank(6).Cape(6, 5)
+            .Box(-2, 16, -2, 1, 20, 1, Gold).Box(-2, 17, 1, 1, 17, 1, Dark)              // gold helm and visor
+            .Box(-1, 21, -2, 0, 23, 1, Team)                                             // crest
+            .Box(3, 12, 1, 3, 29, 1, Gold).Box(3, 30, 1, 3, 32, 1, Steel).Box(3, 12, 0, 3, 13, 2, Steel) // gilded lance
+            .Box(3, 25, -3, 3, 28, 0, Team),                                             // pennon
         "outrider" => new Builder().Mount(PaleHorse)
             .Box(-2, 8, -1, 1, 9, 0, TeamDark)                                           // light saddle cloth
             .Humanoid(lift: 6, legs: false).Rank(6)

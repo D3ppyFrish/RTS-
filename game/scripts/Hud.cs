@@ -721,6 +721,8 @@ public partial class Hud : CanvasLayer
                       $"and get {form.Inspire} back a second instead of 1");
         if (form.Rally > Fix64.Zero && form.Volley > 0 && (form.Rally != from.Rally || form.Volley != from.Volley))
             lines.Add($"Calls the volleys: your ranged units within {Number(form.Rally)} blocks deal {form.Volley}% more damage");
+        if (form.Rally > Fix64.Zero && form.Spur > 0 && (form.Rally != from.Rally || form.Spur != from.Spur))
+            lines.Add($"Leads the charge: your riders within {Number(form.Rally)} blocks move {form.Spur}% faster");
         return string.Join("\n", lines);
     }
 

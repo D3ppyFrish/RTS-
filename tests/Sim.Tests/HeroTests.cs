@@ -9,7 +9,8 @@ namespace Rts.Sim.Tests;
 
 /// <summary>
 /// Heroes: the Settlers' last forms, one of a kind, that steady the soldiers around them (the design doc's
-/// "units near a hero hold longer"). The first is the Marshal, a knight's form at level 2.
+/// "units near a hero hold longer"). The first is the Marshal, a knight's form at level 2; then the Bowmaster
+/// (longbowmen) and the Horselord (lancers).
 /// </summary>
 public class HeroTests
 {
@@ -192,7 +193,7 @@ public class HeroTests
         var files = Files();
         Edit(files, "units.json", "\"hero\": true, \"rally\": 8, ", "\"hero\": true, ");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
-        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\" or \"volley\" but no \"rally\"", e.Errors);
+        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\", \"volley\" or \"spur\" but no \"rally\"", e.Errors);
         Assert.Single(e.Errors);
 
         foreach (var (old, changed) in new[] { ("\"rally\": 8", "\"rally\": 9"), ("\"steady\": 50", "\"steady\": 40"),
@@ -297,6 +298,105 @@ public class HeroTests
             return (int)(sim.Tick - start);
         }
         Assert.True(TicksToKill(true) < TicksToKill(false));
+    }
+
+    /// <summary>The Horselord: the lancer's form at level 2, a third hero of its own.</summary>
+    [Fact]
+    public void TheHorselordIsALancersFormAtTheSecondLevelAndIsAHero()
+    {
+        var db = ContentDb.Default;
+        var lord = db.Unit("horselord");
+        var lancer = db.Unit("lancer");
+        Assert.Same(lancer, lord.EvolvesFrom);
+        Assert.Equal(2, lord.Tier);
+        Assert.True(lord.Hero);
+        Assert.Equal(UnitRole.Cavalry, lord.Role);
+        Assert.Equal(Fix64.FromInt(12), lord.Rally);
+        Assert.Equal(25, lord.Spur);
+        Assert.Equal(0, lord.Volley);
+        Assert.Equal(0, lord.Steady);
+        Assert.Contains(lord, lancer.Forms);
+        // Its gain is hit points and damage; its drawback is upkeep.
+        Assert.True(lord.MaxHp > lancer.MaxHp && lord.Damage > lancer.Damage);
+        Assert.True(lord.Upkeep > lancer.Upkeep);
+
+        var sim = Flat();
+        int a = sim.SpawnUnit(Settlers, "lancer", 20, 30), b = sim.SpawnUnit(Settlers, "lancer", 20, 34);
+        sim.Units.Xp[Index(sim, a)] = 499;
+        Assert.False(sim.Evolution.CanEvolve(Index(sim, a), lord)); // level 1 only
+        sim.Units.Xp[Index(sim, a)] = 500;
+        sim.Units.Xp[Index(sim, b)] = 500;
+        // The other heroes do not stand in its way: each is one of a kind on its own.
+        Evolve(sim, Veteran(sim, 40, 40), "marshal");
+        sim.Schedule(sim.Tick, new EvolveCommand(Settlers, new[] { a, b }, "horselord"));
+        sim.Step();
+        Assert.Equal("horselord", DefId(sim, a));
+        Assert.Equal("lancer", DefId(sim, b));
+        Assert.True(sim.Evolution.WaitsForHero(Index(sim, b)));
+        Assert.Equal(180, sim.Units.Hp[Index(sim, a)]);
+    }
+
+    /// <summary>
+    /// Cavalry of its own side near the Horselord (itself included) ride a quarter faster; foot soldiers beside
+    /// it, riders out of its reach and the enemy's riders ride as before, and the spur ends when it falls.
+    /// </summary>
+    [Fact]
+    public void RidersNearTheHorselordAreSpurredOn()
+    {
+        var sim = Flat();
+        int hl = sim.SpawnUnit(Settlers, "lancer", 30, 30);
+        sim.Units.Xp[Index(sim, hl)] = 500;
+        Evolve(sim, hl, "horselord");
+        int near = sim.SpawnUnit(Settlers, "rider", 36, 30);
+        int spear = sim.SpawnUnit(Settlers, "spearman", 30, 33);
+        int far = sim.SpawnUnit(Settlers, "rider", 70, 70);
+        int enemy = sim.SpawnUnit(Orcs, "rider", 30, 36);
+        sim.Step(); // the spur is worked out with the tick
+        int Spur(int id) => sim.Combat.SpurOf(Index(sim, id));
+        Assert.Equal(25, Spur(near));
+        Assert.Equal(25, Spur(hl));
+        Assert.Equal(0, Spur(far));
+        Assert.Equal(0, Spur(spear));
+        Assert.Equal(0, Spur(enemy));
+
+        Kill(sim, hl);
+        sim.Step();
+        Assert.Equal(0, Spur(near));
+    }
+
+    /// <summary>
+    /// A real ride: riders beside the Horselord cover the same ground sooner than riders without it, on a
+    /// plain move and in a formation (which keeps the slowest member's pace, spurred).
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RidersWithTheHorselordArriveSooner(bool formation)
+    {
+        int TicksToArrive(bool withLord)
+        {
+            var sim = Flat();
+            var riders = new List<int>();
+            for (int k = 0; k < 3; k++) riders.Add(sim.SpawnUnit(Settlers, "rider", 20, 20 + 3 * k));
+            var all = new List<int>(riders);
+            if (withLord)
+            {
+                int ln = sim.SpawnUnit(Settlers, "lancer", 18, 23);
+                sim.Units.Xp[Index(sim, ln)] = 500;
+                Evolve(sim, ln, "horselord");
+                all.Add(ln);
+            }
+            sim.Schedule(sim.Tick, formation
+                ? new FormationMoveCommand(Settlers, all.ToArray(), 70, 18, 70, 28)
+                : new MoveCommand(Settlers, all.ToArray(), 70, 23));
+            long start = sim.Tick;
+            while (sim.Tick - start < 60 * Tps && !riders.TrueForAll(id => sim.Units.X[Index(sim, id)] > Fix64.FromInt(60)))
+                sim.Step();
+            Assert.True(riders.TrueForAll(id => sim.Units.X[Index(sim, id)] > Fix64.FromInt(60)));
+            return (int)(sim.Tick - start);
+        }
+        int with = TicksToArrive(true), without = TicksToArrive(false);
+        Assert.True(with * 100 < without * 90, $"with the Horselord {with} ticks, without {without}");
     }
 
     private static Dictionary<string, string> Files()
