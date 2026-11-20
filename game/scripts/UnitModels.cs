@@ -403,6 +403,18 @@ public static class UnitModels
             .Box(-2, 5, -5, 1, 10, -2, Dark).Box(-2, 6, -5, 1, 6, -2, Wood).Box(-2, 9, -5, 1, 9, -2, Wood) // powder keg
             .Box(-1, 11, -4, -1, 12, -4, Fire)                                           // fuse
             .Box(3, 4, 0, 3, 11, 0, Wood).Box(3, 1, -1, 3, 3, 1, Steel),                 // shovel
+        // A hero: a demolisher with a gold-banded helm and a lamp at its brow, a great powder keg bound in gold
+        // on its back flying a pennant in its owner's colour, and a gilded war pick, so its sappers see whom to follow.
+        "breachmaster" => new Builder().Humanoid().Rank()
+            .Box(-2, 13, -2, 1, 14, 1, Steel).Box(-2, 13, -2, 1, 13, 1, Gold)            // helm with a gold band
+            .Box(-1, 14, 2, 0, 14, 2, Lamp)                                              // lamp at the brow
+            .Box(-2, 6, 1, 1, 9, 1, Leather).Box(-2, 9, -1, 1, 9, 1, Team)               // apron and sash
+            .Box(-4, 9, -2, -3, 10, 1, Gold).Box(2, 9, -2, 3, 10, 1, Gold)               // gilded pauldrons
+            .Box(-3, 4, -6, 2, 11, -2, Dark).Box(-3, 5, -6, 2, 5, -2, Gold).Box(-3, 10, -6, 2, 10, -2, Gold) // keg, gold hoops
+            .Box(-1, 12, -5, -1, 13, -5, Fire)                                           // fuse
+            .Box(1, 12, -5, 1, 20, -5, Wood).Box(1, 21, -5, 1, 21, -5, Gold)             // pennant pole
+            .Box(2, 17, -5, 4, 20, -5, Team)                                             // the pennant
+            .Box(3, 4, 1, 3, 13, 1, Wood).Box(3, 13, -1, 3, 13, 3, Gold).Box(3, 12, 3, 3, 12, 3, Gold), // gilded war pick
         "battle_mage" => new Builder().Robe().Rank()
             .Box(-3, 14, -3, 2, 14, 2, TeamDark).Box(-2, 15, -2, 1, 16, 1, TeamDark)     // wide hat
             .Box(-1, 17, -1, 0, 18, 0, Team).Box(0, 19, 0, 0, 20, 0, Team)

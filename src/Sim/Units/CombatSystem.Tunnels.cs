@@ -210,7 +210,8 @@ public sealed partial class CombatSystem
             }
             // A worker digging itself out digs at its gathering pace, a sapper twice as fast.
             int ticks = Def(i).Role == UnitRole.Sapper ? DigTicks(block) : Harvest.WorkTicks(block);
-            if (++u.JobTimer[i] < Math.Max(1, ticks * 100 / Def(i).WorkPercent)) return;
+            // Near a hero that works the breach, a sapper digs faster still.
+            if (++u.JobTimer[i] < Math.Max(1, ticks * 100 / Def(i).WorkPercent * 100 / (100 + UndermineOf(i)))) return;
             u.JobTimer[i] = 0;
             World.Set(bx, by, bz, BlockType.Air);
             return;

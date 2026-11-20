@@ -120,6 +120,8 @@ public sealed partial class EconomySystem
         var kind = u.JobBlock[i];
         bool sapper = Content.Units[u.Def[i]].Role == UnitRole.Sapper;
         int ticks = sapper ? ByWork(i, CombatSystem.DigTicks(kind)) : ByWork(i, WorkTicks(u.Owner[i], kind));
+        // Near a hero that works the breach (as it stood last tick), a sapper digs faster still.
+        if (sapper) ticks = Math.Max(1, ticks * 100 / (100 + _sim.Combat.UndermineOf(i)));
         if (++u.JobTimer[i] < ticks * (topY - baseY + 1)) return;
         u.JobTimer[i] = 0;
         if (BlockInfo.IsTrunk(kind))

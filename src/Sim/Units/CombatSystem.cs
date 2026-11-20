@@ -134,7 +134,10 @@ public sealed partial class CombatSystem
     private bool _anyRally;
     // This tick's heroes that lead the charge (see UnitDef.Spur), with where they stood when the tick began:
     // the movement after combat speeds up their own side's cavalry near them.
-    private readonly List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Spur)> _spurs = new();
+    private readonly List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> _spurs = new();
+    // This tick's heroes that work the breach (see UnitDef.Undermine), likewise: their own side's sappers near
+    // them hit buildings harder this tick and dig faster (tunnels this tick, dig areas the next).
+    private readonly List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> _undermines = new();
     // This tick's bleeding (see StepBleeding): hit points lost to wounds, landing with the tick's hits.
     private int[] _bled = Array.Empty<int>();
     private readonly List<int> _dead = new();
@@ -822,6 +825,8 @@ public sealed partial class CombatSystem
         {
             Fought(i);
             int damage = Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * Rules.StructureMultiplier(def.Role)).RoundToInt());
+            int undermine = UndermineOf(i); // a sapper near a hero that works the breach
+            if (undermine > 0) damage = damage * (100 + undermine) / 100;
             AddShot(i, def, Clamp(u.X[i], b.X, b.MaxX + 1), b.Y + 1, Clamp(u.Z[i], b.Z, b.MaxZ + 1));
             _sim.Evolution.Damaged(i, damage);
             HitBuilding(b, damage, i, def.Role == UnitRole.Sapper);
@@ -1369,8 +1374,9 @@ public sealed partial class CombatSystem
     /// <summary>
     /// Works out which units this tick's heroes steady (<see cref="UnitDef.Rally"/>): each living hero that is
     /// not beaten steadies its own side's units within its rally range (and <see cref="MoraleHeight"/> levels),
-    /// itself included, calls the volleys of the ranged ones among them and spurs on the cavalry (see
-    /// <see cref="SpurOf"/>). A unit near several takes the best of each.
+    /// itself included, calls the volleys of the ranged ones among them, spurs on the cavalry (see
+    /// <see cref="SpurOf"/>) and works the breach with the sappers (see <see cref="UndermineOf"/>). A unit near
+    /// several takes the best of each.
     /// </summary>
     private void Rally()
     {
@@ -1382,6 +1388,7 @@ public sealed partial class CombatSystem
         }
         _anyRally = false;
         _spurs.Clear();
+        _undermines.Clear();
         for (int h = 0; h < u.Count; h++)
         {
             var def = Def(h);
@@ -1389,6 +1396,7 @@ public sealed partial class CombatSystem
             if (!_anyRally) Array.Fill(_inspire, 1, 0, u.Count);
             _anyRally = true;
             if (def.Spur > 0) _spurs.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Spur));
+            if (def.Undermine > 0) _undermines.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Undermine));
             Near(u.X[h], u.Y[h], u.Z[h], def.Rally, MoraleHeight, u.Owner[h], allies: true, _near);
             foreach (int j in _near)
             {
@@ -1404,18 +1412,28 @@ public sealed partial class CombatSystem
     /// (<see cref="UnitDef.Spur"/>) stood within its rally range (and <see cref="MoraleHeight"/> levels) when
     /// the tick began: cavalry only, the best of the heroes near it, else 0. Read by the movement after combat.
     /// </summary>
-    public int SpurOf(int i)
+    public int SpurOf(int i) => _spurs.Count == 0 ? 0 : Best(_spurs, i, UnitRole.Cavalry);
+
+    /// <summary>
+    /// Percent faster unit i works this tick because a hero of its own side that works the breach
+    /// (<see cref="UnitDef.Undermine"/>) stood within its rally range (and <see cref="MoraleHeight"/> levels)
+    /// when the tick began: sappers only, the best of the heroes near it, else 0. Its blows on buildings land
+    /// that much harder and it digs that much faster.
+    /// </summary>
+    public int UndermineOf(int i) => _undermines.Count == 0 ? 0 : Best(_undermines, i, UnitRole.Sapper);
+
+    /// <summary>The best percent of the heroes in the list that stood near unit i, if i is of the role; else 0.</summary>
+    private int Best(List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> heroes, int i, UnitRole role)
     {
-        if (_spurs.Count == 0) return 0;
         var u = U;
-        if ((uint)i >= (uint)u.Count || Def(i).Role != UnitRole.Cavalry) return 0;
+        if ((uint)i >= (uint)u.Count || Def(i).Role != role) return 0;
         int best = 0;
-        foreach (var s in _spurs)
+        foreach (var s in heroes)
         {
-            if (s.Owner != u.Owner[i] || s.Spur <= best || Math.Abs(u.Y[i] - s.Y) > MoraleHeight) continue;
+            if (s.Owner != u.Owner[i] || s.Percent <= best || Math.Abs(u.Y[i] - s.Y) > MoraleHeight) continue;
             Fix64 dx = u.X[i] - s.X, dz = u.Z[i] - s.Z;
             if (Fix64.Abs(dx) > s.Range || Fix64.Abs(dz) > s.Range) continue;
-            if (dx * dx + dz * dz <= s.Range * s.Range) best = s.Spur;
+            if (dx * dx + dz * dz <= s.Range * s.Range) best = s.Percent;
         }
         return best;
     }
