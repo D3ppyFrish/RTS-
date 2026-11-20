@@ -74,6 +74,9 @@ namespace Rts.Game;
 ///   --daynight[=off]      day, night and weather (see Rts.Sim.Conditions): night, bad weather and mist shorten
 ///                         sight and make ranged shots miss. A match started from the command line has them only
 ///                         with --daynight or --time-of-day; on the start screen they are ticked unless --daynight=off
+///   --dominion[=off]      the old ruins are ancient sites, and holding more than half of them for 3 minutes wins
+///                         (see Rts.Sim.World.DominionSystem). A match started from the command line has it only with
+///                         --dominion; on the start screen it is ticked unless --dominion=off
 ///   --lights=N            N torches around your town hall and a campfire south of it, all finished
 ///   --time-of-day=H       the match starts at hour H (0 to 24; 8 is morning, 13 noon, 19.5 dusk, 0 midnight),
 ///                         with day and night on
@@ -200,6 +203,7 @@ public partial class Main : Node3D
         bool? dayNight = _args.TryGetValue("daynight", out var ds) ? ds is not ("off" or "0" or "false")
             : _args.ContainsKey("time-of-day") ? true : null;
         bool test = _args.ContainsKey("test-mode");
+        bool? dominion = _args.TryGetValue("dominion", out var dms) ? dms is not ("off" or "0" or "false") : null;
         if (_args.TryGetValue("scenario", out var scenarioPath))
         {
             _scenario = ReadScenario(scenarioPath);
@@ -211,11 +215,12 @@ public partial class Main : Node3D
             }
         }
         if (_scenario != null)
-            StartMatch(new MatchSetup(_scenario.Seed, player, _args.ContainsKey("ai"), _scenario.Fog, level, _scenario.DayNight, TestMode: true), fromMenu: false);
+            StartMatch(new MatchSetup(_scenario.Seed, player, _args.ContainsKey("ai"), _scenario.Fog, level, _scenario.DayNight, TestMode: true,
+                Dominion: _scenario.Dominion), fromMenu: false);
         else if (_args.Count == 0 || _args.ContainsKey("menu"))
-            ShowStartScreen(new MatchSetup(seed ?? StartScreen.RandomSeed(), player, Computer: true, Fog: fog ?? true, level, DayNight: dayNight ?? true, test));
+            ShowStartScreen(new MatchSetup(seed ?? StartScreen.RandomSeed(), player, Computer: true, Fog: fog ?? true, level, DayNight: dayNight ?? true, test, dominion ?? true));
         else
-            StartMatch(new MatchSetup(seed ?? 1234UL, player, _args.ContainsKey("ai"), Fog: fog ?? false, level, DayNight: dayNight ?? false, test), fromMenu: false);
+            StartMatch(new MatchSetup(seed ?? 1234UL, player, _args.ContainsKey("ai"), Fog: fog ?? false, level, DayNight: dayNight ?? false, test, dominion ?? false), fromMenu: false);
     }
 
     public override void _Process(double delta)
@@ -306,6 +311,7 @@ public partial class Main : Node3D
         _sim.Fog = setup.Fog;
         _sim.DayNight = setup.DayNight;
         _sim.TestMode = setup.TestMode;
+        _sim.Dominion = setup.Dominion;
         if (scenario == null && _args.ContainsKey("time-of-day"))
             _sim.DayStart = (int)(Mathf.PosMod(ArgFloat(_args, "time-of-day", 8f), 24f) * 60f);
         _issue = c => _sim.Schedule(_sim.Tick, c);
@@ -526,6 +532,7 @@ public partial class Main : Node3D
         long at = playing && !match.InPlay(me) ? match.OutAt(me) : match.EndTick;
         string time = Clock(at);
         string Name(int p) => _sim.Economy.Player(p).Faction.Name;
+        const int DominionMinutes = Rts.Sim.World.DominionSystem.DominionTicks / (60 * Simulation.TicksPerSecond);
         // Out with a town hall still standing means they gave up.
         string Fall(int p) => p == me
             ? _sim.Economy.TownHall(p) != null ? "You surrendered." : "You have lost your last town hall."
@@ -539,12 +546,14 @@ public partial class Main : Node3D
         if (!playing)
         {
             (title, color) = ("Match over", MatchEndPanel.DrawColor);
-            summary = match.Winner >= 0 ? $"The {Name(match.Winner)} (player {match.Winner}) won." : "It ended in a draw.";
+            summary = match.Winner >= 0 ? $"The {Name(match.Winner)} (player {match.Winner}) won{(match.ByDominion ? " by holding the ancient sites" : "")}."
+                : "It ended in a draw.";
         }
         else if (match.InPlay(me))
         {
             (title, color) = ("Victory", MatchEndPanel.VictoryColor);
-            summary = others.Count == 1 ? Fall(others[0]) : "You are the last one left in the match.";
+            summary = match.ByDominion ? $"You held most of the ancient sites for {DominionMinutes} minutes."
+                : others.Count == 1 ? Fall(others[0]) : "You are the last one left in the match.";
         }
         else if (match.Over && match.Winner < 0)
         {
@@ -555,9 +564,10 @@ public partial class Main : Node3D
         else
         {
             (title, color) = ("Defeat", MatchEndPanel.DefeatColor);
-            summary = Fall(me);
+            summary = match.ByDominion && match.OutAt(me) == match.EndTick && match.Winner >= 0
+                ? $"The {Name(match.Winner)} held most of the ancient sites for {DominionMinutes} minutes." : Fall(me);
         }
-        string outcome = !match.Over ? $"player {me} is out" : match.Winner >= 0 ? $"player {match.Winner} won" : "a draw";
+        string outcome = !match.Over ? $"player {me} is out" : match.Winner >= 0 ? $"player {match.Winner} won{(match.ByDominion ? " by dominion" : "")}" : "a draw";
 
         if (_sim.Recording is { } log)
         {
@@ -659,7 +669,7 @@ public partial class Main : Node3D
             if (_args.ContainsKey(option)) odd.Add("--" + option);
         _noReplay = odd.Count > 0 ? $"the match was set up with {string.Join(", ", odd)}" : "";
         if (odd.Count == 0) _sim.Recording = CommandLog.UsualStart(setup.Seed, WorldX, WorldY, WorldZ, _content, setup.Fog,
-            setup.DayNight, _sim.DayStart, setup.TestMode, _sim.World.TreeScale);
+            setup.DayNight, _sim.DayStart, setup.TestMode, _sim.World.TreeScale, setup.Dominion);
     }
 
     /// <summary>
@@ -674,7 +684,7 @@ public partial class Main : Node3D
             Seed = scenario.Seed, SizeX = scenario.SizeX, SizeY = scenario.SizeY, SizeZ = scenario.SizeZ, StartUnits = scenario.StartUnits,
             StartBuildings = scenario.StartBuildings, StartLairs = scenario.StartLairs, StartCities = scenario.StartCities,
             ContentHash = scenario.ContentHash, Fog = scenario.Fog, DayNight = scenario.DayNight, DayStart = scenario.DayStart, TestMode = true,
-            TreeScale = scenario.TreeScale,
+            TreeScale = scenario.TreeScale, Dominion = scenario.Dominion,
         };
         int next = 0;
         while (_sim.Tick < scenario.Ticks)
@@ -717,7 +727,8 @@ public partial class Main : Node3D
         bool sameWorld = scenario.SizeX == WorldX && scenario.SizeZ == WorldZ;
         LeaveMatch();
         _scenario = scenario;
-        StartMatch(last with { Seed = scenario.Seed, Fog = scenario.Fog, DayNight = scenario.DayNight, TestMode = true }, fromMenu: true);
+        StartMatch(last with { Seed = scenario.Seed, Fog = scenario.Fog, DayNight = scenario.DayNight, TestMode = true,
+            Dominion = scenario.Dominion }, fromMenu: true);
         if (sameWorld) FocusCamera(cx, cz, yaw, pitch, distance);
     }
 

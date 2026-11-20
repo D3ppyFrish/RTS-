@@ -40,6 +40,19 @@ public enum GameEventKind : byte
     /// <see cref="GameEvent.Subject"/> is the unit that found it, <see cref="GameEvent.Def"/> the ruin's index.
     /// </summary>
     RuinSearched,
+    /// <summary>
+    /// The player's fighting units took an ancient site (see <see cref="World.DominionSystem"/>), or (for the player
+    /// who held it) a rival took it from them. <see cref="GameEvent.Subject"/> is the player who took it,
+    /// <see cref="GameEvent.Def"/> the ruin's index.
+    /// </summary>
+    SiteTaken,
+    /// <summary>The player lost an ancient site they held to a rival (<see cref="GameEvent.Subject"/> took it).</summary>
+    SiteLost,
+    /// <summary>
+    /// A player (<see cref="GameEvent.Subject"/>, maybe this one) now holds more than half the ancient sites: the
+    /// dominion clock is running. <see cref="GameEvent.Def"/> is the ticks it runs for.
+    /// </summary>
+    DominionStarted,
 }
 
 /// <summary>
@@ -153,6 +166,17 @@ public sealed class EventLog
     /// <summary>The player's unit (id) found what the ruin held.</summary>
     internal void RuinSearched(int player, World.AncientRuin ruin, int unitId) =>
         Add(player, GameEventKind.RuinSearched, ruin.X, ruin.Y + 1, ruin.Z, unitId, ruin.Index);
+
+    /// <summary>The player took the site; <paramref name="old"/> (-1 for nobody) held it.</summary>
+    internal void SiteTaken(int player, int old, World.AncientRuin ruin)
+    {
+        Add(player, GameEventKind.SiteTaken, ruin.X, ruin.Y + 1, ruin.Z, player, ruin.Index);
+        if (old >= 0 && old != player) Add(old, GameEventKind.SiteLost, ruin.X, ruin.Y + 1, ruin.Z, player, ruin.Index);
+    }
+
+    /// <summary>Tells the player that <paramref name="leader"/>'s dominion clock has started.</summary>
+    internal void DominionStarted(int player, int leader) =>
+        Add(player, GameEventKind.DominionStarted, -1, -1, -1, leader, World.DominionSystem.DominionTicks);
 
     /// <summary>True (and remembered) if no attack on the player was reported near (x, z) lately.</summary>
     private bool Throttle(int player, int x, int z)

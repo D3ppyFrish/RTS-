@@ -19,6 +19,7 @@ using Rts.Sim.Replay;
 //     --levels=A,B        with --ai: each player's level, in player order (classic, easy, normal or hard;
 //                         default classic for all; the last one given goes for the rest)
 //     --fog               with --ai: play with fog of war
+//     --dominion          with --ai: play with dominion (holding most of the ancient sites for 3 minutes wins)
 //     --story             with --ai: print what each computer player from Easy up decided, as it decides
 //                         it (its journal; Hard's says the most)
 //     --trace             with --ai: print every minute what each player has (workers, soldiers and their
@@ -141,7 +142,7 @@ try
                 ? level : throw new ArgumentException($"--levels: unknown level '{name}' (classic, easy, normal or hard)"));
         var result = AiMatch.Play(ulong.Parse(Opt("seed", "1234"), ci),
             int.Parse(size[0], ci), int.Parse(size[1], ci), int.Parse(size[2], ci), ticks, levels: levels, fog: opts.ContainsKey("fog"),
-            watch: opts.ContainsKey("trace") || opts.ContainsKey("story") ? Trace : null);
+            watch: opts.ContainsKey("trace") || opts.ContainsKey("story") ? Trace : null, dominion: opts.ContainsKey("dominion"));
         log = result.Log;
         aiWinner = result.Winner;
         aiEnd = result.EndTick;
@@ -187,7 +188,7 @@ try
         if (r == 1)
         {
             var m = sim.Match;
-            Console.WriteLine("Result: " + (m.Winner >= 0 ? $"player {m.Winner} won at {Clock(m.EndTick)}"
+            Console.WriteLine("Result: " + (m.Winner >= 0 ? $"player {m.Winner} won{(m.ByDominion ? " by dominion" : "")} at {Clock(m.EndTick)}"
                 : m.Over ? $"a draw at {Clock(m.EndTick)}" : "nobody has won"));
         }
         if (aiWinner is int won && (sim.Match.Winner != won || sim.Match.EndTick != aiEnd))

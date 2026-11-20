@@ -46,6 +46,8 @@ public sealed class Simulation
     public DuskTreeSystem DuskTree { get; }
     /// <summary>The map's old ruins and what players find searching them.</summary>
     public RuinSystem Ruins { get; }
+    /// <summary>Dominion: holding most of the ancient sites (the ruins) to win, with <see cref="Dominion"/> on.</summary>
+    public DominionSystem Sites { get; }
     /// <summary>Relics and the Dusk Staff lying where their bearers fell, until a unit picks them up.</summary>
     public DroppedItemSystem Items { get; }
     /// <summary>Terrain magic: earth walls (see <see cref="SpellSystem"/>).</summary>
@@ -77,6 +79,7 @@ public sealed class Simulation
     private bool _dayNight;
     private int _dayStart = Conditions.StartMinute;
     private bool _testMode;
+    private bool _dominion;
 
     /// <summary>Starts a match on a freshly generated region, with the game's own data unless given other content.</summary>
     public Simulation(ulong seed, int sizeX, int sizeY, int sizeZ, ContentDb? content = null, int treeScale = RegionGenerator.DefaultTreeScale)
@@ -99,6 +102,7 @@ public sealed class Simulation
         DuskTree = new DuskTreeSystem(this);
         Ruins = new RuinSystem(this);
         Ruins.Place();
+        Sites = new DominionSystem(this);
         Items = new DroppedItemSystem(this);
         Spells = new SpellSystem(this);
         Cities = new CityStateSystem(this);
@@ -155,6 +159,21 @@ public sealed class Simulation
         {
             if (value != _testMode && Tick != 0) throw new InvalidOperationException("Test mode is set before the first tick");
             _testMode = value;
+        }
+    }
+
+    /// <summary>
+    /// Dominion (see <see cref="DominionSystem"/>): a player also wins by holding more than half the map's ancient
+    /// sites (its old ruins) for three minutes. Off unless set, before the first tick; off, the ruins are only
+    /// searched for what they hold.
+    /// </summary>
+    public bool Dominion
+    {
+        get => _dominion;
+        set
+        {
+            if (value != _dominion && Tick != 0) throw new InvalidOperationException("Dominion is set before the first tick");
+            _dominion = value;
         }
     }
 
@@ -337,6 +356,7 @@ public sealed class Simulation
         Cities.Step();
         Paths.Step(Units, Tick);
         _movement.Step();
+        Sites.Step();
         Match.Step();
         Vision.Step();
         Events.Step();
@@ -358,6 +378,7 @@ public sealed class Simulation
         ^ Physics.ComputeHash() * 0x61C8864680B583EBUL
         ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL ^ DuskTree.ComputeHash() * 0x3C6EF372FE94F82BUL
         ^ Ruins.ComputeHash() * 0xC6BC279692B5C323UL
+        ^ (_dominion ? 0x2B992DDFA23249D6UL ^ Sites.ComputeHash() * 0x9E3779B185EBCA87UL : 0)
         ^ Spells.ComputeHash() * 0x2127599BF4325C37UL ^ Items.ComputeHash() * 0x5851F42D4C957F2DUL
         ^ (_fog ? Vision.ComputeHash() * 0xBF58476D1CE4E5B9UL : 0)
         ^ (_testMode ? 0x7A3E1C5B9D2F4E61UL ^ Sandbox.ComputeHash() * 0xE7037ED1A0B428DBUL : 0)

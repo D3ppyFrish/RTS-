@@ -598,6 +598,7 @@ public sealed partial class AiPlayer
         if (_waveLair == 0) ScoutStep(sim, hall, home, issue);
         else home.Remove(_scout);
         HuntStep(sim, hall, home, GuardPercent, issue);
+        SiteStep(sim, hall, home, GuardPercent, issue);
 
         // Defence: as the classic player, with the fighting done well from Normal up.
         int threat = NearestEnemy(sim, hx, hz, DefendRadius, soldiersOnly: false);

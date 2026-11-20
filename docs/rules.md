@@ -756,6 +756,39 @@ builders left, and a line of their writing, so the land tells its own story (the
   the computer players). The classic level leaves ruins be. All numbers are first
   guesses for playtesting.
 
+## Ancient sites and dominion
+
+`src/Sim/World/DominionSystem.cs` (tests in `DominionTests`, `AiSiteTests`): the design doc's second way to win,
+Dominion, holding most of the continent's ancient sites at once for a set time. The ancient sites are the map's old
+ruins (see [Old ruins and what they hold](#old-ruins-and-what-they-hold)), so the ruins matter after they are searched.
+It is played with `Simulation.Dominion` on (set before the first tick, part of the state hash; "dominion 1" in a
+command log): ticked on the start screen ("Win by holding the ancient sites") unless switched off, `--dominion` in
+the game and the match runner. A map needs at least 3 sites for it to count (`DominionSystem.MinSites`; the
+default map has 6).
+
+- **Taking a site**: a player's fighting units (not workers; not beaten, running away or tamed) standing inside a
+  ruin's walls (within 3 columns of its middle, as for searching) with no rival's fighting units there claim it.
+  After 15 seconds of that (`ClaimTicks`) the site is theirs, whoever held it before. While two sides' fighting
+  units are inside, the claim stands still; when no claimant is inside, or another side has it to themselves, it
+  starts again from nothing. A site stays held with nobody in it until a rival takes it. A player who is out of
+  the match holds nothing.
+- **Winning**: a player holding more than half the sites (4 of 6) starts the dominion clock. At 3 minutes
+  (`DominionTicks`) they win: every other player still in goes out on that tick (`MatchSystem.WinByDominion`,
+  `MatchSystem.ByDominion`). Dropping to half or fewer stops the clock and sets it back to nothing.
+- **Computer players** (`AI/AiPlayer.Sites.cs`), from Easy up: from 8 minutes on, with soldiers to spare beyond
+  the guard, they send a garrison of 4 to the nearest site they have seen within 240 columns of their town hall
+  that they do not hold (no lair they know of close by, and nothing there they see that outweighs the garrison),
+  and keep up to 2 garrisons (1 at Easy). A garrison stands inside its site (sent back in when a fight takes it
+  out) and comes home when what it sees round the site outweighs it, leaving that site alone for 10 minutes.
+  When a rival's dominion clock runs, everyone they can spare goes to take back the rival's site nearest their
+  town hall; once it is won back, 4 of them stay on as its garrison. The classic level leaves sites be.
+- **In the game**: each site you have seen flies a banner on a tall pole in a corner of its floor, in its
+  holder's colour (pale while nobody holds it), with a line over it while a side is taking it ("Orcs taking 40%").
+  The top bar's sites button says how many you hold ("Sites 1/6") or, while a dominion clock runs, who wins in
+  how long ("Orcs win in 2:31"); its tooltip lists what everyone holds, and clicking it looks at the next site.
+  Alerts say when you take a site, lose one, or someone starts the dominion clock; the end of match panel says
+  when a match was won by holding the sites. All numbers are first guesses for playtesting.
+
 ## Natural hazards
 
 `src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, `HazardTests`, `QuicksandTests` and `RockfallTests`, issues #45, #66 and #78): ground that
@@ -871,7 +904,9 @@ only the holder hires. All the numbers are first guesses for playtesting.
 `src/Sim/MatchSystem.cs`: every player given a town hall at the start is in the match. A player with no
 finished town hall left standing is out, and so is a player who surrenders (`SurrenderCommand`; their
 units and buildings stay). The last player in wins; players who go out on the same tick draw. A sandbox
-with fewer than two players never ends. Who is out, who won and when are part of the state hash.
+with fewer than two players never ends. With dominion on, a player who holds most of the ancient sites for 3
+minutes wins at once (see [Ancient sites and dominion](#ancient-sites-and-dominion)). Who is out, who won (and
+whether by dominion) and when are part of the state hash.
 
 `src/Sim/AI/AiPlayer.cs` is a computer player. It plays only by giving the commands a person could
 give, deciding from the game as it stands, so a match with it records and replays like any other. It
@@ -1221,9 +1256,10 @@ Started without command-line options (or with `--menu`), the game opens on the s
 two starts, so picking the Settlers or the Orcs picks the player and start too: player 0 in the west or
 player 1 in the east. The world seed comes up at random (New seed draws another), and the computer
 opponent is on unless switched off, which leaves the other side standing idle. So is fog of war (see
-[Fog of war](#fog-of-war)). Matches from the start screen have no terrain tool. With options, the game starts a match
+[Fog of war](#fog-of-war)), and so is winning by holding the ancient sites (see
+[Ancient sites and dominion](#ancient-sites-and-dominion)). Matches from the start screen have no terrain tool. With options, the game starts a match
 at once as they say (seed 1234 unless given, the computer only with `--ai`, fog of war only with
-`--fog`), as the tests run it.
+`--fog`, dominion only with `--dominion`), as the tests run it.
 
 The Surrender button under the top bar asks first, then gives up the match. When the match is over for
 you (you won, lost your last town hall or surrendered), the clock stops and `MatchEndPanel` shows
