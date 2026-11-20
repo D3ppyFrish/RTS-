@@ -141,7 +141,9 @@ replay made with different data says so instead of drifting apart.
 - **Walls, gates and towers** in `buildings.json`: walls and gates come in tiers, where `"upgrade"` names
   the building one is turned into where it stands (so only the first of a chain is ever laid) and
   `"facing"` the building that goes up on each free side of an upgrade when it is done (a stone wall is
-  three columns thick). `"sturdy"` multiplies the damage each of its blocks takes and `"walkway": true`
+  three columns thick). `"sturdy"` multiplies the damage each of its blocks takes, `"thick": true` marks a
+  thick, solid one (close-up blows do `"thick"` in `roles.json` times less, and a unit with `"blast": true` in
+  `units.json` topples it, see [Combat](docs/rules.md#combat): thick walls) and `"walkway": true`
   lets ranged units be posted on top. A building of `"kind": "tower"` is solid to its top, is put up alone
   or onto the player's own walls, and gives the units posted on it `"aim"` (the share in a hundred of
   their would-be misses that land, and a fifth of it more shots to the head). The materials

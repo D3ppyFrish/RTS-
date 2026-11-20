@@ -169,7 +169,7 @@ public class RebuildTests
         var wall = Place(sim, 0, "stone_wall", 20, 20);
         Assert.NotNull(wall.Def.UpgradeOf);
         sim.Schedule(0, new RebuildCommand(0, true));
-        sim.Schedule(0, new AttackBuildingCommand(1, new[] { sim.SpawnUnit(1, "spearman", 22, 22) }, wall.Id));
+        sim.Schedule(0, new AttackBuildingCommand(1, new[] { sim.SpawnUnit(1, "sapper", 22, 22) }, wall.Id));
         RunUntil(sim, () => sim.Buildings.Get(wall.Id) == null, 120 * Tps, "the wall to fall");
         var ruin = Assert.Single(sim.Automation.Ruins);
         var first = wall.Def;

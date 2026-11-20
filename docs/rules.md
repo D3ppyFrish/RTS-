@@ -225,8 +225,23 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   form, heals the same way while it fights in the line.
 - **Buildings** are made of real blocks. Damage knocks out the top block of the column nearest the
   attacker (a sapper knocks out the bottom one, so the whole column falls), and a building that has lost
-  half of itself (by block toughness) collapses. Sappers deal full damage to buildings, everyone else a
-  quarter.
+  half of itself (by block toughness) collapses. Sappers and siege deal full damage to buildings, everyone
+  else a quarter (less again against thick walls, below).
+- **Thick walls topple** (issue #53; `"thick"` in `data/buildings.json`, `"blast"` in `data/units.json`,
+  `"thick"` in `data/roles.json`, `CombatSystem.Topple`, `PhysicsSystem.Topple`): wooden and stone walls,
+  gates, facings and towers are thick and solid (a barrier is not). Blows struck at them close up get little
+  done: melee from any role but sappers deals 0.4 of its quarter, a tenth of its damage, so four spearmen
+  hack at a column of wooden wall for about 20 seconds where a lone siege engineer brings it down in 8.
+  Arrows deal their quarter as before. A **blast** (the siege engineer's fire pots, the ogre hurler's
+  boulders, and the strong magic of the battle mage and the archmage) deals full damage to a thick wall and
+  knocks out the block **under** the top of the column it hits. What that block held up topples away from the
+  blast: the rest of its column, and the columns beside it (one each side) from its level up, each with the
+  columns behind it the way the blast went, through the whole thickness of the wall (at most 6 columns;
+  only the same owner's thick blocks). It comes away as one piece, thrown up off what is left and out the
+  far side, and comes down a few columns behind the wall, crushing whoever it lands on for 80 (a spearman
+  dies; `PhysicsSystem.ToppleCrush`); its rubble spreads so the gap can be walked. So the upper courses of
+  a stretch of stone wall three columns wide come down on the defenders behind it, and a second blast at the
+  same place usually breaches it.
 - **Hollow buildings** (houses, halls, barracks and every other roofed building; walls, gates and towers
   stay solid): walls round the edge, a floor (`BlockType.Floor`, which nobody stands on, so no unit ends
   up shut inside) and a stepped roof over a room that goes up under it. Their blocks are tougher by what
@@ -268,7 +283,8 @@ unit of it carried by a worker or held in a building. A player's stock is what t
   go the same way: a barrier gate (3 high, 3 wood), a wooden gate (4 high, 5 wood more) and a stone gate
   (6 high, 4 wood and 12 stone more, masonry), a gatehouse three columns deep; the two upper tiers of gate
   have the walk too. A column of barrier comes down after 20 damage from its top, of wooden wall after 80
-  and of stone wall after 225 (everyone but sappers deals a quarter damage to buildings). A sapper knocks
+  and of stone wall after 225 (everyone but sappers and siege deals a quarter damage to buildings, and
+  less again close up against wooden and stone walls; see Thick walls topple above). A sapper knocks
   out the bottom block and the column falls: a lone sapper is through a barrier in about 6 seconds, a
   wooden wall in 12, and one column of a stone wall in 23, of which there are three to get through. A
   higher tier is never laid as it is.

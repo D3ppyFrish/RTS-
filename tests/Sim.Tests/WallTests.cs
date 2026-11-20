@@ -893,10 +893,11 @@ public class WallTests
         int archer = sim.SpawnUnit(0, "archer", 25, 33);
         sim.Schedule(0, new PostCommand(0, new[] { archer }, walls[5].Id));
         RunUntil(sim, () => OnTop(sim, archer, walls[5]), 30 * Tps, "the archer to climb up");
-        var spears = Enumerable.Range(0, 8).Select(k => sim.SpawnUnit(1, "spearman", 21 + k, 24)).ToArray();
-        // Blows from the ground do not reach it; the spearmen it shoots at turn on the wall it stands on.
+        // Sappers, as spearmen hacking at a thick wall get little done before the archer has shot them.
+        var spears = Enumerable.Range(0, 8).Select(k => sim.SpawnUnit(1, "sapper", 21 + k, 24)).ToArray();
+        // Blows from the ground do not reach it; the soldiers it shoots at turn on the wall it stands on.
         RunUntil(sim, () => spears.Any(id => sim.Units.Exists(id) && sim.Units.TargetBuilding[Index(sim, id)] == walls[5].Id), 60 * Tps,
-            "a spearman to go for the wall under the archer");
+            "a sapper to go for the wall under the archer");
         Assert.Equal(sim.Economy.MaxHp(0, sim.Content.Unit("archer")), sim.Units.Hp[Index(sim, archer)]);
         RunUntil(sim, () => sim.Buildings.Get(walls[5].Id) == null, 120 * Tps, "the wall to come down under it");
         RunUntil(sim, () => !sim.Units.Exists(archer) || sim.Units.Y[Index(sim, archer)] <= Ground + 2, 5 * Tps, "the archer to come down with it");

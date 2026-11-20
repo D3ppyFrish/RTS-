@@ -146,6 +146,12 @@ public sealed class BuildingDef
     /// </summary>
     public int Sturdy { get; init; } = 1;
     /// <summary>
+    /// A thick, solid wall, gate or tower (<c>"thick"</c> in the data): blows struck at it close up do less to it
+    /// (see <see cref="Content.CombatRules.Thick"/>), and a blast that knocks a block out of it brings down what
+    /// stands above and beside it, toppling away from the blast (see <see cref="Units.CombatSystem"/>).
+    /// </summary>
+    public bool Thick { get; init; }
+    /// <summary>
     /// A wall or gate with a walk along its top: ranged units can be posted on it (see <see cref="PostCommand"/>).
     /// </summary>
     public bool Walkway { get; init; }

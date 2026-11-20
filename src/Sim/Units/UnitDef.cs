@@ -80,6 +80,12 @@ public sealed class UnitDef
     public bool TracksBlood { get; init; }
     /// <summary>It can raise earth walls (see <see cref="SpellSystem"/>).</summary>
     public bool EarthWall { get; init; }
+    /// <summary>
+    /// Its attack is a blast (a siege engine's shot, a boulder, strong magic; <c>"blast"</c> in the data): it deals
+    /// full damage to a thick wall, gate or tower (see <see cref="BuildingDef.Thick"/>), and a block it knocks out
+    /// of one brings down what stands above and beside it, toppling away from the blast onto whoever is behind.
+    /// </summary>
+    public bool Blast { get; init; }
     /// <summary>It can freeze ice bridges over water (see <see cref="SpellSystem"/>).</summary>
     public bool IceBridge { get; init; }
     /// <summary>It can open chasms in the ground (see <see cref="SpellSystem"/>).</summary>

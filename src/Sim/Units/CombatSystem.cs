@@ -827,12 +827,12 @@ public sealed partial class CombatSystem
         if (b != null)
         {
             Fought(i);
-            int damage = Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * Rules.StructureMultiplier(def.Role)).RoundToInt());
+            int damage = Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * StructureMultiplier(def, b.Def)).RoundToInt());
             int undermine = UndermineOf(i); // a sapper near a hero that works the breach
             if (undermine > 0) damage = damage * (100 + undermine) / 100;
             AddShot(i, def, Clamp(u.X[i], b.X, b.MaxX + 1), b.Y + 1, Clamp(u.Z[i], b.Z, b.MaxZ + 1));
             _sim.Evolution.Damaged(i, damage);
-            HitBuilding(b, damage, i, def.Role == UnitRole.Sapper);
+            HitBuilding(b, damage, i, def.Role == UnitRole.Sapper, def.Blast);
             return true;
         }
         if (_pending[t] >= u.Hp[t])

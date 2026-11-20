@@ -3,7 +3,9 @@
 // their damage to the roles its role is strongAgainst, and to the roles that list its role in
 // weakAgainst (the same relation, written from the other side). Against buildings, a role with
 // "structures" in strongAgainst deals full damage and every other role deals "structures" times its
-// damage. job is the role's job in the table, shown in the game.
+// damage. Against a thick wall, gate or tower (see buildings.json), blows struck close up by any role without
+// "structures" in strongAgainst deal "thick" times that again: hacking at solid stone gets little done.
+// job is the role's job in the table, shown in the game.
 //
 // recovery is healing over time, for every unit: one that has not hit anything or been hit for "after"
 // seconds gets back "percent" of its most hit points each second, or "homePercent" within "homeRange"
@@ -16,6 +18,7 @@
 {
   "strong": 2,
   "structures": 0.25,
+  "thick": 0.4,
   "recovery": { "after": 10, "percent": 0.25, "homePercent": 2, "homeRange": 12 },
   "bleeding": { "share": 40, "rate": 1, "kills": true, "bloodDays": 1 },
   "roles": [

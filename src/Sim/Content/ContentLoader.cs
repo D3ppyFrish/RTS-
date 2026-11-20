@@ -455,7 +455,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -499,6 +499,7 @@ public static class ContentLoader
                 Yield = o.Cost("yield"),
                 YieldTicks = o.Int("yieldTime", 1, MaxSeconds, 0) * Tps,
                 Sturdy = o.Int("sturdy", 1, 1000, 1),
+                Thick = o.Bool("thick"),
                 Walkway = o.Bool("walkway"),
                 Aim = o.Int("aim", 0, 100, 0),
                 Speed = o.Int("speed", 100, 1000, 100),
@@ -517,6 +518,7 @@ public static class ContentLoader
                 o.Error("only a quarry has \"works\" and \"workTime\"");
             bool wall = kind is BuildingKind.Wall or BuildingKind.Gate, tower = kind == BuildingKind.Tower;
             if (def.Walkway && !wall && !tower) o.Error("only a wall, gate or tower has a \"walkway\"");
+            if (def.Thick && !wall && !tower) o.Error("only a wall, gate or tower is \"thick\"");
             if (def.Aim > 0 && !tower) o.Error("only a tower has \"aim\"");
             if (def.Aim > 0 && !def.Walkway) o.Error("\"aim\" is for the units posted on it: it needs a \"walkway\"");
             if (def.Walkway && wallHeight <= CombatSystem.MeleeHeight + 1)
@@ -583,7 +585,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "upkeep", "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -617,6 +619,7 @@ public static class ContentLoader
                 Shield = o.Int("shield", 0, 90, 0),
                 Bleeds = !o.Has("bleeds") || o.Bool("bleeds"),
                 TracksBlood = o.Bool("tracksBlood"),
+                Blast = o.Bool("blast"),
                 EarthWall = o.Bool("earthWall"),
                 IceBridge = o.Bool("iceBridge"),
                 Chasm = o.Bool("chasm"),
@@ -849,10 +852,11 @@ public static class ContentLoader
                 return;
             }
             var table = new Obj(_errors, file, "table", "the table", doc.RootElement);
-            table.Keys("strong", "structures", "recovery", "bleeding", "roles");
+            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "roles");
             var combat = _db.Combat;
             combat.Strong = table.Decimal("strong", Fix64.One, Fix64.FromInt(10), Fix64.FromInt(2));
             combat.Structures = table.Decimal("structures", Fix64.Zero, Fix64.One, Fix64.FromRatio(1, 4));
+            combat.Thick = table.Decimal("thick", Fix64.Zero, Fix64.One, Fix64.One, required: false);
             if (Part(table, "recovery", "{ \"after\": 10, \"percent\": 0.25, \"homePercent\": 2, \"homeRange\": 12 }") is { } recovery)
             {
                 recovery.Keys("after", "percent", "homePercent", "homeRange");
@@ -1319,6 +1323,7 @@ public static class ContentLoader
                 h.Add(b.Requires);
                 h.Add(b.Faction?.Index ?? -1);
                 h.Add(b.Sturdy);
+                h.Add(b.Thick ? 1 : 0);
                 h.Add(b.Walkway ? 1 : 0);
                 h.Add(b.Speed);
                 h.Add(b.Upgrade?.Index ?? -1);
@@ -1353,6 +1358,7 @@ public static class ContentLoader
                 h.Add(u.Shield);
                 h.Add(u.Bleeds ? 1 : 0);
                 h.Add(u.TracksBlood ? 1 : 0);
+                h.Add(u.Blast ? 1 : 0);
                 h.Add(u.EarthWall ? 1 : 0);
                 h.Add(u.IceBridge ? 1 : 0);
                 h.Add(u.Chasm ? 1 : 0);
@@ -1432,6 +1438,7 @@ public static class ContentLoader
             var combat = db.Combat;
             h.Add(combat.Strong.Raw);
             h.Add(combat.Structures.Raw);
+            h.Add(combat.Thick.Raw);
             h.Add(combat.RecoveryDelayTicks);
             h.Add(combat.RecoveryPercent.Raw);
             h.Add(combat.HomeRecoveryPercent.Raw);

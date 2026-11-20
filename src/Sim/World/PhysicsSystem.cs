@@ -33,6 +33,11 @@ public sealed class FallingSection
     /// </summary>
     public bool Rockfall { get; internal set; }
     /// <summary>
+    /// A stretch of thick wall toppled by a blast (see <see cref="PhysicsSystem.Topple"/>): it crushes those it
+    /// comes down on harder (<see cref="PhysicsSystem.ToppleCrush"/>).
+    /// </summary>
+    public bool Toppled { get; internal set; }
+    /// <summary>
     /// For a piece of a building caving in (see <see cref="PhysicsSystem.Crumble"/>), the building's middle in
     /// half blocks (doubled coordinates); otherwise <see cref="int.MinValue"/>. Its rubble only slides off a heap
     /// toward there, so it stays on the building's ground.
@@ -363,11 +368,29 @@ public sealed class PhysicsSystem
     public void Release(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX, int fromZ, int push, bool spread = false, int hop = 0) =>
         ReleaseFrom(cells, fromX * 2 + 1, fromZ * 2 + 1, push, spread, hop: hop);
 
+    /// <summary>Speed (64ths of a block per tick) a toppling stretch of wall is thrown out at, away from the blast.</summary>
+    public const int ToppleSpeed = 12;
+
+    /// <summary>Speed (64ths of a block per tick) a toppling stretch of wall is thrown up at, so it comes off what is left under it.</summary>
+    public const int ToppleHop = 30;
+
+    /// <summary>Damage a toppling stretch of wall does to each unit it comes down on (more than <see cref="CrushDamage"/>).</summary>
+    public const int ToppleCrush = 80;
+
+    /// <summary>
+    /// A stretch of thick wall blown off by a blast from (fromX, fromZ) topples away from it: the blocks come
+    /// away as pieces thrown up off what is left under them and out at <see cref="ToppleSpeed"/>, so they come
+    /// down past the far side of the wall, crushing whoever they land on (<see cref="ToppleCrush"/>), and their
+    /// rubble spreads (see <see cref="FallingSection.Spreads"/>).
+    /// </summary>
+    public void Topple(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX, int fromZ) =>
+        ReleaseFrom(cells, fromX * 2 + 1, fromZ * 2 + 1, ToppleSpeed, spread: true, hop: ToppleHop, topple: true);
+
     /// <summary>
     /// <see cref="Release"/>, pushed from a point given in half blocks (doubled coordinates, so it can lie
     /// between blocks: the middle of block x is 2x + 1).
     /// </summary>
-    private void ReleaseFrom(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX2, int fromZ2, int push, bool spread, bool caveIn = false, int hop = 0)
+    private void ReleaseFrom(IReadOnlyList<(int X, int Y, int Z)> cells, int fromX2, int fromZ2, int push, bool spread, bool caveIn = false, int hop = 0, bool topple = false)
     {
         _seen.Clear();
         foreach (var c in cells)
@@ -394,7 +417,8 @@ public sealed class PhysicsSystem
             var s = Start(0);
             s.Spreads = spread;
             s.VelY = hop;
-            s.Rockfall = hop > 0;
+            s.Rockfall = hop > 0 && !topple;
+            s.Toppled = topple;
             if (caveIn) (s.InX, s.InZ) = (fromX2, fromZ2);
             long cx = 0, cz = 0;
             foreach (var b in s._blocks) { cx += b.X; cz += b.Z; }
@@ -739,7 +763,7 @@ public sealed class PhysicsSystem
                 gx += b.X; gz += b.Z;
             }
             blocks.Sort((a, c) => Key(a.X, a.Y, a.Z).CompareTo(Key(c.X, c.Y, c.Z)));
-            var f = new FallingSection(_nextSection++, _sim.Tick, s.Generation + 1, blocks) { Spreads = s.Spreads, InX = s.InX, InZ = s.InZ };
+            var f = new FallingSection(_nextSection++, _sim.Tick, s.Generation + 1, blocks) { Spreads = s.Spreads, Toppled = s.Toppled, InX = s.InX, InZ = s.InZ };
             var (vx, vz) = Away((int)(gx * 2 / group.Count) - mx, (int)(gz * 2 / group.Count) - mz, spread);
             f.VelX = Math.Clamp(vx + rng.Range(-spread / 3, spread / 3 + 1), -MaxSpeed, MaxSpeed);
             f.VelZ = Math.Clamp(vz + rng.Range(-spread / 3, spread / 3 + 1), -MaxSpeed, MaxSpeed);
@@ -838,7 +862,7 @@ public sealed class PhysicsSystem
         var u = _sim.Units;
         if (s.Rockfall && u.Hp[i] > 0 && CrushDamage >= u.Hp[i])
             _sim.Events.UnitLostToHazard(u.Owner[i], u.Id[i], u.Def[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
-        _sim.Combat.Crush(i, CrushDamage);
+        _sim.Combat.Crush(i, s.Toppled ? ToppleCrush : CrushDamage);
     }
 
     /// <summary>Units buried in rubble climb out to the nearest open ground; one with nowhere to go dies.</summary>
