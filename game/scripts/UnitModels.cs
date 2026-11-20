@@ -420,6 +420,18 @@ public static class UnitModels
             .Box(-1, 17, -1, 0, 18, 0, Team).Box(0, 19, 0, 0, 20, 0, Team)
             .Box(-3, 9, -1, -3, 9, 0, Steel).Box(2, 9, -1, 2, 9, 0, Steel)               // pauldrons
             .Box(3, 0, 1, 3, 15, 1, Wood).Box(2, 16, 0, 4, 18, 2, Fire),                 // staff with a fire orb
+        // A hero: a battle mage in a tall hat banded in gold, gilded mantle and a mantle-clasp in its owner's colour,
+        // with a gold-shod staff crowned by a ring of gold round a shining crystal, so its casters see whom to follow.
+        "archmage" => new Builder().Robe().Rank()
+            .Box(-3, 14, -3, 2, 14, 2, TeamDark).Box(-2, 15, -2, 1, 17, 1, TeamDark)     // wide, tall hat
+            .Box(-2, 15, -2, 1, 15, 1, Gold)                                             // gold hat band
+            .Box(-1, 18, -1, 0, 19, 0, Team).Box(0, 20, 0, 0, 22, 0, Team).Box(0, 23, 0, 0, 23, 0, Gold)
+            .Box(-3, 9, -2, 2, 10, -2, Team)                                             // mantle in its colour
+            .Box(-4, 9, -1, -3, 10, 1, Gold).Box(2, 9, -1, 3, 10, 1, Gold)               // gilded pauldrons
+            .Box(-1, 9, 1, 0, 9, 1, Glow)                                                // mantle clasp
+            .Box(3, 0, 1, 3, 17, 1, Wood).Box(3, 0, 1, 3, 1, 1, Gold)                    // gold-shod staff
+            .Box(2, 18, 0, 4, 18, 2, Gold).Box(2, 21, 0, 4, 21, 2, Gold)                 // gold ring
+            .Box(3, 19, 1, 3, 20, 1, Glow).Box(2, 19, 1, 2, 20, 1, Fire).Box(4, 19, 1, 4, 20, 1, Fire), // crystal and flame
         "seer" => new Builder().Robe().Rank()
             .Box(-2, 13, -3, 1, 14, 1, TeamDark).Box(-2, 10, -3, 1, 12, -3, TeamDark)    // deep hood
             .Box(-1, 11, 1, 0, 11, 1, Glow)                                              // shining eyes

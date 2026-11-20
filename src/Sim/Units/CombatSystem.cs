@@ -138,6 +138,9 @@ public sealed partial class CombatSystem
     // This tick's heroes that work the breach (see UnitDef.Undermine), likewise: their own side's sappers near
     // them hit buildings harder this tick and dig faster (tunnels this tick, dig areas the next).
     private readonly List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> _undermines = new();
+    // This tick's heroes that quicken the spells (see UnitDef.Quicken), likewise: a spell their own side's
+    // casters near them cast is ready again sooner.
+    private readonly List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> _quickens = new();
     // This tick's bleeding (see StepBleeding): hit points lost to wounds, landing with the tick's hits.
     private int[] _bled = Array.Empty<int>();
     private readonly List<int> _dead = new();
@@ -1375,8 +1378,8 @@ public sealed partial class CombatSystem
     /// Works out which units this tick's heroes steady (<see cref="UnitDef.Rally"/>): each living hero that is
     /// not beaten steadies its own side's units within its rally range (and <see cref="MoraleHeight"/> levels),
     /// itself included, calls the volleys of the ranged ones among them, spurs on the cavalry (see
-    /// <see cref="SpurOf"/>) and works the breach with the sappers (see <see cref="UndermineOf"/>). A unit near
-    /// several takes the best of each.
+    /// <see cref="SpurOf"/>), works the breach with the sappers (see <see cref="UndermineOf"/>) and quickens the
+    /// casters' spells (see <see cref="QuickenOf"/>). A unit near several takes the best of each.
     /// </summary>
     private void Rally()
     {
@@ -1389,6 +1392,7 @@ public sealed partial class CombatSystem
         _anyRally = false;
         _spurs.Clear();
         _undermines.Clear();
+        _quickens.Clear();
         for (int h = 0; h < u.Count; h++)
         {
             var def = Def(h);
@@ -1397,6 +1401,7 @@ public sealed partial class CombatSystem
             _anyRally = true;
             if (def.Spur > 0) _spurs.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Spur));
             if (def.Undermine > 0) _undermines.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Undermine));
+            if (def.Quicken > 0) _quickens.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Quicken));
             Near(u.X[h], u.Y[h], u.Z[h], def.Rally, MoraleHeight, u.Owner[h], allies: true, _near);
             foreach (int j in _near)
             {
@@ -1421,6 +1426,13 @@ public sealed partial class CombatSystem
     /// that much harder and it digs that much faster.
     /// </summary>
     public int UndermineOf(int i) => _undermines.Count == 0 ? 0 : Best(_undermines, i, UnitRole.Sapper);
+
+    /// <summary>
+    /// Percent sooner unit i is ready to cast again after a spell it casts this tick, because a hero of its own
+    /// side that quickens the spells (<see cref="UnitDef.Quicken"/>) stood within its rally range (and
+    /// <see cref="MoraleHeight"/> levels) when the tick began: casters only, the best of the heroes near it, else 0.
+    /// </summary>
+    public int QuickenOf(int i) => _quickens.Count == 0 ? 0 : Best(_quickens, i, UnitRole.Caster);
 
     /// <summary>The best percent of the heroes in the list that stood near unit i, if i is of the role; else 0.</summary>
     private int Best(List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> heroes, int i, UnitRole role)

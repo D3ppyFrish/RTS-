@@ -10,7 +10,7 @@ namespace Rts.Sim.Tests;
 /// <summary>
 /// Heroes: the Settlers' last forms, one of a kind, that steady the soldiers around them (the design doc's
 /// "units near a hero hold longer"). The first is the Marshal, a knight's form at level 2; then the Bowmaster
-/// (longbowmen), the Horselord (lancers) and the Breachmaster (demolishers).
+/// (longbowmen), the Horselord (lancers), the Breachmaster (demolishers) and the Archmage (battle mages).
 /// </summary>
 public class HeroTests
 {
@@ -193,12 +193,12 @@ public class HeroTests
         var files = Files();
         Edit(files, "units.json", "\"hero\": true, \"rally\": 8, ", "\"hero\": true, ");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
-        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\", \"volley\", \"spur\" or \"undermine\" but no \"rally\"", e.Errors);
+        Assert.Contains("units.json: unit 'marshal': has \"steady\", \"inspire\", \"volley\", \"spur\", \"undermine\" or \"quicken\" but no \"rally\"", e.Errors);
         Assert.Single(e.Errors);
 
         foreach (var (old, changed) in new[] { ("\"rally\": 8", "\"rally\": 9"), ("\"steady\": 50", "\"steady\": 40"),
                                                 ("\"inspire\": 3", "\"inspire\": 2"), ("\"hero\": true", "\"hero\": false"),
-                                                ("\"undermine\": 50", "\"undermine\": 40") })
+                                                ("\"undermine\": 50", "\"undermine\": 40"), ("\"quicken\": 100", "\"quicken\": 50") })
         {
             files = Files();
             Edit(files, "units.json", old, changed);
@@ -553,6 +553,130 @@ public class HeroTests
         }
         int with = TicksToDig(true), without = TicksToDig(false);
         Assert.True(with * 100 < without * 90, $"with the Breachmaster {with} ticks, without {without}");
+    }
+
+    /// <summary>The Archmage: the battle mage's form at level 2, the casters' hero, with the mage's four spells back.</summary>
+    [Fact]
+    public void TheArchmageIsABattleMagesFormAtTheSecondLevelAndIsAHero()
+    {
+        var db = ContentDb.Default;
+        var arch = db.Unit("archmage");
+        var battle = db.Unit("battle_mage");
+        Assert.Same(battle, arch.EvolvesFrom);
+        Assert.Equal(2, arch.Tier);
+        Assert.True(arch.Hero);
+        Assert.Equal(UnitRole.Caster, arch.Role);
+        Assert.Equal(Fix64.FromInt(10), arch.Rally);
+        Assert.Equal(100, arch.Quicken);
+        Assert.Equal(0, arch.Undermine);
+        Assert.Equal(0, arch.Spur);
+        Assert.Equal(0, arch.Volley);
+        Assert.Equal(0, arch.Steady);
+        Assert.Contains(arch, battle.Forms);
+        // The battle mage gave up the terrain spells for its blasts; the Archmage has all four again.
+        Assert.False(battle.EarthWall || battle.IceBridge || battle.Chasm || battle.GrowForest);
+        Assert.True(arch.EarthWall && arch.IceBridge && arch.Chasm && arch.GrowForest);
+        // Its gain is hit points, damage and range; its drawback is upkeep.
+        Assert.True(arch.MaxHp > battle.MaxHp && arch.Damage > battle.Damage && arch.Range > battle.Range);
+        Assert.True(arch.Upkeep > battle.Upkeep);
+
+        var sim = Flat();
+        int a = sim.SpawnUnit(Settlers, "mage", 20, 30), b = sim.SpawnUnit(Settlers, "mage", 20, 34);
+        sim.Units.Xp[Index(sim, a)] = 500;
+        sim.Units.Xp[Index(sim, b)] = 500;
+        sim.Schedule(sim.Tick, new EvolveCommand(Settlers, new[] { a, b }, "battle_mage"));
+        sim.Step();
+        Assert.Equal("battle_mage", DefId(sim, a));
+        // The other heroes do not stand in its way: each is one of a kind on its own.
+        Evolve(sim, Veteran(sim, 40, 40), "marshal");
+        sim.Schedule(sim.Tick, new EvolveCommand(Settlers, new[] { a, b }, "archmage"));
+        sim.Step();
+        Assert.Equal("archmage", DefId(sim, a));
+        Assert.Equal("battle_mage", DefId(sim, b));
+        Assert.True(sim.Evolution.WaitsForHero(Index(sim, b)));
+        Assert.Equal(90, sim.Units.Hp[Index(sim, a)]);
+        Assert.True(sim.Spells.CanCast(Index(sim, a), Spell.Chasm));
+        Assert.False(sim.Spells.CanCast(Index(sim, b), Spell.Chasm));
+    }
+
+    /// <summary>A mage with the experience, made a battle mage and then the Archmage.</summary>
+    private static int Archmage(Simulation sim, int x, int z)
+    {
+        int id = sim.SpawnUnit(Settlers, "mage", x, z);
+        sim.Units.Xp[Index(sim, id)] = 500;
+        Evolve(sim, id, "battle_mage");
+        Evolve(sim, id, "archmage");
+        Assert.Equal("archmage", DefId(sim, id));
+        return id;
+    }
+
+    /// <summary>
+    /// Casters of its own side near the Archmage (itself included) are quickened; foot soldiers beside it,
+    /// casters out of its reach and the enemy's casters are not, and it ends when it falls.
+    /// </summary>
+    [Fact]
+    public void CastersNearTheArchmageAreQuickened()
+    {
+        var sim = Flat();
+        int am = Archmage(sim, 30, 30);
+        int near = sim.SpawnUnit(Settlers, "mage", 35, 30);
+        int seer = sim.SpawnUnit(Settlers, "seer", 30, 35);
+        int spear = sim.SpawnUnit(Settlers, "spearman", 30, 33);
+        int far = sim.SpawnUnit(Settlers, "mage", 70, 70);
+        int enemy = sim.SpawnUnit(Orcs, "mage", 27, 30);
+        foreach (int id in new[] { am, near, seer, spear, far })
+            sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { id }, UnitStance.Hold));
+        sim.Schedule(sim.Tick, new StanceCommand(Orcs, new[] { enemy }, UnitStance.Hold));
+        sim.Step(); // worked out with the tick
+        int Quicken(int id) => sim.Combat.QuickenOf(Index(sim, id));
+        Assert.Equal(100, Quicken(near));
+        Assert.Equal(100, Quicken(seer));
+        Assert.Equal(100, Quicken(am));
+        Assert.Equal(0, Quicken(far));
+        Assert.Equal(0, Quicken(spear));
+        Assert.Equal(0, Quicken(enemy));
+
+        Kill(sim, am);
+        sim.Step();
+        Assert.Equal(0, Quicken(near));
+    }
+
+    /// <summary>
+    /// A mage that raises an earth wall beside the Archmage is ready to cast again in half the time; a mage
+    /// out of its reach waits the whole time, and so does one that casts after the Archmage fell.
+    /// </summary>
+    [Fact]
+    public void AMageBesideTheArchmageCastsAgainInHalfTheTime()
+    {
+        var sim = Flat();
+        int am = Archmage(sim, 30, 30);
+        int near = sim.SpawnUnit(Settlers, "mage", 32, 30);
+        int far = sim.SpawnUnit(Settlers, "mage", 70, 70);
+        foreach (int id in new[] { am, near, far })
+            sim.Schedule(sim.Tick, new StanceCommand(Settlers, new[] { id }, UnitStance.Hold));
+        sim.Step();
+
+        long WaitAfter(int id, int x1, int z1, int x2, int z2)
+        {
+            int walls = sim.Spells.Walls.Count;
+            sim.Schedule(sim.Tick, new EarthWallCommand(Settlers, new[] { id }, x1, z1, x2, z2));
+            sim.Step();
+            Assert.Equal(walls + 1, sim.Spells.Walls.Count);
+            return sim.Spells.ReadyAt(Index(sim, id)) - sim.Tick;
+        }
+        long nearWait = WaitAfter(near, 38, 26, 38, 30);
+        long farWait = WaitAfter(far, 76, 66, 76, 70);
+        Assert.InRange(nearWait, SpellSystem.CooldownTicks / 2 - 2, SpellSystem.CooldownTicks / 2);
+        Assert.InRange(farWait, SpellSystem.CooldownTicks - 2, SpellSystem.CooldownTicks);
+        // The Archmage quickens its own spells too.
+        long ownWait = WaitAfter(am, 24, 36, 28, 36);
+        Assert.InRange(ownWait, SpellSystem.CooldownTicks / 2 - 2, SpellSystem.CooldownTicks / 2);
+
+        // Once it falls, a spell is a full wait again.
+        Kill(sim, am);
+        sim.Run(SpellSystem.CooldownTicks);
+        long after = WaitAfter(near, 40, 20, 40, 24);
+        Assert.InRange(after, SpellSystem.CooldownTicks - 2, SpellSystem.CooldownTicks);
     }
 
     private static Dictionary<string, string> Files()

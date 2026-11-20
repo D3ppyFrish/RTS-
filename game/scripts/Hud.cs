@@ -725,6 +725,20 @@ public partial class Hud : CanvasLayer
             lines.Add($"Leads the charge: your riders within {Number(form.Rally)} blocks move {form.Spur}% faster");
         if (form.Rally > Fix64.Zero && form.Undermine > 0 && (form.Rally != from.Rally || form.Undermine != from.Undermine))
             lines.Add($"Works the breach: your sappers within {Number(form.Rally)} blocks hit buildings and dig {form.Undermine}% faster");
+        if (form.Rally > Fix64.Zero && form.Quicken > 0 && (form.Rally != from.Rally || form.Quicken != from.Quicken))
+            lines.Add($"Quickens the spells: your casters within {Number(form.Rally)} blocks are ready to cast again {form.Quicken}% sooner");
+        var spells = new List<string>();
+        if (form.EarthWall && !from.EarthWall) spells.Add("Earth Wall");
+        if (form.IceBridge && !from.IceBridge) spells.Add("Ice Bridge");
+        if (form.Chasm && !from.Chasm) spells.Add("Chasm");
+        if (form.GrowForest && !from.GrowForest) spells.Add("Grow Forest");
+        if (spells.Count > 0) lines.Add("Casts " + string.Join(", ", spells));
+        var lost = new List<string>();
+        if (from.EarthWall && !form.EarthWall) lost.Add("Earth Wall");
+        if (from.IceBridge && !form.IceBridge) lost.Add("Ice Bridge");
+        if (from.Chasm && !form.Chasm) lost.Add("Chasm");
+        if (from.GrowForest && !form.GrowForest) lost.Add("Grow Forest");
+        if (lost.Count > 0) lines.Add("No longer casts " + string.Join(", ", lost));
         return string.Join("\n", lines);
     }
 

@@ -35,7 +35,8 @@
 // that distance (itself included) are steadied: they lose steady percent less morale to deaths near them,
 // and get inspire morale back a second instead of 1 (see Morale in docs/rules.md); the ranged ones among them
 // deal volley percent more damage, the cavalry among them move spur percent faster, and the sappers among them
-// work undermine percent faster: their blows on buildings land that much harder and they dig that much faster.
+// work undermine percent faster: their blows on buildings land that much harder and they dig that much faster;
+// a spell cast by a caster among them is ready again quicken percent sooner (100 halves the wait).
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -171,6 +172,12 @@
     "speed": 4, "hp": 45, "model": "battle_mage", "damage": 14, "attackTime": 2, "range": 8, "sight": 9, "splash": 2,
     "attack": "crush",
     "upkeep": 2 },
+  { "id": "archmage", "name": "Archmage", "evolvesFrom": "battle_mage", "faction": "settlers", "role": "caster",
+    "description": "A hero, one of a kind: the battle mages' last form. It casts all four terrain spells again and quickens the spells: your casters near the Archmage are ready to cast again in half the time, and it never runs. Eats 3 food a minute.",
+    "speed": 4, "hp": 90, "model": "archmage", "damage": 16, "attackTime": 2, "range": 9, "sight": 10, "splash": 2,
+    "attack": "crush", "armor": { "torso": 1 },
+    "earthWall": true, "iceBridge": true, "chasm": true, "growForest": true,
+    "upkeep": 3, "hero": true, "rally": 10, "quicken": 100 },
   { "id": "seer", "name": "Seer", "evolvesFrom": "mage", "faction": "settlers", "role": "caster",
     "description": "Sees and strikes from far off, but walks slowly.",
     "speed": 3.5, "hp": 45, "model": "seer", "damage": 10, "attackTime": 2, "range": 11, "sight": 15, "splash": 1.5,
