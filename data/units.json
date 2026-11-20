@@ -38,7 +38,8 @@
 // and get inspire morale back a second instead of 1 (see Morale in docs/rules.md); the ranged ones among them
 // deal volley percent more damage, the cavalry among them move spur percent faster, and the sappers among them
 // work undermine percent faster: their blows on buildings land that much harder and they dig that much faster;
-// a spell cast by a caster among them is ready again quicken percent sooner (100 halves the wait).
+// a spell cast by a caster among them is ready again quicken percent sooner (100 halves the wait), and the
+// workers among them work hasten percent faster: they gather, build, farm, quarry, dig and clean that much faster.
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -99,6 +100,11 @@
     "speed": 4, "hp": 50, "model": "foreman", "damage": 3, "attackTime": 1.5, "range": 1.25, "sight": 6,
     "attack": "crush", "armor": { "torso": 1 },
     "work": 150 },
+  { "id": "master_builder", "name": "Master Builder", "evolvesFrom": "foreman", "faction": "settlers", "role": "worker",
+    "description": "A hero, one of a kind: the foremen's last form. It works twice as fast as a worker and drives the work: your workers near the Master Builder gather, build and farm half as fast again, and it never runs.",
+    "speed": 4, "hp": 80, "model": "master_builder", "damage": 5, "attackTime": 1.5, "range": 1.25, "sight": 8,
+    "attack": "crush", "armor": { "head": 1, "torso": 2 },
+    "work": 200, "hero": true, "rally": 10, "hasten": 50 },
   { "id": "militia", "name": "Militia", "evolvesFrom": "worker", "faction": "settlers", "role": "line_infantry",
     "description": "A worker who has taken up the spear for good: line infantry, a little slower than a spearman. It no longer works.",
     "speed": 3.5, "hp": 70, "model": "militia", "damage": 7, "attackTime": 1, "range": 1.5, "sight": 8,

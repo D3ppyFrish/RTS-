@@ -139,6 +139,9 @@ public sealed partial class CombatSystem
     // This tick's heroes that quicken the spells (see UnitDef.Quicken), likewise: a spell their own side's
     // casters near them cast is ready again sooner.
     private readonly List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> _quickens = new();
+    // This tick's heroes that drive the work (see UnitDef.Hasten), likewise: their own side's workers near them
+    // work faster (read by the economy the next tick, which steps before combat).
+    private readonly List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> _hastens = new();
     // This tick's bleeding (see StepBleeding): hit points lost to wounds, landing with the tick's hits.
     private int[] _bled = Array.Empty<int>();
     private readonly List<int> _dead = new();
@@ -1373,8 +1376,8 @@ public sealed partial class CombatSystem
     /// Works out which units this tick's heroes steady (<see cref="UnitDef.Rally"/>): each living hero that is
     /// not beaten steadies its own side's units within its rally range (and <see cref="MoraleHeight"/> levels),
     /// itself included, calls the volleys of the ranged ones among them, spurs on the cavalry (see
-    /// <see cref="SpurOf"/>), works the breach with the sappers (see <see cref="UndermineOf"/>) and quickens the
-    /// casters' spells (see <see cref="QuickenOf"/>). A unit near several takes the best of each.
+    /// <see cref="SpurOf"/>), works the breach with the sappers (see <see cref="UndermineOf"/>), quickens the
+    /// casters' spells (see <see cref="QuickenOf"/>) and drives the workers' work (see <see cref="HasteOf"/>). A unit near several takes the best of each.
     /// </summary>
     private void Rally()
     {
@@ -1388,6 +1391,7 @@ public sealed partial class CombatSystem
         _spurs.Clear();
         _undermines.Clear();
         _quickens.Clear();
+        _hastens.Clear();
         for (int h = 0; h < u.Count; h++)
         {
             var def = Def(h);
@@ -1397,6 +1401,7 @@ public sealed partial class CombatSystem
             if (def.Spur > 0) _spurs.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Spur));
             if (def.Undermine > 0) _undermines.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Undermine));
             if (def.Quicken > 0) _quickens.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Quicken));
+            if (def.Hasten > 0) _hastens.Add((u.Owner[h], u.X[h], u.Y[h], u.Z[h], def.Rally, def.Hasten));
             Near(u.X[h], u.Y[h], u.Z[h], def.Rally, MoraleHeight, u.Owner[h], allies: true, _near);
             foreach (int j in _near)
             {
@@ -1428,6 +1433,13 @@ public sealed partial class CombatSystem
     /// <see cref="MoraleHeight"/> levels) when the tick began: casters only, the best of the heroes near it, else 0.
     /// </summary>
     public int QuickenOf(int i) => _quickens.Count == 0 ? 0 : Best(_quickens, i, UnitRole.Caster);
+
+    /// <summary>
+    /// Percent faster unit i works because a hero of its own side that drives the work (<see cref="UnitDef.Hasten"/>)
+    /// stood within its rally range (and <see cref="MoraleHeight"/> levels) when the last combat step began:
+    /// workers only, the best of the heroes near it, else 0. The economy steps before combat, so it reads last tick's.
+    /// </summary>
+    public int HasteOf(int i) => _hastens.Count == 0 ? 0 : Best(_hastens, i, UnitRole.Worker);
 
     /// <summary>The best percent of the heroes in the list that stood near unit i, if i is of the role; else 0.</summary>
     private int Best(List<(int Owner, Fix64 X, int Y, Fix64 Z, Fix64 Range, int Percent)> heroes, int i, UnitRole role)

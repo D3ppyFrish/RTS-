@@ -5,7 +5,8 @@
 # selected again, the other knights' Marshal button says you have one already and none of them can take it.
 # Then an archer is selected on its own, becomes a longbowman and at once the Bowmaster, the longbowmen's hero,
 # a rider becomes a lancer and the Horselord, the lancers' hero, a sapper becomes a demolisher and the
-# Breachmaster, the demolishers' hero, and a mage becomes a battle mage and the Archmage, the battle mages' hero.
+# Breachmaster, the demolishers' hero, a mage becomes a battle mage and the Archmage, the battle mages' hero,
+# and a worker becomes a foreman and the Master Builder, the foremen's hero.
 # Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-hero-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -17,7 +18,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, west start: town hall at 128..134 x 381..387, the 24 starting units (four of each of the six
 # trained types, in turn: worker, spearman, archer, rider, sapper, mage) in rows from 126,388, so there is
-# a spearman at 127,388, an archer at 128,388, a rider at 129,388, a sapper at 130,388 and a mage at 131,388.
+# a spearman at 127,388, an archer at 128,388, a rider at 129,388, a sapper at 130,388, a mage at 131,388 and a worker at 126,388.
 STEPS="
 wait 20
 camera 131,389 45 55 22
@@ -97,6 +98,17 @@ ticks 2
 wait 2
 print
 shot $OUT/ui-hero-archmage.png
+clickworld 126,g+1,388
+wait 2
+ticks 2
+clickui evolve_foreman
+ticks 2
+wait 2
+clickui evolve_master_builder
+ticks 2
+wait 2
+print
+shot $OUT/ui-hero-master-builder.png
 "
 LOG="$OUT/ui-hero.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -106,7 +118,7 @@ fail() { echo "UI hero test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step failed: $(grep '^Input script' "$LOG")"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 8 ] || fail "expected 8 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 9 ] || fail "expected 9 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" evolved)" -eq 4 ] && [ "$(field "${UI[0]}" heroes)" -eq 0 ] \
   || fail "the spearmen did not become knights: ${UI[0]}"
 [ "$(field "${UI[1]}" own)" -eq 1 ] && [ "$(field "${UI[1]}" unit)" = knight ] && [ "$(field "${UI[1]}" can_evolve)" -eq 1 ] \
@@ -123,5 +135,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
   || fail "the sapper did not become the Breachmaster beside the other heroes: ${UI[6]}"
 [ "$(field "${UI[7]}" own)" -eq 1 ] && [ "$(field "${UI[7]}" unit)" = archmage ] && [ "$(field "${UI[7]}" heroes)" -eq 5 ] \
   || fail "the mage did not become the Archmage beside the other heroes: ${UI[7]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 6 ] || fail "missing screenshots"
+[ "$(field "${UI[8]}" own)" -eq 1 ] && [ "$(field "${UI[8]}" unit)" = master_builder ] && [ "$(field "${UI[8]}" heroes)" -eq 6 ] \
+  || fail "the worker did not become the Master Builder beside the other heroes: ${UI[8]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 7 ] || fail "missing screenshots"
 echo "UI hero screenshot test OK: $OUT"

@@ -308,6 +308,16 @@ public static class UnitModels
             .Box(-2, 13, -2, 1, 14, 1, Leather).Box(-2, 13, 2, 1, 13, 2, Leather)        // cap with a brim
             .Box(-2, 6, 1, 1, 9, 1, Leather)                                             // apron
             .Box(3, 3, 0, 3, 10, 0, Wood).Box(3, 10, -1, 3, 12, 2, Steel),               // hammer
+        // A hero: a foreman in a gold-banded master's cap, a sash in its owner's colour, a builder's square and a
+        // rolled plan on its back, and a gilded mallet, so its workers see whom to follow.
+        "master_builder" => new Builder().Humanoid().Rank()
+            .Box(-2, 13, -2, 1, 14, 1, Leather).Box(-3, 13, 2, 2, 13, 3, Leather)        // cap with a wide brim
+            .Box(-2, 13, -2, 1, 13, 1, Gold).Box(-1, 15, -1, 0, 15, 0, Team)             // gold band, a tuft in its colour
+            .Box(-2, 6, 1, 1, 9, 1, Leather).Box(-2, 9, -1, 1, 9, 1, Team)               // apron and sash
+            .Box(-4, 9, -1, -3, 10, 1, Gold).Box(2, 9, -1, 3, 10, 1, Gold)               // gilded shoulder pieces
+            .Box(-3, 5, -3, -3, 13, -3, Gold).Box(-3, 5, -3, 1, 5, -3, Gold)             // builder's square on its back
+            .Box(-1, 8, -4, 2, 9, -3, Cloth).Box(2, 8, -4, 2, 9, -3, Team)               // rolled plan, ribbon in its colour
+            .Box(3, 3, 0, 3, 10, 0, Wood).Box(3, 10, -1, 3, 12, 2, Gold),                // gilded mallet
         "militia" => new Builder().Humanoid().Rank()
             .Box(-2, 13, -2, 1, 13, 1, Leather)                                          // leather cap
             .Box(3, 1, 1, 3, 15, 1, Wood).Box(3, 16, 1, 3, 17, 1, Steel),                // short spear

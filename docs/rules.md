@@ -500,6 +500,7 @@ Orc units earn none.
   | Lancer (level 2) | the **Horselord**, a hero (below) |
   | Demolisher (level 2) | the **Breachmaster**, a hero (below) |
   | Battle mage (level 2) | the **Archmage**, a hero (below) |
+  | Foreman (level 2) | the **Master Builder**, a hero (below) |
 
 - **Heroes** (`"hero": true` in `data/units.json`, `HeroTests`): the last forms are heroes, one of a kind. The
   first is the **Marshal**, the knight's form at level 2 (500 experience): 200 hit points, 14 damage, a knight's
@@ -543,7 +544,17 @@ Orc units earn none.
   soldiers gain nothing, a wait already begun keeps its length, and it ends when the Archmage falls. In the game it
   wears a tall hat banded in gold, a mantle in its owner's colour with gilded pauldrons, and carries a gold-shod
   staff crowned with a gold ring round a shining crystal.
-  The design doc's other heroes (the worker line's, with abilities of its own) come later.
+  The sixth is the **Master Builder**, the foreman's form at level 2 (500 experience), the worker line's hero: 80
+  hit points, 5 damage, sight 8, a little leather on head and body, and it still gathers, builds and farms, twice as
+  fast as a worker (`"work": 200`). It is one of a kind on its own like the others and never breaks. It **drives the
+  work**: its own side's workers within 10 blocks (and 4 levels), itself included, work half as fast again on top of
+  their own speed (`"rally": 10`, `"hasten": 50`): a worker works at 150%, a foreman at 225% and the Master Builder
+  itself at 300%. That counts for gathering, building and upgrading, farming, quarrying, digging and cleaning blood;
+  walking and hauling are as before. Where the Master Builder stood last tick counts. Soldiers, other players' workers
+  and workers out of its reach gain nothing, and it ends when it falls. In the game it wears a leather cap with a
+  wide brim and a gold band, a sash in its owner's colour, gilded shoulder pieces, a gold builder's square and a
+  rolled plan on its back, and carries a gilded mallet.
+  With it every Settlers line has its hero.
 - **Evolving** (`EvolveCommand`) is immediate and free. The unit keeps its id, place, orders, experience
   and the same share of its hit points; a worker that becomes militia drops its job and load and is no
   longer automatic. Experience is never spent, so a form of a form needs only the next level.
@@ -555,7 +566,7 @@ Orc units earn none.
   takes on its own. A single unit's panel shows its level and experience. Forms wear a gold belt.
   `--xp=N` starts your units with N experience, to try the forms at once.
 
-`--xp=500` starts your units at the second level, to try the Marshal, the Bowmaster, the Horselord, the Breachmaster and the Archmage at once. `EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
+`--xp=500` starts your units at the second level, to try the Marshal, the Bowmaster, the Horselord, the Breachmaster, the Archmage and the Master Builder at once. `EvolutionTests` has the issue's check: a spearman kills three orc workers, reaches level 1 and becomes
 a knight, which hits an orc spearman three times as hard as before (heavy infantry beats line infantry)
 but walks a quarter slower. All the numbers are first guesses for playtesting.
 

@@ -721,6 +721,8 @@ public partial class Hud : CanvasLayer
             lines.Add($"Works the breach: your sappers within {Number(form.Rally)} blocks hit buildings and dig {form.Undermine}% faster");
         if (form.Rally > Fix64.Zero && form.Quicken > 0 && (form.Rally != from.Rally || form.Quicken != from.Quicken))
             lines.Add($"Quickens the spells: your casters within {Number(form.Rally)} blocks are ready to cast again {form.Quicken}% sooner");
+        if (form.Rally > Fix64.Zero && form.Hasten > 0 && (form.Rally != from.Rally || form.Hasten != from.Hasten))
+            lines.Add($"Drives the work: your workers within {Number(form.Rally)} blocks gather, build and farm {form.Hasten}% faster");
         var spells = new List<string>();
         if (form.EarthWall && !from.EarthWall) spells.Add("Earth Wall");
         if (form.IceBridge && !from.IceBridge) spells.Add("Ice Bridge");

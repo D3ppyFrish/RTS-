@@ -585,7 +585,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -636,6 +636,7 @@ public static class ContentLoader
                 Spur = o.Int("spur", 0, 200, 0),
                 Undermine = o.Int("undermine", 0, 400, 0),
                 Quicken = o.Int("quicken", 0, 400, 0),
+                Hasten = o.Int("hasten", 0, 400, 0),
                 WorkPercent = o.Int("work", 10, 1000, 100),
                 Lair = Lair(o),
                 FromDen = o.Bool("fromDen"),
@@ -643,8 +644,8 @@ public static class ContentLoader
             };
             if (def.Heal == 0 && (o.Has("healTime") || o.Has("healRange")))
                 o.Error("has \"healTime\" or \"healRange\" but no \"heal\"");
-            if (def.Rally == Fix64.Zero && (o.Has("steady") || o.Has("inspire") || o.Has("volley") || o.Has("spur") || o.Has("undermine") || o.Has("quicken")))
-                o.Error("has \"steady\", \"inspire\", \"volley\", \"spur\", \"undermine\" or \"quicken\" but no \"rally\"");
+            if (def.Rally == Fix64.Zero && (o.Has("steady") || o.Has("inspire") || o.Has("volley") || o.Has("spur") || o.Has("undermine") || o.Has("quicken") || o.Has("hasten")))
+                o.Error("has \"steady\", \"inspire\", \"volley\", \"spur\", \"undermine\", \"quicken\" or \"hasten\" but no \"rally\"");
             _db.Add(def);
             var trainedAt = o.Str("trainedAt", false);
             var faction = o.Str("faction", false);
@@ -1374,6 +1375,7 @@ public static class ContentLoader
                 h.Add(u.Spur);
                 h.Add(u.Undermine);
                 h.Add(u.Quicken);
+                h.Add(u.Hasten);
                 h.Add(u.WorkPercent);
                 h.Add(u.EvolvesFrom?.Index ?? -1);
                 h.Add(u.FromDen ? 1 : 0);

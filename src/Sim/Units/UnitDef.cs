@@ -115,8 +115,8 @@ public sealed class UnitDef
     /// Steadied units lose <see cref="Steady"/> percent less morale to deaths near them and get
     /// <see cref="Inspire"/> morale back a second instead of one, and ranged ones deal <see cref="Volley"/>
     /// percent more damage, cavalry ones move <see cref="Spur"/> percent faster, sappers work
-    /// <see cref="Undermine"/> percent faster and casters are ready to cast again <see cref="Quicken"/> percent
-    /// sooner (see <c>CombatSystem</c>).
+    /// <see cref="Undermine"/> percent faster, casters are ready to cast again <see cref="Quicken"/> percent
+    /// sooner and workers work <see cref="Hasten"/> percent faster (see <c>CombatSystem</c>).
     /// </summary>
     public Fix64 Rally { get; init; }
     /// <summary>Percent less morale the units it steadies lose to deaths (see <see cref="Rally"/>).</summary>
@@ -145,6 +145,13 @@ public sealed class UnitDef
     /// 1 + Quicken / 100, so 100 halves it. The Archmage quickens the spells (see <c>CombatSystem.QuickenOf</c>).
     /// </summary>
     public int Quicken { get; init; }
+    /// <summary>
+    /// Percent faster its own side's workers (<see cref="UnitRole.Worker"/>, itself included) work while within
+    /// its <see cref="Rally"/> range: gathering, building, farming, quarrying, digging and cleaning take
+    /// 1 + Hasten / 100 times less long, on top of their own <see cref="WorkPercent"/>. The Master Builder drives
+    /// the work (see <c>CombatSystem.HasteOf</c>).
+    /// </summary>
+    public int Hasten { get; init; }
 
     /// <summary>How fast it gathers, builds, farms and digs tunnels, in percent of the usual.</summary>
     public int WorkPercent { get; init; } = 100;
