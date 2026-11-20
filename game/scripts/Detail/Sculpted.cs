@@ -62,6 +62,15 @@ public static partial class Sculpted
         },
         ["dusk_warden"] = WardenRig(), // the dusk tree's guardian (Sculpted.Warden)
         ["knight"] = ImportedRig("res://models/knight.vox.gz"), // made with Meshy AI (Sculpted.Imported)
+        // Sawyer's Meshy AI models for telling troops apart. The shared base units' models are the Settlers' look:
+        // the Orcs keep their own ("orcs/spearman" and the rest, see UnitModels.ForFaction).
+        ["worker"] = ImportedRig("res://models/worker.vox.gz"),
+        ["militia"] = ImportedRig("res://models/militia.vox.gz"),
+        ["spearman"] = ImportedRig("res://models/spearman.vox.gz"),
+        ["pathfinder"] = ImportedRig("res://models/pathfinder.vox.gz"),
+        ["archer"] = ImportedRig("res://models/archer.vox.gz"),
+        ["rider"] = ImportedRig("res://models/rider.vox.gz", stride: 1.6f, bob: 1.5f),
+        ["mage"] = ImportedRig("res://models/mage.vox.gz"),
         ["golem"] = new RigDef
         {
             Roles = new[] { Role.LegA, Role.LegB, Role.Body, Role.Head, Role.ArmA, Role.ArmB, Role.Fixed },
