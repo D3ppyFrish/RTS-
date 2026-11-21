@@ -104,4 +104,17 @@ public sealed class CityStateDef
     /// every unit of theirs on its toll ground instead, from the last blow.
     /// </summary>
     public int FeudTicks { get; init; } = 60 * Simulation.TicksPerSecond;
+
+    /// <summary>
+    /// How far round the town (columns from its square) its holder sees while they hold it, as their units would: the
+    /// land its scouts ride (the centaurs'). 0 for nothing beyond the totem's own sight. See <c>VisionSystem.Step</c>.
+    /// </summary>
+    public int WatchRange { get; init; }
+
+    /// <summary>
+    /// The biome the town keeps to (the centaurs' open grassland), or null for any: it is placed at the best site whose
+    /// market and most of the land round it are of that biome, and only with no such site anywhere else (see
+    /// <c>CityStateSystem.InBiome</c>). Not for a deep town or a crossing.
+    /// </summary>
+    public World.Biome? Biome { get; init; }
 }

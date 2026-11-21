@@ -772,7 +772,7 @@ public static class ContentLoader
         private void ReadCityState(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof", "ground", "deep", "crossing", "toll");
+            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof", "ground", "deep", "crossing", "toll", "watch", "biome");
             if (id == null) return;
             if (_db.TryGetCityState(id, out _))
             {
@@ -793,6 +793,8 @@ public static class ContentLoader
             heal?.Keys("range");
             var toll = Part(o, "toll", "{ \"gold\": 2, \"feud\": 60 }");
             toll?.Keys("gold", "feud");
+            var watch = Part(o, "watch", "{ \"range\": 40 }");
+            watch?.Keys("range");
             var buys = trade?.Enum("buys", Good.Food, required: false) ?? Good.Food;
             var sells = trade?.Enum("sells", Good.Iron, required: false) ?? Good.Iron;
             if (buys == sells) trade!.Error($"buys and sells the same good ({SnakeName(buys)})");
@@ -822,7 +824,10 @@ public static class ContentLoader
                 Crossing = o.Bool("crossing"),
                 TollGold = toll?.Int("gold", 1, 1000, 2) ?? 0,
                 FeudTicks = (toll?.Int("feud", 0, MaxSeconds, 60) ?? 60) * Tps,
+                WatchRange = watch?.Int("range", 1, 256, 40) ?? 0,
+                Biome = o.Has("biome") ? o.Enum("biome", World.Biome.Grassland, required: true) : null,
             };
+            if (def.Biome != null && (def.Deep || def.Crossing)) o.Error("a town in the deep caves or at a crossing cannot keep to a biome (\"biome\")");
             if (def.Crossing && def.Deep) o.Error("a town in the deep caves cannot be a crossing (\"deep\" and \"crossing\" are both true)");
             var totemId = totem?.Str("building", true);
             var guardIds = guards?.Ids("units") ?? new List<string>();

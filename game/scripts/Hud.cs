@@ -2300,9 +2300,14 @@ public partial class Hud : CanvasLayer
                   (town.Holder >= 0 ? $"\nBreak {PlayerName(town.Holder)}'s stone to take the bridge: the toll goes to them"
                                     : "\nBreak the stone to take the bridge: striking it or its guards sets them at feud with you");
         }
+        string watch = def.WatchRange > 0
+            ? (town.Holder == player
+                ? $"Its scouts show you the land within {def.WatchRange} blocks of the town"
+                : $"Its scouts show its holder the land within {def.WatchRange} blocks of the town") + "\n"
+            : "";
         return $"{def.Name}   (city-state)   {HolderText(town, player)}\n" +
                $"{totemText}   {guards}\n" +
-               take + "\n" + tribute +
+               take + "\n" + watch + tribute +
                $"Caravans bring {def.Load} {Goods.Name(def.Buys).ToLowerInvariant()} and get {def.Price} {Goods.Name(def.Sells).ToLowerInvariant()} " +
                $"per 100 blocks from your storage ({def.HolderBonus}% more for its holder): {trading} of yours trading here\n" +
                $"Mercenaries for its holder: {town.Ready} of {def.Pool} ready{refill}";

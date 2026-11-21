@@ -1048,9 +1048,9 @@ hurts the units on or near it.
 ## City-states
 
 `src/Sim/Economy/CityStateSystem.cs`: towns of other races, too small to win, that trade with everyone
-and are won by force. There are four, the goblins, the ogres, the kobolds and the trolls
+and are won by force. There are five, the goblins, the ogres, the kobolds, the trolls and the centaurs
 (`data/citystates.json`); everything below holds for all of them, with the goblins' numbers unless the ogres',
-the kobolds' or the trolls' section says otherwise.
+the kobolds', the trolls' or the centaurs' section says otherwise.
 
 - **The town**: at match start each city-state gets a town about as far from every start area as from
   the others (on a 512 map about 96 blocks from their middle, where the ground allows): a levelled
@@ -1169,6 +1169,30 @@ the kobolds' or the trolls' section says otherwise.
   - `TrollBridgeTests` checks the data, the bridge over the river on two seeds (walked across, nobody building on it),
     no bridge without a river, the toll paid and units let through, unpaid ones fought, the holder crossing free and
     getting the toll, feuds, and the trolls' regeneration by day, by night and under a roof.
+
+- **The centaur camp** (`"watch"` and `"biome"` in `citystates.json`): a fifth city-state, placed last, on the open
+  grassland: at the best site (scored as the other towns' are) whose market and at least half the land within 24
+  columns of it are grassland and that is at least the usual distance (144 blocks on the default map) from every other
+  town in the open; with no such site it is placed as any other town (on the default map it lies west of the middle,
+  between the goblins' town and the ogres' hold). Its huts are planks with
+  thatched roofs, like tents of a herding camp, and its totem is the **centaur standard** (`centaur_standard`: a
+  wooden pole 8 high on a 3×3 plinth, topped with a crossbar hung with long horse tails, a pennant in the holder's
+  colour and a gilt horseshoe). It keeps no lair. Five centaurs guard it, three archers and two lancers, and being
+  mounted they ride out 6 columns from the square instead of 4 (a fallen one is replaced every 45 seconds). Its holder
+  gets 40 food a minute as tribute from the herds, caravans bring wood there and get food back (12 per 100 blocks of
+  route), and its holder hires centaurs, at most 4 ready at a time and one more every 45 seconds:
+  - **Centaur archer**: cavalry (90 hit points, speed 7.5, nearly a rider's 8) with a short horse bow that shoots 8
+    columns (6 damage every 1.3 seconds, pierce), so it harries flanks, archers and caravans from range and rides off;
+    it is still cavalry, so line infantry beats it. 70 food, 20 wood and 15 gold.
+  - **Centaur lancer**: cavalry (140 hit points, speed 7.5) with a long lance (11 damage every 1.2 seconds, reach
+    1.75, pierce) and a hide shield that stops 10% of the blows from in front; 80 food and 20 gold.
+  - **Scouts** (`"watch": { "range": 40 }`): while you hold the camp you see the land within 40 blocks of its square,
+    with no unit or building of yours there, as a building's sight works: less far in the dark, further where it is
+    lit. The camp's rivals see nothing of it, and whoever takes the camp over takes its scouts too, so the land goes
+    out of your sight. With fog of war off it changes nothing.
+  - `CentaurTests` checks the data, the scouts' sight (the holder seeing the land round the camp and the rival not,
+    the sight going over to a new holder, less of it at night), a hired archer shooting from the saddle, and the camp
+    placed in a match away from the other towns.
 
 This replaced the earlier influence alliance (gifts, influence from trade and lairs, raiding caravans
 for influence), which is gone. `CityStateTests` has the issue's checks: breaking the totem makes the

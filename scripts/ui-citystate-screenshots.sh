@@ -7,7 +7,8 @@
 # (issue #46) is picked from the top bar: neutral, its stone idol plain and four ogre guards round it, and then
 # the kobolds' warren, dug into a chamber of the deep caves, seen through the height slice: neutral, its great
 # crystal plain and five kobold guards round it, and last the troll bridge: neutral, its standing stone plain, four
-# troll guards and the stone bridge it built over the river. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
+# troll guards and the stone bridge it built over the river, and last the centaur camp: neutral, its horse-tail
+# standard plain and five centaur guards round it. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-citystate-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/ui}")"
@@ -21,7 +22,8 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # (den at 171,384), which a lone caravan would not get past. --goods gives enough for the hires and the
 # caravan; --houses makes room for them behind the hall (the start has more people than its hall houses).
 # The ogres' hold has its market at 393,632, the kobolds' warren at 418,46,437 (under the forest), and the
-# troll bridge at 389,180, its bridge west over the river (columns 364 to 381, rows 179 to 181).
+# troll bridge at 389,180, its bridge west over the river (columns 364 to 381, rows 179 to 181), and the
+# centaur camp at 329,86,476 on the grassland.
 STEPS="
 wait 20
 clickui city_goblins
@@ -114,6 +116,15 @@ shot $OUT/ui-trolls.png
 camera 386,180 -120 35 14
 wait 5
 shot $OUT/ui-trolls-close.png
+clickui city_centaurs
+wait 5
+print
+camera 329,476 30 45 30
+wait 10
+shot $OUT/ui-centaurs.png
+camera 329,476 210 30 14
+wait 5
+shot $OUT/ui-centaurs-close.png
 "
 LOG="$OUT/ui-citystate.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -124,7 +135,7 @@ fail() { echo "UI city-state test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 10 ] || fail "expected 10 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 11 ] || fail "expected 11 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" city)" = goblins ] && [ "$(field "${UI[0]}" holder)" -eq -1 ] && [ "$(field "${UI[0]}" totem_owner)" -eq 7 ] \
   && [ "$(field "${UI[0]}" guards)" -eq 6 ] && [ "$(field "${UI[0]}" guards_owner)" -eq 7 ] \
   || fail "the goblin town is not selected, or it is not neutral with its totem and guards: ${UI[0]}"
@@ -147,5 +158,7 @@ GOT_AFTER=$(( $(field "${UI[6]}" iron) + $(field "${UI[6]}" gold) ))
 [ "$(field "${UI[9]}" city)" = trolls ] && [ "$(field "${UI[9]}" holder)" -eq -1 ] && [ "$(field "${UI[9]}" totem_owner)" -eq 7 ] \
   && [ "$(field "${UI[9]}" guards)" -eq 4 ] && [ "$(field "${UI[9]}" bridge)" -eq 1 ] \
   || fail "the troll bridge is not selected, or it is not neutral with its stone, guards and bridge: ${UI[9]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 11 ] || fail "missing screenshots"
+[ "$(field "${UI[10]}" city)" = centaurs ] && [ "$(field "${UI[10]}" holder)" -eq -1 ] && [ "$(field "${UI[10]}" totem_owner)" -eq 7 ] \
+  && [ "$(field "${UI[10]}" guards)" -eq 5 ] || fail "the centaur camp is not selected, or it is not neutral with its standard and guards: ${UI[10]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 13 ] || fail "missing screenshots"
 echo "UI city-state screenshot test OK: $OUT"
