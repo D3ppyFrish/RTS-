@@ -178,7 +178,7 @@ public partial class Hud : CanvasLayer
         bar.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
         root.AddChild(bar);
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 10);
+        row.AddThemeConstantOverride("separation", 6);
         bar.AddChild(row);
 
         foreach (var good in Goods.All)
@@ -213,14 +213,14 @@ public partial class Hud : CanvasLayer
         _techButton.Name = "techs_button";
         _techButton.Pressed += () => _control.ToggleTechTree();
         row.AddChild(_techButton);
-        _autoButton = MakeButton("Auto workers [Shift+J]");
+        _autoButton = MakeButton("Auto workers");
         _autoButton.Name = "auto_button";
-        _autoButton.TooltipText = "All your workers, and those you train, find their own jobs; houses and farms go up when needed";
+        _autoButton.TooltipText = "[Shift+J] All your workers, and those you train, find their own jobs; houses and farms go up when needed";
         _autoButton.Pressed += () => _control.ToggleAutoAll();
         row.AddChild(_autoButton);
-        _rebuildButton = MakeButton("Rebuild [Shift+P]");
+        _rebuildButton = MakeButton("Rebuild");
         _rebuildButton.Name = "rebuild_button";
-        _rebuildButton.TooltipText = "Rebuild orders: your destroyed buildings are cleared and put back where they stood, once no enemy is near and you can pay";
+        _rebuildButton.TooltipText = "[Shift+P] Rebuild orders: your destroyed buildings are cleared and put back where they stood, once no enemy is near and you can pay";
         _rebuildButton.Pressed += () => _control.ToggleRebuild();
         row.AddChild(_rebuildButton);
         _prioritiesButton = MakeButton("Priorities");
