@@ -155,6 +155,7 @@ public partial class TechTreePanel : PanelContainer
             {
                 State.Researched => "Researched",
                 State.Researching => $"Researching {100L * econ.ResearchTicks(player) / tech.ResearchTicks}%",
+                _ when can == ResearchResult.NotDiscovered => DiscoveryText(tech.Discovery),
                 _ => $"{Hud.CostText(tech.Cost)}   {tech.ResearchTicks / Simulation.TicksPerSecond} s",
             };
             button.Text = $"{tech.Name}\n{second}";
@@ -191,6 +192,7 @@ public partial class TechTreePanel : PanelContainer
             ResearchResult.Busy => "Another tech is being researched.",
             ResearchResult.NoTownHall => "You need a finished town hall.",
             ResearchResult.CannotAfford => "Not enough goods.",
+            ResearchResult.NotDiscovered => $"A discovery: {DiscoveryText(tech.Discovery)} to research it.",
             _ => null,
         };
         if (why != null) text.Append('\n').Append(why);
@@ -207,7 +209,23 @@ public partial class TechTreePanel : PanelContainer
         TechEffectType.UnitHp => $"{Who(e)} have {e.Amount} more hit points",
         TechEffectType.UnitSpeed => $"{Who(e)} walk {e.Amount}% faster",
         TechEffectType.Roads => "Roads can be laid (L)",
+        TechEffectType.Reveal => e.Reveal switch
+        {
+            MapFeature.Ruins => "Shows every old ruin on the map",
+            MapFeature.Lairs => "Shows every monster lair on the map",
+            _ => "Shows every city-state town on the map",
+        },
+        TechEffectType.SpareWorkers => "Wild monsters leave your workers alone",
         _ => e.Type.ToString(),
+    };
+
+    /// <summary>What the player has to do to make the discovery: "Search an old ruin".</summary>
+    public static string DiscoveryText(Discovery d) => d switch
+    {
+        Discovery.Ruin => "Search an old ruin",
+        Discovery.Lair => "Clear a monster lair",
+        Discovery.Town => "Take a city-state town",
+        _ => "",
     };
 
     private static string Who(TechEffect e)

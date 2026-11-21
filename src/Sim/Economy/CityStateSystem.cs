@@ -511,6 +511,7 @@ public sealed class CityStateSystem
             u.ClearCombat(i);
             u.HitBy[i] = 0;
         }
+        _sim.Economy.Discover(player, Rts.Sim.Content.Discovery.Town);
         _sim.Events.TownConquered(town, player, old);
     }
 

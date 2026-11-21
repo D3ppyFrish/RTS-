@@ -128,6 +128,34 @@ public sealed class VisionSystem
     }
 
     /// <summary>
+    /// Marks every column within <paramref name="r"/> of (x, z) that the player has never seen as seen (not in sight):
+    /// what a chart shows (a reveal tech, see <see cref="Content.TechEffectType.Reveal"/>). The ground there looks as
+    /// it did when the match began until the player's units see it for themselves. Nothing with fog of war off.
+    /// </summary>
+    internal void Reveal(int player, int x, int z, int r)
+    {
+        if (!_sim.Fog || (uint)player >= (uint)_grids.Length) return;
+        var g = _grids[player] ??= new byte[_sizeX * _sizeZ];
+        var half = Disc(r * r);
+        long seen = 0;
+        for (int dz = -r; dz <= r; dz++)
+        {
+            int cz = z + dz;
+            if ((uint)cz >= (uint)_sizeZ) continue;
+            int h = half[Math.Abs(dz)];
+            for (int cx = Math.Max(0, x - h); cx <= Math.Min(_sizeX - 1, x + h); cx++)
+            {
+                ref byte b = ref g[cx + cz * _sizeX];
+                if (b != (byte)Sight.Unseen) continue;
+                b = (byte)Sight.Seen;
+                seen++;
+            }
+        }
+        _seen[player] += seen;
+        Version++;
+    }
+
+    /// <summary>
     /// Puts the rectangle of columns (x0, z0)-(x1, z1), and every column within the square root of
     /// <paramref name="r2"/> of it, in the player's sight; with <paramref name="litOnly"/>, only those in
     /// the light (see <see cref="Lights"/>).

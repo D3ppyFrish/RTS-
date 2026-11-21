@@ -361,6 +361,18 @@ public static class UiIcons
             ".kssyyyysSk.", ".ksSssssssk.", "..ksSsssSk..", "...kssSsk...", "....kssk....", ".....kk.....",
         },
         // An old ruin's carved stone tablet, gold writing on grey, standing in grass.
+        // Wardens' charts: an old map with a path to a red cross over grey ruin stones.
+        ["chart"] = new[]
+        {
+            "............", ".kkkkkkkkkk.", "kppppppppppk", "kpbpppprprpk", "kppbppppRppk", "kpppbbprprpk",
+            "kppppppbpppk", "kpsppppbpppk", "kssspbbppppk", "kppppppppppk", ".kkkkkkkkkk.", "............",
+        },
+        // Trail maps: a scrawled map of woods, hills and a trail to a red paw mark.
+        ["trail_map"] = new[]
+        {
+            "............", ".kkkkkkkkkk.", "kpgGpppppkpk", "kgGgppppkkkk", "kpkbpbpbpBpk", "kppppppppbpk",
+            "kpppppppbppk", "kppprpbbpppk", "kpprrrpppgpk", "kpppkppppGgk", ".kkkkkkkkkk.", "............",
+        },
         ["ruin"] = new[]
         {
             "....kkkk....", "...klllsk...", "..klsssssk..", "..ksysysSk..", "..kssyssSk..", "..ksyyysSk..",

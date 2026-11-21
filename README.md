@@ -130,12 +130,15 @@ replay made with different data says so instead of drifting apart.
 - **Factions**: Settlers and Orcs (who tame monsters: see [Monsters and taming](docs/rules.md#monsters-and-taming)). Player 0 plays the first
   faction, player 1 the second, and so on; picking a faction on the start screen picks the player who
   has it.
-- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 15
+- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 18
   in all: a shared core (farming, better tools, roads, archery, basic magic, masonry, crop rotation,
-  horse breeding, handcarts, smelting, sapping) and two per faction. Prerequisites form a branching
+  horse breeding, handcarts, smelting, sapping), two per faction, and three discovery techs (`"discovery"`:
+  Wardens' charts, Beast lore, Trail maps) opened only by exploring (see
+  [Discovery techs](docs/rules.md#discovery-techs)). Prerequisites form a branching
   tree up to four deep. A tech unlocks the units and buildings that name it in `requires`, and can have
   effects: faster gathering, bigger loads, richer farms, more housing, more hit points (for units
-  already alive too), faster walking, and roads.
+  already alive too), faster walking, roads, showing the map's ruins, lairs or towns through the fog
+  (`reveal`), and wild monsters sparing workers (`spare_workers`).
   Design principle for new techs: **research gives tools, not numbers**. A tech should give players a new
   ability, unit option, building or tactic to outsmart enemies and adapt, not just a higher number; stat
   buffs are mostly avoided. The stat effects above are to be replaced (see issue #80, on hold).
@@ -166,7 +169,8 @@ replay made with different data says so instead of drifting apart.
 
 The tech tree screen (K) shows your faction's techs in columns by how many techs lead to them, with
 lines from each tech to what it opens up: green when researched, gold while being researched, bright
-when you can start it now and dim otherwise. All the numbers are first guesses for playtesting.
+when you can start it now and dim otherwise. A discovery tech not yet discovered says what to do for it
+("Search an old ruin"). All the numbers are first guesses for playtesting.
 
 ### Headless matches and replays
 

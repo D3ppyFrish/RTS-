@@ -283,6 +283,7 @@ public sealed class RuinSystem
         ruin.SearchedAt = _sim.Tick;
         ruin.Finder = s.Id;
         _searchers.RemoveAll(o => o.Ruin == ruin.Index);
+        _sim.Economy.Discover(p, Rts.Sim.Content.Discovery.Ruin);
         if (ruin.Find is not { } find) return;
         if (find.Goods.Length > 0 && _sim.Economy.NearestStorage(p, ruin.X, ruin.Z) is { } store)
             foreach (var g in find.Goods) store.Stock[(int)g.Good] += g.Amount;

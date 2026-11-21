@@ -72,7 +72,9 @@ public sealed class PlayerEconomy
     internal int ResearchTicks;
     // Bonuses from the techs had, recomputed when one is added (see EconomySystem.UpdateBonuses).
     internal int GatherPercent, CarryBonus, FarmBonus;
-    internal bool Roads;
+    internal bool Roads, SpareWorkers;
+    // The discoveries made (bit 1 << Discovery), which open discovery techs.
+    internal byte Discoveries;
     internal readonly int[] HousingBonus, HpBonus;
     internal readonly Fix64[] SpeedPerTick;
     // The form (unit index) each unit type (by index) takes on its own once it can, or -1 (see EvolutionSystem).
@@ -252,6 +254,7 @@ public sealed partial class EconomySystem
             Mix(p.Researching);
             Mix(p.ResearchTicks);
             Mix(p.Mana);
+            Mix(p.Discoveries);
             for (int t = 0; t < p.Researched.Length; t++)
                 if (p.Researched[t]) Mix(t);
             foreach (int form in p.AutoForm) Mix(form);
