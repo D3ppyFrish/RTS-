@@ -197,10 +197,11 @@ public partial class Alerts : VBoxContainer
         e.Kind == GameEventKind.RuinSearched && e.Def >= 0 && e.Def < _sim.Ruins.Ruins.Count
         && _sim.Ruins.Ruins[e.Def].Find is { Lore.Length: > 0 } find ? find.Lore : null;
 
-    /// <summary>What the ground did, read from where the unit died: stone rubble on it means falling rocks, the crust gone a sinkhole.</summary>
+    /// <summary>What the ground did, read from where the unit died: water over its head means a flood, stone rubble on it falling rocks, the crust gone a sinkhole.</summary>
     private string HazardDeath(GameEvent e)
     {
         var below = _sim.World.Get(e.X, e.Y - 1, e.Z);
+        if (_sim.World.Get(e.X, e.Y + 1, e.Z) == BlockType.Water) return "drowned in a flood";
         for (int dz = -1; dz <= 1; dz++)
         for (int dx = -1; dx <= 1; dx++)
         for (int dy = -1; dy <= 1; dy++)

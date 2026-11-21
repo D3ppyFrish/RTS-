@@ -13,7 +13,8 @@ namespace Rts.Sim.World;
 /// (<see cref="BlockType.Quicksand"/>) loses <see cref="QuicksandDamage"/> and walks at a
 /// <see cref="QuicksandSlow"/>th of its speed while it is on it. Both land with the tick's hits, by no one, so
 /// no one gets the kill and armour does not help. Wild monsters are hurt the same. Digging the bog away (it is
-/// gathered like mud) makes the ground safe.
+/// gathered like mud) makes the ground safe. A unit left with its head under water by a flood, with no ground
+/// near enough to be swept out to (see <see cref="PhysicsSystem"/>), loses <see cref="DrownDamage"/> a second.
 ///
 /// Sinkholes are a thin crust (<see cref="BlockType.Crust"/>) over a hollow. The tick a unit stands on one,
 /// the whole crust (every crust block joined to it, at its level) gives way: it is gone, the units on it drop
@@ -38,6 +39,8 @@ public sealed class HazardSystem
     public const int LavaDamage = 6;
     /// <summary>Hit points a second lost standing on quicksand.</summary>
     public const int QuicksandDamage = 2;
+    /// <summary>Hit points a second lost with the head under water, where a flood left no ground near to swim to.</summary>
+    public const int DrownDamage = 10;
     /// <summary>Units on quicksand move this many times slower.</summary>
     public const int QuicksandSlow = 3;
     /// <summary>Hit points lost dropping through a sinkhole's crust.</summary>
@@ -70,7 +73,7 @@ public sealed class HazardSystem
     /// <summary>Hit points a second a unit with its feet at block (x, y, z) of world <paramref name="w"/> loses to the ground around it.</summary>
     public static int DamageAt(VoxelWorld w, int x, int y, int z)
     {
-        int damage = 0;
+        int damage = w.Get(x, y + 1, z) == BlockType.Water ? DrownDamage : 0;
         var under = w.Get(x, y - 1, z);
         if (under == BlockType.Bog) damage += BogDamage;
         else if (under == BlockType.Quicksand) damage += QuicksandDamage;

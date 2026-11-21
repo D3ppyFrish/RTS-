@@ -32,6 +32,9 @@ namespace Rts.Game;
 ///   dragworld X1,Y1,Z1 X2,Y2,Z2   left-drag from the top of one block to the top of another
 ///   place X1,Y1,Z1 X2,Y2,Z2   place stone in every empty block of the box, as the terrain tool's right
 ///                        click does (a Y of g+N counts from the highest solid block at X1, Z1)
+///   blocks X1,Y1,Z1 X2,Y2,Z2 BLOCK   test mode: set every block of the box to BLOCK (Air, Water, Stone, ...),
+///                        as the test panel's blocks do (a Y of g+N counts from the highest solid block at X1, Z1)
+///   spawn UNIT X,Z [N] [OWNER]   test mode: put down N (1) units of that kind for OWNER (you) at column (X, Z)
 ///   camera X,Z [YAW PITCH DISTANCE]   move the camera focus to block column (X, Z)
 ///   shot PATH            save a screenshot (after the frame has been drawn)
 ///   print                print a "UI ..." line describing the selection, clock and slice
@@ -194,6 +197,26 @@ public sealed class InputScript
                 for (int z = Math.Min(z1, z2); z <= Math.Max(z1, z2); z++)
                 for (int x = Math.Min(x1, x2); x <= Math.Max(x1, x2); x++)
                     sim.Schedule(sim.Tick, new PlaceCommand(PlayerControl.LocalPlayer, x, y, z, BlockType.Stone));
+                return true;
+            }
+            case "blocks":
+            {
+                var sim = main.Sim;
+                if (sim == null || parts.Length < 4 || !Enum.TryParse<BlockType>(parts[3], true, out var block)) return true;
+                var (x1, y1, z1) = Block(sim, parts[1], null);
+                var (x2, y2, z2) = Block(sim, parts[2], (x1, z1));
+                sim.Schedule(sim.Tick, new SandboxBlocksCommand(PlayerControl.LocalPlayer, block, x1, y1, z1, x2, y2, z2));
+                return true;
+            }
+            case "spawn":
+            {
+                var sim = main.Sim;
+                if (sim == null || parts.Length < 3) return true;
+                var xz = parts[2].Split(',');
+                int n = parts.Length > 3 ? int.Parse(parts[3], CultureInfo.InvariantCulture) : 1;
+                int owner = parts.Length > 4 ? int.Parse(parts[4], CultureInfo.InvariantCulture) : PlayerControl.LocalPlayer;
+                sim.Schedule(sim.Tick, new SandboxUnitCommand(PlayerControl.LocalPlayer, owner, parts[1],
+                    int.Parse(xz[0], CultureInfo.InvariantCulture), int.Parse(xz[1], CultureInfo.InvariantCulture), n));
                 return true;
             }
             case "camera":

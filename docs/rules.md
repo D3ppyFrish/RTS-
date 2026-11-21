@@ -845,12 +845,21 @@ hurts the units on or near it.
   falling ground, by no one), and it lands as stone rubble. Then the scree whose rocks are all gone is plain
   stone. Workers quarry loose rock for stone and dig scree away (it gives nothing); monster lairs are not put
   on either.
+- **Floods**: water flows into any opening beside it (`PhysicsSystem`, a block every 5 ticks, down first, never
+  up), so breaking the bank between a river, lake or flooded cave and a pit, trench or tunnel dug below its
+  level fills that ground to the water's level, to the brim (before, a pit only filled its floor). A unit the water
+  rises over (its head under water) is swept out to the nearest ground within 3 columns where its feet stand
+  no lower than the water's top over it (up to 5 levels up: it swims for the edge), and loses 10 hit points
+  (`PhysicsSystem.FloodDamage`). One with no such ground near (in the middle of a wide flooded pit, or deep in
+  a tunnel) stays under and drowns, 10 hit points a second (`HazardSystem.DrownDamage`), and its panel says
+  "(drowning)". Wading water one block deep is safe. So sappers tunnelling below a moat, or an army sheltering
+  in a dug pit beside a river, can be flooded out (`FloodTests`).
 - **Keeping off**: move orders path around all of them where there is another way (see Moving). Computer
   players (every level) keep their workers off them too: they never send wood cutters to a tree whose work
   spot is hazard ground, nor lay out a building whose footprint, or the ring round it where its builders
   stand, has any (`HazardSystem.HazardNear`), and Hard digs no quarry within a lava's heat.
 - **Alert**: a unit of yours killed by the ground alone raises an alert, "Your worker died in the poison
-  bog", "was dragged under by quicksand", "burned beside the lava" "fell into a sinkhole" or "was crushed by falling rocks" (`GameEventKind.UnitLostToHazard`).
+  bog", "was dragged under by quicksand", "burned beside the lava", "fell into a sinkhole", "was crushed by falling rocks" or "drowned in a flood" (`GameEventKind.UnitLostToHazard`).
 
 ## City-states
 

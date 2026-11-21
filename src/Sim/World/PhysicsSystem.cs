@@ -150,7 +150,9 @@ public readonly record struct Landing(int Section, int X, int Y, int Z, int Bloc
 ///
 /// <para><b>Water.</b> Water next to an opening flows into it a block at a time, every
 /// <see cref="WaterTicks"/> ticks: down if it can, otherwise sideways, never up. Water stands at one level
-/// across the map, so a channel or a hole dug from a lake fills up to the lake's level and no higher.</para>
+/// across the map, so a channel or a hole dug from a lake fills up to the lake's level and no higher. A unit
+/// the water rises over (its head under water) is swept out to the nearest ground where its head is clear, and
+/// hurt; one with no such ground near drowns (see <see cref="FreeUnits"/>).</para>
 /// </summary>
 public sealed class PhysicsSystem
 {
@@ -180,6 +182,12 @@ public sealed class PhysicsSystem
     public const int MaxChecksPerTick = 4096;
     /// <summary>How far (columns) a unit buried in rubble looks for open ground.</summary>
     public const int EscapeRange = 3;
+    /// <summary>Hit points a unit loses when a flood goes over its head and sweeps it out.</summary>
+    public const int FloodDamage = 10;
+    /// <summary>How many levels up (or down) a unit a flood goes over can come up to stand, as it swims for the edge.</summary>
+    public const int FloodClimb = 5;
+    /// <summary>Units swept out of a flood so far (for the screenshot checks).</summary>
+    public int Swept { get; private set; }
     /// <summary>Ticks a felled tree takes to topple over and land.</summary>
     public const int TreeFallTicks = 16;
 
@@ -865,13 +873,23 @@ public sealed class PhysicsSystem
         _sim.Combat.Crush(i, s.Toppled ? ToppleCrush : CrushDamage);
     }
 
-    /// <summary>Units buried in rubble climb out to the nearest open ground; one with nowhere to go dies.</summary>
+    /// <summary>
+    /// Units buried in rubble climb out to the nearest open ground; one with nowhere to go dies. Units a flood
+    /// has gone over (water at their heads) are swept out to the nearest ground where their heads are clear,
+    /// taking <see cref="FloodDamage"/>; one with nowhere to go stays under and drowns (see
+    /// <see cref="HazardSystem.DrownDamage"/>).
+    /// </summary>
     private void FreeUnits()
     {
         var u = _sim.Units;
         for (int i = 0; i < u.Count; i++)
         {
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
+            if (_w.Get(x, y + 1, z) == BlockType.Water && u.Hp[i] > 0)
+            {
+                SweepOut(i, x, y, z);
+                continue;
+            }
             if (!BlockInfo.IsRubble(_w.Get(x, y, z)) && !BlockInfo.IsRubble(_w.Get(x, y + 1, z))) continue;
             if (Escape(x, y, z, out int ex, out int ey, out int ez))
             {
@@ -883,8 +901,34 @@ public sealed class PhysicsSystem
         }
     }
 
+    /// <summary>
+    /// Unit i, whose head is under water, is swept out to the nearest ground within <see cref="EscapeRange"/>
+    /// columns where it can stand with its feet no lower than the water's top over it (wading in a bank's
+    /// shallows is fine), so it is not swept to a spot the flood is about to reach, and takes <see cref="FloodDamage"/>
+    /// (by no one). A unit the sweep kills dies where it was, under water. With nowhere to go it stays where it
+    /// is, and the water drowns it a little every second (<see cref="HazardSystem"/>).
+    /// </summary>
+    private void SweepOut(int i, int x, int y, int z)
+    {
+        var u = _sim.Units;
+        int surface = y + 1;
+        while (surface < _w.SizeY && _w.Get(x, surface, z) == BlockType.Water) surface++;
+        if (!Escape(x, y, z, out int ex, out int ey, out int ez, FloodClimb, surface)) return;
+        if (FloodDamage >= u.Hp[i])
+        {
+            _sim.Events.UnitLostToHazard(u.Owner[i], u.Id[i], u.Def[i], x, y, z);
+            _sim.Combat.Crush(i, FloodDamage);
+            return;
+        }
+        u.X[i] = Fix64.FromInt(ex) + Fix64.Half;
+        u.Z[i] = Fix64.FromInt(ez) + Fix64.Half;
+        u.Y[i] = ey;
+        _sim.Combat.Crush(i, FloodDamage);
+        Swept++;
+    }
+
     /// <summary>The nearest open ground to (x, y, z) within <see cref="EscapeRange"/> columns, nearest level first.</summary>
-    private bool Escape(int x, int y, int z, out int ex, out int ey, out int ez)
+    private bool Escape(int x, int y, int z, out int ex, out int ey, out int ez, int levels = 3, int lowest = 0)
     {
         for (int r = 0; r <= EscapeRange; r++)
         {
@@ -892,7 +936,7 @@ public sealed class PhysicsSystem
             for (int dx = -r; dx <= r; dx++)
             {
                 if (Math.Max(Math.Abs(dx), Math.Abs(dz)) != r) continue;
-                int level = Walk.NearestStandLevel(_w, x + dx, z + dz, y, 3);
+                int level = lowest > 0 ? HighStand(x + dx, z + dz, y, levels, lowest) : Walk.NearestStandLevel(_w, x + dx, z + dz, y, levels);
                 if (level < 0) continue;
                 (ex, ey, ez) = (x + dx, level, z + dz);
                 return true;
@@ -902,9 +946,23 @@ public sealed class PhysicsSystem
         return false;
     }
 
+    /// <summary>The nearest level within <paramref name="levels"/> of y in column (x, z) a unit can stand at with its feet at <paramref name="lowest"/> or higher, or -1.</summary>
+    private int HighStand(int x, int z, int y, int levels, int lowest)
+    {
+        for (int d = 0; d <= levels; d++)
+        {
+            if (y + d >= lowest && Walk.CanStand(_w, x, y + d, z)) return y + d;
+            if (d > 0 && y - d >= lowest && Walk.CanStand(_w, x, y - d, z)) return y - d;
+        }
+        return -1;
+    }
+
     // --- Water ------------------------------------------------------------------------------------------
 
-    /// <summary>A round of flowing: each water block waiting to flow fills the block under it if that is open, otherwise the open blocks beside it.</summary>
+    /// <summary>
+    /// A round of flowing: each water block waiting to flow fills the block under it if that is open (and waits to
+    /// flow again, so a pit fills to the brim rather than only its floor), otherwise the open blocks beside it.
+    /// </summary>
     private void Flow()
     {
         _flowing.Clear();
@@ -921,6 +979,7 @@ public sealed class PhysicsSystem
             if (y > 0 && _w.Get(x, y - 1, z) == BlockType.Air)
             {
                 Fill(x, y - 1, z);
+                _water.Add(k); // once what is under it has filled, it spreads sideways too
                 continue;
             }
             for (int f = 1; f <= 4; f++)

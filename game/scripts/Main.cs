@@ -774,7 +774,7 @@ public partial class Main : Node3D
         return $"tick={_sim.Tick} screen={screen} player={PlayerControl.LocalPlayer} result={Result()} " +
                $"world={_sim.World.SizeX}x{_sim.World.SizeY}x{_sim.World.SizeZ} lair_kinds={string.Join(",", lairs)} " +
                $"replay={(_replayPath != null ? "saved" : "none")} terrain_tool={(PlayerControl.TerrainTool ? 1 : 0)} " +
-               $"falling={_sim.Physics.Falling.Count} trees_falling={_sim.Physics.FallingTrees.Count} dust={_fallingRenderer.Effects} icons={_unitIcons.Shown} {_hud.AlertFeed.Describe()} {_control.Describe()}" +
+               $"falling={_sim.Physics.Falling.Count} trees_falling={_sim.Physics.FallingTrees.Count} swept={_sim.Physics.Swept} dust={_fallingRenderer.Effects} icons={_unitIcons.Shown} {_hud.AlertFeed.Describe()} {_control.Describe()}" +
                (_testPanel != null ? " " + _testPanel.Describe() : "");
     }
 
