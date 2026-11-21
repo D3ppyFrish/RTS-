@@ -2121,6 +2121,18 @@ public partial class Hud : CanvasLayer
               (town.Holder == player ? $", the next in {Seconds(def.TributeTicks - town.TributeTimer)}" : "") + "\n"
             : "";
         string refill = town.Ready < def.Pool ? $", the next in {Seconds(def.RefillTicks - town.RefillTimer)}" : "";
+        if (town.Toll)
+        {
+            string at = town.HasBridge ? "on its bridge and round its square" : "round its square";
+            take = town.Holder == player
+                ? $"Your units cross free; everyone else's pay you {def.TollGold} gold a unit {at}, or its guards fight them" +
+                  $"\nTolls taken for you: {town.Tolls} gold; anyone who breaks the stone takes it from you" +
+                  (def.HealRange >= 0 ? $"\nYour hurt units within {def.HealRange} blocks of the town heal fast there, as at home" : "")
+                : $"Toll: {def.TollGold} gold a unit {at}, soldiers too; units you cannot pay for are fought" +
+                  (town.FeudWith(player) > 0 ? $"\nAt feud with you for {Seconds(town.FeudWith(player))}: its guards fight all your units there" : "") +
+                  (town.Holder >= 0 ? $"\nBreak {PlayerName(town.Holder)}'s stone to take the bridge: the toll goes to them"
+                                    : "\nBreak the stone to take the bridge: striking it or its guards sets them at feud with you");
+        }
         return $"{def.Name}   (city-state)   {HolderText(town, player)}\n" +
                $"{totemText}   {guards}\n" +
                take + "\n" + tribute +

@@ -26,7 +26,8 @@
 // work (optional, default 100) is how fast it gathers, builds, farms and digs tunnels, in percent. regen
 // (optional, default 0) is the percent of its
 // hit points it heals each second even in a fight (the ogres); out of the fight it heals at this rate or the
-// usual one, whichever is faster.
+// usual one, whichever is faster. nightRegen (optional, default false): its regen works only out of the daylight (the
+// trolls): by night, at dawn and dusk, and under rock or a roof, but not under the open sky by day.
 // Evolution: a unit with evolvesFrom is a form that unit can take once it has the experience (see
 // "experience" in factions.json): it is not trained, and a form of a form needs one level more. Most
 // forms simply grow stronger; some give something and take something: less speed or a weakness (weakTo).
@@ -306,6 +307,14 @@
     "speed": 3.5, "hp": 160, "model": "ogre_hurler", "damage": 16, "attackTime": 3, "range": 9, "sight": 11,
     "blast": true, "attack": "crush", "splash": 1, "armor": { "torso": 1 }, "regen": 1,
     "cost": { "food": 120, "stone": 40, "gold": 15 } },
+
+  // Troll mercenaries, hired at the troll bridge by its holder: heavy infantry with a stony hide, whose wounds
+  // close fast, but only out of the daylight (nightRegen).
+  { "id": "troll", "name": "Troll", "role": "heavy_infantry", "hiredFrom": "trolls",
+    "description": "A hulking, grey-green troll with a stone maul: breaks lines and heals fast at night or under the ground, but not in the sun.",
+    "speed": 4, "hp": 300, "model": "troll", "damage": 22, "attackTime": 1.8, "range": 1.5, "sight": 9,
+    "attack": "crush", "armor": { "head": 1, "torso": 2, "arms": 1, "legs": 1 }, "regen": 2, "nightRegen": true,
+    "cost": { "food": 140, "gold": 30 } },
 
   // Kobold mercenaries, hired at the kobolds' warren in the deep caves by its holder: small and cheap, paid
   // partly in crystal. The diggers are sappers, so a holder of any faction can tunnel and undermine walls.

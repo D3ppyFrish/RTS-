@@ -152,6 +152,16 @@ public partial class Alerts : VBoxContainer
         if (_alerts.Count > MaxShown) _alerts.RemoveRange(MaxShown, _alerts.Count - MaxShown);
     }
 
+    /// <summary>Why a toll town's guards fight the player's units: they struck it, or cannot pay its toll.</summary>
+    private string TollUnpaid(GameEvent e)
+    {
+        var town = _sim.Cities.At(e.X, e.Z);
+        string name = Lower(_sim.Content.CityStates[e.Def].Name);
+        return town != null && town.FeudWith(e.Player) > 0
+            ? $"The {name} is at feud with you: its guards fight your units there"
+            : $"You cannot pay the {name}'s toll ({town?.Def.TollGold ?? 0} gold a unit): its guards fight your units there";
+    }
+
     private (string? Text, Color Colour) Describe(GameEvent e)
     {
         var content = _sim.Content;
@@ -169,6 +179,7 @@ public partial class Alerts : VBoxContainer
             GameEventKind.EnemyTownHallTaken => ("You captured an enemy town hall", GoodColour),
             GameEventKind.TownConquered => ($"The {Lower(content.CityStates[e.Def].Name)} is yours", GoodColour),
             GameEventKind.TownLost => ($"Your {Lower(content.CityStates[e.Def].Name)} was taken", AttackColour),
+            GameEventKind.TollUnpaid => (TollUnpaid(e), AttackColour),
             GameEventKind.TributeSent => ($"Tribute is on its way from the {Lower(content.CityStates[e.Def].Name)}", Hud.PlainColour),
             GameEventKind.UnitLostToHazard => ($"Your {Lower(content.Units[e.Def].Name)} {HazardDeath(e)}", AttackColour),
             GameEventKind.RuinSearched => (RuinFound(e), GoodColour),

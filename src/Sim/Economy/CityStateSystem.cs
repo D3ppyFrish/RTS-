@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Rts.Sim.Content;
 using Rts.Sim.Units;
+using Rts.Sim.World;
 
 namespace Rts.Sim.Economy;
 
@@ -48,6 +49,46 @@ public sealed class CityState
     public int RefillTimer { get; internal set; }
     /// <summary>The lair placed near the town with it (see <see cref="MonsterSystem"/>), or 0 for none.</summary>
     public int LairId { get; internal set; }
+
+    /// <summary>
+    /// The town's bridge (a crossing's, see <see cref="CityStateDef.Crossing"/>): the columns from (BridgeX0, BridgeZ0)
+    /// to (BridgeX1, BridgeZ1), its deck one under the square's level. Empty (X1 below X0) for a town without one.
+    /// </summary>
+    public int BridgeX0 { get; internal set; }
+    public int BridgeZ0 { get; internal set; }
+    public int BridgeX1 { get; internal set; } = -1;
+    public int BridgeZ1 { get; internal set; } = -1;
+    /// <summary>True if the town has a bridge.</summary>
+    public bool HasBridge => BridgeX1 >= BridgeX0;
+
+    /// <summary>Units on the toll ground whose owner paid the toll this time on it (unit ids).</summary>
+    internal readonly SortedSet<int> Paid = new();
+    /// <summary>Units on the toll ground whose owner could not pay (unit ids): the guards fight them.</summary>
+    internal readonly SortedSet<int> Unpaid = new();
+    /// <summary>Ticks left of each player's feud with the town (see <see cref="CityStateDef.FeudTicks"/>), by player.</summary>
+    internal readonly int[] Feud = new int[Simulation.WildPlayer];
+    /// <summary>Gold the toll has brought in since the town last changed hands (its holder's, or the town's own while it has none).</summary>
+    public int Tolls { get; internal set; }
+
+    /// <summary>True if the town takes a toll (see <see cref="CityStateDef.TollGold"/>).</summary>
+    public bool Toll => Def.TollGold > 0;
+    /// <summary>True if the unit (an id) is on the toll ground and its owner paid.</summary>
+    public bool PaidToll(int id) => Paid.Contains(id);
+    /// <summary>True if the unit (an id) is on the toll ground and its owner could not pay.</summary>
+    public bool OwesToll(int id) => Unpaid.Contains(id);
+    /// <summary>Ticks left of the player's feud with the town, or 0.</summary>
+    public int FeudWith(int player) => player >= 0 && player < Feud.Length ? Feud[player] : 0;
+
+    /// <summary>Columns from (x, z) to the town's bridge, counting diagonal steps as one (0 on it); int.MaxValue with no bridge.</summary>
+    public int BridgeDistance(int x, int z) =>
+        !HasBridge ? int.MaxValue : Math.Max(0, Math.Max(Math.Max(BridgeX0 - x, x - BridgeX1), Math.Max(BridgeZ0 - z, z - BridgeZ1)));
+
+    /// <summary>
+    /// True if a unit with its feet at (x, y, z) is on the town's toll ground: within <see cref="CityStateDef.GuardReach"/>
+    /// columns of its square or its bridge, at the town's level. False for a town without a toll.
+    /// </summary>
+    public bool OnTollGround(int x, int y, int z) =>
+        Toll && AtLevel(y) && Math.Min(ColumnDistance(x, z), BridgeDistance(x, z)) <= Def.GuardReach;
 
     /// <summary>The owner of the town's guards, totem and tribute: its holder, or the wild side while it has none.</summary>
     public int Side => Holder >= 0 ? Holder : Simulation.WildPlayer;
@@ -185,6 +226,7 @@ public sealed class CityStateSystem
             if (town.Deep) continue; // far under the ground: building over it is fine
             int r = TownRadius + 1;
             if (x0 <= town.X + r && x1 >= town.X - r && z0 <= town.Z + r && z1 >= town.Z - r) return true;
+            if (town.HasBridge && x0 <= town.BridgeX1 + 1 && x1 >= town.BridgeX0 - 1 && z0 <= town.BridgeZ1 + 1 && z1 >= town.BridgeZ0 - 1) return true;
         }
         return false;
     }
@@ -205,6 +247,13 @@ public sealed class CityStateSystem
             Mix(town.CaravanIds.Count);
             foreach (int c in town.CaravanIds) Mix(c);
             Mix(town.Ready); Mix(town.RefillTimer); Mix(town.LairId);
+            Mix(town.BridgeX0); Mix(town.BridgeZ0); Mix(town.BridgeX1); Mix(town.BridgeZ1);
+            Mix(town.Paid.Count);
+            foreach (int id in town.Paid) Mix(id);
+            Mix(town.Unpaid.Count);
+            foreach (int id in town.Unpaid) Mix(id);
+            foreach (int f in town.Feud) Mix(f);
+            Mix(town.Tolls);
         }
         return h;
     }
@@ -242,6 +291,12 @@ public sealed class CityStateSystem
             if (def.Deep)
             {
                 if (PlaceDeep(def, cx, cz, want) is { } deep) placed.Add(deep);
+                continue;
+            }
+            if (def.Crossing && PlaceCrossing(def, scored, want, cx, cz) is { } crossing)
+            {
+                placed.Add(crossing);
+                PlaceLair(crossing, cx, cz);
                 continue;
             }
             foreach (var (x, z) in Spread(scored, want, cx, cz))
@@ -390,6 +445,112 @@ public sealed class CityStateSystem
         RaiseTotem(town);
         for (int k = 0; k < town.GuardIds.Length; k++) SpawnGuard(town, k);
         return town;
+    }
+
+    /// <summary>Columns a crossing's square may stand back from the river (the bank it levels between them is bridged too).</summary>
+    public const int BankReach = 6;
+    /// <summary>Longest bridge a crossing lays, in columns.</summary>
+    public const int MaxCrossing = 40;
+    /// <summary>Columns between a bridge's piers.</summary>
+    private const int PierEvery = 4;
+    /// <summary>Headroom cleared over a bridge's deck.</summary>
+    private const int BridgeHeadroom = 4;
+
+    /// <summary>
+    /// Places a crossing (<see cref="CityStateDef.Crossing"/>): at the best scored site (<see cref="Spread"/>) that fits
+    /// (<see cref="SiteFits"/>) and has the river within <see cref="BankReach"/> columns of its square's edge, straight out
+    /// from the market, with a bridge to lay across it (<see cref="PlanCrossing"/>). The town is built and the bridge laid
+    /// over the river from the square's edge. Null if no site has the river beside it (a map without one).
+    /// </summary>
+    private CityState? PlaceCrossing(CityStateDef def, List<(long Score, int X, int Z, int Near)> scored, int want, int cx, int cz)
+    {
+        foreach (var (x, z) in Spread(scored, want, cx, cz))
+        {
+            if (!SiteFits(x, z) || !PlanCrossing(x, z, out int dx, out int dz, out int length)) continue;
+            var town = Place(def, x, z)!;
+            LayBridge(town, dx, dz, length);
+            return town;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// True if a bridge can go out from the square of a town with its market at (x, z) (on the ground there), three
+    /// columns wide along the row or column through the market, in direction (dx, dz): one of the four straight ways,
+    /// tried east, west, south, north. The river (<see cref="RegionMap.BiomeAt"/>) must come within
+    /// <see cref="BankReach"/> columns of the square's edge, and past it the ground must rise to within a climb of the
+    /// square's level before <see cref="MaxCrossing"/> columns; nothing on the way may stand higher than a climb over
+    /// that level, and no tree, building or other town may be in it. <paramref name="length"/> is how many columns
+    /// out from the square the bridge runs, up to and with the first one on the far bank.
+    /// </summary>
+    public bool PlanCrossing(int x, int z, out int dx, out int dz, out int length)
+    {
+        var w = World;
+        int y = Walk.GroundLevel(w, x, z);
+        int r = TownRadius;
+        foreach (var (sx, sz) in Steps)
+        {
+            (dx, dz) = (sx, sz);
+            length = 0;
+            if (y < 2 || y + BridgeHeadroom >= w.SizeY) return false;
+            bool river = false, ok = true;
+            for (int k = 1; k <= MaxCrossing && ok; k++)
+            {
+                bool wet = false, bank = true;
+                for (int side = -1; side <= 1 && ok; side++)
+                {
+                    int bx = x + sx * (r + k) + sz * side, bz = z + sz * (r + k) + sx * side;
+                    if (bx < 1 || bz < 1 || bx >= w.SizeX - 1 || bz >= w.SizeZ - 1) { ok = false; break; }
+                    if (_sim.Map.BiomeAt(bx, bz) == Biome.River) wet = true;
+                    int g = Walk.GroundLevel(w, bx, bz);
+                    if (g > y + Walk.MaxClimb) ok = false; // a bank or hill in the way
+                    if (g < y - Walk.MaxClimb || w.Get(bx, g - 1, bz) == BlockType.Water) bank = false;
+                    for (int cy = Math.Max(0, y - 1); cy <= y + BridgeHeadroom; cy++)
+                        if (BlockInfo.IsTrunk(w.Get(bx, cy, bz))) ok = false;
+                    if (_sim.Buildings.AtColumn(bx, bz) != null) ok = false;
+                    foreach (var town in _towns)
+                        if (!town.Deep && town.ColumnDistance(bx, bz) <= TownGap / 2) ok = false;
+                }
+                if (!ok) break;
+                if (wet) river = true;
+                else if (!river && k > BankReach) break; // the river is not near enough this way
+                else if (river && bank)
+                {
+                    length = k;
+                    return true;
+                }
+            }
+        }
+        dx = dz = length = 0;
+        return false;
+    }
+
+    /// <summary>
+    /// Lays the town's bridge (see <see cref="PlanCrossing"/>): a deck of stone brick one under the square's level,
+    /// three columns wide, from the square's edge <paramref name="length"/> columns out in direction (dx, dz), with the
+    /// headroom over it cleared, and piers of stone brick under its edges every <see cref="PierEvery"/> columns, down to
+    /// the river bed. It is ground, not a building: anyone walks over it, and it can be dug like any block.
+    /// </summary>
+    private void LayBridge(CityState town, int dx, int dz, int length)
+    {
+        var w = World;
+        int r = TownRadius, y = town.Y;
+        int ax = town.X + dx * (r + 1) - Math.Abs(dz), az = town.Z + dz * (r + 1) - Math.Abs(dx);
+        int bx = town.X + dx * (r + length) + Math.Abs(dz), bz = town.Z + dz * (r + length) + Math.Abs(dx);
+        town.BridgeX0 = Math.Min(ax, bx);
+        town.BridgeX1 = Math.Max(ax, bx);
+        town.BridgeZ0 = Math.Min(az, bz);
+        town.BridgeZ1 = Math.Max(az, bz);
+        for (int k = 1; k <= length; k++)
+        for (int side = -1; side <= 1; side++)
+        {
+            int cx = town.X + dx * (r + k) + dz * side, cz = town.Z + dz * (r + k) + dx * side;
+            w.Set(cx, y - 1, cz, BlockType.StoneBrick);
+            for (int cy = y; cy <= y + BridgeHeadroom; cy++)
+                if (w.Get(cx, cy, cz) != BlockType.Air) w.Set(cx, cy, cz, BlockType.Air);
+            if (side == 0 || k % PierEvery != 0 || k == length) continue;
+            for (int cy = y - 2; cy >= 1 && !BlockInfo.IsSolid(w.Get(cx, cy, cz)); cy--) w.Set(cx, cy, cz, BlockType.StoneBrick);
+        }
     }
 
     /// <summary>
@@ -591,6 +752,7 @@ public sealed class CityStateSystem
         {
             StepTotem(town);
             StepGuards(town);
+            StepToll(town);
             StepTribute(town);
             if (town.Ready >= town.Def.Pool) continue;
             if (++town.RefillTimer < town.Def.RefillTicks) continue;
@@ -616,7 +778,9 @@ public sealed class CityStateSystem
     internal void TotemHit(Building b, int player)
     {
         if (player < 0 || player >= Simulation.WildPlayer || player == b.Owner) return;
-        if (TownOfTotem(b) is { } town) town.LastHitBy = player;
+        if (TownOfTotem(b) is not { } town) return;
+        town.LastHitBy = player;
+        StartFeud(town, player);
     }
 
     /// <summary>
@@ -651,6 +815,11 @@ public sealed class CityStateSystem
         int old = town.Holder;
         town.Holder = player;
         town.TributeTimer = 0;
+        // The toll starts over: the new holder's units cross free, everyone else's pay them.
+        town.Paid.Clear();
+        town.Unpaid.Clear();
+        if (player < town.Feud.Length) town.Feud[player] = 0;
+        town.Tolls = 0;
         var u = U;
         foreach (int id in town.Guards)
         {
@@ -715,6 +884,11 @@ public sealed class CityStateSystem
     {
         var u = U;
         if (u.Owner[t] == u.Owner[guard] || Get(u.Town[guard]) is not { } town) return false;
+        int owner = u.Owner[t];
+        // A toll town fights a player's units on its toll ground that did not pay, or whose owner is at feud with it.
+        if (town.Toll && owner >= 0 && owner < Simulation.WildPlayer && u.Town[t] == 0)
+            return town.OnTollGround(u.X[t].FloorToInt(), u.Y[t], u.Z[t].FloorToInt())
+                   && (town.Unpaid.Contains(u.Id[t]) || town.FeudWith(owner) > 0);
         var def = _sim.Content.Units[u.Def[t]];
         if (!def.CanAttack || def.Role is UnitRole.Worker or UnitRole.Trader) return false;
         return town.ColumnDistance(u.X[t].FloorToInt(), u.Z[t].FloorToInt()) <= town.Def.GuardReach && town.AtLevel(u.Y[t]);
@@ -758,6 +932,70 @@ public sealed class CityStateSystem
             SpawnGuard(town, k);
             return;
         }
+    }
+
+    private readonly HashSet<int> _onToll = new();
+    private readonly int[] _gold = new int[Simulation.WildPlayer];
+
+    /// <summary>
+    /// A toll town's toll (<see cref="CityStateDef.TollGold"/>): feuds run down, and a player whose unit struck a guard
+    /// this tick is at feud again. Each player's unit that comes onto the toll ground (not the holder's, not a town's
+    /// guard or tribute caravan, not a beaten monster) is paid for once while it stays on it: its owner pays the toll from
+    /// their storage nearest the market, and it goes to the holder's storage nearest the market (while the town has a
+    /// holder). Units whose owner is at feud, or cannot pay, owe it until they leave or it is paid. The sets only ever
+    /// change by membership, so their order does not matter.
+    /// </summary>
+    private void StepToll(CityState town)
+    {
+        if (!town.Toll) return;
+        var u = U;
+        for (int p = 0; p < town.Feud.Length; p++)
+            if (town.Feud[p] > 0) town.Feud[p]--;
+        foreach (int id in town.Guards)
+        {
+            int g = u.IndexOf(id);
+            int by = g >= 0 && u.HitBy[g] != 0 ? u.IndexOf(u.HitBy[g]) : -1;
+            if (by >= 0) StartFeud(town, u.Owner[by]);
+        }
+        _onToll.Clear();
+        var cost = town.Def.TollCost;
+        // Each player's gold, worked out once a tick (when first needed), as units that owe the toll try again every tick.
+        Array.Fill(_gold, -1);
+        for (int i = 0; i < u.Count; i++)
+        {
+            int p = u.Owner[i];
+            if (p < 0 || p >= Simulation.WildPlayer || p == town.Holder || u.Town[i] != 0 || u.Subdued[i]) continue;
+            if (!town.OnTollGround(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt())) continue;
+            int id = u.Id[i];
+            _onToll.Add(id);
+            if (town.Paid.Contains(id)) continue;
+            if (town.Feud[p] == 0 && _gold[p] < 0) _gold[p] = Economy.Stock(p, Good.Gold);
+            if (town.Feud[p] == 0 && _gold[p] >= town.Def.TollGold && Economy.TrySpend(p, cost, town.X, town.Z))
+            {
+                _gold[p] -= town.Def.TollGold;
+                town.Unpaid.Remove(id);
+                town.Paid.Add(id);
+                town.Tolls += town.Def.TollGold;
+                if (town.Holder >= 0 && Economy.NearestStorage(town.Holder, town.X, town.Z) is { } store)
+                    store.Stock[(int)Good.Gold] += town.Def.TollGold;
+                continue;
+            }
+            if (town.Unpaid.Contains(id)) continue;
+            bool owed = false;
+            foreach (int o in town.Unpaid)
+                if (u.IndexOf(o) is int k && k >= 0 && u.Owner[k] == p) owed = true;
+            town.Unpaid.Add(id);
+            if (!owed) _sim.Events.TollUnpaid(town, p, id);
+        }
+        town.Paid.RemoveWhere(id => !_onToll.Contains(id));
+        town.Unpaid.RemoveWhere(id => !_onToll.Contains(id));
+    }
+
+    /// <summary>The player (if a player, and not the town's holder) is at feud with a toll town from now.</summary>
+    private static void StartFeud(CityState town, int player)
+    {
+        if (!town.Toll || player < 0 || player >= town.Feud.Length || player == town.Holder) return;
+        town.Feud[player] = town.Def.FeudTicks;
     }
 
     /// <summary>Guard post k's column.</summary>

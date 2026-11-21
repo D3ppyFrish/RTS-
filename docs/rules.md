@@ -1021,9 +1021,9 @@ hurts the units on or near it.
 ## City-states
 
 `src/Sim/Economy/CityStateSystem.cs`: towns of other races, too small to win, that trade with everyone
-and are won by force. There are three, the goblins, the ogres and the kobolds (`data/citystates.json`);
-everything below holds for all of them, with the goblins' numbers unless the ogres' or the kobolds' section
-says otherwise.
+and are won by force. There are four, the goblins, the ogres, the kobolds and the trolls
+(`data/citystates.json`); everything below holds for all of them, with the goblins' numbers unless the ogres',
+the kobolds' or the trolls' section says otherwise.
 
 - **The town**: at match start each city-state gets a town about as far from every start area as from
   the others (on a 512 map about 96 blocks from their middle, where the ground allows): a levelled
@@ -1107,6 +1107,41 @@ says otherwise.
     levels of it, and its healing reaches only that far up or down, so the land far over it is not theirs. Building
     over the warren is allowed (only straight over its crystal is taken), and the wild lairs spread across the map
     do not keep away from it. A map with no deep caves (64 high) has no warren.
+
+- **The troll bridge** (`"crossing": true` and `"toll"` in `citystates.json`): a fourth city-state, placed last, on a
+  bank of the river with a stone bridge it built over it. Its site is scored as the other towns' are, but must have
+  the river within 6 columns of the square's edge straight out from the market (east, west, south or north, tried in
+  that order), with no bank or hill over a climb above the square's level, no tree, building or other town in the
+  way, and the far bank within a climb of the square's level within 40 columns. The bridge is three columns wide,
+  from the square's edge to the first column on the far bank: a deck of stone brick one under the square's level,
+  the headroom over it cleared, with stone brick piers under its edges every 4 columns down to the river bed. It is
+  ground, not a building, so it cannot be knocked down by blows (it can be dug), and nobody can build on it or right
+  next to it. With no river beside a fair site (a map without one) the town stands like the others, without a bridge.
+  Its huts are stone brick with red tile roofs on a square paved with stone, and its totem is the **troll stone** (a
+  stone pillar 7 high on a 3×3 plinth, topped with a carved long-nosed troll head hung with bones, banded in the
+  holder's colour). It keeps no lair. Four trolls guard it (a fallen one is replaced every 60 seconds), its holder gets
+  20 iron a minute as tribute, caravans bring back iron there (6 per 100 blocks of route), and its holder hires trolls,
+  at most 3 ready at a time and one more every 60 seconds:
+  - **Troll**: heavy infantry, 300 hit points, speed 4, a stone maul that crushes (22 damage every 1.8 seconds), a
+    stony hide (armour 2 on the torso, 1 elsewhere); 140 food and 30 gold. It **regenerates** 2% of its hit points a
+    second even in a fight, but only out of the daylight (`"nightRegen"` in `units.json`): by night, at dawn and dusk,
+    or with anything solid over it (in a cave or a tunnel), never under the open sky by day. With day and night off it
+    is always a clear day, which changes nothing, and trolls regenerate as ogres do.
+  - **The toll** (2 gold, `"toll": { "gold" }`): the toll ground is the town's square and its bridge and 4 columns
+    round them (the guards' reach). Each unit of a player's that comes onto it (not the holder's, not a town's guard or
+    tribute caravan, not a beaten monster) is paid for once while it stays on it: its owner pays 2 gold from their
+    storage nearest the market, and it goes to the holder's storage nearest the market (the trolls keep it while
+    nobody holds the bridge; the panel counts it since the town last changed hands). Off the ground and back on, it
+    is paid for again. Unlike the other towns' guards, the trolls let a unit that was paid for through, soldiers too,
+    and fight one whose owner could not pay, workers and caravans too (it is paid for as soon as its owner can pay).
+    The first unit of a player's that cannot be paid for tells them so. The holder's units cross free, so holding the
+    bridge makes it everyone else's to pay for.
+  - **Feuds** (60 seconds, `"toll": { "feud" }`): a player whose unit strikes the troll stone or a troll is at feud
+    with the bridge until 60 seconds after the last blow: no toll is taken from them, and the trolls fight all their
+    units on the toll ground. Breaking the stone ends the new holder's feud; their units cross free from then on.
+  - `TrollBridgeTests` checks the data, the bridge over the river on two seeds (walked across, nobody building on it),
+    no bridge without a river, the toll paid and units let through, unpaid ones fought, the holder crossing free and
+    getting the toll, feuds, and the trolls' regeneration by day, by night and under a roof.
 
 This replaced the earlier influence alliance (gifts, influence from trade and lairs, raiding caravans
 for influence), which is gone. `CityStateTests` has the issue's checks: breaking the totem makes the

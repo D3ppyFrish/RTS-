@@ -79,6 +79,12 @@ public enum GameEventKind : byte
     AwakeningStage,
     /// <summary>A brood of corrupted beasts (<see cref="GameEvent.Def"/> of them) rose out of the Heartscar at (x, y, z) and is coming for the player.</summary>
     BroodRising,
+    /// <summary>
+    /// A unit of the player's (<see cref="GameEvent.Subject"/>) came onto a toll town's ground and they could not pay
+    /// the toll, or are at feud with it, so its guards fight it. <see cref="GameEvent.Def"/> is the city-state. Only
+    /// when none of the player's units already owed that town.
+    /// </summary>
+    TollUnpaid,
 }
 
 /// <summary>
@@ -171,6 +177,9 @@ public sealed class EventLog
         Add(player, GameEventKind.TownConquered, town.X, town.Y, town.Z, town.Id, town.Def.Index);
         if (old >= 0 && old != player) Add(old, GameEventKind.TownLost, town.X, town.Y, town.Z, town.Id, town.Def.Index);
     }
+
+    internal void TollUnpaid(CityState town, int player, int unit) =>
+        Add(player, GameEventKind.TollUnpaid, town.X, town.Y, town.Z, unit, town.Def.Index);
 
     internal void TributeSent(CityState town, int player) =>
         Add(player, GameEventKind.TributeSent, town.X, town.Y, town.Z, town.Id, town.Def.Index);

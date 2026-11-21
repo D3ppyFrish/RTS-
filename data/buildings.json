@@ -165,6 +165,8 @@
     "wall": "stone_brick", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
   { "id": "kobold_crystal", "name": "Kobold crystal", "kind": "totem", "size": [3, 3], "wallHeight": 6,
     "wall": "stone_brick", "footing": "stone_brick", "buildTime": 1, "sight": 8 },
+  { "id": "troll_stone", "name": "Troll stone", "kind": "totem", "size": [3, 3], "wallHeight": 7,
+    "wall": "stone_brick", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
   { "id": "bridge", "name": "Bridge", "kind": "bridge", "size": [1, 1], "wallHeight": 1, "wall": "planks",
     "cost": { "wood": 3 }, "buildTime": 3, "sight": 2 }
 ]
