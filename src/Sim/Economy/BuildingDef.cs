@@ -137,6 +137,11 @@ public sealed class BuildingDef
     /// (see <see cref="Economy.EconomySystem.Plant"/>); 0 for every other building.
     /// </summary>
     public int Plants { get; init; }
+    /// <summary>
+    /// A hunter's lodge: a quarry whose workers hunt the wild game (see <see cref="Units.UnitDef.Game"/>) within this
+    /// many columns of it, each round of work an aimed shot, and carry home what they shoot; 0 for every other building.
+    /// </summary>
+    public int Hunts { get; init; }
     /// <summary>A shrine: mana each crystal it channels gives its owner; 0 for every other building.</summary>
     public int Mana { get; init; }
     /// <summary>A shrine: ticks it takes to channel one crystal (before its <see cref="Speed"/>); 0 for every other building.</summary>
@@ -211,7 +216,7 @@ public sealed class BuildingDef
     {
         foreach (var w in Works)
             if (w.Good == good) return true;
-        return false;
+        return Hunts > 0 && good == Good.Food;
     }
 
     /// <summary>Units stand on it rather than next to it.</summary>

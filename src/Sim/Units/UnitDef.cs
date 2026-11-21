@@ -191,6 +191,14 @@ public sealed class UnitDef
     /// <summary>Goods a player's storage nearest the spot gets when one of their units kills or beats this monster; none for most.</summary>
     public GoodAmount[] Bounty { get; init; } = Array.Empty<GoodAmount>();
     /// <summary>
+    /// Wild game (see <see cref="MonsterSystem.Herds"/>): what a hunter brings home from one it shoots (one good, see
+    /// <see cref="Economy.EconomySystem"/>'s hunting); none for every other unit. Game never fights, nobody goes after
+    /// it on their own, and a faction that tames monsters kills it rather than beating it.
+    /// </summary>
+    public GoodAmount[] Game { get; init; } = Array.Empty<GoodAmount>();
+    /// <summary>Wild game: hunters shoot it for <see cref="Game"/>.</summary>
+    public bool IsGame => Game.Length > 0;
+    /// <summary>
     /// For a monster a taming faction beats (see <see cref="MonsterSystem"/>): who can ride it and what they
     /// become; null if nobody rides it (it can still be recruited).
     /// </summary>

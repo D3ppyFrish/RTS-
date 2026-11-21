@@ -124,6 +124,7 @@ public sealed class MonsterSystem
 
     private readonly Simulation _sim;
     private readonly List<Lair> _lairs = new();
+    private readonly List<Lair> _herds = new();
     private readonly List<int> _home = new();
     private int _nextId = 1;
 
@@ -139,6 +140,22 @@ public sealed class MonsterSystem
 
     /// <summary>Every lair, cleared ones too, in the order they were placed.</summary>
     public IReadOnlyList<Lair> Lairs => _lairs;
+
+    /// <summary>
+    /// The herds of wild game (see <see cref="UnitDef.Game"/>, <see cref="PlaceHerds"/>), kept apart from the monster
+    /// lairs: a herd guards nothing, pays no reward, leaves no den and counts for nothing that clearing a lair does.
+    /// A herd shot out to the last is <see cref="Lair.Cleared"/> and gone for good.
+    /// </summary>
+    public IReadOnlyList<Lair> Herds => _herds;
+
+    /// <summary>The herd wild game unit i belongs to, or null.</summary>
+    public Lair? HerdOf(int i)
+    {
+        int id = U.Id[i];
+        foreach (var herd in _herds)
+            if (!herd.Cleared && herd.PackIds.Contains(id)) return herd;
+        return null;
+    }
 
     public Lair? GetLair(int id)
     {
@@ -177,6 +194,14 @@ public sealed class MonsterSystem
             foreach (int id in lair.PackIds) Mix(id);
             Mix(lair.TrackerIds.Count);
             foreach (int id in lair.TrackerIds) Mix(id);
+        }
+        Mix(_herds.Count);
+        foreach (var herd in _herds)
+        {
+            Mix(herd.Id); Mix(herd.Monster.Index); Mix(herd.X); Mix(herd.Y); Mix(herd.Z); Mix(herd.Cleared ? 1 : 0);
+            Mix(herd.Roam); Mix(herd.HomeX); Mix(herd.HomeY); Mix(herd.HomeZ); Mix(herd.NextRoam); Mix(herd.NextBirth);
+            Mix(herd.PackIds.Count);
+            foreach (int id in herd.PackIds) Mix(id);
         }
         return h;
     }
@@ -256,6 +281,78 @@ public sealed class MonsterSystem
             }
         }
         return placed;
+    }
+
+    /// <summary>The nearest a herd of wild game is placed to a start (blocks): near enough to hunt from a first town.</summary>
+    public const int HerdStartGap = 48;
+    /// <summary>The nearest a herd is placed to another herd, a lair or a town (blocks).</summary>
+    public const int HerdGap = 32;
+
+    /// <summary>How much further than <see cref="HerdStartGap"/> from its start a start's own herd may graze (blocks).</summary>
+    public const int HerdStartSpread = 40;
+
+    /// <summary>
+    /// Match setup: the herds of wild game (<see cref="Content.ContentDb.GameAnimals"/>, in data order). First one
+    /// herd of each for every start, on dry ground of its biome between <see cref="HerdStartGap"/> and
+    /// <see cref="HerdStartGap"/> + <see cref="HerdStartSpread"/> blocks from it, so every town has game to hunt; then,
+    /// like <see cref="PlaceWild"/>, <see cref="LairDef.Count"/> for each 512 by 512 blocks of map anywhere on their
+    /// biome. Every herd keeps <see cref="HerdGap"/> from the others, the lairs and the towns, and the spots come from
+    /// a random stream of their own. Every herd roams. Call last, after every lair is placed. Returns the herds placed.
+    /// </summary>
+    public List<Lair> PlaceHerds()
+    {
+        var placed = new List<Lair>();
+        var game = _sim.Content.GameAnimals;
+        long area = (long)World.SizeX * World.SizeZ;
+        for (int k = 0; k < game.Count; k++)
+        {
+            var animal = game[k];
+            var def = animal.Lair!;
+            int count = (int)(def.Count * area / (512L * 512L));
+            var rng = new DeterministicRandom(_sim.Seed ^ 0x4E3D7A11UL ^ (ulong)(k + 1) * 0x9E3779B97F4A7C15UL);
+            foreach (var start in _sim.Map.Starts)
+            for (int t = 0; t < WildTries; t++)
+            {
+                int r = HerdStartGap + HerdStartSpread;
+                int x = start.X + rng.Range(-r, r + 1), z = start.Z + rng.Range(-r, r + 1);
+                if (IntMath.Distance(x, z, start.X, start.Z) > r || !World.InBounds(x, 0, z)) continue;
+                if (_sim.Map.BiomeAt(x, z) != def.Biome || !HerdSiteFits(x, z)) continue;
+                if (Place(animal, x, z) is { } herd)
+                {
+                    placed.Add(herd);
+                    if (def.Roam > 0) StartRoaming(herd);
+                }
+                break;
+            }
+            for (int n = 0; n < count; n++)
+            for (int t = 0; t < WildTries; t++)
+            {
+                int x = rng.Range(0, World.SizeX), z = rng.Range(0, World.SizeZ);
+                if (_sim.Map.BiomeAt(x, z) != def.Biome || !HerdSiteFits(x, z)) continue;
+                if (Place(animal, x, z) is { } herd)
+                {
+                    placed.Add(herd);
+                    if (def.Roam > 0) StartRoaming(herd);
+                }
+                break;
+            }
+        }
+        return placed;
+    }
+
+    private bool HerdSiteFits(int x, int z)
+    {
+        foreach (var s in _sim.Map.Starts)
+            if (IntMath.Distance(x, z, s.X, s.Z) < HerdStartGap) return false;
+        foreach (var lair in _lairs)
+            if (IntMath.Distance(x, z, lair.X, lair.Z) < HerdGap) return false;
+        foreach (var herd in _herds)
+            if (IntMath.Distance(x, z, herd.X, herd.Z) < HerdGap) return false;
+        foreach (var town in _sim.Cities.Towns)
+            if (!town.Deep && IntMath.Distance(x, z, town.X, town.Z) < HerdGap) return false;
+        if (!SiteFits(x, z)) return false;
+        int y = Walk.GroundLevel(World, x, z);
+        return World.Get(x, y - 1, z) is not (BlockType.Water or BlockType.Lava or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock);
     }
 
     /// <summary>The smallest map (blocks across) whose cavern has monsters in it.</summary>
@@ -409,7 +506,7 @@ public sealed class MonsterSystem
             if (id > 0) lair.PackIds.Add(id);
         }
         if (def.GrowTicks > 0) lair.NextBirth = _sim.Tick + def.GrowTicks;
-        _lairs.Add(lair);
+        (monster.IsGame ? _herds : _lairs).Add(lair);
         return lair;
     }
 
@@ -454,6 +551,7 @@ public sealed class MonsterSystem
     /// </summary>
     public void Step()
     {
+        if (_herds.Count > 0) StepHerds();
         if (_lairs.Count == 0) return;
         long tick = _sim.Tick;
         foreach (var lair in _lairs)
@@ -469,6 +567,48 @@ public sealed class MonsterSystem
                 if ((tick + lair.Id) % GuardInterval == 0) Guard(lair);
             }
         }
+    }
+
+    /// <summary>
+    /// The herds of wild game: each forgets the animals it lost and is gone for good once none are left; the rest
+    /// grow back (see <see cref="LairDef.GrowTicks"/>), wander on together and call home any that strayed past the
+    /// leash. Game never fights and goes after no one.
+    /// </summary>
+    private void StepHerds()
+    {
+        long tick = _sim.Tick;
+        foreach (var herd in _herds)
+        {
+            if (herd.Cleared) continue;
+            herd.PackIds.RemoveAll(id => U.IndexOf(id) is var i && (i < 0 || !IsWild(i)));
+            if (herd.PackIds.Count == 0)
+            {
+                herd.Cleared = true;
+                continue;
+            }
+            if (herd.NextBirth > 0 && tick >= herd.NextBirth) Grow(herd);
+            if ((tick + herd.Id) % GuardInterval == 0) Graze(herd);
+        }
+    }
+
+    /// <summary>A herd with nothing chasing it home wanders on when its time comes; strays past the leash walk back.</summary>
+    private void Graze(Lair herd)
+    {
+        var u = U;
+        Fix64 leash = Fix64.FromInt(herd.Monster.Lair!.Leash);
+        _home.Clear();
+        foreach (int id in herd.PackIds)
+        {
+            int i = u.IndexOf(id);
+            bool goingHome = u.Order[i] == UnitOrder.Move && u.OrderX[i] == herd.HomeX && u.OrderZ[i] == herd.HomeZ;
+            if (!goingHome && Distance2(i, herd) > leash * leash) _home.Add(id);
+        }
+        if (herd.Roam > 0 && _sim.Tick >= herd.NextRoam && MoveOn(herd))
+        {
+            _home.Clear();
+            _home.AddRange(herd.PackIds);
+        }
+        if (_home.Count > 0) _sim.Issue(new MoveCommand(Simulation.WildPlayer, _home.ToArray(), herd.HomeX, herd.HomeZ, herd.HomeY));
     }
 
     /// <summary>
@@ -681,7 +821,7 @@ public sealed class MonsterSystem
 
     /// <summary>True if the blow that kills unit <paramref name="dead"/> beats it instead: it is a wild monster and the killer's faction tames monsters.</summary>
     internal bool Tames(int dead, int killer) =>
-        IsWild(dead) && U.Town[dead] == 0 && !IsWild(killer) && Economy.Faction(U.Owner[killer]).TamesMonsters;
+        IsWild(dead) && U.Town[dead] == 0 && !Def(dead).IsGame && !IsWild(killer) && Economy.Faction(U.Owner[killer]).TamesMonsters;
 
     /// <summary>Unit i, a wild monster, is beaten: it is the player's now, with 1 hit point, and waits for their choice.</summary>
     internal void Subdue(int i, int player)

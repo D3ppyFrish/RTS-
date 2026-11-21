@@ -500,6 +500,12 @@ public partial class Hud : CanvasLayer
                                 $"columns of it, clear of buildings and other trees. A sapling grows into a tree in " +
                                 $"{EconomySystem.SaplingGrowTicks / Simulation.TicksPerSecond / 60} minutes, for your wood cutters to fell. " +
                                 "Automatic workers leave it to you.";
+            if (def.Hunts > 0)
+                b.TooltipText = $"Right click it with workers: up to {def.WorkerSlots} hunters work it. Each sets out after the deer " +
+                                $"nearest the lodge within {def.Hunts} columns, stalks it, aims for {def.WorkTicks / Simulation.TicksPerSecond} " +
+                                "seconds and shoots it, then carries its meat to storage. Hunters leave the last " +
+                                $"{EconomySystem.HerdKeep} of a herd to breed, so it grows back; build it near the deer on the grassland. " +
+                                "Automatic workers hunt when food is needed.";
             if (def.Kind == BuildingKind.Shrine)
                 b.TooltipText = $"Right click it with a worker: they bring it crystal from storage, and it channels each crystal " +
                                 $"into {def.Mana} mana in {def.ChannelTicks / Simulation.TicksPerSecond} seconds. Spells cost mana. " +
@@ -2115,6 +2121,7 @@ public partial class Hud : CanvasLayer
                 parts.Add($"{n} of {b.Def.WorkerSlots} workers (right click it with workers)");
             }
             if (b.Def.Plants > 0) parts.Add($"{_sim.Economy.SaplingsOf(b)} saplings growing");
+            if (b.Def.Hunts > 0) parts.Add(_sim.Economy.GameInReach(b) is var game and > 0 ? $"{game} deer within reach" : "no deer within reach");
             if (b.Def.Kind == BuildingKind.Smelter && b.SmeltTicks > 0)
                 parts.Add($"smelting {100 - 100L * b.SmeltTicks / EconomySystem.SmeltTicks}%");
             if (b.Def.Kind == BuildingKind.Shrine)
@@ -2367,7 +2374,7 @@ public partial class Hud : CanvasLayer
         },
         UnitJob.Build => "building",
         UnitJob.Farm => "farming",
-        UnitJob.Quarry => _sim.Buildings.Get(u.JobTarget[i]) is { } q ? q.Def.Shore ? "fishing" : q.Def.Plants > 0 ? "planting trees" : $"working the {q.Def.Name.ToLowerInvariant()}" : "quarrying",
+        UnitJob.Quarry => _sim.Buildings.Get(u.JobTarget[i]) is { } q ? q.Def.Shore ? "fishing" : q.Def.Plants > 0 ? "planting trees" : q.Def.Hunts > 0 ? "hunting" : $"working the {q.Def.Name.ToLowerInvariant()}" : "quarrying",
         UnitJob.Haul => _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind == BuildingKind.Shrine ? "keeping the shrine" : "supplying the smelter",
         UnitJob.Supply => u.Phase[i] switch
         {

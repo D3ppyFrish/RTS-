@@ -136,7 +136,7 @@ public sealed partial class CombatSystem
                 if (!Hostile(owner, p)) continue;
                 for (int j = _head[c + p]; j >= 0; j = _next[j])
                 {
-                    if (u.Subdued[j] || u.Town[j] != 0 && u.Owner[j] == Simulation.WildPlayer) continue;
+                    if (u.Subdued[j] || u.Town[j] != 0 && u.Owner[j] == Simulation.WildPlayer || Def(j).IsGame) continue;
                     if (hall.ColumnDistance(u.X[j].FloorToInt(), u.Z[j].FloorToInt()) > TownReach) continue;
                     if (!_sim.Vision.SeesUnit(owner, j)) continue;
                     Fix64 dx = u.X[j] - u.X[i], dz = u.Z[j] - u.Z[i];

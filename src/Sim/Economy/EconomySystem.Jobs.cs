@@ -294,6 +294,11 @@ public sealed partial class EconomySystem
                 if (--u.JobTimer[i] <= 0) Resume(i);
                 return;
         }
+        if (quarry.Def.Hunts > 0)
+        {
+            StepHunt(i, quarry);
+            return;
+        }
         if (WalkToBuilding(i, quarry, out bool there)) return;
         if (!there)
         {

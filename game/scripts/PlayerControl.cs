@@ -82,7 +82,7 @@ public partial class PlayerControl : Node
     public static readonly (Key Key, string Building)[] BuildKeys =
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
-        (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "shrine"),
+        (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "hunting_lodge"), (Key.None, "shrine"),
         (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
@@ -2142,6 +2142,7 @@ public partial class PlayerControl : Node
                $"sites_active={(_sim.Sites.Active ? 1 : 0)} sites_held={_sim.Sites.Held(LocalPlayer)} sites_leader={_sim.Sites.Leader} " +
                $"great_works={_sim.Ascendancy.Works.Count} great_work_left={(_sim.Ascendancy.Leading is { } gw ? _sim.Ascendancy.TicksLeft(gw) : -1)} " +
                $"great_work_owner={_sim.Ascendancy.Leading?.Owner ?? -1} by_ascendancy={(_sim.Match.ByAscendancy ? 1 : 0)} " +
+               $"herds={_sim.Monsters.Herds.Count(h => !h.Cleared)} deer={_sim.Monsters.Herds.Sum(h => h.Pack.Count)} hunted={_sim.Economy.GameHunted} " +
                $"wilds={(_sim.Map.HasWilds ? 1 : 0)} stalker_dens={_sim.Monsters.Lairs.Count(l => l.Monster.Id == "shade_stalker" && !l.Cleared)} " +
                $"stalkers={_sim.Monsters.Lairs.Where(l => l.Monster.Id == "shade_stalker").Sum(l => l.Pack.Count)} " +
                $"dark_stage={_sim.DarkPower.Stage} dark_radius={_sim.DarkPower.Radius} dark_next={_sim.DarkPower.TicksToNextStage} " +
