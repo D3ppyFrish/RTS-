@@ -469,6 +469,18 @@ public sealed record TradeCommand(int PlayerId, int[] Units, int City) : UnitsCo
 public sealed record HireCommand(int PlayerId, int City, string Unit) : Command(PlayerId);
 
 /// <summary>
+/// The player offers a short truce to the rival player <paramref name="Other"/>, or accepts the rival's standing
+/// offer, which starts it (see <see cref="TruceSystem"/>).
+/// </summary>
+public sealed record TruceCommand(int PlayerId, int Other) : Command(PlayerId);
+
+/// <summary>
+/// The player breaks off the truce with <paramref name="Other"/>, which then ends after a warning, or withdraws
+/// their standing offer of one (see <see cref="TruceSystem"/>).
+/// </summary>
+public sealed record EndTruceCommand(int PlayerId, int Other) : Command(PlayerId);
+
+/// <summary>
 /// The player gives up the match: they are out at once, as if their last town hall had fallen (see
 /// <see cref="MatchSystem"/>). Their units and buildings stay where they are.
 /// </summary>

@@ -226,7 +226,7 @@ public sealed partial class AiPlayer
         bool inMatch = sim.Match.Players.Count > 0;
         foreach (var b in sim.Buildings.All)
         {
-            if (b.Owner == Player || b.Owner == Simulation.WildPlayer || b.Planned) continue; // others' plans are not seen
+            if (!Rival(b.Owner) || b.Planned) continue; // others' plans are not seen
             var (mx, mz) = Middle(b);
             if (!vision.Sees(Player, mx, mz) && !vision.Sees(Player, b.X, b.Z) && !vision.Sees(Player, b.MaxX, b.Z)
                 && !vision.Sees(Player, b.X, b.MaxZ) && !vision.Sees(Player, b.MaxX, b.MaxZ)) continue;
@@ -249,7 +249,7 @@ public sealed partial class AiPlayer
         for (int i = 0; i < u.Count; i++)
         {
             int owner = u.Owner[i];
-            if (owner == Player || owner == Simulation.WildPlayer || u.Subdued[i]) continue;
+            if (!Rival(owner) || u.Subdued[i]) continue;
             var def = sim.Content.Units[u.Def[i]];
             if (!def.CanAttack || def.Role is UnitRole.Worker or UnitRole.Trader) continue;
             if (!vision.SeesUnit(Player, i)) continue;
@@ -271,7 +271,7 @@ public sealed partial class AiPlayer
         long bestD = long.MaxValue;
         foreach (var k in _known.Values)
         {
-            if (k.Kind != BuildingKind.TownHall || !k.Active) continue;
+            if (k.Kind != BuildingKind.TownHall || !k.Active || !Rival(k.Owner)) continue;
             long d = Dist2(k.X, k.Z, x, z);
             if (d < bestD) (bestD, best) = (d, k);
         }
@@ -285,6 +285,7 @@ public sealed partial class AiPlayer
         long bestD = long.MaxValue;
         foreach (var k in _known.Values)
         {
+            if (!Rival(k.Owner)) continue;
             long d = Dist2(k.X, k.Z, x, z);
             if (d < bestD) (bestD, best) = (d, k);
         }
@@ -957,7 +958,7 @@ public sealed partial class AiPlayer
         for (int i = 0; i < u.Count; i++)
         {
             int owner = u.Owner[i];
-            if (owner == Player || owner == Simulation.WildPlayer || u.Subdued[i]) continue;
+            if (!Rival(owner) || u.Subdued[i]) continue;
             var def = sim.Content.Units[u.Def[i]];
             if (!def.CanAttack || def.Role is UnitRole.Worker or UnitRole.Trader) continue;
             if (Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), cx, cz) > r2 || !sim.Vision.SeesUnit(Player, i)) continue;
@@ -985,7 +986,7 @@ public sealed partial class AiPlayer
         for (int i = 0; i < u.Count; i++)
         {
             int owner = u.Owner[i];
-            if (owner == Player || owner == Simulation.WildPlayer || u.Subdued[i]) continue;
+            if (!Rival(owner) || u.Subdued[i]) continue;
             var def = sim.Content.Units[u.Def[i]];
             if (!def.CanAttack || def.Role is UnitRole.Worker or UnitRole.Trader) continue;
             if (Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), cx, cz) > r2 || !sim.Vision.SeesUnit(Player, i)) continue;

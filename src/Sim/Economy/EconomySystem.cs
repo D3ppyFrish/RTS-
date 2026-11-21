@@ -1060,7 +1060,7 @@ public sealed partial class EconomySystem
     private void StartRaid(UnitsCommand c, int building, UnitJob job)
     {
         var b = Buildings.Get(building);
-        if (b == null || b.Owner == c.PlayerId || !b.Def.Raidable || b.Planned) return;
+        if (b == null || !_sim.Truces.Hostile(c.PlayerId, b.Owner) || !b.Def.Raidable || b.Planned) return;
         foreach (int i in OwnedUnits(c))
             StartJob(i, job, b.Id);
     }

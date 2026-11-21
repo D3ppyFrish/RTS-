@@ -211,6 +211,8 @@ public sealed partial class AiPlayer
         if (sim.Match.Over) return;
         var hall = sim.Economy.TownHall(Player);
         if (hall == null) return;
+        for (int p = 0; p < Simulation.WildPlayer; p++) _peace[p] = sim.Truces.AtPeace(Player, p);
+        if ((sim.Tick + Player * 5) % ArmyTicks == 0) AnswerTruces(sim, issue);
         if (!_started)
         {
             _started = true;
@@ -224,6 +226,35 @@ public sealed partial class AiPlayer
             if (Hard) HardArmy(sim, hall, issue);
             else if (Smart) SmartArmy(sim, hall, issue);
             else Army(sim, hall, issue);
+        }
+    }
+
+    // --- Truces ------------------------------------------------------------------------------------
+
+    // By player: at peace with it this tick (see TruceSystem); refreshed at the start of every Think.
+    private readonly bool[] _peace = new bool[Simulation.WildPlayer];
+
+    /// <summary>True if the side is a rival it fights: another player, not the wild side, not one it is at peace with.</summary>
+    private bool Rival(int owner) => owner != Player && owner != Simulation.WildPlayer && !((uint)owner < (uint)_peace.Length && _peace[owner]);
+
+    /// <summary>
+    /// A computer player takes a rival's offer of a truce unless its own soldiers are clearly the stronger (more
+    /// than <see cref="TruceRefusePercent"/>% of the rival's, by the same worth it weighs fights by).
+    /// </summary>
+    public const int TruceRefusePercent = 150;
+
+    /// <summary>Answers the truces it is offered: accepts each one it is not clearly too strong to want.</summary>
+    private void AnswerTruces(Simulation sim, Action<Command> issue)
+    {
+        long mine = -1;
+        for (int p = 0; p < Simulation.WildPlayer; p++)
+        {
+            if (!sim.Truces.Offered(p, Player) || !sim.Truces.CanOffer(Player, p)) continue;
+            if (mine < 0) mine = PowerOf(sim, Soldiers(sim));
+            long theirs = PowerOf(sim, Soldiers(sim, p));
+            if (mine * 100 > theirs * TruceRefusePercent) continue;
+            Note(sim, $"agrees a truce with player {p}");
+            issue(new TruceCommand(Player, p));
         }
     }
 
@@ -1064,7 +1095,7 @@ public sealed partial class AiPlayer
         for (int i = 0; i < u.Count; i++)
         {
             int owner = u.Owner[i];
-            if (owner == Player || owner == Simulation.WildPlayer || u.Subdued[i]) continue;
+            if (!Rival(owner) || u.Subdued[i]) continue;
             if (Smart && !sim.Vision.SeesUnit(Player, i)) continue; // it plays by the fog of war
             if (soldiersOnly)
             {
@@ -1108,8 +1139,8 @@ public sealed partial class AiPlayer
     /// <summary>The enemy building with this id as the player knows it, or null if there is none (any more).</summary>
     private Foe? Target(Simulation sim, int id)
     {
-        if (Smart) return _known.TryGetValue(id, out var k) ? k : null;
-        return sim.Buildings.Get(id) is { } b && b.Owner != Player ? AsFoe(sim, b) : null;
+        if (Smart) return _known.TryGetValue(id, out var k) && Rival(k.Owner) ? k : null;
+        return sim.Buildings.Get(id) is { } b && Rival(b.Owner) ? AsFoe(sim, b) : null;
     }
 
     /// <summary>The nearest town hall of a player still in the match (any other player in a sandbox), or null.</summary>
@@ -1120,7 +1151,7 @@ public sealed partial class AiPlayer
         long bestD = long.MaxValue;
         foreach (var b in sim.Buildings.All)
         {
-            if (b.Owner == Player || b.Owner == Simulation.WildPlayer || !b.Active || b.Def.Kind != BuildingKind.TownHall) continue;
+            if (!Rival(b.Owner) || !b.Active || b.Def.Kind != BuildingKind.TownHall) continue;
             if (sim.Match.Players.Count > 0 && !sim.Match.InPlay(b.Owner)) continue;
             var (bx, bz) = Middle(b);
             long d = Dist2(bx, bz, x, z);
@@ -1138,7 +1169,7 @@ public sealed partial class AiPlayer
         long bestD = long.MaxValue;
         foreach (var b in sim.Buildings.All)
         {
-            if (b.Owner == Player || b.Owner == Simulation.WildPlayer || b.Planned) continue;
+            if (!Rival(b.Owner) || b.Planned) continue;
             var (bx, bz) = Middle(b);
             long d = Dist2(bx, bz, x, z);
             if (d < bestD) (bestD, best) = (d, b);
