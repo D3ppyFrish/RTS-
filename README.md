@@ -31,6 +31,7 @@ scripts/ui-monsters-screenshots.sh    # scripted wolf lairs: Orcs beat a pack, r
 scripts/ui-citystate-screenshots.sh   # scripted city-state: break the goblins' totem, hire goblins, a caravan trades, the ogres' hold, the kobolds' warren
 scripts/ui-match-screenshots.sh       # scripted match flow: start screen, surrender, defeat and its replay, victory
 scripts/ui-dominion-screenshots.sh    # scripted ancient sites: soldiers walk into a ruin and take it; its banner, the sites button, the alert
+scripts/ui-ascendancy-screenshots.sh  # scripted great work (--great-work): the Hall of Legends in the deep caves, the crown countdown, the win
 scripts/ui-fog-screenshots.sh         # scripted fog of war: the start screen switch, enemies hidden until in sight
 scripts/ui-dig-screenshots.sh         # scripted dig tool: workers and sappers dig out a dragged area
 scripts/ui-wall-screenshots.sh        # scripted walls: a gate placed, a wall drawn through it and built, upgraded twice, archers posted on it, a stone tower put onto it and a watchtower beside it
@@ -87,7 +88,7 @@ start area and four of every unit type that is trained in front of it (except ca
 lies on the way to the map centre (see [Monsters and taming](docs/rules.md#monsters-and-taming)) and each city-state has a town (see
 [City-states](docs/rules.md#city-states)); `--goods=N` gives every town hall N more of every good (and its player N more mana), and `--houses=N` puts N houses
 behind yours, since the start has more people than room; `--raid=N` sends N enemy sappers at the one of
-those nearest your start (to try out rebuild orders, see [Automation](docs/rules.md#automation)). `--units=N` instead spawns N of your units
+those nearest your start (to try out rebuild orders, see [Automation](docs/rules.md#automation)). `--great-work` puts your faction's great work, finished, in the deep caves' chamber nearest your start, its clock running (see [Ascendancy and great works](docs/rules.md#ascendancy-and-great-works)). `--units=N` instead spawns N of your units
 around the camera focus (all on one side, so they walk rather than fight), and `--battle=N` sets two
 armies of N soldiers each facing each other at the camera focus, with an enemy house nearby (both sides
 have 500 mana, so the mages can cast).

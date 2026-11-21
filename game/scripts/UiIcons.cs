@@ -415,6 +415,12 @@ public static class UiIcons
             ".....kk.....", "....kvvk....", "...kvttvk...", "...kvwtvk...", "..kvtwwtvk..", "..kvtwwtvk..",
             "..kvttttvk..", "..kvttttvk..", "...kvttvk...", "...kvttvk...", "....kvvk....", ".....kk.....",
         },
+        // A crown: the great works (see Rts.Sim.World.AscendancySystem) and the final techs that open them.
+        ["crown"] = new[]
+        {
+            "............", "............", "k....k....k.", "ky..kyk..yk.", "kyk.kyk.kyk.", "kyykyyykyyk.",
+            "kyyyyryyyyk.", "kyyyrRryyyk.", "kyyyyryyyyk.", "kYYYYYYYYYk.", ".kkkkkkkkkk.", "............",
+        },
         ["paw"] = new[]
         {
             "............", "..kk....kk..", ".kBBk..kBBk.", ".kBBk..kBBk.", "..kkkkkkkk..", "kk.kBBBBk.kk",

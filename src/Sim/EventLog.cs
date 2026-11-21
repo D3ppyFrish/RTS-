@@ -58,6 +58,18 @@ public enum GameEventKind : byte
     /// tech (<see cref="GameEvent.Def"/> is its index; see <see cref="Content.TechDef.Discovery"/>).
     /// </summary>
     TechDiscovered,
+    /// <summary>
+    /// A player (<see cref="GameEvent.Subject"/>, maybe this one) began building their great work (see
+    /// <see cref="World.AscendancySystem"/>) at (x, y, z). <see cref="GameEvent.Def"/> is the building type.
+    /// </summary>
+    GreatWorkBegun,
+    /// <summary>
+    /// A player's (<see cref="GameEvent.Subject"/>) great work is finished: if it still stands
+    /// <see cref="World.AscendancySystem.AscendancyTicks"/> from now, they win. <see cref="GameEvent.Def"/> is the building type.
+    /// </summary>
+    GreatWorkFinished,
+    /// <summary>A player's (<see cref="GameEvent.Subject"/>) great work was brought down. <see cref="GameEvent.Def"/> is the building type.</summary>
+    GreatWorkLost,
 }
 
 /// <summary>
@@ -185,6 +197,10 @@ public sealed class EventLog
     /// <summary>Tells the player that <paramref name="leader"/>'s dominion clock has started.</summary>
     internal void DominionStarted(int player, int leader) =>
         Add(player, GameEventKind.DominionStarted, -1, -1, -1, leader, World.DominionSystem.DominionTicks);
+
+    /// <summary>Tells the player about a great work: begun, finished or brought down (one of the GreatWork kinds).</summary>
+    internal void GreatWork(int player, GameEventKind kind, World.AscendancySystem.Work work) =>
+        Add(player, kind, work.X, work.Y, work.Z, work.Owner, work.Def);
 
     /// <summary>True (and remembered) if no attack on the player was reported near (x, z) lately.</summary>
     private bool Throttle(int player, int x, int z)

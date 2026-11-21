@@ -94,7 +94,9 @@ public partial class Alerts : VBoxContainer
     {
         if (index >= _alerts.Count) return;
         var e = _alerts[index].Event;
-        _control.LookAt(e.X, e.Y, e.Z);
+        // A great work stands in the deep caves: the height slice cuts the land over it away.
+        if (e.Kind is GameEventKind.GreatWorkBegun or GameEventKind.GreatWorkFinished or GameEventKind.GreatWorkLost) _control.FocusAt(e.X, e.Y, e.Z);
+        else _control.LookAt(e.X, e.Y, e.Z);
     }
 
     /// <summary>Takes in new events, drops old alerts and updates the buttons. Call every frame.</summary>
@@ -175,9 +177,20 @@ public partial class Alerts : VBoxContainer
             GameEventKind.DominionStarted => e.Subject == e.Player
                 ? ($"You hold most of the ancient sites: hold them {Minutes(e.Def)} minutes to win", GoodColour)
                 : ($"The {Faction(e.Subject)} hold most of the ancient sites: they win in {Minutes(e.Def)} minutes", AttackColour),
+            GameEventKind.GreatWorkBegun => e.Subject == e.Player
+                ? ($"You began the {GreatWork(e)} in the deep caves", GoodColour)
+                : ($"The {Faction(e.Subject)} began their {GreatWork(e)} in the deep caves", AttackColour),
+            GameEventKind.GreatWorkFinished => e.Subject == e.Player
+                ? ($"Your {GreatWork(e)} is finished: keep it standing {Minutes(Rts.Sim.World.AscendancySystem.AscendancyTicks)} minutes to win", GoodColour)
+                : ($"The {Faction(e.Subject)} finished their {GreatWork(e)}: bring it down within {Minutes(Rts.Sim.World.AscendancySystem.AscendancyTicks)} minutes or they win", AttackColour),
+            GameEventKind.GreatWorkLost => e.Subject == e.Player
+                ? ($"Your {GreatWork(e)} was brought down", AttackColour)
+                : ($"The {Faction(e.Subject)}' {GreatWork(e)} was brought down", GoodColour),
             _ => (null, Hud.PlainColour),
         };
     }
+
+    private string GreatWork(GameEvent e) => e.Def >= 0 ? _sim.Content.Buildings[e.Def].Name : "great work";
 
     private string Faction(int player) => _sim.Economy.Player(player).Faction.Name;
 

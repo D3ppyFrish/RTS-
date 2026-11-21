@@ -188,7 +188,7 @@ try
         if (r == 1)
         {
             var m = sim.Match;
-            Console.WriteLine("Result: " + (m.Winner >= 0 ? $"player {m.Winner} won{(m.ByDominion ? " by dominion" : "")} at {Clock(m.EndTick)}"
+            Console.WriteLine("Result: " + (m.Winner >= 0 ? $"player {m.Winner} won{(m.ByDominion ? " by dominion" : m.ByAscendancy ? " by ascendancy" : "")} at {Clock(m.EndTick)}"
                 : m.Over ? $"a draw at {Clock(m.EndTick)}" : "nobody has won"));
         }
         if (aiWinner is int won && (sim.Match.Winner != won || sim.Match.EndTick != aiEnd))

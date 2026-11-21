@@ -94,21 +94,23 @@ public sealed record WorkCommand(int PlayerId, int[] Units, int Building) : Unit
 
 /// <summary>
 /// Place a building (by definition id) with its footprint's corner at column (X, Z), pay for it, and send
-/// the workers among the units to build it.
+/// the workers among the units to build it. Y (optional) is the level to stand it at, for ground under other ground
+/// (a great work in the deep caves): the standing level nearest it there; -1 for the top of the ground.
 /// </summary>
-public sealed record BuildCommand(int PlayerId, int[] Units, string Building, int X, int Z) : UnitsCommand(PlayerId, Units)
+public sealed record BuildCommand(int PlayerId, int[] Units, string Building, int X, int Z, int Y = -1) : UnitsCommand(PlayerId, Units)
 {
     public bool Equals(BuildCommand? other) =>
-        base.Equals(other) && Building == other!.Building && X == other.X && Z == other.Z;
-    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building, X, Z);
+        base.Equals(other) && Building == other!.Building && X == other.X && Z == other.Z && Y == other.Y;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building, X, Z, Y);
 }
 
 /// <summary>
 /// Plan a building (by definition id) with its footprint's corner at column (X, Z): it is marked out but not
 /// paid for or built, so it may be placed before the player can afford it. A <see cref="WorkCommand"/> on the
-/// plan starts it, once the player can pay (see <see cref="Economy.BuildingState.Planned"/>).
+/// plan starts it, once the player can pay (see <see cref="Economy.BuildingState.Planned"/>). Y (optional) is the
+/// level to stand it at, as for <see cref="BuildCommand"/>.
 /// </summary>
-public sealed record PlanCommand(int PlayerId, string Building, int X, int Z) : Command(PlayerId);
+public sealed record PlanCommand(int PlayerId, string Building, int X, int Z, int Y = -1) : Command(PlayerId);
 
 /// <summary>Remove one of the player's plans (a building not yet started).</summary>
 public sealed record CancelPlanCommand(int PlayerId, int Building) : Command(PlayerId);

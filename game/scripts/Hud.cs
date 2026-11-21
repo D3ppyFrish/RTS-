@@ -81,6 +81,10 @@ public partial class Hud : CanvasLayer
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
     // The ancient sites, with dominion on: who holds how many, and the dominion clock (click to look at the next site).
     private Button _sitesButton = null!;
+    // Great works (see AscendancySystem): the one nearest winning, or your site (click to look at it).
+    private Button _greatWorkButton = null!;
+    // The owner the great work button was last framed for (-1 nobody, -2 not yet).
+    private int _greatWorkFramedFor = -2;
     private int _nextSite;
     // The leader the sites button was last framed for (-1 nobody, -2 not yet).
     private int _sitesFramedFor = -2;
@@ -264,6 +268,17 @@ public partial class Hud : CanvasLayer
             _nextSite = (_nextSite + 1) % n;
         };
         under.AddChild(_sitesButton);
+
+        _greatWorkButton = MakeButton("");
+        _greatWorkButton.Name = "great_work_button";
+        _greatWorkButton.ToggleMode = false;
+        _greatWorkButton.Icon = UiIcons.Get("crown");
+        _greatWorkButton.Visible = false;
+        _greatWorkButton.Pressed += () =>
+        {
+            if (ShownGreatWork() is { } w) _control.FocusAt(w.X, w.Y, w.Z);
+        };
+        under.AddChild(_greatWorkButton);
         Place(under, Control.LayoutPreset.CenterTop, 0, 54);
         under.GrowHorizontal = Control.GrowDirection.Both;
         bar.GetParent().AddChild(under);
@@ -1114,6 +1129,7 @@ public partial class Hud : CanvasLayer
         RefreshGrowForest();
         RefreshCities();
         RefreshSites();
+        RefreshGreatWork();
     }
 
     /// <summary>A build key as it is written on its button.</summary>
@@ -1260,6 +1276,56 @@ public partial class Hud : CanvasLayer
             $"Ancient sites: the {count} old ruins. Soldiers standing alone inside one for {DominionSystem.ClaimTicks / Simulation.TicksPerSecond} s take it, " +
             $"and it stays yours until a rival does the same. Hold {sites.Needed} of them for {DominionSystem.DominionTicks / (60 * Simulation.TicksPerSecond)} minutes and you win." +
             $"\nHeld:{held}\nClick to look at the next site.";
+    }
+
+    /// <summary>
+    /// The great work the top bar shows: the finished one nearest winning, else your own site, else the first site
+    /// begun; null while there is none.
+    /// </summary>
+    private AscendancySystem.Work? ShownGreatWork()
+    {
+        var asc = _sim.Ascendancy;
+        if (asc.Leading is { } lead) return lead;
+        AscendancySystem.Work? first = null;
+        foreach (var w in asc.Works)
+        {
+            if (w.Owner == PlayerControl.LocalPlayer) return w;
+            first ??= w;
+        }
+        return first;
+    }
+
+    /// <summary>
+    /// The great work button, while a great work is being built or stands: who is building one, or, once one is
+    /// finished, who wins in how long unless it is brought down. Click it to look at it.
+    /// </summary>
+    private void RefreshGreatWork()
+    {
+        var w = ShownGreatWork();
+        _greatWorkButton.Visible = w != null;
+        if (w == null) return;
+        int me = PlayerControl.LocalPlayer;
+        string name = _sim.Content.Buildings[w.Def].Name;
+        long ticks = _sim.Ascendancy.TicksLeft(w);
+        if (ticks >= 0)
+        {
+            long left = (ticks + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
+            string who = w.Owner == me ? "You win" : $"{PlayerName(w.Owner)} win";
+            _greatWorkButton.Text = $"{who} in {left / 60}:{left % 60:00}";
+        }
+        else _greatWorkButton.Text = w.Owner == me ? $"Building the {name}" : $"{PlayerName(w.Owner)} build the {name}";
+        int framed = ticks >= 0 ? w.Owner : -1;
+        if (_greatWorkFramedFor != framed)
+        {
+            _greatWorkFramedFor = framed;
+            Frame(_greatWorkButton, framed < 0 ? PlainColour
+                : framed == me ? MatchEndPanel.VictoryColor.Darkened(0.45f) : MatchEndPanel.DefeatColor.Darkened(0.45f));
+        }
+        int minutes = AscendancySystem.AscendancyTicks / (60 * Simulation.TicksPerSecond);
+        _greatWorkButton.TooltipText =
+            $"Great works: each faction's final tech opens its great work, built in the deep caves. Once one is finished, " +
+            $"its owner wins if it still stands {minutes} minutes later; bring it down before then and the clock is gone with it." +
+            "\nClick to look at it.";
     }
 
     /// <summary>Who holds the town, as the player sees it: neutral, yours, or another player's.</summary>
@@ -1564,6 +1630,8 @@ public partial class Hud : CanvasLayer
                     PlaceResult.Uneven => "   (the ground is too steep)",
                     PlaceResult.Blocked => "   (something is in the way)",
                     PlaceResult.NoWater => "   (it must stand right beside water)",
+                    PlaceResult.NotDeep => "   (it must stand in the deep caves, under the land)",
+                    PlaceResult.OnlyOne => "   (you have a great work already)",
                     PlaceResult.CannotAfford => "   (not enough goods)",
                     PlaceResult.Locked when _control.BuildDef is { } def => $"   ({Needs(def.Requires, def.Faction)})",
                     _ => "   (off the map)",

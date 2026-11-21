@@ -48,6 +48,8 @@ public sealed class Simulation
     public RuinSystem Ruins { get; }
     /// <summary>Dominion: holding most of the ancient sites (the ruins) to win, with <see cref="Dominion"/> on.</summary>
     public DominionSystem Sites { get; }
+    /// <summary>Ascendancy: a faction's great work in the deep caves, standing long enough, wins.</summary>
+    public AscendancySystem Ascendancy { get; }
     /// <summary>Relics and the Dusk Staff lying where their bearers fell, until a unit picks them up.</summary>
     public DroppedItemSystem Items { get; }
     /// <summary>Terrain magic: earth walls (see <see cref="SpellSystem"/>).</summary>
@@ -103,6 +105,7 @@ public sealed class Simulation
         Ruins = new RuinSystem(this);
         Ruins.Place();
         Sites = new DominionSystem(this);
+        Ascendancy = new AscendancySystem(this);
         Items = new DroppedItemSystem(this);
         Spells = new SpellSystem(this);
         Cities = new CityStateSystem(this);
@@ -357,6 +360,7 @@ public sealed class Simulation
         Paths.Step(Units, Tick);
         _movement.Step();
         Sites.Step();
+        Ascendancy.Step();
         Match.Step();
         Vision.Step();
         Events.Step();
@@ -379,6 +383,7 @@ public sealed class Simulation
         ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL ^ DuskTree.ComputeHash() * 0x3C6EF372FE94F82BUL
         ^ Ruins.ComputeHash() * 0xC6BC279692B5C323UL
         ^ (_dominion ? 0x2B992DDFA23249D6UL ^ Sites.ComputeHash() * 0x9E3779B185EBCA87UL : 0)
+        ^ Ascendancy.ComputeHash() * 0xF1357AEA2E62A9C5UL
         ^ Spells.ComputeHash() * 0x2127599BF4325C37UL ^ Items.ComputeHash() * 0x5851F42D4C957F2DUL
         ^ (_fog ? Vision.ComputeHash() * 0xBF58476D1CE4E5B9UL : 0)
         ^ (_testMode ? 0x7A3E1C5B9D2F4E61UL ^ Sandbox.ComputeHash() * 0xE7037ED1A0B428DBUL : 0)

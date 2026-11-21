@@ -46,6 +46,9 @@
 // only, needed) is the mana one crystal gives.
 // shore: true means it must stand at the water's edge, with open water in a column right beside its footprint
 // (the fishing hut, a quarry whose rounds give food).
+// Kind great_work is a faction's great work (see "Ascendancy" in docs/rules.md): it stands only in the deep caves,
+// on ground under the land, a player has one at a time, and once finished it wins the match for its owner if it
+// is still standing a few minutes later.
 [
   { "id": "town_hall", "name": "Town hall", "kind": "town_hall", "size": [7, 7], "wallHeight": 4,
     "wall": "planks", "footing": "stone_brick", "roof": "roof_tile",
@@ -148,6 +151,14 @@
   { "id": "crab_pots", "name": "Crab pots", "kind": "house", "size": [3, 3], "wallHeight": 2,
     "wall": "palisade", "footing": "stone_brick", "roof": "thatch", "icon": "crab_shell", "faction": "orcs", "fromDen": true,
     "cost": { "wood": 20 }, "buildTime": 10, "housing": 2, "yield": { "food": 6 }, "yieldTime": 15 },
+  { "id": "hall_of_legends", "name": "Hall of Legends", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
+    "wall": "stone_brick", "footing": "rampart", "roof": "roof_tile", "icon": "crown", "faction": "settlers",
+    "cost": { "stone": 300, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "requires": "settler_legends", "sight": 10, "light": 6 },
+  { "id": "beast_throne", "name": "Beast Throne", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
+    "wall": "stone_brick", "footing": "rampart", "roof": "thatch", "icon": "crown", "faction": "orcs",
+    "cost": { "stone": 300, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "requires": "orc_beast_king", "sight": 10, "light": 6 },
   { "id": "goblin_totem", "name": "Goblin totem", "kind": "totem", "size": [3, 3], "wallHeight": 7,
     "wall": "planks", "footing": "stone_brick", "buildTime": 1, "sight": 8 },
   { "id": "ogre_idol", "name": "Ogre idol", "kind": "totem", "size": [3, 3], "wallHeight": 8,

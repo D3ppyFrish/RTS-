@@ -857,6 +857,42 @@ default map has 6).
   Alerts say when you take a site, lose one, or someone starts the dominion clock; the end of match panel says
   when a match was won by holding the sites. All numbers are first guesses for playtesting.
 
+## Ascendancy and great works
+
+`src/Sim/World/AscendancySystem.cs` (tests in `AscendancyTests`): the design doc's third way to win, Ascendancy:
+finish a faction's final tech and great work deep in the most dangerous ground. It is always on: the price of
+entry is the tech, the goods and the trip into the deep caves.
+
+- **The final tech**: each faction has one, researched at the town hall once the faction's other techs are done.
+  The Settlers' **Legends' lore** needs Drilled ranks and Craft guilds; the Orcs' **Beast-king's rite** needs Beast
+  pens, War drums and Smelting. Both cost 200 food, 150 stone and 30 iron and take 90 seconds.
+- **The great work** (kind `great_work` in `data/buildings.json`): the Settlers' **Hall of Legends** (stone with a
+  tiled roof) and the Orcs' **Beast Throne** (stone with a thatched roof), each 7 by 7, 300 stone, 150 wood, 40 iron,
+  30 crystal and 30 gold, 300 seconds of one worker's building, as sturdy as any stone building. It must stand
+  in the deep caves: on ground in the deep rock under the land (`EconomySystem.DeepGround`, below layer 64 on the
+  default map; a map with no deep rock has no ground for one). Elsewhere it does not fit (`PlaceResult.NotDeep`; the
+  ghost says it must stand in the deep caves). The chambers' floors are rough and their mushrooms and spikes are in
+  the way, so a hall is usually dug out first. It is placed at the level the cursor is on (with the height slice
+  cutting the land over the cave away), not on top of the ground: `BuildCommand` and `PlanCommand` carry that level
+  (`Y`), and the footprint's ground is the standing level nearest it in each column (`CanPlace`'s `level`). A player has one at a time, built, being built or planned
+  (`PlaceResult.OnlyOne`).
+- **Winning**: everyone is told when a player begins one (its site is laid; a plan does not count) and where. When it
+  is finished its clock starts and everyone is told again: if it still stands 5 minutes later
+  (`AscendancyTicks`, the tick it was finished on counting as the first) and its owner is still in, they win, and
+  every other player still in goes out on that tick (`MatchSystem.WinByAscendancy`, `MatchSystem.ByAscendancy`).
+  Brought down before then (it is fought like any building: blows, sappers, collapse), the clock goes with it,
+  and a new one starts again from nothing; everyone is told that too. With two finished, the one finished first
+  wins.
+- **Computer players** (`AI/AiPlayer.GreatWorks.cs`), from Easy up: while a rival's great work stands finished,
+  every soldier at home they can spare goes to bring it down (`AttackBuildingCommand`), keeping only the least guard
+  (2) home unless enemy soldiers are near the town hall, and those that strayed are sent at it again every few
+  seconds; once it is down they come home. They do not build great works of their own yet. The classic level
+  leaves them be.
+- **In the game**: the top bar's crown button shows the great work nearest winning ("Orcs win in 4:12") or, before
+  one is finished, who is building one ("Building the Hall of Legends"); clicking it, or a great work's alert, looks
+  at it, with the height slice cutting the land over it away. The end of match panel says when a match was won by a
+  great work. All numbers are first guesses for playtesting.
+
 ## Natural hazards
 
 `src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, `HazardTests`, `QuicksandTests` and `RockfallTests`, issues #45, #66 and #78): ground that
@@ -1007,7 +1043,8 @@ only the holder hires. All the numbers are first guesses for playtesting.
 finished town hall left standing is out, and so is a player who surrenders (`SurrenderCommand`; their
 units and buildings stay). The last player in wins; players who go out on the same tick draw. A sandbox
 with fewer than two players never ends. With dominion on, a player who holds most of the ancient sites for 3
-minutes wins at once (see [Ancient sites and dominion](#ancient-sites-and-dominion)). Who is out, who won (and
+minutes wins at once (see [Ancient sites and dominion](#ancient-sites-and-dominion)). A player whose great work stands finished in the deep caves for 5 minutes wins too
+(see [Ascendancy and great works](#ascendancy-and-great-works)). Who is out, who won (and
 whether by dominion) and when are part of the state hash.
 
 `src/Sim/AI/AiPlayer.cs` is a computer player. It plays only by giving the commands a person could

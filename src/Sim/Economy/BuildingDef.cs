@@ -66,6 +66,12 @@ public enum BuildingKind : byte
     /// spells cost (see <see cref="Units.SpellSystem.ManaCost"/>).
     /// </summary>
     Shrine,
+    /// <summary>
+    /// A faction's great work (see <see cref="Rts.Sim.World.AscendancySystem"/>): it stands only in the deep caves, on ground
+    /// under the land (<see cref="EconomySystem.DeepGround"/>), and a player has one at a time. Once finished it
+    /// wins the match for its owner if it is still standing <see cref="Rts.Sim.World.AscendancySystem.AscendancyTicks"/> later.
+    /// </summary>
+    GreatWork,
 }
 
 /// <summary>One block of a building, relative to its footprint corner and base level.</summary>

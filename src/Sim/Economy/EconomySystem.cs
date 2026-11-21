@@ -22,6 +22,10 @@ public enum PlaceResult : byte
     Locked,
     /// <summary>A building that must stand at the water's edge (<see cref="BuildingDef.Shore"/>) has no water beside it.</summary>
     NoWater,
+    /// <summary>A great work (<see cref="BuildingKind.GreatWork"/>) must stand in the deep caves, under the land.</summary>
+    NotDeep,
+    /// <summary>The player already has a great work, built, being built or planned: one at a time.</summary>
+    OnlyOne,
 }
 
 /// <summary>Per-player economy state and running totals.</summary>
@@ -330,9 +334,12 @@ public sealed partial class EconomySystem
     /// other buildings (or the gap around them; walls, gates and towers need none between each other) must
     /// not be in the way. A tower may stand on the player's own walls (see <see cref="TakesPlaceOf"/>). With
     /// <paramref name="checkPlayer"/> false only the ground counts, not the player's techs and goods (match setup).
-    /// A plan is checked with <paramref name="ignore"/>: the building that may stand on its own footprint.
+    /// A plan is checked with <paramref name="ignore"/>: the building that may stand on its own footprint. With a
+    /// <paramref name="level"/> (0 or more) the ground is the standing level nearest it in each column rather than the
+    /// top of the ground, for ground under other ground (a great work in the deep caves).
     /// </summary>
-    public PlaceResult CanPlace(int player, BuildingDef def, int x, int z, out int baseY, bool checkPlayer = true, Building? ignore = null)
+    public PlaceResult CanPlace(int player, BuildingDef def, int x, int z, out int baseY, bool checkPlayer = true, Building? ignore = null,
+        int level = -1)
     {
         baseY = -1;
         if (def.IsBridge) return PlaceResult.Blocked; // laid along a line instead (see BridgeCommand)
@@ -365,15 +372,16 @@ public sealed partial class EconomySystem
                     if (t.Covers(cx, cz)) return t;
             return null;
         }
-        baseY = Under(x + def.SizeX / 2, z + def.SizeZ / 2)?.Y ?? Walk.GroundLevel(w, x + def.SizeX / 2, z + def.SizeZ / 2);
+        baseY = Under(x + def.SizeX / 2, z + def.SizeZ / 2)?.Y
+                ?? (level >= 0 ? Walk.NearestStandLevel(w, x + def.SizeX / 2, z + def.SizeZ / 2, level, 2) : Walk.GroundLevel(w, x + def.SizeX / 2, z + def.SizeZ / 2));
         int clear = Math.Max(def.Height, Walk.Clearance);
         if (baseY < 2 || baseY + clear >= w.SizeY) return PlaceResult.Uneven;
         for (int cz = z; cz <= z1; cz++)
         for (int cx = x; cx <= x1; cx++)
         {
             var under = Under(cx, cz);
-            int g = under?.Y ?? Walk.GroundLevel(w, cx, cz);
-            if (g < baseY - 1 || g > baseY + 1) return PlaceResult.Uneven;
+            int g = under?.Y ?? (level >= 0 ? Walk.NearestStandLevel(w, cx, cz, baseY, 1) : Walk.GroundLevel(w, cx, cz));
+            if (g < 0 || g < baseY - 1 || g > baseY + 1) return PlaceResult.Uneven;
             // A high column is cut down: its top block must be plain ground with solid ground under it.
             if (g == baseY + 1 && (!BlockInfo.IsGround(w.Get(cx, baseY, cz)) || !BlockInfo.IsSolid(w.Get(cx, baseY - 1, cz))))
                 return PlaceResult.Blocked;
@@ -382,8 +390,28 @@ public sealed partial class EconomySystem
                 if (w.Get(cx, y, cz) is var c && c != BlockType.Air && !BlockInfo.IsLeaves(c)) return PlaceResult.Blocked;
         }
         if (def.Shore && !BesideWater(w, x, z, x1, z1, baseY)) return PlaceResult.NoWater;
+        if (def.Kind == BuildingKind.GreatWork)
+        {
+            if (!DeepGround(baseY)) return PlaceResult.NotDeep;
+            if (checkPlayer && HasGreatWork(player, ignore)) return PlaceResult.OnlyOne;
+        }
         if (checkPlayer && !CanAfford(player, def.Cost)) return PlaceResult.CannotAfford;
         return PlaceResult.Ok;
+    }
+
+    /// <summary>
+    /// True if a building standing at level <paramref name="y"/> stands in the deep caves: in the deep rock under the
+    /// land (<see cref="Rts.Sim.World.RegionGenerator.DeepLayers"/>), where a great work must stand. A map with no deep rock
+    /// has none.
+    /// </summary>
+    public bool DeepGround(int y) => y < Rts.Sim.World.RegionGenerator.DeepLayers(World.SizeY);
+
+    /// <summary>True if the player has a great work (finished, a site or a plan) other than <paramref name="ignore"/>.</summary>
+    public bool HasGreatWork(int player, Building? ignore = null)
+    {
+        foreach (var b in Buildings.All)
+            if (b != ignore && b.Owner == player && b.Def.Kind == BuildingKind.GreatWork) return true;
+        return false;
     }
 
     /// <summary>How far below the level a building stands at the water beside it may lie and still count (see <see cref="BesideWater"/>).</summary>
@@ -470,9 +498,9 @@ public sealed partial class EconomySystem
     /// <summary>
     /// Puts a building down without cost or work, finished (match setup, tests). Null if it does not fit.
     /// </summary>
-    public Building? PlaceFinished(int owner, BuildingDef def, int x, int z)
+    public Building? PlaceFinished(int owner, BuildingDef def, int x, int z, int level = -1)
     {
-        if (CanPlace(owner, def, x, z, out int baseY, checkPlayer: false) != PlaceResult.Ok) return null;
+        if (CanPlace(owner, def, x, z, out int baseY, checkPlayer: false, level: level) != PlaceResult.Ok) return null;
         var b = Prepare(owner, def, x, z, baseY);
         foreach (var t in def.Blocks) World.Set(b.X + t.X, b.Y + t.Y, b.Z + t.Z, t.Block);
         b.Placed = def.Blocks.Count;
@@ -869,7 +897,7 @@ public sealed partial class EconomySystem
     internal void Apply(BuildCommand c)
     {
         if (!_sim.Content.TryGetBuilding(c.Building, out var def)) return;
-        if (CanPlace(c.PlayerId, def, c.X, c.Z, out int baseY) != PlaceResult.Ok) return;
+        if (CanPlace(c.PlayerId, def, c.X, c.Z, out int baseY, level: c.Y) != PlaceResult.Ok) return;
         if (!TrySpend(c.PlayerId, def.Cost, c.X + def.SizeX / 2, c.Z + def.SizeZ / 2)) return;
         var b = Prepare(c.PlayerId, def, c.X, c.Z, baseY);
         foreach (int i in Workers(c))
@@ -883,7 +911,7 @@ public sealed partial class EconomySystem
     internal void Apply(PlanCommand c)
     {
         if (!_sim.Content.TryGetBuilding(c.Building, out var def)) return;
-        var fit = CanPlace(c.PlayerId, def, c.X, c.Z, out int baseY);
+        var fit = CanPlace(c.PlayerId, def, c.X, c.Z, out int baseY, level: c.Y);
         if (fit != PlaceResult.Ok && fit != PlaceResult.CannotAfford) return;
         var b = Buildings.Add(c.PlayerId, def, c.X, baseY, c.Z);
         b.State = BuildingState.Planned;
@@ -900,7 +928,13 @@ public sealed partial class EconomySystem
     /// the techs are there and the goods are in store).
     /// </summary>
     public PlaceResult CanStart(Building plan) =>
-        !plan.Planned ? PlaceResult.Blocked : CanPlace(plan.Owner, plan.Def, plan.X, plan.Z, out _, ignore: plan);
+        !plan.Planned ? PlaceResult.Blocked : CanPlace(plan.Owner, plan.Def, plan.X, plan.Z, out _, ignore: plan, level: LevelOf(plan));
+
+    /// <summary>
+    /// The level a plan or ruin is checked at again: its own for a great work, which stands under other ground;
+    /// -1 (the top of the ground) for anything else, which is placed there however the ground has changed.
+    /// </summary>
+    public static int LevelOf(Building b) => b.Def.Kind == BuildingKind.GreatWork ? b.Y : -1;
 
     /// <summary>
     /// Starts a plan: pays for it, levels its ground and makes it a site. False, with nothing changed, if it
@@ -908,7 +942,7 @@ public sealed partial class EconomySystem
     /// </summary>
     private bool StartPlan(Building b)
     {
-        if (CanPlace(b.Owner, b.Def, b.X, b.Z, out int baseY, ignore: b) != PlaceResult.Ok) return false;
+        if (CanPlace(b.Owner, b.Def, b.X, b.Z, out int baseY, ignore: b, level: LevelOf(b)) != PlaceResult.Ok) return false;
         if (!TrySpend(b.Owner, b.Def.Cost, b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2)) return false;
         Level(b.Owner, b.Def, b.X, b.Z, baseY);
         b.Y = baseY;
