@@ -133,7 +133,7 @@ public sealed partial class CombatSystem
             int c = (cz * _cellsX + cx) * _players;
             for (int p = 0; p < _players; p++)
             {
-                if (p == owner) continue;
+                if (!Hostile(owner, p)) continue;
                 for (int j = _head[c + p]; j >= 0; j = _next[j])
                 {
                     if (u.Subdued[j] || u.Town[j] != 0 && u.Owner[j] == Simulation.WildPlayer) continue;
@@ -168,7 +168,7 @@ public sealed partial class CombatSystem
         var u = U;
         if (!Charge(i, out int ward, out _) || ward < 0 || u.HitBy[ward] == 0) return -1;
         int by = u.IndexOf(u.HitBy[ward]);
-        return by >= 0 && u.Owner[by] != u.Owner[i] && !u.Subdued[by] && NearCharge(i, by, LeashOf(i)) ? by : -1;
+        return by >= 0 && Hostile(u.Owner[i], u.Owner[by]) && !u.Subdued[by] && NearCharge(i, by, LeashOf(i)) ? by : -1;
     }
 
     /// <summary>

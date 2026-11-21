@@ -204,6 +204,14 @@ public partial class Alerts : VBoxContainer
                 2 => "The dark power grows: brutes rise with its broods",
                 _ => "The dark power is fully awake",
             }, AttackColour),
+            GameEventKind.TruceOffered => ($"The {Faction(e.Subject)} offer you a truce: answer within {e.Def / Simulation.TicksPerSecond} seconds (Rivals in the top bar)", ResearchColour),
+            GameEventKind.TruceStarted => ($"Truce with the {Faction(e.Subject)} for {Minutes(e.Def)} minutes: neither side fights the other", GoodColour),
+            GameEventKind.TruceEnding => e.Def == e.Player
+                ? ($"You broke off the truce with the {Faction(e.Subject)}: it ends in {TruceSystem.WarnTicks / Simulation.TicksPerSecond} seconds", Hud.PlainColour)
+                : e.Def >= 0
+                    ? ($"The {Faction(e.Subject)} broke off the truce: it ends in {TruceSystem.WarnTicks / Simulation.TicksPerSecond} seconds", AttackColour)
+                    : ($"The truce with the {Faction(e.Subject)} ends in {TruceSystem.WarnTicks / Simulation.TicksPerSecond} seconds", AttackColour),
+            GameEventKind.TruceEnded => ($"The truce with the {Faction(e.Subject)} is over", AttackColour),
             GameEventKind.BroodRising => ($"A brood of {e.Def} corrupted beasts rises from the Heartscar and comes for you", AttackColour),
             _ => (null, Hud.PlainColour),
         };

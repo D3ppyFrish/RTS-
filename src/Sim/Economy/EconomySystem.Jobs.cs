@@ -453,7 +453,7 @@ public sealed partial class EconomySystem
     private void StepRaider(int i)
     {
         var b = Buildings.Get(U.JobTarget[i]);
-        if (b == null || b.Owner == U.Owner[i] || !b.Def.Raidable)
+        if (b == null || !_sim.Truces.Hostile(U.Owner[i], b.Owner) || !b.Def.Raidable)
         {
             EndJob(i);
             return;

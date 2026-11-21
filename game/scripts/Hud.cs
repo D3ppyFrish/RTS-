@@ -80,6 +80,8 @@ public partial class Hud : CanvasLayer
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
+    // A button per rival player in the match, for truces (see TruceSystem).
+    private readonly List<(Button Button, int Rival)> _rivalButtons = new();
     // The ancient sites, with dominion on: who holds how many, and the dominion clock (click to look at the next site).
     private Button _sitesButton = null!;
     // Great works (see AscendancySystem): the one nearest winning, or your site (click to look at it).
@@ -256,6 +258,18 @@ public partial class Hud : CanvasLayer
             b.Pressed += () => _control.FocusCity(town.Id);
             under.AddChild(b);
             _cityButtons.Add((b, town));
+        }
+
+        foreach (int rival in _sim.Match.Players)
+        {
+            if (rival == PlayerControl.LocalPlayer) continue;
+            var b = MakeButton("");
+            b.Name = $"truce_{rival}";
+            b.ToggleMode = false;
+            b.AddThemeFontSizeOverride("font_size", 14);
+            b.Pressed += () => _control.Truce(rival);
+            under.AddChild(b);
+            _rivalButtons.Add((b, rival));
         }
 
         _sitesButton = MakeButton("");
@@ -1250,6 +1264,71 @@ public partial class Hud : CanvasLayer
     }
 
     /// <summary>
+    /// The rivals' truce buttons in the top bar: at peace (and how long for), an offer standing either way, or
+    /// how long until another truce can be agreed.
+    /// </summary>
+    private void RefreshTruces()
+    {
+        var truces = _sim.Truces;
+        int me = PlayerControl.LocalPlayer;
+        long now = _sim.Tick;
+        foreach (var (button, rival) in _rivalButtons)
+        {
+            string name = _sim.Economy.Player(rival).Faction.Name;
+            bool inPlay = _sim.Match.InPlay(rival);
+            button.Visible = inPlay;
+            if (!inPlay) continue;
+            button.Disabled = false;
+            Color frame = PlainColour;
+            if (truces.AtPeace(me, rival))
+            {
+                long ends = truces.EndsAt(me, rival);
+                bool broken = truces.BrokenBy(me, rival) >= 0;
+                button.Text = broken ? $"{name}: truce ends {Countdown(ends - now)}" : $"{name}: truce {Countdown(ends - now)}";
+                button.TooltipText = broken
+                    ? $"The truce with the {name} was broken off and ends in {Countdown(ends - now)}: then the fighting starts again."
+                    : $"At peace with the {name}: neither side's units fight the other's, raid or attack its buildings.\n" +
+                      $"Click to break it off: it ends {TruceSystem.WarnTicks / Simulation.TicksPerSecond} seconds later, and both sides are warned.";
+                button.Disabled = broken;
+                frame = new Color(0.18f, 0.45f, 0.24f);
+            }
+            else if (truces.Offered(rival, me))
+            {
+                button.Text = $"{name} offer a truce: accept {Countdown(truces.OfferEnds(rival, me) - now)}";
+                button.TooltipText = $"The {name} offer a truce of {TruceSystem.TruceTicks / (60 * Simulation.TicksPerSecond)} minutes. Click to accept it.";
+                frame = new Color(0.22f, 0.36f, 0.62f);
+            }
+            else if (truces.Offered(me, rival))
+            {
+                button.Text = $"{name}: truce offered {Countdown(truces.OfferEnds(me, rival) - now)}";
+                button.TooltipText = $"You offered the {name} a truce: it starts if they accept before the offer runs out. Click to take it back.";
+            }
+            else if (truces.CanOffer(me, rival))
+            {
+                button.Text = $"{name}: offer truce";
+                button.TooltipText = $"Offer the {name} a truce of {TruceSystem.TruceTicks / (60 * Simulation.TicksPerSecond)} minutes: while it lasts " +
+                                     "neither side fights the other. There are no shared victories, and either side can break it off with " +
+                                     $"{TruceSystem.WarnTicks / Simulation.TicksPerSecond} seconds' warning.";
+            }
+            else
+            {
+                long wait = truces.FreeAt(me, rival) - now;
+                button.Text = $"{name}: no truce for {Countdown(wait)}";
+                button.TooltipText = $"After a truce ends, the two sides cannot agree another for {TruceSystem.CooldownTicks / (60 * Simulation.TicksPerSecond)} minutes.";
+                button.Disabled = true;
+            }
+            Frame(button, frame);
+        }
+    }
+
+    /// <summary>Ticks as m:ss.</summary>
+    private static string Countdown(long ticks)
+    {
+        long s = Math.Max(0, (ticks + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond);
+        return $"{s / 60}:{s % 60:D2}";
+    }
+
+    /// <summary>
     /// The town buttons in the top bar (who holds the town), and the selected town's hire buttons, greyed out
     /// when you do not hold it, lack the goods, have no room or nobody is ready.
     /// </summary>
@@ -1263,6 +1342,7 @@ public partial class Hud : CanvasLayer
             button.Text = $"{char.ToUpperInvariant(town.Def.Id[0])}{town.Def.Id[1..]}: {HolderText(town, player)}";
             button.SetPressedNoSignal(_control.SelectedCity == town.Id);
         }
+        RefreshTruces();
         var selected = _sim.Cities.Get(_control.SelectedCity);
         if (selected?.Def != _cityFor) BuildCityButtons(selected?.Def);
         _cityBox.Visible = selected != null;

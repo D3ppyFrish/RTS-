@@ -85,6 +85,20 @@ public enum GameEventKind : byte
     /// when none of the player's units already owed that town.
     /// </summary>
     TollUnpaid,
+    /// <summary>
+    /// A rival (<see cref="GameEvent.Subject"/>) offers the player a truce (see <see cref="TruceSystem"/>); it stands
+    /// for <see cref="GameEvent.Def"/> ticks.
+    /// </summary>
+    TruceOffered,
+    /// <summary>The player and a rival (<see cref="GameEvent.Subject"/>) are at peace for <see cref="GameEvent.Def"/> ticks.</summary>
+    TruceStarted,
+    /// <summary>
+    /// The truce with a rival (<see cref="GameEvent.Subject"/>) ends in <see cref="TruceSystem.WarnTicks"/>;
+    /// <see cref="GameEvent.Def"/> is the player who broke it off, or -1 if its time is up.
+    /// </summary>
+    TruceEnding,
+    /// <summary>The truce with a rival (<see cref="GameEvent.Subject"/>) is over; <see cref="GameEvent.Def"/> as for <see cref="TruceEnding"/>.</summary>
+    TruceEnded,
 }
 
 /// <summary>
@@ -227,6 +241,10 @@ public sealed class EventLog
     /// <summary>A brood of <paramref name="count"/> corrupted beasts rose at (x, y, z) and is coming for the player.</summary>
     internal void BroodRising(int player, int x, int y, int z, int count) =>
         Add(player, GameEventKind.BroodRising, x, y, z, 0, count);
+
+    /// <summary>Tells the player about a truce with <paramref name="rival"/> (one of the Truce kinds).</summary>
+    internal void Truce(int player, GameEventKind kind, int rival, int def) =>
+        Add(player, kind, -1, -1, -1, rival, def);
 
     /// <summary>True (and remembered) if no attack on the player was reported near (x, z) lately.</summary>
     private bool Throttle(int player, int x, int z)
