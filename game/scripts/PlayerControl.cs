@@ -2062,6 +2062,7 @@ public partial class PlayerControl : Node
                $"totem_owner={(town != null ? _sim.Cities.Totem(town)?.Owner ?? -1 : -1)} guards={town?.Guards.Count() ?? 0} " +
                $"guards_owner={(town != null && town.Guards.Any() ? u.Owner[u.IndexOf(town.Guards.First())] : -1)} tribute={town?.Caravans.Count ?? 0} " +
                $"pool={town?.Ready ?? 0} caravans={caravans} trading={trading} mercs={mercs} " +
+               $"bridge={(town?.HasBridge == true ? 1 : 0)} tolls={town?.Tolls ?? 0} feud={town?.FeudWith(LocalPlayer) ?? 0} " +
                $"idle={_sim.Economy.IdleWorkers(LocalPlayer).Count} army={_sim.Combat.ArmyUnits(LocalPlayer).Count} " +
                $"selected_workers={_selected.Count(id => u.IndexOf(id) is int k && k >= 0 && _sim.Content.Units[u.Def[k]].Role == UnitRole.Worker)} camera={cam.X},{cam.Z} " +
                $"dusk_tree={duskState} warden={warden} staff={staff} staff_at={staffAt} tending={tending} bloom_ready={(StaffSelected() is int sb && sb != 0 && dusk.CanBloom(u.IndexOf(sb)) ? 1 : 0)} " +

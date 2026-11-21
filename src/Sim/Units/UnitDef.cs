@@ -105,6 +105,12 @@ public sealed class UnitDef
     public int Regen { get; init; }
 
     /// <summary>
+    /// Its <see cref="Regen"/> works only out of the daylight (the trolls): by night, at dawn and dusk, or under a roof
+    /// of rock or anything else, but not under the open sky by day (see <c>Conditions.InDaylight</c>).
+    /// </summary>
+    public bool NightRegen { get; init; }
+
+    /// <summary>
     /// A hero (the Settlers' last forms): one of a kind, so a player has at most one living unit of this type
     /// and none evolves into it while one lives, and it never breaks and runs (see <see cref="EvolutionSystem"/>,
     /// <c>CombatSystem</c>).

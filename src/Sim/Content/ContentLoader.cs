@@ -600,7 +600,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -643,6 +643,7 @@ public static class ContentLoader
                 HealTicks = Math.Max(1, (healTime * Tps).RoundToInt()),
                 HealRange = o.Decimal("healRange", Fix64.One, Fix64.FromInt(32), Fix64.FromInt(5), required: false),
                 Regen = o.Int("regen", 0, 100, 0),
+                NightRegen = o.Bool("nightRegen"),
                 Hero = o.Bool("hero"),
                 Rally = o.Decimal("rally", Fix64.Zero, Fix64.FromInt(32), Fix64.Zero, required: false),
                 Steady = o.Int("steady", 0, 100, 0),
@@ -771,7 +772,7 @@ public static class ContentLoader
         private void ReadCityState(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof", "ground", "deep");
+            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof", "ground", "deep", "crossing", "toll");
             if (id == null) return;
             if (_db.TryGetCityState(id, out _))
             {
@@ -790,6 +791,8 @@ public static class ContentLoader
             mercenaries?.Keys("pool", "refill");
             var heal = Part(o, "heal", "{ \"range\": 6 }");
             heal?.Keys("range");
+            var toll = Part(o, "toll", "{ \"gold\": 2, \"feud\": 60 }");
+            toll?.Keys("gold", "feud");
             var buys = trade?.Enum("buys", Good.Food, required: false) ?? Good.Food;
             var sells = trade?.Enum("sells", Good.Iron, required: false) ?? Good.Iron;
             if (buys == sells) trade!.Error($"buys and sells the same good ({SnakeName(buys)})");
@@ -816,7 +819,11 @@ public static class ContentLoader
                 Roof = o.Material("roof", BlockType.Thatch),
                 Ground = o.Ground("ground"),
                 Deep = o.Bool("deep"),
+                Crossing = o.Bool("crossing"),
+                TollGold = toll?.Int("gold", 1, 1000, 2) ?? 0,
+                FeudTicks = (toll?.Int("feud", 0, MaxSeconds, 60) ?? 60) * Tps,
             };
+            if (def.Crossing && def.Deep) o.Error("a town in the deep caves cannot be a crossing (\"deep\" and \"crossing\" are both true)");
             var totemId = totem?.Str("building", true);
             var guardIds = guards?.Ids("units") ?? new List<string>();
             var caravanId = tribute?.Str("caravan", true);
@@ -1399,6 +1406,7 @@ public static class ContentLoader
                 h.Add(u.Chasm ? 1 : 0);
                 h.Add(u.GrowForest ? 1 : 0);
                 h.Add(u.Heal);
+                h.Add(u.NightRegen ? 1 : 0);
                 h.Add(u.HealTicks);
                 h.Add(u.HealRange.Raw);
                 h.Add(u.Regen);
@@ -1475,6 +1483,9 @@ public static class ContentLoader
                 h.Add(c.Lair?.Index ?? -1);
                 h.Add((int)c.Ground);
                 h.Add(c.Deep ? 1 : 0);
+                h.Add(c.Crossing ? 1 : 0);
+                h.Add(c.TollGold);
+                h.Add(c.FeudTicks);
                 h.Add((int)c.Wall);
                 h.Add((int)c.Roof);
             }

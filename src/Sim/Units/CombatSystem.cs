@@ -1302,7 +1302,10 @@ public sealed partial class CombatSystem
         for (int i = 0; i < u.Count; i++)
         {
             if ((tick + u.Id[i]) % Tps != 0 || u.Subdued[i]) continue;
-            int regen = Def(i).Regen;
+            var def = Def(i);
+            int regen = def.Regen;
+            // Trolls' wounds close only out of the daylight.
+            if (regen > 0 && def.NightRegen && _sim.Conditions.InDaylight(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt())) regen = 0;
             bool resting = tick - u.LastFight[i] >= rules.RecoveryDelayTicks;
             if (!resting && regen == 0) continue;
             int max = _sim.MaxHpOf(i);

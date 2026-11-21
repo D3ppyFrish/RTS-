@@ -81,4 +81,27 @@ public sealed class CityStateDef
     /// the open; on a map with no deep caves it is left out. See <c>CityStateSystem.PlaceDeep</c>.
     /// </summary>
     public bool Deep { get; init; }
+
+    /// <summary>
+    /// True for a town on a river bank whose people built a stone bridge across the river beside it (the trolls'):
+    /// it is placed where the river runs close by, and the bridge laid with it (see <c>CityStateSystem.PlaceCrossing</c>).
+    /// On a map with no river beside a fair site it stands like any other town, without a bridge.
+    /// </summary>
+    public bool Crossing { get; init; }
+
+    /// <summary>
+    /// Gold a player pays for each unit of theirs that comes onto the town's toll ground (its square, its bridge, and
+    /// <see cref="GuardReach"/> columns round them), unless they hold the town; 0 for no toll. A unit whose owner cannot
+    /// pay is fought by the guards, even a worker or a caravan, and soldiers that paid are let through. The toll goes
+    /// to the town's holder (see <c>CityStateSystem.StepToll</c>).
+    /// </summary>
+    public int TollGold { get; init; }
+    /// <summary>The toll as a cost, for paying it.</summary>
+    public GoodAmount[] TollCost => _tollCost ??= TollGold > 0 ? new[] { new GoodAmount(Good.Gold, TollGold) } : Array.Empty<GoodAmount>();
+    private GoodAmount[]? _tollCost;
+    /// <summary>
+    /// Ticks a toll town takes no toll from a player whose units struck its totem or its guards, and its guards fight
+    /// every unit of theirs on its toll ground instead, from the last blow.
+    /// </summary>
+    public int FeudTicks { get; init; } = 60 * Simulation.TicksPerSecond;
 }

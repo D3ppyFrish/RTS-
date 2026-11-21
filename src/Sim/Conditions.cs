@@ -122,6 +122,12 @@ public sealed class Conditions
     /// <summary>How light it is now.</summary>
     public DayPart Part => PartAt(Minute);
 
+    /// <summary>
+    /// True if (x, y, z), where a unit stands with its feet at y, is in the daylight: it is day (not dawn, dusk or
+    /// night) and nothing solid is over it. With day and night off, never (nothing here changes anything).
+    /// </summary>
+    public bool InDaylight(int x, int y, int z) => On && Part == DayPart.Day && _sim.World.SurfaceHeight(x, z) < y;
+
     /// <summary>The weather now; with day and night off, always clear.</summary>
     public Weather Weather => On ? _weather : Weather.Clear;
     /// <summary>The weather that comes after this spell.</summary>

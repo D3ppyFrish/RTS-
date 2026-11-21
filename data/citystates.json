@@ -20,6 +20,15 @@
 //   ground (optional): what the town's square is paved with (grass, the default, stone or stone_brick).
 //   deep (optional): true for a town dug out of a chamber of the deep caves rather than standing in the open; it
 //     is left out on a map with no deep caves.
+//   crossing (optional): true for a town on a river bank whose people built a stone bridge over the river beside it.
+//     It is placed where the river comes within a few columns of a fair site; with no such site (a map without a
+//     river) it stands like any other town, without a bridge.
+//   toll (optional): gold is the toll a player pays for each unit of theirs that comes onto the town's toll ground
+//     (its square, its bridge and the guards' reach round them), once while it stays on it, unless they hold the
+//     town. The toll goes to the town's holder. The guards let units that paid through, soldiers too, and fight
+//     those whose owner could not pay, workers and caravans too. A player whose units strike the totem or a guard
+//     is at feud with the town for feud seconds from the last blow: no toll is taken from them, and the guards
+//     fight all their units there.
 // All the numbers are first guesses for playtesting.
 [
   { "id": "goblins", "name": "Goblin town",
@@ -50,5 +59,15 @@
     "trade": { "buys": "food", "load": 20, "sells": "crystal", "price": 2, "holderBonus": 50 },
     "mercenaries": { "pool": 4, "refill": 40 },
     "heal": { "range": 6 },
-    "wall": "stone_brick", "roof": "stone_brick", "ground": "stone" }
+    "wall": "stone_brick", "roof": "stone_brick", "ground": "stone" },
+  { "id": "trolls", "name": "Troll bridge", "crossing": true,
+    "description": "Trolls who built a stone bridge over the river and live off its toll: pay their gold and cross, soldiers too, or be fought. Break their standing stone and the bridge is yours: your units cross free, the toll comes to you, and they sell you trolls whose wounds close in the dark.",
+    "totem": { "building": "troll_stone", "respawn": 5 },
+    "guards": { "units": ["troll", "troll", "troll", "troll"], "reach": 4, "refill": 60 },
+    "toll": { "gold": 2, "feud": 60 },
+    "tribute": { "caravan": "caravan", "good": "iron", "amount": 20, "every": 60 },
+    "trade": { "buys": "food", "load": 20, "sells": "iron", "price": 6, "holderBonus": 50 },
+    "mercenaries": { "pool": 3, "refill": 60 },
+    "heal": { "range": 6 },
+    "wall": "stone_brick", "roof": "roof_tile", "ground": "stone" }
 ]

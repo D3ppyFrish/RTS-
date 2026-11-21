@@ -28,7 +28,7 @@ scripts/ui-supply-screenshots.sh      # scripted supply rules: a storehouse told
 scripts/ui-governor-screenshots.sh    # scripted town governor: a Defence governor runs the town, putting up a barracks and four watchtowers
 scripts/ui-evolution-screenshots.sh   # scripted evolution: evolve buttons, auto-evolve, a knight's panel
 scripts/ui-monsters-screenshots.sh    # scripted wolf lairs: Orcs beat a pack, ride one wolf and recruit one; Settlers get the reward
-scripts/ui-citystate-screenshots.sh   # scripted city-state: break the goblins' totem, hire goblins, a caravan trades, the ogres' hold, the kobolds' warren
+scripts/ui-citystate-screenshots.sh   # scripted city-state: break the goblins' totem, hire goblins, a caravan trades, the ogres' hold, the kobolds' warren, the troll bridge
 scripts/ui-match-screenshots.sh       # scripted match flow: start screen, surrender, defeat and its replay, victory
 scripts/ui-dominion-screenshots.sh    # scripted ancient sites: soldiers walk into a ruin and take it; its banner, the sites button, the alert
 scripts/ui-ascendancy-screenshots.sh  # scripted great work (--great-work): the Hall of Legends in the deep caves, the crown countdown, the win
@@ -230,7 +230,7 @@ the Beaten button for a spearman to ride and the next to recruit, and plays the 
 their lair for its reward; `scripts/ui-citystate-screenshots.sh` starts with `--goods=1000 --houses=4`,
 picks the goblin town from the top bar, clears the wolf lair on the road and breaks the goblins' totem
 with the starting units, hires a goblin of each kind, and trains a caravan and right-clicks the town with
-it, then waits for the trade and tribute to come in, and last picks the ogres' hold and then the kobolds' warren (in the deep caves, through the height slice) from the top bar; `scripts/ui-match-screenshots.sh` starts with `--menu`, picks the
+it, then waits for the trade and tribute to come in, and last picks the ogres' hold, then the kobolds' warren (in the deep caves, through the height slice) and then the troll bridge from the top bar; `scripts/ui-match-screenshots.sh` starts with `--menu`, picks the
 Orcs on the start screen with the computer playing the Settlers, surrenders, checks the Defeat panel
 and that the match runner plays the saved replay back to the same end, goes back to the start screen,
 and then, from the command line with `--units=40`, brings down the Orcs' town hall for a Victory;

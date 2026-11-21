@@ -43,6 +43,8 @@ public static class UnitModels
     private static readonly Color KoboldBelly = new(0.82f, 0.58f, 0.36f);
     private static readonly Color OgreSkin = new(0.62f, 0.55f, 0.4f);
     private static readonly Color OgreSkinDark = new(0.48f, 0.42f, 0.3f);
+    private static readonly Color TrollSkin = new(0.42f, 0.5f, 0.42f);
+    private static readonly Color TrollSkinDark = new(0.3f, 0.37f, 0.31f);
     private static readonly Color OrcSkin = new(0.36f, 0.5f, 0.24f);
     private static readonly Color OrcEye = new(0.95f, 0.25f, 0.12f);
     private static readonly Color Bone = new(0.92f, 0.88f, 0.74f);
@@ -193,6 +195,27 @@ public static class UnitModels
             .Box(-2, 16, 5, -2, 17, 5, Bone).Box(1, 16, 5, 1, 17, 5, Bone)              // tusks
             .Box(-1, 17, 5, 0, 18, 5, OgreSkinDark)                                     // nose
             .Box(-1, 22, 0, 0, 22, 2, Hair);                                            // a tuft of hair
+
+        /// <summary>
+        /// A troll: as tall as an ogre but lean and hunched, grey-green with a stony, mossy back, a long drooping nose,
+        /// a jutting jaw with tusks, small pale eyes, long arms with big hands and a hide kilt in its owner's colour.
+        /// </summary>
+        public Builder Troll() =>
+            Box(-4, 0, -2, -2, 8, 0, TrollSkinDark).Box(1, 0, -2, 3, 8, 0, TrollSkinDark)   // long legs
+            .Box(-5, 0, -2, -2, 0, 2, TrollSkinDark).Box(1, 0, -2, 4, 0, 2, TrollSkinDark)  // broad bare feet
+            .Box(-4, 7, -2, 3, 10, 1, Team).Box(-4, 10, -2, 3, 10, 1, Hide)                 // kilt and belt
+            .Box(-4, 11, -3, 3, 18, 1, TrollSkin)                                          // body, bent forward
+            .Box(-4, 15, -4, 3, 19, -4, DarkRock).Box(-3, 16, -5, 2, 18, -5, Rock)          // stony back
+            .Box(-2, 19, -4, 1, 19, -3, Moss).Box(-4, 14, -4, -3, 14, -4, Moss)             // moss on it
+            .Box(-7, 8, -1, -5, 18, 1, TrollSkin).Box(5, 8, -1, 7, 18, 1, TrollSkin)        // long arms
+            .Box(-8, 5, -1, -5, 7, 2, TrollSkinDark).Box(5, 5, -1, 8, 7, 2, TrollSkinDark)  // big hands
+            .Box(-3, 17, 1, 2, 21, 4, TrollSkin)                                           // head, thrust forward
+            .Box(-3, 21, 1, 2, 21, 3, TrollSkinDark)                                       // heavy brow
+            .Box(-2, 20, 4, -2, 20, 4, Lamp).Box(1, 20, 4, 1, 20, 4, Lamp)                 // small pale eyes
+            .Box(-1, 17, 5, 0, 20, 6, TrollSkinDark).Box(-1, 16, 6, 0, 16, 6, TrollSkinDark) // long drooping nose
+            .Box(-3, 16, 2, 2, 16, 4, TrollSkinDark)                                       // jutting jaw
+            .Box(-3, 17, 5, -3, 18, 5, Bone).Box(2, 17, 5, 2, 18, 5, Bone)                 // tusks
+            .Box(-1, 22, 0, 0, 23, 2, Moss);                                               // a mossy tuft
 
         /// <summary>The gold belt every form wears.</summary>
         public Builder Rank(int lift = 0) => Box(-2, lift + 5, -1, 1, lift + 5, 0, Gold);
@@ -681,6 +704,11 @@ public static class UnitModels
             .Box(3, 1, 1, 3, 12, 1, Wood).Box(3, 13, 1, 3, 14, 1, Steel)                // long spear
             .Box(-4, 3, -1, -4, 7, 2, Hide).Box(-4, 5, 0, -4, 5, 1, Team),              // hide shield
 
+        "troll" => new Builder().Troll()
+            .Box(7, 4, 0, 7, 18, 0, Wood).Box(6, 15, -2, 9, 20, 2, Rock)                // a maul of stone on a pole
+            .Box(6, 17, -2, 9, 17, 2, Hide)                                            // lashed on
+            .Box(-8, 18, -2, -4, 20, 1, Hide).Box(-8, 20, -1, -6, 20, 0, Bone),         // a hide shoulder wrap and a bone
+
         "ogre_brute" => new Builder().Ogre()
             .Box(7, 3, 2, 8, 16, 3, Wood)                                                // a tree-trunk club
             .Box(6, 16, 1, 9, 23, 4, Wood).Box(6, 19, 1, 9, 19, 4, Leather)             // its knotted head
@@ -716,6 +744,21 @@ public static class UnitModels
             .Box(-3, 3, -3, 2, 10, 2, Crystal).Box(-2, 11, -2, 1, 13, 1, Crystal).Box(-1, 14, -1, 0, 15, 0, Glow)  // the great crystal
             .Box(-6, 3, -1, -4, 7, 0, Crystal).Box(3, 3, -2, 5, 6, -1, Crystal)                                    // small ones round it
             .Box(-1, 3, 3, 0, 8, 5, Crystal).Box(0, 3, -6, 1, 5, -4, Crystal),
+
+        // The trolls' standing stone, over its pole of stone: rough grey slabs with moss and a band in the holder's
+        // colour, and on top a crude carved troll head, long-nosed and tusked, with a ring of bones hung under it.
+        "troll_stone_band" => new Builder()
+            .Box(-5, 0, -5, 4, 7, 4, Iron).Box(-5, 1, -5, 4, 1, 4, DarkRock).Box(-5, 6, -5, 4, 6, 4, DarkRock)
+            .Box(-5, 3, -5, 4, 4, 4, Team).Box(-6, 2, 1, -6, 5, 2, Moss).Box(5, 0, -3, 5, 3, -2, Moss),
+        "troll_stone_head" => new Builder()
+            .Box(-5, 0, -5, 4, 10, 4, Iron).Box(-5, 0, -5, 4, 0, 4, DarkRock)
+            .Box(-6, 1, -6, 5, 1, 5, Bone).Box(-6, 0, -6, -6, 0, -6, Bone).Box(5, 0, 5, 5, 0, 5, Bone)              // ring of bones
+            .Box(-5, 9, -5, 4, 10, 4, Team)                                                                       // painted crown
+            .Box(-4, 7, 5, 3, 8, 5, DarkRock)                                                                     // heavy brow
+            .Box(-3, 6, 5, -2, 6, 5, Lamp).Box(1, 6, 5, 2, 6, 5, Lamp)                                            // pale eyes
+            .Box(-1, 2, 5, 0, 6, 7, DarkRock).Box(-1, 1, 7, 0, 1, 7, DarkRock)                                    // the long nose
+            .Box(-4, 1, 5, -3, 3, 6, Bone).Box(2, 1, 5, 3, 3, 6, Bone)                                            // tusks
+            .Box(-3, 11, -2, 2, 11, 1, Moss).Box(-1, 12, -1, 0, 12, 0, Moss),                                     // moss on top
 
         // The ogres' idol, over its pole of stone: rough stone bands with a painted stripe, and on top a broad
         // ogre face with a heavy brow, glaring eyes, an underbite of tusks, a brow band in the holder's colour
