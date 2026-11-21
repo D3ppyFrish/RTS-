@@ -1352,7 +1352,7 @@ public sealed partial class CombatSystem
         int owner = u.Owner[i], x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), range = Rules.HomeRange;
         foreach (var b in _homes)
             if (b.Owner == owner && b.ColumnDistance(x, z) <= range) return true;
-        return _sim.Cities.HealingTown(owner, x, z) != null;
+        return _sim.Cities.HealingTown(owner, x, u.Y[i], z) != null;
     }
 
     // --- Morale ------------------------------------------------------------------------------------

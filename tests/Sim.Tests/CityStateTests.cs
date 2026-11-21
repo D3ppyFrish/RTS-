@@ -291,15 +291,15 @@ public class CityStateTests
         }
 
         // Neutral: nobody heals fast at the town.
-        Assert.Null(sim.Cities.HealingTown(Settlers, town.X, town.Z));
+        Assert.Null(sim.Cities.HealingTown(Settlers, town.X, town.Y, town.Z));
         var neutral = Hurt((Settlers, town.X - 3, town.Z + 3));
         int slow = Gained(neutral, 10, out _);
         foreach (int id in neutral) sim.Units.Remove(id);
 
         Conquer(sim, town, Settlers);
-        Assert.Same(town, sim.Cities.HealingTown(Settlers, edge, town.Z));
-        Assert.Null(sim.Cities.HealingTown(Settlers, edge - 1, town.Z));
-        Assert.Null(sim.Cities.HealingTown(Orcs, town.X, town.Z));
+        Assert.Same(town, sim.Cities.HealingTown(Settlers, edge, town.Y, town.Z));
+        Assert.Null(sim.Cities.HealingTown(Settlers, edge - 1, town.Y, town.Z));
+        Assert.Null(sim.Cities.HealingTown(Orcs, town.X, town.Y, town.Z));
 
         // The holder's units in the town and at the edge of its reach, the holder's one step past it, and an Orc's.
         var units = Hurt((Settlers, town.X - 3, town.Z + 3), (Settlers, edge, town.Z + 2), (Settlers, edge - 2, town.Z - 2), (Orcs, town.X + 3, town.Z - 3));
@@ -605,7 +605,7 @@ public class CityStateTests
     public void TheGoblinsAreData()
     {
         var db = ContentDb.Default;
-        Assert.Equal(2, db.CityStates.Count);
+        Assert.Equal(3, db.CityStates.Count);
         var goblins = db.CityStates[0];
         Assert.Same(goblins, db.CityState("goblins"));
         Assert.Same(db.Building("goblin_totem"), goblins.Totem);
@@ -722,7 +722,7 @@ public class CityStateTests
             int at = files[file].IndexOf(old, StringComparison.Ordinal);
             files[file] = files[file][..at] + replacement + files[file][(at + old.Length)..];
         }
-        Edit("units.json", "\"hiredFrom\": \"goblins\",", "\"hiredFrom\": \"kobolds\",");
+        Edit("units.json", "\"hiredFrom\": \"goblins\",", "\"hiredFrom\": \"trolls\",");
         Edit("units.json", "\"hiredFrom\": \"goblins\",", "\"hiredFrom\": \"goblins\", \"trainedAt\": \"barracks\",");
         Edit("units.json", "\"role\": \"trader\",", "\"role\": \"trader\", \"damage\": 3,");
         Edit("citystates.json", "\"sells\": \"iron\"", "\"sells\": \"food\"");
@@ -732,7 +732,7 @@ public class CityStateTests
         Edit("citystates.json", "\"caravan\": \"caravan\"", "\"caravan\": \"worker\"");
         Edit("citystates.json", "\"respawn\": 5 },", "\"respawn\": 5 }, \"ally\": 1,");
         var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
-        Assert.Contains("units.json: unit 'goblin_cutthroat': \"hiredFrom\" is \"kobolds\", which is not a city-state", e.Errors);
+        Assert.Contains("units.json: unit 'goblin_cutthroat': \"hiredFrom\" is \"trolls\", which is not a city-state", e.Errors);
         Assert.Contains("units.json: unit 'goblin_slinger': is a mercenary, hired at a city-state's town: it cannot have \"trainedAt\", \"evolvesFrom\", \"lair\" or \"trainTime\"", e.Errors);
         Assert.Contains("units.json: unit 'caravan': is a caravan (role trader): it cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"", e.Errors);
         Assert.Contains("citystates.json: city-state 'goblins', trade: buys and sells the same good (food)", e.Errors);
@@ -768,5 +768,168 @@ public class CityStateTests
         Assert.NotEqual(original, Hash("citystates.json", "\"heal\": { \"range\": 6 }", "\"heal\": { \"range\": 7 }"));
         Assert.NotEqual(original, Hash("citystates.json", "\"roof\": \"thatch\"", "\"roof\": \"roof_tile\""));
         Assert.Equal(original, Hash("citystates.json", "Goblin traders", "Goblin merchants")); // descriptions do not count
+    }
+
+    // --- The kobolds' warren, in the deep caves ----------------------------------------------------
+
+    [Fact]
+    public void TheKoboldsAreData()
+    {
+        var db = ContentDb.Default;
+        Assert.Equal(new[] { "goblins", "ogres", "kobolds" }, db.CityStates.Select(c => c.Id));
+        var kobolds = db.CityState("kobolds");
+        Assert.True(kobolds.Deep);
+        Assert.False(db.CityState("goblins").Deep);
+        Assert.Equal((BlockType.Stone, BlockType.Grass), (kobolds.Ground, db.CityState("goblins").Ground));
+        Assert.Same(db.Building("kobold_crystal"), kobolds.Totem);
+        Assert.Equal(new[] { "kobold_spear", "kobold_spear", "kobold_spear", "kobold_digger", "kobold_digger" }, kobolds.Guards.Select(u => u.Id));
+        Assert.Equal((Good.Crystal, 8, 60 * Tps), (kobolds.TributeGood, kobolds.TributeAmount, kobolds.TributeTicks));
+        Assert.Equal((Good.Food, 20, Good.Crystal, 2), (kobolds.Buys, kobolds.Load, kobolds.Sells, kobolds.Price));
+        Assert.Null(kobolds.Lair);
+        Assert.Equal(new[] { "kobold_digger", "kobold_spear" }, kobolds.Mercenaries.Select(u => u.Id));
+        // The diggers are sappers, so whoever holds the warren can tunnel with them; both cost crystal.
+        Assert.Equal(UnitRole.Sapper, db.Unit("kobold_digger").Role);
+        Assert.All(kobolds.Mercenaries, m => Assert.Contains(m.Cost, c => c.Good == Good.Crystal));
+        // The data is checked.
+        var files = ContentLoader.Files.ToDictionary(f => f, f => ContentLoader.EmbeddedText(f)!);
+        files["citystates.json"] = files["citystates.json"].Replace("\"ground\": \"stone\"", "\"ground\": \"lava\"").Replace("\"deep\": true", "\"deep\": 1");
+        var e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
+        Assert.Contains("citystates.json: city-state 'kobolds': \"ground\" is \"lava\"; it should be grass, stone or stone_brick", e.Errors);
+        Assert.Contains("citystates.json: city-state 'kobolds': \"deep\" should be true or false", e.Errors);
+        // And hashed.
+        files = ContentLoader.Files.ToDictionary(f => f, f => ContentLoader.EmbeddedText(f)!);
+        files["citystates.json"] = files["citystates.json"].Replace("\"ground\": \"stone\"", "\"ground\": \"stone_brick\"");
+        Assert.NotEqual(db.Hash, ContentLoader.Load(files).Hash);
+        files = ContentLoader.Files.ToDictionary(f => f, f => ContentLoader.EmbeddedText(f)!);
+        files["citystates.json"] = files["citystates.json"].Replace("\"deep\": true", "\"deep\": false");
+        Assert.NotEqual(db.Hash, ContentLoader.Load(files).Hash);
+    }
+
+    /// <summary>
+    /// On the default map the kobolds' warren is dug out of a chamber of the deep caves' upper level, not a nest's:
+    /// a level square of stone under a roof of rock, its huts and crystal in it, its guards round the market, far from
+    /// both starts and about as far from each; a unit can walk from it up to the open. Building over it, far above,
+    /// is fine. A map without deep caves has no warren.
+    /// </summary>
+    [Theory]
+    [InlineData(1234UL)]
+    [InlineData(7UL)]
+    public void TheKoboldWarrenIsDugIntoADeepCave(ulong seed)
+    {
+        var sim = CavernTests.DefaultMatch(seed);
+        var w = sim.World;
+        int deep = Rts.Sim.World.RegionGenerator.DeepLayers(w.SizeY);
+        Assert.Equal(new[] { "goblins", "ogres", "kobolds" }, sim.Cities.Towns.Select(t => t.Def.Id));
+        var warren = sim.Cities.Towns[2];
+        Assert.True(warren.Deep);
+        int chamber = sim.Map.Deeps.FindIndex(d => d.X == warren.X && d.Z == warren.Z);
+        Assert.True(chamber >= 0, "the warren is not at a deep chamber");
+        Assert.NotEqual(0, chamber % Rts.Sim.World.RegionGenerator.DeepNestEvery);
+        Assert.InRange(warren.Y, deep / 2, deep);
+        int r = CityStateSystem.TownRadius;
+        for (int dz = -r; dz <= r; dz++)
+        for (int dx = -r; dx <= r; dx++)
+        {
+            int x = warren.X + dx, z = warren.Z + dz;
+            Assert.Equal(BlockType.Stone, w.Get(x, warren.Y - 1, z));
+            bool hut = Math.Abs(dx) > 3 && Math.Abs(dz) > 3, plinth = Math.Abs(dx) <= 1 && Math.Abs(dz) <= 1;
+            if (!hut && !plinth) Assert.Equal(BlockType.Air, w.Get(x, warren.Y, z));
+            // Rock over the hall, with the land far above and no water near it.
+            int top = w.SizeY - 1;
+            while (w.Get(x, top, z) == BlockType.Air) top--;
+            Assert.True(top > warren.Y + 8 + CityStateSystem.DeepRoof, $"open above {x},{z}");
+            for (int y = warren.Y; y <= warren.Y + 8 + CityStateSystem.DeepRoof; y++) Assert.False(w.Get(x, y, z) is BlockType.Water or BlockType.Lava);
+        }
+        Assert.Equal(warren.Def.Wall, w.Get(warren.X - r, warren.Y, warren.Z - r));
+        var crystal = sim.Cities.Totem(warren)!;
+        Assert.Equal(("kobold_crystal", warren.Y, Simulation.WildPlayer), (crystal.Def.Id, crystal.Y, crystal.Owner));
+        Assert.Equal(5, warren.Guards.Count());
+        Assert.All(warren.Guards, id => Assert.InRange(sim.Units.Y[Index(sim, id)], warren.Y - 1, warren.Y + 1));
+        var d = sim.Map.Starts.Select(s => IntMath.Distance(s.X, s.Z, warren.X, warren.Z)).ToArray();
+        int want = w.SizeX * 3 / 16;
+        Assert.All(d, x => Assert.True(x >= want * 3 / 2, $"the warren is {x} blocks from a start"));
+        Assert.InRange(Math.Abs(d[0] - d[1]), 0, 120);
+        // No den beside it.
+        Assert.All(sim.Monsters.Lairs, l => Assert.True(IntMath.Distance(l.X, l.Z, warren.X, warren.Z) >= CityStateSystem.LairNear || Math.Abs(l.Y - warren.Y) > 16));
+
+        // On foot from the market up into the open.
+        long Key(int x, int y, int z) => ((long)x * w.SizeY + y) * w.SizeZ + z;
+        var seen = new HashSet<long> { Key(warren.X, warren.Y, warren.Z + 3) };
+        var open = new Queue<(int X, int Y, int Z)>();
+        open.Enqueue((warren.X, warren.Y, warren.Z + 3));
+        bool surfaced = false;
+        while (open.Count > 0 && !surfaced)
+        {
+            var (x, y, z) = open.Dequeue();
+            if (Walk.GroundLevel(w, x, z) <= y) surfaced = true;
+            foreach (var (sx, sz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                if (w.InBounds(x + sx, 0, z + sz) && Walk.TryStep(w, x, z, y, x + sx, z + sz, out int ny) && seen.Add(Key(x + sx, ny, z + sz)))
+                    open.Enqueue((x + sx, ny, z + sz));
+        }
+        Assert.True(surfaced, "no way up from the warren");
+
+        // Building far over its square is not crowded by it (only straight over its crystal), as it is by a town in the open.
+        Assert.NotEqual(PlaceResult.Crowded, sim.Economy.CanPlace(0, sim.Content.Building("house"), warren.X + 3, warren.Z + 3, out _, checkPlayer: false));
+        var goblins = sim.Cities.Towns[0];
+        Assert.Equal(PlaceResult.Crowded, sim.Economy.CanPlace(0, sim.Content.Building("house"), goblins.X - 1, goblins.Z - 1, out _, checkPlayer: false));
+    }
+
+    [Fact]
+    public void AMapWithoutDeepCavesHasNoWarren()
+    {
+        var sim = new Simulation(1234, 512, 64, 512);
+        sim.PlaceStartingBuildings();
+        sim.SpawnStartingUnits(24);
+        sim.SpawnLairs();
+        Assert.Equal(new[] { "goblins", "ogres" }, sim.SpawnCities().Select(t => t.Def.Id));
+    }
+
+    /// <summary>
+    /// A deep town's guards and healing reach only its own level: a soldier on a pillar ten levels over the square's
+    /// edge is left alone, and does not heal there; one at the square's level beside it is set on.
+    /// </summary>
+    [Fact]
+    public void ADeepTownsGuardsKeepToItsLevel()
+    {
+        var sim = Flat();
+        var warren = sim.Cities.Place(sim.Content.CityState("kobolds"), TownX, TownZ)!;
+        Assert.True(warren.Deep);
+        Assert.Equal(BlockType.Stone, sim.World.Get(TownX, warren.Y - 1, TownZ + 3));
+        int px = TownX - CityStateSystem.TownRadius - 2, pz = TownZ + 3;
+        TestWorlds.Box(sim.World, px - 1, Ground + 1, pz - 1, px + 1, Ground + 10, pz + 1, BlockType.Stone);
+        int high = sim.SpawnUnit(Settlers, "spearman", px, pz);
+        Assert.Equal(Ground + 11, sim.Units.Y[Index(sim, high)]);
+        Assert.False(warren.AtLevel(Ground + 11));
+        Assert.True(warren.AtLevel(warren.Y));
+        sim.Run(5 * Tps);
+        Assert.Equal(sim.Content.Unit("spearman").MaxHp, sim.Units.Hp[Index(sim, high)]);
+        Assert.All(warren.Guards, id => Assert.Equal(0, sim.Units.Target[Index(sim, id)]));
+
+        int low = sim.SpawnUnit(Settlers, "spearman", px, pz + 3);
+        RunUntil(sim, () => !sim.Units.Exists(low) || sim.Units.Hp[Index(sim, low)] < sim.Content.Unit("spearman").MaxHp,
+            20 * Tps, "the guards attack the spearman at their level");
+        Assert.Equal(sim.Content.Unit("spearman").MaxHp, sim.Units.Hp[Index(sim, high)]);
+
+        // Its healing reaches its own level only (were it held).
+        Assert.Null(sim.Cities.HealingTown(Settlers, px, Ground + 11, pz));
+    }
+
+    /// <summary>Breaking the kobolds' crystal makes them yours: they send crystal, and sell diggers for food and crystal.</summary>
+    [Fact]
+    public void BreakingTheCrystalMakesTheKoboldsYourVassals()
+    {
+        var sim = Flat();
+        var hall = Hall(sim, Settlers, food: 1000);
+        hall.Stock[(int)Good.Crystal] = 20;
+        var warren = sim.Cities.Place(sim.Content.CityState("kobolds"), TownX, TownZ)!;
+        Conquer(sim, warren, Settlers);
+        Assert.Equal(Settlers, Totem(sim, warren).Owner);
+        Assert.All(warren.Guards, id => Assert.Equal(Settlers, sim.Units.Owner[Index(sim, id)]));
+        Assert.NotNull(sim.Cities.HealingTown(Settlers, warren.X, warren.Y, warren.Z));
+        Do(sim, new HireCommand(Settlers, warren.Id, "kobold_digger"));
+        var hired = UnitsOf(sim, Settlers, "kobold_digger").Where(id => sim.Units.Town[Index(sim, id)] == 0).ToList();
+        Assert.Single(hired);
+        Assert.Equal((1000 - 25, 20 - 5), (hall.Stock[(int)Good.Food], hall.Stock[(int)Good.Crystal]));
+        RunUntil(sim, () => hall.Stock[(int)Good.Crystal] == 15 + 8, warren.Def.TributeTicks + 120 * Tps, "the kobolds' crystal reaches the town hall");
     }
 }

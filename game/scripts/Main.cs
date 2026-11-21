@@ -754,7 +754,11 @@ public partial class Main : Node3D
     {
         x = Math.Clamp(x, 0, WorldX - 1);
         z = Math.Clamp(z, 0, WorldZ - 1);
-        _rig.Position = new Vector3(x, Mathf.Max(0, _sim.World.SurfaceHeight(x, z)), z) * ChunkMesher.BlockSize;
+        // With the height slice on, the ground showing under the cut (a cave's floor), not the land cut away.
+        int top = _sim.World.SurfaceHeight(x, z);
+        if (_slice.On)
+            for (top = Math.Min(top, _slice.Level - 1); top > 0 && !BlockInfo.IsSolid(_sim.World.Get(x, top, z)); top--) { }
+        _rig.Position = new Vector3(x, Mathf.Max(0, top), z) * ChunkMesher.BlockSize;
         if (yaw != null) _rig.SetView(yaw.Value, pitch, distance);
     }
 

@@ -1210,7 +1210,8 @@ public partial class Hud : CanvasLayer
         int player = PlayerControl.LocalPlayer;
         foreach (var (button, town) in _cityButtons)
         {
-            button.Text = $"{town.Def.Name}: {HolderText(town, player)}";
+            // The race alone (the id, "Goblins"), so three towns' buttons fit in the top bar; the tooltip has the name.
+            button.Text = $"{char.ToUpperInvariant(town.Def.Id[0])}{town.Def.Id[1..]}: {HolderText(town, player)}";
             button.SetPressedNoSignal(_control.SelectedCity == town.Id);
         }
         var selected = _sim.Cities.Get(_control.SelectedCity);
@@ -1706,7 +1707,7 @@ public partial class Hud : CanvasLayer
                 ? (u.Auto[i] ? (u.Held[i] ? "    automatic, waiting for orders" : "    automatic") : "")
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
             string heals = !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
-                : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Z[i].FloorToInt()) is { } camp
+                : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) is { } camp
                     ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
             if (hurt > 0) heals += _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] + 1, u.Z[i].FloorToInt()) == BlockType.Water ? " (drowning)"

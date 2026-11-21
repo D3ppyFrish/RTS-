@@ -65,6 +65,16 @@ public sealed class CityState
     /// <summary>The tribute caravans on the road (unit ids, oldest first).</summary>
     public IReadOnlyList<int> Caravans => CaravanIds;
 
+    /// <summary>True for a town dug out of a chamber of the deep caves (see <see cref="CityStateDef.Deep"/>).</summary>
+    public bool Deep => Def.Deep;
+
+    /// <summary>
+    /// True if a unit with its feet at level y is at the town's level: anywhere for a town in the open, within
+    /// <see cref="CityStateSystem.DeepLevels"/> levels of its square for one in the deep caves, so its guards and
+    /// healing do not reach the ground far over it.
+    /// </summary>
+    public bool AtLevel(int y) => !Def.Deep || Math.Abs(y - Y) <= CityStateSystem.DeepLevels;
+
     /// <summary>True if column (x, z) is in the town's square.</summary>
     public bool Covers(int x, int z) => ColumnDistance(x, z) == 0;
 
@@ -112,6 +122,12 @@ public sealed class CityStateSystem
     public const int LairFar = 36;
     /// <summary>Where caravans trade, beside the totem: this many columns south of the market.</summary>
     public const int TradeSpotOffset = 2;
+    /// <summary>How many levels above or below a deep town's square its guards and healing reach (its hall is 9 high).</summary>
+    public const int DeepLevels = 8;
+    /// <summary>Fewest layers of ground left between a deep town's hall roof and the open above it.</summary>
+    public const int DeepRoof = 4;
+    /// <summary>Most cells walked looking for a way from a deep chamber up to the open (see <see cref="Surfaces"/>).</summary>
+    public const int DeepWalk = 400_000;
 
     // Huts: one at each corner of the square, 4 by 4, walls 3 high, a roof and a ridge on top.
     private const int HutSize = 4;
@@ -166,6 +182,7 @@ public sealed class CityStateSystem
     {
         foreach (var town in _towns)
         {
+            if (town.Deep) continue; // far under the ground: building over it is fine
             int r = TownRadius + 1;
             if (x0 <= town.X + r && x1 >= town.X - r && z0 <= town.Z + r && z1 >= town.Z - r) return true;
         }
@@ -222,6 +239,11 @@ public sealed class CityStateSystem
         var scored = Scored(cx, cz, out int want);
         foreach (var def in defs)
         {
+            if (def.Deep)
+            {
+                if (PlaceDeep(def, cx, cz, want) is { } deep) placed.Add(deep);
+                continue;
+            }
             foreach (var (x, z) in Spread(scored, want, cx, cz))
             {
                 if (!SiteFits(x, z)) continue;
@@ -318,7 +340,7 @@ public sealed class CityStateSystem
             if (Math.Max(dx, dz) < TownGap) return false;
         }
         foreach (var town in _towns)
-            if (Math.Max(Math.Abs(town.X - x), Math.Abs(town.Z - z)) - 2 * r < TownGap) return false;
+            if (!town.Deep && Math.Max(Math.Abs(town.X - x), Math.Abs(town.Z - z)) - 2 * r < TownGap) return false;
         foreach (var lair in _sim.Monsters.Lairs)
         {
             // The dusk tree's warden is kept half as far again, so the town's guards and the tree's fights stay apart.
@@ -341,21 +363,22 @@ public sealed class CityStateSystem
     /// Builds a town of the city-state with its market at column (x, z), on the ground there: the square is
     /// levelled (grass at the market's level, soil under it, air above), with a hut at each corner whose door
     /// faces the market, the totem on the market and the guards at their posts, all wild. Does not check the site (see <see cref="SiteFits"/>). Null if there is no ground at
-    /// (x, z) or the square does not fit in the world.
+    /// (x, z) or the square does not fit in the world. The square is at the ground's level there, or at level
+    /// <paramref name="level"/> when given (a deep town's, in a cave chamber), and topped with <see cref="CityStateDef.Ground"/>.
     /// </summary>
-    public CityState? Place(CityStateDef def, int x, int z)
+    public CityState? Place(CityStateDef def, int x, int z, int level = -1)
     {
         var w = World;
         int r = TownRadius;
         if (!w.InBounds(x - r, 0, z - r) || !w.InBounds(x + r, 0, z + r)) return null;
-        int y = Walk.GroundLevel(w, x, z);
+        int y = level >= 0 ? level : Walk.GroundLevel(w, x, z);
         if (y < 2 || y + ClearAbove >= w.SizeY) return null;
         for (int cz = z - r; cz <= z + r; cz++)
         for (int cx = x - r; cx <= x + r; cx++)
         {
             for (int cy = Math.Max(1, y - FillBelow); cy < y - 1; cy++)
                 if (!BlockInfo.IsSolid(w.Get(cx, cy, cz))) w.Set(cx, cy, cz, BlockType.Soil);
-            if (w.Get(cx, y - 1, cz) != BlockType.Grass) w.Set(cx, y - 1, cz, BlockType.Grass);
+            if (w.Get(cx, y - 1, cz) != def.Ground) w.Set(cx, y - 1, cz, def.Ground);
             for (int cy = y; cy <= y + ClearAbove; cy++)
                 if (w.Get(cx, cy, cz) != BlockType.Air) w.Set(cx, cy, cz, BlockType.Air);
         }
@@ -368,6 +391,132 @@ public sealed class CityStateSystem
         for (int k = 0; k < town.GuardIds.Length; k++) SpawnGuard(town, k);
         return town;
     }
+
+    /// <summary>
+    /// Places a deep town (<see cref="CityStateDef.Deep"/>) in a chamber of the upper level of the deep caves
+    /// (<see cref="RegionMap.Deeps"/>), not a monsters' nest's, at least one and a half times
+    /// <paramref name="want"/> from every start, from which a unit can walk up to the open. The chambers are
+    /// scored as surface towns' sites are (<see cref="Scored"/>, <see cref="Spread"/>): how much further from the
+    /// furthest start than from the nearest, four times, how far off <paramref name="want"/> from (cx, cz), and how much
+    /// nearer than one and a half times <paramref name="want"/> to a town already placed; ties to the earlier chamber.
+    /// The square is dug out at the chamber's floor (see <see cref="DeepSiteFits"/>). Null if no chamber fits (a map
+    /// without deep caves).
+    /// </summary>
+    private CityState? PlaceDeep(CityStateDef def, int cx, int cz, int want)
+    {
+        var deeps = _sim.Map.Deeps;
+        int deep = Rts.Sim.World.RegionGenerator.DeepLayers(World.SizeY);
+        var starts = _sim.Map.Starts;
+        var ranked = new List<(long Score, int K)>();
+        for (int k = 0; k < deeps.Count; k++)
+        {
+            if (k % Rts.Sim.World.RegionGenerator.DeepNestEvery == 0) continue; // a nest's chamber
+            var (x, y, z) = deeps[k];
+            if (y < deep / 2) continue; // the lower level
+            int near = int.MaxValue, far = 0;
+            foreach (var s in starts)
+            {
+                int d = IntMath.Distance(s.X, s.Z, x, z);
+                near = Math.Min(near, d);
+                far = Math.Max(far, d);
+            }
+            if (starts.Count > 0 && near < want * 3 / 2) continue;
+            int unfair = starts.Count > 1 ? far - near : 0;
+            int nearest = int.MaxValue;
+            foreach (var town in _towns) nearest = Math.Min(nearest, IntMath.Distance(town.X, town.Z, x, z));
+            long crowd = nearest == int.MaxValue ? 0 : Math.Max(0, want * 3 / 2 - nearest);
+            ranked.Add((4L * unfair + Math.Abs(IntMath.Distance(cx, cz, x, z) - want) + crowd, k));
+        }
+        ranked.Sort((a, b) => a.Score != b.Score ? a.Score.CompareTo(b.Score) : a.K.CompareTo(b.K));
+        foreach (var (_, k) in ranked)
+        {
+            var (x, y, z) = deeps[k];
+            int floor = Walk.NearestStandLevel(World, x, z, y - 2, 3);
+            if (floor < 0 || !DeepSiteFits(x, floor, z) || !Surfaces(x, floor, z)) continue;
+            var town = Place(def, x, z, floor);
+            // What is left of the giant mushrooms over the hall goes too, up to the cave's roof.
+            int r = TownRadius;
+            for (int mz = z - r; mz <= z + r; mz++)
+            for (int mx = x - r; mx <= x + r; mx++)
+            for (int my = floor + ClearAbove + 1; my < World.SizeY - 1; my++)
+            {
+                var b = World.Get(mx, my, mz);
+                if (b is BlockType.MushroomStem or BlockType.MushroomCap) World.Set(mx, my, mz, BlockType.Air);
+                else if (BlockInfo.IsSolid(b)) break; // the cave's roof
+            }
+            return town;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// True if a deep town's square can be dug out with its market at (x, y, z): well inside the map, the open ground
+    /// more than <see cref="DeepRoof"/> layers over the hall it digs, no water or lava beside the square or over it
+    /// that its digging would let in (a pool in the middle is filled), no tree or giant mushroom, and no den within
+    /// <see cref="LairNear"/> blocks.
+    /// </summary>
+    public bool DeepSiteFits(int x, int y, int z)
+    {
+        var w = World;
+        int r = TownRadius;
+        if (x - r < TownMargin || z - r < TownMargin || x + r >= w.SizeX - TownMargin || z + r >= w.SizeZ - TownMargin) return false;
+        if (y < FillBelow + 2) return false;
+        foreach (var lair in _sim.Monsters.Lairs)
+            if (IntMath.Distance(x, z, lair.X, lair.Z) < LairNear) return false;
+        for (int cz = z - r - 1; cz <= z + r + 1; cz++)
+        for (int cx = x - r - 1; cx <= x + r + 1; cx++)
+        {
+            bool inside = Math.Abs(cx - x) <= r && Math.Abs(cz - z) <= r;
+            for (int cy = y - FillBelow; cy <= y + ClearAbove + DeepRoof; cy++)
+            {
+                var b = w.Get(cx, cy, cz);
+                if (BlockInfo.IsTrunk(b) && b != BlockType.MushroomStem) return false; // giant mushrooms are cleared
+                bool liquid = b is BlockType.Water or BlockType.Lava;
+                if (liquid && (!inside || cy >= y)) return false;
+            }
+            if (inside && Top(cx, cz) <= y + ClearAbove + DeepRoof) return false; // nearly open to the sky
+        }
+        return true;
+    }
+
+    /// <summary>The highest block in column (x, z) that is not air (the land, or water on it), or -1.</summary>
+    private int Top(int x, int z)
+    {
+        for (int y = World.SizeY - 1; y >= 0; y--)
+            if (World.Get(x, y, z) != BlockType.Air) return y;
+        return -1;
+    }
+
+    /// <summary>
+    /// True if a unit at (x, y, z) underground can walk up to the open (a column whose ground is no higher than
+    /// where it stands), looking at up to <see cref="DeepWalk"/> cells. The walk only asks whether a cell was
+    /// reached, so the order sets are kept in does not matter.
+    /// </summary>
+    private bool Surfaces(int x, int y, int z)
+    {
+        var w = World;
+        long Key(int kx, int ky, int kz) => ((long)kx * w.SizeY + ky) * w.SizeZ + kz;
+        var seen = new HashSet<long> { Key(x, y, z) };
+        var open = new Queue<(int X, int Y, int Z)>();
+        open.Enqueue((x, y, z));
+        var ground = new Dictionary<int, int>(); // each column's ground level, worked out once
+        while (open.Count > 0 && seen.Count < DeepWalk)
+        {
+            var (cx, cy, cz) = open.Dequeue();
+            int column = cz * w.SizeX + cx;
+            if (!ground.TryGetValue(column, out int top)) ground[column] = top = Walk.GroundLevel(w, cx, cz);
+            if (top <= cy) return true;
+            foreach (var (dx, dz) in Steps)
+            {
+                int nx = cx + dx, nz = cz + dz;
+                if (!w.InBounds(nx, 0, nz) || !Walk.TryStep(w, cx, cz, cy, nx, nz, out int ny)) continue;
+                if (seen.Add(Key(nx, ny, nz))) open.Enqueue((nx, ny, nz));
+            }
+        }
+        return false;
+    }
+
+    private static readonly (int X, int Z)[] Steps = { (1, 0), (-1, 0), (0, 1), (0, -1) };
 
     /// <summary>
     /// A hut with its corner at column (x, z), standing at level y: walls of the city-state's wall block, a
@@ -568,7 +717,7 @@ public sealed class CityStateSystem
         if (u.Owner[t] == u.Owner[guard] || Get(u.Town[guard]) is not { } town) return false;
         var def = _sim.Content.Units[u.Def[t]];
         if (!def.CanAttack || def.Role is UnitRole.Worker or UnitRole.Trader) return false;
-        return town.ColumnDistance(u.X[t].FloorToInt(), u.Z[t].FloorToInt()) <= town.Def.GuardReach;
+        return town.ColumnDistance(u.X[t].FloorToInt(), u.Z[t].FloorToInt()) <= town.Def.GuardReach && town.AtLevel(u.Y[t]);
     }
 
     /// <summary>Prunes fallen guards, replaces one in time, and walks idle guards back to their posts.</summary>
@@ -687,12 +836,12 @@ public sealed class CityStateSystem
     /// <summary>Where tribute goes: the player's first finished town hall (the lowest id), or null if they have none.</summary>
     /// <summary>
     /// The town held by <paramref name="player"/> whose healing reach (<see cref="CityStateDef.HealRange"/> columns
-    /// beyond its square) takes in column (x, z), or null if none does. Its holder's units there heal as at home.
+    /// beyond its square) takes in column (x, z) at level y, or null if none does. Its holder's units there heal as at home.
     /// </summary>
-    public CityState? HealingTown(int player, int x, int z)
+    public CityState? HealingTown(int player, int x, int y, int z)
     {
         foreach (var town in _towns)
-            if (town.Holder == player && town.Def.HealRange >= 0 && town.ColumnDistance(x, z) <= town.Def.HealRange) return town;
+            if (town.Holder == player && town.Def.HealRange >= 0 && town.ColumnDistance(x, z) <= town.Def.HealRange && town.AtLevel(y)) return town;
         return null;
     }
 

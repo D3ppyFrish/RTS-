@@ -39,6 +39,8 @@ public static class UnitModels
     private static readonly Color Mule = new(0.48f, 0.4f, 0.33f);
     private static readonly Color GoblinSkin = new(0.42f, 0.62f, 0.25f);
     private static readonly Color GoblinEye = new(1f, 0.85f, 0.2f);
+    private static readonly Color KoboldScale = new(0.66f, 0.32f, 0.2f);
+    private static readonly Color KoboldBelly = new(0.82f, 0.58f, 0.36f);
     private static readonly Color OgreSkin = new(0.62f, 0.55f, 0.4f);
     private static readonly Color OgreSkinDark = new(0.48f, 0.42f, 0.3f);
     private static readonly Color OrcSkin = new(0.36f, 0.5f, 0.24f);
@@ -143,6 +145,24 @@ public static class UnitModels
             .Box(-4, 10, -1, -3, 11, -1, GoblinSkin).Box(2, 10, -1, 3, 11, -1, GoblinSkin) // ears
             .Box(-1, 10, 1, -1, 10, 1, GoblinEye).Box(0, 10, 1, 0, 10, 1, GoblinEye)     // eyes
             .Box(-1, 9, 2, 0, 9, 2, GoblinSkin);                                         // nose
+
+        /// <summary>
+        /// A kobold: smaller than a goblin, rust-scaled, with a dog's snout, little bone horns, glowing yellow eyes and a
+        /// tail, in a loincloth and vest of its owner's colour.
+        /// </summary>
+        public Builder Kobold() =>
+            Box(-2, 0, -1, -1, 2, 0, KoboldScale).Box(0, 0, -1, 1, 2, 0, KoboldScale)    // legs
+            .Box(-2, 0, 1, -1, 0, 1, KoboldScale).Box(0, 0, 1, 1, 0, 1, KoboldScale)     // clawed feet
+            .Box(-2, 3, -1, 1, 6, 0, Team).Box(-1, 4, 1, 0, 6, 1, KoboldBelly)           // vest and scaly front
+            .Box(-2, 3, -1, 1, 3, 0, Leather)                                            // belt
+            .Box(-3, 4, -1, -3, 6, 0, KoboldScale).Box(2, 4, -1, 2, 6, 0, KoboldScale)   // arms
+            .Box(-2, 7, -2, 1, 9, 1, KoboldScale)                                        // head
+            .Box(-1, 7, 2, 0, 8, 3, KoboldScale).Box(-1, 7, 3, 0, 7, 3, KoboldBelly)     // snout and jaw
+            .Box(-1, 8, 4, 0, 8, 4, Dark)                                                // nose
+            .Box(-2, 9, 1, -2, 9, 1, GoblinEye).Box(1, 9, 1, 1, 9, 1, GoblinEye)         // eyes
+            .Box(-2, 10, -2, -2, 11, -2, Bone).Box(1, 10, -2, 1, 11, -2, Bone)           // horns
+            .Box(-1, 2, -2, 0, 3, -2, KoboldScale).Box(-1, 1, -3, 0, 1, -4, KoboldScale) // tail
+            .Box(0, 0, -5, 0, 0, -5, KoboldScale);
 
         /// <summary>
         /// An ogre: half again a person's height and twice as broad, sallow and pot-bellied, with a small head
@@ -600,6 +620,14 @@ public static class UnitModels
             .Box(3, 4, 0, 3, 9, 0, Leather).Box(3, 10, -1, 3, 10, 1, Rock)               // sling and stone
             .Box(-2, 5, 1, -1, 6, 1, Leather),                                           // pouch of stones
 
+        "kobold_digger" => new Builder().Kobold()
+            .Box(-2, 10, -2, 1, 10, 1, Iron).Box(-1, 11, 0, 0, 11, 0, Lamp)              // helmet with a candle
+            .Box(3, 3, 1, 3, 9, 1, Wood).Box(2, 9, 0, 4, 9, 2, Iron)                    // pick
+            .Box(-3, 3, -3, 0, 6, -2, Leather).Box(-2, 6, -3, -1, 6, -3, Crystal),      // a sack with a crystal in it
+        "kobold_spear" => new Builder().Kobold()
+            .Box(3, 1, 1, 3, 12, 1, Wood).Box(3, 13, 1, 3, 14, 1, Steel)                // long spear
+            .Box(-4, 3, -1, -4, 7, 2, Hide).Box(-4, 5, 0, -4, 5, 1, Team),              // hide shield
+
         "ogre_brute" => new Builder().Ogre()
             .Box(7, 3, 2, 8, 16, 3, Wood)                                                // a tree-trunk club
             .Box(6, 16, 1, 9, 23, 4, Wood).Box(6, 19, 1, 9, 19, 4, Leather)             // its knotted head
@@ -624,6 +652,17 @@ public static class UnitModels
             .Box(-9, 4, -1, -6, 6, 0, Team).Box(-8, 6, -1, -7, 7, 0, TeamDark)                                    // ears
             .Box(5, 4, -1, 8, 6, 0, Team).Box(6, 6, -1, 7, 7, 0, TeamDark)
             .Box(-4, 8, -1, -3, 10, 0, Bone).Box(2, 8, -1, 3, 10, 0, Bone).Box(-4, 11, -1, -4, 11, 0, Bone).Box(3, 11, -1, 3, 11, 0, Bone),
+
+        // The kobolds' crystal, over its pole of stone: stone bands bound with a strap of the holder's colour, and on
+        // top a great violet crystal in a stone cup, with smaller crystals round it.
+        "kobold_crystal_band" => new Builder()
+            .Box(-5, 0, -5, 4, 7, 4, Rock).Box(-5, 0, -5, 4, 0, 4, DarkRock).Box(-5, 7, -5, 4, 7, 4, DarkRock)
+            .Box(-5, 3, -5, 4, 4, 4, Team).Box(-4, 5, 5, -3, 6, 5, Crystal).Box(2, 1, -6, 3, 2, -6, Crystal),
+        "kobold_crystal_head" => new Builder()
+            .Box(-5, 0, -5, 4, 2, 4, Rock).Box(-5, 2, -5, 4, 2, 4, Team)                                          // the cup
+            .Box(-3, 3, -3, 2, 10, 2, Crystal).Box(-2, 11, -2, 1, 13, 1, Crystal).Box(-1, 14, -1, 0, 15, 0, Glow)  // the great crystal
+            .Box(-6, 3, -1, -4, 7, 0, Crystal).Box(3, 3, -2, 5, 6, -1, Crystal)                                    // small ones round it
+            .Box(-1, 3, 3, 0, 8, 5, Crystal).Box(0, 3, -6, 1, 5, -4, Crystal),
 
         // The ogres' idol, over its pole of stone: rough stone bands with a painted stripe, and on top a broad
         // ogre face with a heavy brow, glaring eyes, an underbite of tusks, a brow band in the holder's colour

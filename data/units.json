@@ -275,5 +275,18 @@
     "description": "Heaves boulders over the line: slow to throw, hard on walls and on anyone standing near where it lands.",
     "speed": 3.5, "hp": 160, "model": "ogre_hurler", "damage": 16, "attackTime": 3, "range": 9, "sight": 11,
     "blast": true, "attack": "crush", "splash": 1, "armor": { "torso": 1 }, "regen": 1,
-    "cost": { "food": 120, "stone": 60 } }
+    "cost": { "food": 120, "stone": 60 } },
+
+  // Kobold mercenaries, hired at the kobolds' warren in the deep caves by its holder: small and cheap, paid
+  // partly in crystal. The diggers are sappers, so a holder of any faction can tunnel and undermine walls.
+  { "id": "kobold_digger", "name": "Kobold digger", "role": "sapper", "hiredFrom": "kobolds",
+    "description": "A little tunneller with a pick and a candle on its helmet: digs tunnels and undermines walls like a sapper.",
+    "speed": 4.5, "hp": 40, "model": "kobold_digger", "damage": 4, "attackTime": 1.2, "range": 1.25, "sight": 8,
+    "attack": "pierce", "armor": { "head": 1 },
+    "cost": { "food": 25, "crystal": 5 } },
+  { "id": "kobold_spear", "name": "Kobold spear", "role": "line_infantry", "hiredFrom": "kobolds",
+    "description": "Small and quick with a long spear, stabbing from behind a hide shield.",
+    "speed": 5, "hp": 45, "model": "kobold_spear", "damage": 5, "attackTime": 0.9, "range": 1.75, "sight": 9,
+    "attack": "pierce", "shield": 15,
+    "cost": { "food": 30, "crystal": 5 } }
 ]

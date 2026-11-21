@@ -754,7 +754,7 @@ public static class ContentLoader
         private void ReadCityState(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof");
+            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof", "ground", "deep");
             if (id == null) return;
             if (_db.TryGetCityState(id, out _))
             {
@@ -797,6 +797,8 @@ public static class ContentLoader
                 HealRange = heal?.Int("range", 0, 64, 6) ?? -1,
                 Wall = o.Material("wall", BlockType.Planks),
                 Roof = o.Material("roof", BlockType.Thatch),
+                Ground = o.Ground("ground"),
+                Deep = o.Bool("deep"),
             };
             var totemId = totem?.Str("building", true);
             var guardIds = guards?.Ids("units") ?? new List<string>();
@@ -1448,6 +1450,8 @@ public static class ContentLoader
                 h.Add(c.RefillTicks);
                 h.Add(c.HealRange);
                 h.Add(c.Lair?.Index ?? -1);
+                h.Add((int)c.Ground);
+                h.Add(c.Deep ? 1 : 0);
                 h.Add((int)c.Wall);
                 h.Add((int)c.Roof);
             }
@@ -1650,6 +1654,16 @@ public static class ContentLoader
             foreach (var m in Materials) names.Add(SnakeName(m));
             Error($"\"{key}\" is \"{text}\", which is not a building material ({string.Join(", ", names)})");
             return fallback;
+        }
+
+        /// <summary>What a town square is paved with: grass (the fallback), stone or stone_brick.</summary>
+        public BlockType Ground(string key)
+        {
+            var text = Str(key, false);
+            if (text == null) return BlockType.Grass;
+            if (TryEnum<BlockType>(text, out var block) && block is BlockType.Grass or BlockType.Stone or BlockType.StoneBrick) return block;
+            Error($"\"{key}\" is \"{text}\"; it should be grass, stone or stone_brick");
+            return BlockType.Grass;
         }
 
         /// <summary>A footprint, [x, z] in blocks.</summary>
