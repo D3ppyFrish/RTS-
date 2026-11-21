@@ -24,12 +24,13 @@ public class CityStateTests
     private static CityState PlaceTown(Simulation sim, int x = TownX, int z = TownZ) =>
         sim.Cities.Place(sim.Content.CityState("goblins"), x, z) ?? throw new InvalidOperationException("no ground for the town");
 
-    private static Building Hall(Simulation sim, int owner, int x = HallX, int z = HallZ, int food = 0, int wood = 0, int iron = 0)
+    private static Building Hall(Simulation sim, int owner, int x = HallX, int z = HallZ, int food = 0, int wood = 0, int iron = 0, int gold = 0)
     {
         var b = sim.Economy.PlaceFinished(owner, sim.Content.Building("town_hall"), x, z) ?? throw new InvalidOperationException("the hall does not fit");
         b.Stock[(int)Good.Food] = food;
         b.Stock[(int)Good.Wood] = wood;
         b.Stock[(int)Good.Iron] = iron;
+        b.Stock[(int)Good.Gold] = gold;
         return b;
     }
 
@@ -90,7 +91,7 @@ public class CityStateTests
     /// <summary>
     /// The goblin town starts neutral: a totem on the market and six guards, all wild. The Settlers' spearmen
     /// break the totem, and the goblins are theirs: the guards change sides on the spot, and the totem stands
-    /// again five seconds later, in the Settlers' hands. A minute on, a tribute caravan of 15 iron sets out,
+    /// again five seconds later, in the Settlers' hands. A minute on, a tribute caravan of 10 gold sets out,
     /// walks it to the Settlers' town hall, and goes home to the market, where it is gone. Neither the guards
     /// nor the caravan count against the Settlers' housing.
     /// </summary>
@@ -131,11 +132,11 @@ public class CityStateTests
         // Housing: only the Settlers' own units count, not the goblins'.
         Assert.Equal(0, sim.Economy.Population(Settlers));
 
-        // Tribute: a caravan sets out a minute after the town was taken, with 15 iron for the town hall.
+        // Tribute: a caravan sets out a minute after the town was taken, with 10 gold for the town hall.
         RunUntil(sim, () => town.Caravans.Count > 0, goblins.TributeTicks + Tps, "a tribute caravan sets out");
         int caravan = town.Caravans[0];
         int c = Index(sim, caravan);
-        Assert.Equal((Settlers, town.Id, Good.Iron, 15), (sim.Units.Owner[c], sim.Units.Town[c], sim.Units.Carry[c], sim.Units.CarryAmount[c]));
+        Assert.Equal((Settlers, town.Id, Good.Gold, 10), (sim.Units.Owner[c], sim.Units.Town[c], sim.Units.Carry[c], sim.Units.CarryAmount[c]));
         Assert.Equal(UnitJob.Deliver, sim.Units.Job[c]);
         Assert.Equal(0, sim.Economy.Population(Settlers));
         Assert.Contains(sim.Events.All.Where(e => e.Player == Settlers), e => e.Kind == GameEventKind.TributeSent);
@@ -143,7 +144,7 @@ public class CityStateTests
         Do(sim, new StopCommand(Settlers, new[] { caravan }));
         Assert.Equal(UnitJob.Deliver, sim.Units.Job[Index(sim, caravan)]);
 
-        RunUntil(sim, () => hall.Stock[(int)Good.Iron] == 15, 90 * Tps, "the tribute reaches the town hall");
+        RunUntil(sim, () => hall.Stock[(int)Good.Gold] == 10, 90 * Tps, "the tribute reaches the town hall");
         RunUntil(sim, () => !sim.Units.Exists(caravan), 90 * Tps, "the empty caravan goes home");
         Assert.DoesNotContain(caravan, town.Caravans);
         Assert.Equal(6, town.Guards.Count());
@@ -224,8 +225,8 @@ public class CityStateTests
     public void VassalGuardsFightTheHoldersEnemiesAndOnlyTheHolderHires()
     {
         var sim = Flat();
-        Hall(sim, Settlers, food: 1000, wood: 100, iron: 100);
-        Hall(sim, Orcs, HallX, 20, food: 1000, wood: 100, iron: 100);
+        Hall(sim, Settlers, food: 1000, wood: 100, iron: 100, gold: 100);
+        Hall(sim, Orcs, HallX, 20, food: 1000, wood: 100, iron: 100, gold: 100);
         var town = PlaceTown(sim);
 
         // Neutral: nobody hires.
@@ -417,7 +418,7 @@ public class CityStateTests
     public void TheHolderHiresFromAPoolThatRefills()
     {
         var sim = Flat();
-        var hall = Hall(sim, Settlers, food: 2000, wood: 500, iron: 500);
+        var hall = Hall(sim, Settlers, food: 2000, wood: 500, iron: 500, gold: 500);
         var town = PlaceTown(sim);
         Conquer(sim, town, Settlers);
         Assert.Equal(0, sim.Economy.Population(Settlers));
@@ -614,7 +615,7 @@ public class CityStateTests
         Assert.Equal(new[] { "goblin_cutthroat", "goblin_cutthroat", "goblin_cutthroat", "goblin_slinger", "goblin_slinger", "goblin_slinger" },
             goblins.Guards.Select(u => u.Id));
         Assert.Equal((4, 45 * Tps), (goblins.GuardReach, goblins.GuardRefillTicks));
-        Assert.Equal((db.Unit("caravan"), Good.Iron, 15, 60 * Tps), (goblins.TributeCaravan, goblins.TributeGood, goblins.TributeAmount, goblins.TributeTicks));
+        Assert.Equal((db.Unit("caravan"), Good.Gold, 10, 60 * Tps), (goblins.TributeCaravan, goblins.TributeGood, goblins.TributeAmount, goblins.TributeTicks));
         Assert.Equal((Good.Food, 20, Good.Iron, 5, 50), (goblins.Buys, goblins.Load, goblins.Sells, goblins.Price, goblins.HolderBonus));
         // Nobody builds a totem.
         Assert.False(new Simulation(1, 32, 16, 32).Economy.Unlocked(0, goblins.Totem));
@@ -670,7 +671,7 @@ public class CityStateTests
     public void BreakingTheIdolMakesTheOgresYourVassals()
     {
         var sim = Flat();
-        var hall = Hall(sim, Settlers, food: 1000, iron: 100);
+        var hall = Hall(sim, Settlers, food: 1000, iron: 100, gold: 100);
         var hold = sim.Cities.Place(sim.Content.CityState("ogres"), TownX, TownZ)!;
         Assert.Equal(new[] { "ogre_brute", "ogre_brute", "ogre_hurler", "ogre_hurler" }, hold.Guards.Select(id => DefOf(sim, id).Id));
         Conquer(sim, hold, Settlers, spearmen: 24);
@@ -762,7 +763,7 @@ public class CityStateTests
         ulong original = ContentDb.Default.Hash;
         Assert.NotEqual(original, Hash("citystates.json", "\"respawn\": 5", "\"respawn\": 6"));
         Assert.NotEqual(original, Hash("citystates.json", "\"reach\": 4", "\"reach\": 5"));
-        Assert.NotEqual(original, Hash("citystates.json", "\"amount\": 15", "\"amount\": 16"));
+        Assert.NotEqual(original, Hash("citystates.json", "\"amount\": 10", "\"amount\": 11"));
         Assert.NotEqual(original, Hash("citystates.json", "\"goblin_slinger\"]", "\"goblin_cutthroat\"]"));
         Assert.NotEqual(original, Hash("citystates.json", "\"holderBonus\": 50", "\"holderBonus\": 51"));
         Assert.NotEqual(original, Hash("citystates.json", "\"heal\": { \"range\": 6 }", "\"heal\": { \"range\": 7 }"));

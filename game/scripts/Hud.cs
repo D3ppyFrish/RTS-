@@ -235,15 +235,19 @@ public partial class Hud : CanvasLayer
                                     "(or drag a box around several to choose for all of them at once)";
         _beatenButton.Pressed += () => _control.SelectNextBeaten();
         row.AddChild(_beatenButton);
+        // Under the middle of the top bar, which is full: a button per city-state town, and the ancient sites.
+        var under = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        under.AddThemeConstantOverride("separation", 6);
         foreach (var town in _sim.Cities.Towns)
         {
             var b = MakeButton("");
             b.Name = "city_" + town.Def.Id;
             b.ToggleMode = false;
+            b.AddThemeFontSizeOverride("font_size", 14);
             b.TooltipText = $"{town.Def.Name}: {town.Def.Description}\nClick to select it and look at it. Whoever breaks the totem " +
                             "on its market holds the town.";
             b.Pressed += () => _control.FocusCity(town.Id);
-            row.AddChild(b);
+            under.AddChild(b);
             _cityButtons.Add((b, town));
         }
 
@@ -259,10 +263,10 @@ public partial class Hud : CanvasLayer
             _control.FocusSite(_nextSite % n);
             _nextSite = (_nextSite + 1) % n;
         };
-        // Under the middle of the top bar, which is full.
-        Place(_sitesButton, Control.LayoutPreset.CenterTop, 0, 54);
-        _sitesButton.GrowHorizontal = Control.GrowDirection.Both;
-        bar.GetParent().AddChild(_sitesButton);
+        under.AddChild(_sitesButton);
+        Place(under, Control.LayoutPreset.CenterTop, 0, 54);
+        under.GrowHorizontal = Control.GrowDirection.Both;
+        bar.GetParent().AddChild(under);
 
         _pauseButton = MakeButton("Pause");
         _pauseButton.Pressed += () => _clock.TogglePause();
@@ -2056,6 +2060,7 @@ public partial class Hud : CanvasLayer
             BlockType.Stone or BlockType.LooseRock => "quarrying stone",
             BlockType.IronOre => "mining iron ore",
             BlockType.Coal => "mining coal",
+            BlockType.GoldOre => "mining gold",
             _ => "digging",
         },
         UnitJob.Build => "building",

@@ -353,6 +353,7 @@ public static class ChunkMesher
         BlockType.IronOre => new Color(0.65f, 0.45f, 0.35f),
         BlockType.Coal => new Color(0.15f, 0.15f, 0.17f),
         BlockType.Crystal => new Color(0.55f, 0.35f, 0.9f),
+        BlockType.GoldOre => new Color(0.9f, 0.72f, 0.2f), // gold ore: bright yellow seams that catch the eye on grey rock
         BlockType.Wood => new Color(0.45f, 0.3f, 0.15f),
         BlockType.Water => new Color(0.2f, 0.4f, 0.8f),
         BlockType.Bedrock => new Color(0.1f, 0.1f, 0.1f),

@@ -286,7 +286,7 @@ public static partial class RegionGenerator
         }
 
         /// <summary>
-        /// Ore in the deep caves' walls: iron and coal, and crystal, which grows richer the deeper it is (half as much
+        /// Ore in the deep caves' walls: iron and coal, a little gold (<see cref="GoldWallPermille"/>), and crystal, which grows richer the deeper it is (half as much
         /// again at the top of the deep rock as in a hill cavern's walls, three times as much at the bottom).
         /// </summary>
         private void Vein(int x, int y, int z)
@@ -296,6 +296,7 @@ public static partial class RegionGenerator
             if (r < 70) _w.Set(x, y, z, BlockType.IronOre);
             else if (r < 110) _w.Set(x, y, z, BlockType.Coal);
             else if (r < 110 + crystal) _w.Set(x, y, z, BlockType.Crystal);
+            else if (r >= 1000 - GoldWallPermille) _w.Set(x, y, z, BlockType.GoldOre);
         }
 
         /// <summary>

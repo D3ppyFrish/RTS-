@@ -5,7 +5,7 @@ How each game system works, for players and for anyone changing the rules. Contr
 
 ## Economy
 
-`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal, iron ingots and crystal, every
+`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal, iron ingots, crystal and gold, every
 unit of it carried by a worker or held in a building. Mana, which spells cost, is the one exception: a
 player's own pool, channelled from crystal at a shrine (see Crystal, shrines and mana below). A player's stock is what their storage buildings
 (town hall and storehouses) hold, and costs are taken from the storage nearest the work.
@@ -77,6 +77,19 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   sending workers there is the player's call. Test mode's goods cheat and `--goods` also give mana; both sides
   of a `--battle` have 500. Computer players do not cast spells, so they build no shrines yet. All numbers are
   first guesses for playtesting.
+- **Gold** (`GoldTests`; the design doc's Resources table: gold from mountain and cavern veins, not processed, for
+  hiring mercenaries): gold ore (`BlockType.GoldOre`, bright yellow seams) lies in **lodes in the hills**, four in
+  each hill range (`RegionGenerator.GoldLodesPerHill`): a winding streak of rock some ten to twenty blocks long, a
+  couple of blocks under the surface and showing on it where it runs close, never within 80 blocks (on a 512 map;
+  120 on the default) of a start (`GoldKeepOff`). The walls of the hill caverns and the deep caves have specks of
+  it too, 1.5% of their bare stone (`GoldWallPermille`). Workers dig it like ore, slowly (3 seconds a block), and
+  carry it to storage as the good `Gold`; it falls like stone, and its rubble is stone rubble. Gold pays the
+  city-states' mercenaries: the goblins' (a cutthroat 40 food and 10 gold, a slinger 40 food, 20 wood and 5 gold)
+  and the ogres' (a brute 120 food and 25 gold, a hurler 120 food, 40 stone and 15 gold); the kobolds' still cost
+  crystal. The goblins send their holder 10 gold a minute as tribute (see City-states), so holding the goblins pays
+  for a blade now and then, and more takes digging. **Automatic workers** dig gold (wanted 1 part, like iron ore)
+  only while their player holds a town whose mercenaries cost gold, and leave it otherwise; computer players
+  get theirs the same way. The top bar shows it after crystal. All numbers are first guesses for playtesting.
 - **Quarries and mines** (`WorkCommand`, kind `quarry` in `data/buildings.json`, #50): buildings workers work, like
   a farm, for goods that never run out, wherever they stand. A quarry (5 by 5, 60 wood) takes three workers, each
   bringing 5 stone every 12 seconds of work; a mine (5 by 5, 60 wood and 40 stone, needs Smelting) takes two, each
@@ -919,9 +932,9 @@ says otherwise.
   answer one that hits them). A guard that chased a soldier out walks back to its post, and a fallen
   guard is replaced every 45 seconds.
 - **Vassals**: while you hold the town its guards fight your enemies' soldiers there, it sends you a
-  tribute caravan with 15 iron every minute (to your first town hall, and the caravan goes home after;
+  tribute caravan with 10 gold every minute (to your first town hall, and the caravan goes home after;
   it can be killed on the way), you alone can hire its mercenaries (`HireCommand`): goblin cutthroats
-  (quick blades) and slingers, paid for in goods, at most 6 ready at a time and one more every 30
+  (quick blades) and slingers, paid for in food and gold (see Gold under Economy), at most 6 ready at a time and one more every 30
   seconds, stepping out at the market and needing room in your housing; and your caravans earn 50% more
   there.
 - **Healing at the town** (issue #44): while you hold the town, your hurt units within 6 columns of its
@@ -952,9 +965,9 @@ says otherwise.
   route) instead of iron, and its holder hires ogres, at most 3 ready at a time and one more every 60
   seconds:
   - **Ogre brute**: 260 hit points, speed 3.5, a club that crushes (18 damage every 1.6 seconds); 120 food
-    and 30 iron.
+    and 25 gold.
   - **Ogre hurler**: 160 hit points, throws boulders 9 columns that crush (16 damage every 3 seconds, a
-    little splash); 120 food and 60 stone.
+    little splash); 120 food, 40 stone and 15 gold.
   - Both **regenerate**: they heal 1% of their hit points every second even in a fight (`"regen"` in
     `units.json`), and out of the fight at that rate or the usual one, whichever is faster.
 

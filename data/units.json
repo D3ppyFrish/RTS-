@@ -253,29 +253,30 @@
     "armor": { "torso": 1 },
     "cost": { "food": 20, "wood": 40 }, "trainTime": 20, "trainedAt": "town_hall" },
 
-  // Goblin mercenaries, hired at the goblins' town by their ally.
+  // Goblin mercenaries, hired at the goblins' town by their ally, paid in gold (the goblins' tribute is gold).
   { "id": "goblin_cutthroat", "name": "Goblin cutthroat", "role": "line_infantry", "hiredFrom": "goblins",
     "description": "A quick goblin blade for hire.",
     "speed": 5, "hp": 55, "model": "goblin_cutthroat", "damage": 6, "attackTime": 0.8, "range": 1.25, "sight": 9,
     "attack": "slash",
-    "cost": { "food": 40, "iron": 10 } },
+    "cost": { "food": 40, "gold": 10 } },
   { "id": "goblin_slinger", "name": "Goblin slinger", "role": "ranged", "hiredFrom": "goblins",
     "description": "Slings rocks and scrap from behind the line.",
     "speed": 4.5, "hp": 35, "model": "goblin_slinger", "damage": 5, "attackTime": 1.2, "range": 7, "sight": 10,
     "attack": "crush",
-    "cost": { "food": 40, "wood": 20 } },
+    "cost": { "food": 40, "wood": 20, "gold": 5 } },
 
-  // Ogre mercenaries, hired at the ogres' hold by its holder: big, slow and costly, and they heal even in a fight.
+  // Ogre mercenaries, hired at the ogres' hold by its holder: big, slow and costly (in gold dug from the hills), and
+  // they heal even in a fight.
   { "id": "ogre_brute", "name": "Ogre brute", "role": "line_infantry", "hiredFrom": "ogres",
     "description": "Twice a man's height with a tree-trunk club: slow, but each blow crushes, and its wounds close as it fights.",
     "speed": 3.5, "hp": 260, "model": "ogre_brute", "damage": 18, "attackTime": 1.6, "range": 1.5, "sight": 9,
     "attack": "crush", "armor": { "head": 1, "torso": 2, "arms": 1, "legs": 1 }, "regen": 1,
-    "cost": { "food": 120, "iron": 30 } },
+    "cost": { "food": 120, "gold": 25 } },
   { "id": "ogre_hurler", "name": "Ogre hurler", "role": "ranged", "hiredFrom": "ogres",
     "description": "Heaves boulders over the line: slow to throw, hard on walls and on anyone standing near where it lands.",
     "speed": 3.5, "hp": 160, "model": "ogre_hurler", "damage": 16, "attackTime": 3, "range": 9, "sight": 11,
     "blast": true, "attack": "crush", "splash": 1, "armor": { "torso": 1 }, "regen": 1,
-    "cost": { "food": 120, "stone": 60 } },
+    "cost": { "food": 120, "stone": 40, "gold": 15 } },
 
   // Kobold mercenaries, hired at the kobolds' warren in the deep caves by its holder: small and cheap, paid
   // partly in crystal. The diggers are sappers, so a holder of any faction can tunnel and undermine walls.

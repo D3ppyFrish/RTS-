@@ -31,7 +31,7 @@ public static class Harvest
     /// <summary>True if a worker can dig, chop or pick this block. Buildings and roads are not dug this way.</summary>
     public static bool CanGather(BlockType b) => b is BlockType.Grass or BlockType.Soil or BlockType.Sand
         or BlockType.Mud or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal
-        or BlockType.BerryBush || BlockInfo.IsTrunk(b) || BlockInfo.IsLeaves(b) || BlockInfo.IsRubble(b);
+        or BlockType.GoldOre or BlockType.BerryBush || BlockInfo.IsTrunk(b) || BlockInfo.IsLeaves(b) || BlockInfo.IsRubble(b);
 
     /// <summary>The good a block gives, if any. Plain ground is only dug away.</summary>
     public static bool Yields(BlockType b, out Good good)
@@ -44,6 +44,7 @@ public static class Harvest
             case BlockType.IronOre: good = Good.IronOre; return true;
             case BlockType.Coal: good = Good.Coal; return true;
             case BlockType.Crystal: good = Good.Crystal; return true;
+            case BlockType.GoldOre: good = Good.Gold; return true;
             case BlockType.BerryBush: good = Good.Food; return true;
             // Rubble gives back what it was made of.
             case BlockType.StoneRubble: good = Good.Stone; return true;
@@ -83,6 +84,7 @@ public static class Harvest
         BlockType.IronOre => 40,
         BlockType.Coal => 30,
         BlockType.Crystal => 60,
+        BlockType.GoldOre => 60,
         BlockType.BerryBush => 40,
         _ when BlockInfo.IsTrunk(b) => 20,
         _ when BlockInfo.IsRubble(b) => 10,
@@ -94,7 +96,7 @@ public static class Harvest
     /// made of), until the heap is gone.
     /// Digging plain ground is a one-off.
     /// </summary>
-    public static bool Repeats(BlockType b) => b is BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal
+    public static bool Repeats(BlockType b) => b is BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.GoldOre
         or BlockType.BerryBush || BlockInfo.IsTrunk(b) || BlockInfo.IsRubble(b);
 
     /// <summary>Taken whole and carried away in one load (a bush), rather than a block at a time.</summary>

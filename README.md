@@ -50,14 +50,14 @@ for 512 across and 64 high and scale with it). On a map at least 96 high, the la
 `RegionGenerator.DeepLayers` more of deep rock (64 on the default map), with **the deep caves** running through it:
 two levels of domed chambers on a grid about `DeepSpacing` (120) blocks apart under most of the map, joined by
 winding tunnels, sloping shafts between the levels, a tunnel down from each hill cavern and a few long ramps up to
-open country. Their walls are seamed with iron, coal and crystal (more crystal deeper), crystal and stone spikes
+open country. Their walls are seamed with iron, coal, crystal (more crystal deeper) and a little gold, crystal and stone spikes
 rise from the floors and hang from the roofs, giant mushrooms stand in the upper chambers, pools of water and lava
 lie in the floors, and every `DeepNestEvery`th chamber is a crawler nest (`RegionMap.Deeps` lists the chambers;
 `DeepCaveTests`). A lower map has no deep rock and is laid out as before:
 ocean and beaches on the west and east edges, a river running north–south that can be waded at three
 shallow fords (about a quarter, half and three quarters of the way down), grassland and forests,
-a hill range with stone ridges and pools of lava, a swamp with patches of poison bog (see
-[Natural hazards](docs/rules.md#natural-hazards)), a cavern with ore and crystal under the hills, and old
+a hill range with stone ridges, lodes of gold ore (`PlaceGold`, see Gold in [Economy](docs/rules.md#economy)) and pools of lava, a swamp with patches of poison bog (see
+[Natural hazards](docs/rules.md#natural-hazards)), a cavern with ore, crystal and a little gold under the hills, and old
 stone ruins (broken stone brick walls and fallen stone to clear for stone, `RegionGenerator.RuinsPer512` for
 each 512×512 blocks), each holding a find from `data/ruins.json` for the first side to search it. A bigger map gets more features, not just bigger ones (issue #67,
 `RegionGenerator.FeatureSets`): one more, smaller hill range (with its own cavern, crawler nests and lava) in

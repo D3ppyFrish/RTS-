@@ -137,12 +137,18 @@ public enum BlockType : byte
     /// fall (see <see cref="World.HazardSystem"/>). Workers quarry them for stone.
     /// </summary>
     LooseRock,
+    /// <summary>
+    /// Gold ore: glinting yellow seams in the hills' rock, a few blocks under the surface and showing where the
+    /// ground is cut, and in the walls of the caverns and deep caves (see <see cref="Economy.Good.Gold"/>).
+    /// Workers dig it slowly for gold; it falls like stone, and its rubble is stone rubble.
+    /// </summary>
+    GoldOre,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.LooseRock;
+    public const BlockType Last = BlockType.GoldOre;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
@@ -187,7 +193,7 @@ public static class BlockInfo
     /// themselves up, buildings look after their own blocks, and bedrock never moves.
     /// </summary>
     public static bool CanFall(BlockType t) => t is BlockType.Grass or BlockType.Soil or BlockType.Sand
-        or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.Mud or BlockType.Bog
+        or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.GoldOre or BlockType.Mud or BlockType.Bog
         or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock || IsRubble(t);
 
     /// <summary>Any tree's trunk: workers cut it for wood, and it topples when its foot is cut.</summary>
@@ -205,7 +211,7 @@ public static class BlockInfo
     /// </summary>
     public static BlockType RubbleOf(BlockType t) => t switch
     {
-        BlockType.Stone or BlockType.Crystal or BlockType.StoneBrick or BlockType.RoofTile or BlockType.Rampart or BlockType.LooseRock => BlockType.StoneRubble,
+        BlockType.Stone or BlockType.Crystal or BlockType.GoldOre or BlockType.StoneBrick or BlockType.RoofTile or BlockType.Rampart or BlockType.LooseRock => BlockType.StoneRubble,
         BlockType.IronOre => BlockType.OreRubble,
         BlockType.Coal => BlockType.CoalRubble,
         BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Trestle or BlockType.Floor => BlockType.WoodRubble,

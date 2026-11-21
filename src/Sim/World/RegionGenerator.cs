@@ -248,6 +248,7 @@ public static partial class RegionGenerator
             PlaceQuicksand();
             PlaceRockfalls();
             CarveDeepRamps();
+            PlaceGold();
             return _map;
         }
 
@@ -840,7 +841,7 @@ public static partial class RegionGenerator
                 if (s % 2 == 1) ty++;
             }
 
-            // Ore and crystal on the cave walls.
+            // Ore, crystal and a little gold on the cave walls.
             for (int by = minY - 1; by <= maxY + 1; by++)
             for (int bz = minZ - 1; bz <= maxZ + 1; bz++)
             for (int bx = minX - 1; bx <= maxX + 1; bx++)
@@ -853,6 +854,7 @@ public static partial class RegionGenerator
                 if (r < 110) _w.Set(bx, by, bz, BlockType.IronOre);
                 else if (r < 170) _w.Set(bx, by, bz, BlockType.Crystal);
                 else if (r < 230) _w.Set(bx, by, bz, BlockType.Coal);
+                else if (r >= 1000 - GoldWallPermille) _w.Set(bx, by, bz, BlockType.GoldOre);
             }
         }
 
