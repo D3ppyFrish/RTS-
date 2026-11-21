@@ -29,7 +29,7 @@ public static class Harvest
     public const int WoodPerTreeRubble = 2;
 
     /// <summary>True if a worker can dig, chop or pick this block. Buildings and roads are not dug this way.</summary>
-    public static bool CanGather(BlockType b) => b is BlockType.Grass or BlockType.Soil or BlockType.Sand
+    public static bool CanGather(BlockType b) => b is BlockType.Grass or BlockType.Gloom or BlockType.Soil or BlockType.Sand
         or BlockType.Mud or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal
         or BlockType.GoldOre or BlockType.BerryBush || BlockInfo.IsTrunk(b) || BlockInfo.IsLeaves(b) || BlockInfo.IsRubble(b);
 

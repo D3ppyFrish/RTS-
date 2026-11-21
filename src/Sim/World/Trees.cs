@@ -96,11 +96,11 @@ public static class Trees
     {
         // Pines stand two blocks taller (their lowest boughs clear the ground like any crown), willows one,
         // and mushrooms are a block shorter than a tree, with the cap over the top of the stalk.
-        trunk += kind switch { TreeKind.Pine => 2, TreeKind.Willow => 1, TreeKind.Mushroom => -1, _ => 0 };
+        trunk += kind switch { TreeKind.Pine => 2, TreeKind.Gloom => 4, TreeKind.Willow => 1, TreeKind.Mushroom => -1, _ => 0 };
         if (!w.InBounds(x, g, z) || g + trunk + 3 >= w.SizeY) return false;
         var wood = kind switch
         {
-            TreeKind.Pine => BlockType.PineWood,
+            TreeKind.Pine or TreeKind.Gloom => BlockType.PineWood,
             TreeKind.Birch => BlockType.BirchWood,
             TreeKind.Mushroom => BlockType.MushroomStem,
             _ => BlockType.Wood,
@@ -111,6 +111,7 @@ public static class Trees
         switch (kind)
         {
             case TreeKind.Pine: Pine(w, x, top, z, crown); return true;
+            case TreeKind.Gloom: Pine(w, x, top, z, crown, BlockType.GloomLeaves); return true;
             case TreeKind.Birch: Birch(w, x, top, z, h); return true;
             case TreeKind.Willow: Willow(w, x, top, z, h); return true;
             case TreeKind.Mushroom: Mushroom(w, x, top, z, crown); return true;
@@ -153,10 +154,9 @@ public static class Trees
             if (Math.Abs(dx) + Math.Abs(dz) <= 2) Leaf(w, x + dx, y, z + dz, leaf);
     }
 
-    /// <summary>A pine: tiers of needles narrowing to a point over the top of the trunk.</summary>
-    private static void Pine(VoxelWorld w, int x, int top, int z, int crown)
+    /// <summary>A pine: tiers of needles narrowing to a point over the top of the trunk (a gloom pine's are <see cref="BlockType.GloomLeaves"/>).</summary>
+    private static void Pine(VoxelWorld w, int x, int top, int z, int crown, BlockType n = BlockType.PineNeedles)
     {
-        var n = BlockType.PineNeedles;
         Layer(w, x, top - 3, z, 2, n, round: true);
         Layer(w, x, top - 2, z, 1, n);
         if (crown % 2 == 0) Diamond(w, x, top - 1, z, n); else Layer(w, x, top - 1, z, 2, n, round: true);

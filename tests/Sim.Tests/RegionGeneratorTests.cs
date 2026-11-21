@@ -116,9 +116,9 @@ public class RegionGeneratorTests
         var map = FirstTreeMaps[m].Value;
         var w = map.World;
         var heights = new int[12];
-        var kinds = new int[5];
-        var smallest = new int[5];
-        var largest = new int[5];
+        var kinds = new int[6];
+        var smallest = new int[6];
+        var largest = new int[6];
         Array.Fill(smallest, int.MaxValue);
         int trees = 0;
         for (int z = 3; z < 509; z++)
@@ -181,7 +181,7 @@ public class RegionGeneratorTests
     /// <summary>The kind of tree with this trunk and (mostly) these leaves.</summary>
     private static TreeKind KindOf(BlockType trunk, BlockType leaves) => trunk switch
     {
-        BlockType.PineWood => TreeKind.Pine,
+        BlockType.PineWood => leaves == BlockType.GloomLeaves ? TreeKind.Gloom : TreeKind.Pine,
         BlockType.BirchWood => TreeKind.Birch,
         BlockType.MushroomStem => TreeKind.Mushroom,
         _ => leaves switch
@@ -194,6 +194,7 @@ public class RegionGeneratorTests
     private static int MinTrunk(TreeKind kind) => kind switch
     {
         TreeKind.Pine => 6,
+        TreeKind.Gloom => 8,
         TreeKind.Willow => 5,
         TreeKind.Mushroom => 3,
         _ => 4,

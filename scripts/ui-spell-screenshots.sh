@@ -12,23 +12,23 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, map centre: open ground at levels 20 to 22. With --battle=16 your army stands in two ranks
-# at x 369..370, z 353..367, the enemy's at x 382..383 (they stand their ground until something comes near).
-# The wall runs north to south at x 376 (three thick: x 375..377), well within a mage's reach; the second line at x 378
+# Seed 1234, west of the map centre (the centre is the gloom forest): open ground. With --battle=16 your army stands in two ranks
+# at x 253..254, z 409..423, the enemy's at x 266..267 (they stand their ground until something comes near).
+# The wall runs north to south at x 260 (three thick: x 259..261), well within a mage's reach; the second line at x 262
 # raises nothing while every mage waits.
 # The first, smaller trees (--trees=1): the steps click at places the bigger trees now stand on.
 STEPS="
 wait 20
-camera 376,360 300 50 20
+camera 260,416 300 50 20
 wait 5
-dragworld 364,g,350 373,g,371
+dragworld 248,g,406 257,g,427
 wait 2
 print
 key shift+y
 wait 2
-mouseworld 376,g,356
+mouseworld 260,g,412
 down here
-mouseworld 376,g,363
+mouseworld 260,g,419
 wait 3
 print
 shot $OUT/ui-earth-wall-drag.png
@@ -39,21 +39,21 @@ wait 3
 shot $OUT/ui-earth-wall-raised.png
 key shift+y
 wait 2
-dragworld 378,g,355 378,g,364
+dragworld 262,g,411 262,g,420
 ticks 4
 print
-camera 376,360 210 40 22
+camera 260,416 210 40 22
 wait 5
 shot $OUT/ui-earth-wall-behind.png
 ticks 920
 print
-camera 376,360 300 50 26
+camera 260,416 300 50 26
 wait 5
 shot $OUT/ui-earth-wall-crumbled.png
 "
 LOG="$OUT/ui-spell.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --trees=1 --focus=376,360 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --trees=1 --focus=260,416 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI spell test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

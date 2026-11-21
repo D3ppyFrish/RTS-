@@ -60,6 +60,10 @@ public static class UnitModels
     private static readonly Color BlightStone = new(0.2f, 0.16f, 0.24f);
     private static readonly Color BlightVein = new(0.62f, 0.2f, 0.85f);
     private static readonly Color BlightEye = new(1f, 0.32f, 0.1f);
+    // The shadowed wilds' shade stalkers: blue-black fur, a paler grey-blue under it, and cold pale eyes.
+    private static readonly Color ShadeFur = new(0.14f, 0.17f, 0.25f);
+    private static readonly Color ShadePale = new(0.38f, 0.44f, 0.55f);
+    private static readonly Color ShadeEye = new(0.7f, 0.92f, 1f);
     private static readonly Color Bristle = new(0.17f, 0.13f, 0.1f);
     private static readonly Color Iron = new(0.38f, 0.38f, 0.4f);
     private static readonly Color Toxic = new(0.55f, 1f, 0.3f);
@@ -550,6 +554,12 @@ public static class UnitModels
             .Box(-1, 12, 0, 0, 15, 2, Crystal).Box(-3, 10, -6, -2, 13, -4, Crystal)             // crystals down its back
             .Box(1, 9, -10, 2, 12, -8, Crystal).Box(-1, 7, -17, 0, 9, -16, Crystal)
             .Box(-6, 6, -2, 5, 6, 2, TeamDark),                                                 // a band, once it is someone's
+        // A shade stalker: a big, gaunt blue-black wolf of the wilds, with a ragged mane of grey-blue down its back,
+        // long fangs and cold pale eyes.
+        "shade_stalker" => new Builder().Wolf(ShadeFur, ShadePale, big: true)
+            .Box(-1, 9, -4, 0, 9, 3, ShadePale).Box(-1, 10, -1, 0, 10, 2, ShadePale)            // ragged mane
+            .Box(-2, 9, 7, -2, 9, 7, ShadeEye).Box(1, 9, 7, 1, 9, 7, ShadeEye)                  // pale eyes
+            .Box(-1, 6, 10, -1, 7, 10, Bone).Box(0, 6, 10, 0, 7, 10, Bone),                      // long fangs
         // A blight hound: a big, lean black wolf with violet veins down its flanks, a ridge of spines and ember eyes.
         "blight_hound" => new Builder().Wolf(BlightHide, BlightStone, big: true)
             .Box(-2, 5, -4, -2, 5, 2, BlightVein).Box(1, 5, -4, 1, 5, 2, BlightVein)            // veins down the flanks

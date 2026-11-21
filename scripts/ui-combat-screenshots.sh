@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Scripted-input screenshot test for combat: two armies face off at the map centre (--battle); a sapper
+# Scripted-input screenshot test for combat: two armies face off west of the map centre (--battle); a sapper
 # tunnels under an enemy house while the rest of your army, box-selected and recalled as a control group,
 # attack-moves through the enemy; then a close look at the house with part of its wall fallen in. Saves
 # PNGs to OUT_DIR and fails if the UI state is not as expected.
@@ -11,30 +11,30 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, map centre: open ground at levels 20 to 22. With --battle=16 your army stands in two ranks
-# at x 369..370, z 353..367 (a sapper at 370,359), the enemy's at x 382..383, and the enemy house at
-# 372..375 x 346..349. With the first, smaller trees (--trees=1): the bigger ones put a birch over the house.
+# Seed 1234, west of the map centre (the centre itself is the shadowed wilds' gloom forest): open, level
+# ground. With --battle=16 your army stands in two ranks at x 253..254, z 409..423 (a sapper at 254,415),
+# the enemy's at x 266..267, and the enemy house at 256..259 x 402..405. With the first, smaller trees (--trees=1).
 STEPS="
 wait 20
-camera 376,360 0 55 22
+camera 260,416 0 55 22
 wait 5
 print
-dragworld 364,g,350 373,g,371
+dragworld 248,g,406 257,g,427
 wait 2
-clickworld 370,g,359 shift
+clickworld 254,g,415 shift
 key ctrl+2
 wait 2
 print
-clickworld 370,g,359
+clickworld 254,g,415
 key x
 wait 3
 print
 shot $OUT/ui-combat-tunnel-tool.png
-clickworld 373,g,347
+clickworld 257,g,403
 ticks 4
 print
 key 2
-clickworld 390,g,364 right ctrl
+clickworld 274,g,420 right ctrl
 ticks 50
 print
 shot $OUT/ui-combat-fight.png
@@ -42,15 +42,15 @@ key plus*2
 ticks 700
 print
 shot $OUT/ui-combat-after.png
-clickworld 374,g,347
-camera 373,349 340 40 12
+clickworld 258,g,403
+camera 257,405 340 40 12
 wait 5
 print
 shot $OUT/ui-combat-house.png
 "
 LOG="$OUT/ui-combat.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --trees=1 --focus=376,360 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --trees=1 --focus=260,416 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI combat test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

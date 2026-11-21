@@ -56,6 +56,7 @@ public sealed partial class EconomySystem
     {
         TreeKind.Pine => BlockType.PineNeedles,
         TreeKind.Birch => BlockType.BirchLeaves,
+        TreeKind.Gloom => BlockType.GloomLeaves,
         _ => BlockType.Leaves,
     };
 
@@ -102,7 +103,7 @@ public sealed partial class EconomySystem
         for (int cz = z; cz < z + s; cz++)
         for (int cx = x; cx < x + s; cx++)
         {
-            if (w.SurfaceHeight(cx, cz) != g || w.Get(cx, g, cz) is not (BlockType.Grass or BlockType.Soil)) return false;
+            if (w.SurfaceHeight(cx, cz) != g || w.Get(cx, g, cz) is not (BlockType.Grass or BlockType.Gloom or BlockType.Soil)) return false;
             for (int y = g + 1; y <= g + 3; y++)
                 if (w.Get(cx, y, cz) != BlockType.Air) return false;
             if (HazardSystem.IsHazard(w, cx, g + 1, cz)) return false;
@@ -143,7 +144,7 @@ public sealed partial class EconomySystem
             for (int y = w.SurfaceHeight(cx, cz), low = Math.Max(1, y - 24); y >= low && !BlockInfo.IsTrunk(t); y--) t = w.Get(cx, y, cz);
             if (!BlockInfo.IsTrunk(t)) continue;
             best = d;
-            kind = t switch { BlockType.PineWood => TreeKind.Pine, BlockType.BirchWood => TreeKind.Birch, _ => TreeKind.Broadleaf };
+            kind = t switch { BlockType.PineWood when _sim.Map.BiomeAt(cx, cz) == Biome.Wilds => TreeKind.Gloom, BlockType.PineWood => TreeKind.Pine, BlockType.BirchWood => TreeKind.Birch, _ => TreeKind.Broadleaf };
         }
         return kind;
     }

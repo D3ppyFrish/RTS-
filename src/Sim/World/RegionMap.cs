@@ -15,6 +15,13 @@ public enum Biome : byte
     Hills,
     Swamp,
     River,
+    /// <summary>
+    /// The shadowed wilds: a dark forest of gloom pines on gloom moss in the far interior, round the middle of the
+    /// map over the Heartscar (see <see cref="RegionGenerator"/>, <c>PlaceWilds</c>). Units in it see less far and
+    /// are harder to hit from range (see <see cref="Conditions"/>), shadow crystal grows out of its ground, and
+    /// corrupted beasts den in it whose packs grow the longer they are left (see <see cref="Units.MonsterSystem"/>).
+    /// </summary>
+    Wilds,
 }
 
 /// <summary>Where a player starts: the centre of a flat clearing, standing on the block at Y.</summary>
@@ -72,7 +79,16 @@ public sealed class RegionMap
     public Biome BiomeAt(int x, int z) =>
         x < 0 || z < 0 || x >= World.SizeX || z >= World.SizeZ ? Biome.Ocean : _biomes[z * World.SizeX + x];
 
-    public void SetBiome(int x, int z, Biome b) => _biomes[z * World.SizeX + x] = b;
+    public void SetBiome(int x, int z, Biome b)
+    {
+        _biomes[z * World.SizeX + x] = b;
+        _hasWilds = null;
+    }
+
+    private bool? _hasWilds;
+
+    /// <summary>True if any column of the map is in the shadowed wilds (<see cref="Biome.Wilds"/>).</summary>
+    public bool HasWilds => _hasWilds ??= Array.IndexOf(_biomes, Biome.Wilds) >= 0;
 
     /// <summary>Hash of blocks, biomes and starts; equal maps have equal hashes.</summary>
     public ulong ComputeHash()
@@ -146,7 +162,7 @@ public sealed class RegionMap
         for (int i = 0; i < map._biomes.Length; i++)
         {
             byte b = runs.Next();
-            if (b > (byte)Biome.River) throw new InvalidDataException($"Bad biome {b}");
+            if (b > (byte)Biome.Wilds) throw new InvalidDataException($"Bad biome {b}");
             map._biomes[i] = (Biome)b;
         }
         runs.ExpectEnd();

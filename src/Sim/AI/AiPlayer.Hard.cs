@@ -575,7 +575,7 @@ public sealed partial class AiPlayer
         {
             if (sim.Vision.At(Player, x, z) == Sight.Unseen || sim.Buildings.AtColumn(x, z) != null) return null;
             int top = w.SurfaceHeight(x, z);
-            if (top < 1 || w.Get(x, top, z) is not (BlockType.Grass or BlockType.Soil or BlockType.Sand)) return null;
+            if (top < 1 || w.Get(x, top, z) is not (BlockType.Grass or BlockType.Gloom or BlockType.Soil or BlockType.Sand)) return null;
             if (w.Get(x, top + 1, z) != BlockType.Air) return null; // a bush, a field, a road
             if (World.HazardSystem.IsHazard(w, x, top + 1, z)) return null; // the lava's heat
             low = Math.Min(low, top);

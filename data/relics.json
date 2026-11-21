@@ -20,6 +20,9 @@
   { "id": "wyrm_crystal", "name": "Wyrm crystal", "icon": "wyrm_crystal",
     "description": "The crystal that grew in a cave wyrm's skull, still humming. Its bearer is harder to fell and hits harder.",
     "hp": 40, "damage": 6, "armor": 1 },
+  { "id": "shade_pelt", "name": "Shade pelt", "icon": "shade_pelt",
+    "description": "A shade stalker's blue-black pelt, worn as a hooded cloak. Its bearer strikes from the dark and shrugs off the first of a blow.",
+    "damage": 3, "armor": 1 },
   { "id": "sunstone_circlet", "name": "Sunstone circlet", "icon": "sunstone_circlet",
     "description": "A warden's circlet of the old builders, found in a ruin, its stone still warm. Its bearer stands and strikes like one who has seen worse.",
     "hp": 30, "damage": 2, "armor": 1 }

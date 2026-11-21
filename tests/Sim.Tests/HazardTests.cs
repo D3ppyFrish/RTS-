@@ -174,7 +174,7 @@ public class HazardTests
             int top = w.SurfaceHeight(x, z);
             while (top > 1 && w.Get(x, top, z) != BlockType.Crust && !BlockInfo.IsGround(w.Get(x, top, z))) top--;
             if (w.Get(x, top, z) != BlockType.Crust) continue;
-            Assert.Contains(map.BiomeAt(x, z), new[] { Biome.Grassland, Biome.Forest, Biome.Hills });
+            Assert.Contains(map.BiomeAt(x, z), new[] { Biome.Grassland, Biome.Forest, Biome.Hills, Biome.Wilds });
             foreach (var s in map.Starts)
                 Assert.True(IntMath.Distance(x, z, s.X, s.Z) > RegionGenerator.StartResourceRadius, $"sinkhole at {x},{z} is near a start");
             if (w.Get(x, top - 1, z) == BlockType.Air) hollow++;

@@ -249,6 +249,7 @@ public static partial class RegionGenerator
             PlaceRockfalls();
             CarveDeepRamps();
             PlaceGold();
+            PlaceWilds();
             return _map;
         }
 
@@ -1067,4 +1068,6 @@ public enum TreeKind : byte
     Willow,
     /// <summary>A giant mushroom in the swamp: a pale stalk and a red cap.</summary>
     Mushroom,
+    /// <summary>A gloom pine in the shadowed wilds: a pine taller and gaunter than most, with blue-black needles.</summary>
+    Gloom,
 }
