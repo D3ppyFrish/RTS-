@@ -423,7 +423,7 @@ public static class ContentLoader
         private void ReadTech(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "icon", "faction", "cost", "researchTime", "requires", "effects");
+            o.Keys("id", "name", "description", "icon", "faction", "cost", "researchTime", "requires", "effects", "discovery");
             if (id == null) return;
             if (_db.TryGetTech(id, out _))
             {
@@ -438,6 +438,7 @@ public static class ContentLoader
                 Icon = o.Str("icon", false) ?? id,
                 Cost = o.Cost("cost"),
                 ResearchTicks = o.Int("researchTime", 1, MaxSeconds, 20, required: true) * Tps,
+                Discovery = o.Enum("discovery", Discovery.None, required: false),
             };
             _db.Add(def);
             var faction = o.Str("faction", false);
@@ -1043,8 +1044,13 @@ public static class ContentLoader
                         break;
                     }
                     case TechEffectType.Roads:
+                    case TechEffectType.SpareWorkers:
                         o.Keys("type");
                         effects.Add(new TechEffect { Type = type });
+                        break;
+                    case TechEffectType.Reveal:
+                        o.Keys("type", "what");
+                        effects.Add(new TechEffect { Type = type, Reveal = o.Enum("what", MapFeature.Ruins, required: true) });
                         break;
                 }
             }
@@ -1292,6 +1298,7 @@ public static class ContentLoader
                 h.Add(t.Faction?.Index ?? -1);
                 h.Add(t.Cost);
                 h.Add(t.ResearchTicks);
+                h.Add((int)t.Discovery);
                 h.Add(t.Requires);
                 h.Add(t.Effects.Count);
                 foreach (var e in t.Effects)
@@ -1301,6 +1308,7 @@ public static class ContentLoader
                     h.Add(e.Building?.Index ?? -1);
                     h.Add(e.Role is { } role ? (int)role : -1);
                     h.Add(e.Unit?.Index ?? -1);
+                    h.Add((int)e.Reveal);
                 }
             }
             h.Add(db.Buildings.Count);

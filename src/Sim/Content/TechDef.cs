@@ -113,6 +113,40 @@ public enum TechEffectType : byte
     UnitSpeed,
     /// <summary>The player can lay roads. If no tech has this effect, roads need no tech.</summary>
     Roads,
+    /// <summary>
+    /// When it is researched, every <see cref="TechEffect.Reveal"/> on the map (all the old ruins, monster lairs or
+    /// city-state towns) comes out of the player's fog as seen ground, as if marked on a chart.
+    /// </summary>
+    Reveal,
+    /// <summary>Wild monsters leave the player's workers alone: they do not go after them, though they still answer one that hits them.</summary>
+    SpareWorkers,
+}
+
+/// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>
+public enum MapFeature : byte
+{
+    /// <summary>The old ruins (the ancient sites).</summary>
+    Ruins,
+    /// <summary>The monsters' lairs, the caverns' and the deeps' too.</summary>
+    Lairs,
+    /// <summary>The city-states' towns.</summary>
+    Towns,
+}
+
+/// <summary>
+/// What a player has to do before they can research a discovery tech (the design doc's discovery techs, unlocked
+/// only by exploring). Once done, it stays done for the rest of the match.
+/// </summary>
+public enum Discovery : byte
+{
+    /// <summary>Not a discovery tech: anyone can research it.</summary>
+    None,
+    /// <summary>The player's units finished searching an old ruin.</summary>
+    Ruin,
+    /// <summary>The player's unit got the last of a monster lair's pack.</summary>
+    Lair,
+    /// <summary>The player broke a city-state's totem and took the town.</summary>
+    Town,
 }
 
 /// <summary>One effect of a tech.</summary>
@@ -127,6 +161,8 @@ public sealed class TechEffect
     public UnitRole? Role { get; init; }
     /// <summary>For unit effects: only this unit type. With neither a role nor a unit, every unit.</summary>
     public UnitDef? Unit { get; init; }
+    /// <summary>For a reveal effect: what it shows.</summary>
+    public MapFeature Reveal { get; init; }
 
     /// <summary>True if a unit effect applies to units of this type.</summary>
     public bool AppliesTo(UnitDef def) => Unit != null ? Unit == def : Role == null || Role == def.Role;
@@ -147,6 +183,8 @@ public sealed class TechDef
     public string Icon { get; init; } = "";
     /// <summary>The only faction that can research it; null for every faction.</summary>
     public FactionDef? Faction { get; internal set; }
+    /// <summary>What the player must have done before they can research it; <see cref="Discovery.None"/> for most techs.</summary>
+    public Discovery Discovery { get; init; }
     /// <summary>What researching it costs, paid when it starts.</summary>
     public GoodAmount[] Cost { get; init; } = Array.Empty<GoodAmount>();
     /// <summary>Ticks of research at a town hall.</summary>

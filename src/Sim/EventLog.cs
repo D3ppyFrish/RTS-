@@ -53,6 +53,11 @@ public enum GameEventKind : byte
     /// dominion clock is running. <see cref="GameEvent.Def"/> is the ticks it runs for.
     /// </summary>
     DominionStarted,
+    /// <summary>
+    /// The player made a discovery (searched a ruin, cleared a lair, took a town) that lets them research a discovery
+    /// tech (<see cref="GameEvent.Def"/> is its index; see <see cref="Content.TechDef.Discovery"/>).
+    /// </summary>
+    TechDiscovered,
 }
 
 /// <summary>
@@ -155,6 +160,9 @@ public sealed class EventLog
         if (hall != null) Add(player, GameEventKind.ResearchDone, (hall.X + hall.MaxX) / 2, hall.Y, (hall.Z + hall.MaxZ) / 2, 0, tech);
         else Add(player, GameEventKind.ResearchDone, -1, -1, -1, 0, tech);
     }
+
+    internal void TechDiscovered(int player, int tech) =>
+        Add(player, GameEventKind.TechDiscovered, -1, -1, -1, 0, tech);
 
     internal void UnitTrained(int player, int unitId, int def, int x, int y, int z) =>
         Add(player, GameEventKind.UnitTrained, x, y, z, unitId, def);

@@ -416,6 +416,7 @@ public sealed partial class CombatSystem
         var u = U;
         Fix64 x = u.X[i], z = u.Z[i];
         bool guard = u.Town[i] != 0;
+        bool monster = !guard && u.Owner[i] == Simulation.WildPlayer;
         // In the dark it sees less far, but a target in the light as far as by day (see Conditions).
         var cond = _sim.Conditions;
         int ox = x.FloorToInt(), oz = z.FloorToInt();
@@ -437,6 +438,7 @@ public sealed partial class CombatSystem
                 {
                     if (u.Subdued[j]) continue;
                     if (guard ? !_sim.Cities.Repels(i, j) : u.Town[j] != 0 && u.Owner[j] == Simulation.WildPlayer) continue;
+                    if (monster && _sim.Monsters.Spares(i, j)) continue;
                     int dy = u.Y[i] - u.Y[j];
                     if (!def.IsRanged && Math.Abs(dy) > MeleeSearchHeight) continue;
                     Fix64 s = litPct > darkPct && cond.Lights.Lit(u.X[j].FloorToInt(), u.Z[j].FloorToInt()) ? litSight : darkSight;

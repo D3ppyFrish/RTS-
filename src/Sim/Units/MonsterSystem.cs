@@ -148,6 +148,16 @@ public sealed class MonsterSystem
     /// <summary>True if unit i is a wild monster (it belongs to no player).</summary>
     public bool IsWild(int i) => U.Owner[i] == Simulation.WildPlayer;
 
+    /// <summary>
+    /// True if wild monster i leaves unit j alone: j is a worker whose player has a tech that spares workers (Beast
+    /// lore, see <see cref="Content.TechEffectType.SpareWorkers"/>). The monster does not pick it, track its blood or
+    /// go after it at the den, though it still answers a worker that hits it. A city-state's guards are not monsters.
+    /// </summary>
+    public bool Spares(int i, int j) => IsWild(i) && U.Town[i] == 0 && Spared(j);
+
+    /// <summary>True if unit j is a worker the wild monsters leave alone (see <see cref="Spares"/>).</summary>
+    private bool Spared(int j) => Def(j).Role == UnitRole.Worker && Economy.SparesWorkers(U.Owner[j]);
+
     /// <summary>Hash of the lairs (the monsters themselves are units and hash with them).</summary>
     public ulong ComputeHash()
     {
@@ -463,6 +473,7 @@ public sealed class MonsterSystem
         lair.Cleared = true;
         lair.ClearedBy = lair.LastBeatenBy;
         int p = lair.ClearedBy;
+        Economy.Discover(p, Rts.Sim.Content.Discovery.Lair);
         if (p < 0 || p == Simulation.WildPlayer || Economy.Faction(p).TamesMonsters) return;
         var reward = lair.Monster.Lair!.Reward;
         if (reward.Length == 0 || Economy.NearestStorage(p, lair.X, lair.Z) is not { } store) return;
@@ -569,7 +580,7 @@ public sealed class MonsterSystem
         int id = _sim.Blood.FreshTrail(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), def.Sight.FloorToInt(), source =>
         {
             int j = u.IndexOf(source);
-            return j >= 0 && !IsWild(j) && !u.Subdued[j] && Distance2(j, lair) <= range * range;
+            return j >= 0 && !IsWild(j) && !u.Subdued[j] && !Spares(i, j) && Distance2(j, lair) <= range * range;
         });
         return id == 0 ? -1 : u.IndexOf(id);
     }
@@ -584,7 +595,7 @@ public sealed class MonsterSystem
         Fix64 bestD = Fix64.MaxValue;
         for (int j = 0; j < u.Count; j++)
         {
-            if (IsWild(j) || u.Subdued[j] || Math.Abs(u.Y[j] - lair.HomeY) > GuardHeight) continue;
+            if (IsWild(j) || u.Subdued[j] || Spared(j) || Math.Abs(u.Y[j] - lair.HomeY) > GuardHeight) continue;
             Fix64 d = Distance2(j, lair);
             if (d > r2) continue;
             if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))

@@ -20,6 +20,8 @@ public enum ResearchResult : byte
     /// <summary>The player has no finished town hall to research at.</summary>
     NoTownHall,
     CannotAfford,
+    /// <summary>A discovery tech whose discovery the player has not made yet (see <see cref="TechDef.Discovery"/>).</summary>
+    NotDiscovered,
 }
 
 /// <summary>
@@ -74,12 +76,33 @@ public sealed partial class EconomySystem
     {
         if (HasTech(player, tech)) return ResearchResult.Researched;
         if (tech.Faction != null && tech.Faction != Faction(player)) return ResearchResult.OtherFaction;
+        if (!Discovered(player, tech.Discovery)) return ResearchResult.NotDiscovered;
         if (MissingTech(player, tech.Requires) != null) return ResearchResult.NeedsTechs;
         if (Researching(player) != null) return ResearchResult.Busy;
         if (TownHall(player) == null) return ResearchResult.NoTownHall;
         if (checkCost && !CanAfford(player, tech.Cost)) return ResearchResult.CannotAfford;
         return ResearchResult.Ok;
     }
+
+    /// <summary>True if the player has made the discovery (always true for <see cref="Discovery.None"/>).</summary>
+    public bool Discovered(int player, Discovery d) =>
+        d == Discovery.None || ((Find(player)?.Discoveries ?? 0) & (1 << (int)d)) != 0;
+
+    /// <summary>
+    /// The player made the discovery (searched a ruin, cleared a lair, took a town): the discovery techs it opens
+    /// can be researched from now on, and the player hears of each one their faction can research. Once a match.
+    /// </summary>
+    public void Discover(int player, Discovery d)
+    {
+        if (d == Discovery.None || player < 0 || player >= Simulation.WildPlayer || Discovered(player, d)) return;
+        Player(player).Discoveries |= (byte)(1 << (int)d);
+        foreach (var t in Content.Techs)
+            if (t.Discovery == d && (t.Faction == null || t.Faction == Faction(player)) && !HasTech(player, t))
+                _sim.Events.TechDiscovered(player, t.Index);
+    }
+
+    /// <summary>True if wild monsters leave the player's workers alone (a <see cref="TechEffectType.SpareWorkers"/> tech).</summary>
+    public bool SparesWorkers(int player) => Find(player)?.SpareWorkers ?? false;
 
     /// <summary>The player's first finished town hall, where research happens; null if they have none.</summary>
     public Building? TownHall(int player)
@@ -127,6 +150,8 @@ public sealed partial class EconomySystem
             p.ResearchTicks = 0;
         }
         UpdateBonuses(p);
+        foreach (var e in tech.Effects)
+            if (e.Type == TechEffectType.Reveal) Reveal(player, e.Reveal);
         // More hit points reach the units already alive as well as those trained later.
         foreach (var e in tech.Effects)
         {
@@ -141,7 +166,7 @@ public sealed partial class EconomySystem
     {
         var units = Content.Units;
         p.GatherPercent = p.CarryBonus = p.FarmBonus = 0;
-        p.Roads = false;
+        p.Roads = p.SpareWorkers = false;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         var speedPercent = new int[units.Count];
@@ -157,6 +182,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.FarmYield: p.FarmBonus += e.Amount; break;
                     case TechEffectType.Housing: p.HousingBonus[e.Building!.Index] += e.Amount; break;
                     case TechEffectType.Roads: p.Roads = true; break;
+                    case TechEffectType.SpareWorkers: p.SpareWorkers = true; break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.Amount;
@@ -170,6 +196,28 @@ public sealed partial class EconomySystem
         }
         foreach (var d in units)
             p.SpeedPerTick[d.Index] = d.SpeedPerTick * (100 + speedPercent[d.Index]) / 100;
+    }
+
+    /// <summary>How far round each ruin, lair or town a reveal effect shows the ground, in columns.</summary>
+    public const int RevealRadius = 8;
+
+    /// <summary>Puts the ground round every feature of that kind on the map in the player's fog as seen.</summary>
+    private void Reveal(int player, MapFeature what)
+    {
+        var vision = _sim.Vision;
+        switch (what)
+        {
+            case MapFeature.Ruins:
+                foreach (var r in _sim.Ruins.Ruins) vision.Reveal(player, r.X, r.Z, RevealRadius);
+                break;
+            case MapFeature.Lairs:
+                foreach (var l in _sim.Monsters.Lairs)
+                    if (!l.Used) vision.Reveal(player, l.X, l.Z, RevealRadius);
+                break;
+            case MapFeature.Towns:
+                foreach (var t in _sim.Cities.Towns) vision.Reveal(player, t.X, t.Z, RevealRadius);
+                break;
+        }
     }
 
     // --- Numbers that techs change -----------------------------------------------------------------

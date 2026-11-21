@@ -159,6 +159,7 @@ public partial class Alerts : VBoxContainer
             GameEventKind.BuildingAttacked => ($"Your {Lower(content.Buildings[e.Def].Name)} is under attack", AttackColour),
             GameEventKind.BuildingFinished => ($"{content.Buildings[e.Def].Name} finished", GoodColour),
             GameEventKind.ResearchDone => ($"Research done: {content.Techs[e.Def].Name}", ResearchColour),
+            GameEventKind.TechDiscovered => ($"Discovery: {content.Techs[e.Def].Name} can be researched", ResearchColour),
             GameEventKind.UnitTrained => ($"{content.Units[e.Def].Name} trained", Hud.PlainColour),
             GameEventKind.TownHallDestroyed => ("Your town hall was destroyed", AttackColour),
             GameEventKind.TownHallCaptured => ("Your town hall was captured", AttackColour),

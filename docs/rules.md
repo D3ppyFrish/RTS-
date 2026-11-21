@@ -780,6 +780,33 @@ builders left, and a line of their writing, so the land tells its own story (the
   the computer players). The classic level leaves ruins be. All numbers are first
   guesses for playtesting.
 
+## Discovery techs
+
+`TechDef.Discovery`, `EconomySystem.Discover` and `Discovered` (tests in `DiscoveryTests`): the design doc's discovery techs,
+unlocked only by exploring. A tech with `"discovery"` in `data/techs.json` cannot be researched (`ResearchResult.NotDiscovered`)
+until the player has made that discovery; after that it is researched like any other tech, at the town hall, for its cost.
+A discovery is the player's for the rest of the match (`PlayerEconomy.Discoveries`, in the state hash), and nobody else's.
+
+- **Ruin**: the player's units finish searching an old ruin (see [Old ruins and what they hold](#old-ruins-and-what-they-hold)).
+  It opens **Wardens' charts** (30 food, 30 wood, 20 seconds): every old ruin on the map, so every ancient site, comes
+  out of the player's fog.
+- **Lair**: the player's unit gets the last of a monster lair's pack (Orcs taming it count too). It opens **Beast lore**
+  (60 food, 20 wood, 30 seconds): wild monsters leave the player's workers alone. They do not go after them at their
+  den, on sight or on their blood trail, so workers can dig, chop and haul beside a lair; they still fight soldiers there,
+  and answer a worker that hits one. A monster already after a worker when the research ends keeps after it. A city-state's
+  guards are not monsters: they fight as before (they leave workers alone anyway).
+- **Town**: the player breaks a city-state's totem and takes the town (see [City-states](#city-states)). It opens **Trail
+  maps** (40 food, 10 iron, 20 seconds): every monster lair (the caverns' and the deeps' too, but not dens already used up)
+  and every city-state town on the map come out of the player's fog.
+- **Out of the fog** (`reveal` in the data, `VisionSystem.Reveal`): the columns within 8 of each one
+  (`EconomySystem.RevealRadius`) that the player has never seen become seen, not in sight: they show on the map as the
+  ground was when the match began, with nothing on it, until the player's own units see them. With fog of war off it
+  does nothing.
+- **In the game**: the player hears of each discovery tech they can now research ("Discovery: Wardens' charts
+  can be researched"). In the tech tree (K) a discovery tech not yet discovered says what to do for it ("Search an
+  old ruin", "Clear a monster lair", "Take a city-state town"), and its tooltip says so too. Computer players do not
+  research discovery techs yet. All numbers are first guesses for playtesting.
+
 ## Ancient sites and dominion
 
 `src/Sim/World/DominionSystem.cs` (tests in `DominionTests`, `AiSiteTests`): the design doc's second way to win,
