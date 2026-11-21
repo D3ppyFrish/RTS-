@@ -237,6 +237,100 @@ public class TradeDealTests
         Assert.True(sim.Deals.Partners(0, 1));
     }
 
+    private static void Play(Simulation sim, AiPlayer[] ai, int ticks, Func<bool>? done = null)
+    {
+        for (int t = 0; t < ticks && (done == null || !done()); t++)
+        {
+            foreach (var p in ai) p.Think(sim, c => sim.Schedule(sim.Tick, c));
+            sim.Step();
+        }
+    }
+
+    private static List<int> Caravans(Simulation sim, int player)
+    {
+        var u = sim.Units;
+        var list = new List<int>();
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == player && sim.Content.Units[u.Def[i]].IsTrader) list.Add(i);
+        return list;
+    }
+
+    /// <summary>
+    /// A smart computer player offers a deal to the nearest rival whose town pays, once its town is set up; when it is
+    /// taken and it has food to spare, it trains caravans and sends them to the partner's hall, and gold comes home.
+    /// Short of food, it stops them.
+    /// </summary>
+    [Fact]
+    public void ASmartComputerOffersADealAndSendsCaravansWhileItIsOn()
+    {
+        var sim = ThreeTowns();
+        var hall = sim.Economy.TownHall(0)!;
+        var ai = new[] { new AiPlayer(0, 1, AiLevel.Normal) };
+        // Not before its town is set up.
+        Play(sim, ai, 60 * Tps);
+        Assert.False(sim.Deals.Offered(0, 1) || sim.Deals.Offered(0, 2));
+        sim.Run(AiPlayer.TradeFromTicks - (int)sim.Tick);
+        hall.Stock[(int)Good.Food] = 3000;
+        hall.Stock[(int)Good.Wood] = 3000;
+        Play(sim, ai, AiPlayer.TradeTicks + 1, () => sim.Deals.Offered(0, 2));
+        // Player 2's town (about 140 blocks) is nearer than player 1's (190).
+        Assert.True(sim.Deals.Offered(0, 2));
+        Assert.False(sim.Deals.Offered(0, 1));
+        Do(sim, new TradeDealCommand(2, 0));
+        Assert.True(sim.Deals.Partners(0, 2));
+        var theirs = sim.Economy.TownHall(2)!;
+
+        Play(sim, ai, 120 * Tps, () => Caravans(sim, 0).Count(i => sim.Units.Job[i] == UnitJob.Market) >= AiPlayer.CaravansPerDeal);
+        var caravans = Caravans(sim, 0);
+        Assert.Equal(AiPlayer.CaravansPerDeal, caravans.Count);
+        Assert.All(caravans, i => Assert.Equal((UnitJob.Market, theirs.Id), (sim.Units.Job[i], sim.Units.JobTarget[i])));
+        // With a deal on it offers nobody else.
+        Assert.False(sim.Deals.Offered(0, 1));
+
+        int gold = sim.Economy.Stock(0, Good.Gold);
+        int hostFood = theirs.Stock[(int)Good.Food];
+        Play(sim, ai, 150 * Tps, () => sim.Economy.Stock(0, Good.Gold) > gold);
+        Assert.True(sim.Economy.Stock(0, Good.Gold) > gold);
+        Assert.True(theirs.Stock[(int)Good.Food] > hostFood);
+
+        // Short of food: the caravans stop trading.
+        foreach (var b in sim.Buildings.All)
+            if (b.Owner == 0) b.Stock[(int)Good.Food] = 0;
+        Play(sim, ai, AiPlayer.TradeTicks + 1);
+        Assert.All(Caravans(sim, 0), i => Assert.NotEqual(UnitJob.Market, sim.Units.Job[i]));
+        Assert.True(sim.Deals.Partners(0, 2));
+    }
+
+    /// <summary>
+    /// A smart computer player ends a deal with a rival whose soldiers grow far stronger than its own (after the deal
+    /// has stood a while), and refuses that rival's offers; a classic one takes every offer.
+    /// </summary>
+    [Fact]
+    public void ASmartComputerEndsADealWithARivalGrownTooStrongAndRefusesItsOffers()
+    {
+        var sim = ThreeTowns();
+        var ai = new[] { new AiPlayer(1, 1, AiLevel.Normal) };
+        Agree(sim, 0, 1);
+        var mine = sim.Economy.TownHall(0)!;
+        for (int k = 0; k < 8; k++) sim.SpawnUnit(0, "spearman", mine.X + 2 + k, mine.MaxZ + 4);
+        Play(sim, ai, AiPlayer.DealKeepTicks - 10 * Tps);
+        Assert.True(sim.Deals.Partners(0, 1));
+        Play(sim, ai, 20 * Tps, () => !sim.Deals.Partners(0, 1));
+        Assert.False(sim.Deals.Partners(0, 1));
+        Assert.Equal(1, Assert.Single(Events(sim, 0, GameEventKind.DealEnded)).Def);
+
+        sim.Run(TradeDealSystem.CooldownTicks);
+        sim.Schedule(sim.Tick, new TradeDealCommand(0, 1));
+        Play(sim, ai, 10 * Tps);
+        Assert.False(sim.Deals.Partners(0, 1));
+
+        // The classic computer player still takes it.
+        var classic = new[] { new AiPlayer(1, 1) };
+        sim.Schedule(sim.Tick, new TradeDealCommand(0, 1));
+        Play(sim, classic, 10 * Tps, () => sim.Deals.Partners(0, 1));
+        Assert.True(sim.Deals.Partners(0, 1));
+    }
+
     [Fact]
     public void DealsAreInTheHashAndReplayFromTheLog()
     {
