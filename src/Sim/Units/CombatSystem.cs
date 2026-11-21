@@ -350,11 +350,11 @@ public sealed partial class CombatSystem
         if (u.TargetBuilding[i] != 0)
         {
             b = Buildings.Get(u.TargetBuilding[i]);
-            if (b != null && !b.Planned && (b.Owner != u.Owner[i] || b.Def.IsBridge) && !guard) return true;
+            if (b != null && !b.Planned && (Hostile(u.Owner[i], b.Owner) || b.Def.IsBridge && b.Owner == u.Owner[i]) && !guard) return true;
             // The wall it was breaking through is down: back to the building it was sent at (see Breach).
             b = u.BreachFor[i] != 0 ? Buildings.Get(u.BreachFor[i]) : null;
             u.TargetBuilding[i] = u.BreachFor[i] = 0;
-            if (b != null && !b.Planned && b.Owner != u.Owner[i] && !guard)
+            if (b != null && !b.Planned && Hostile(u.Owner[i], b.Owner) && !guard)
             {
                 u.TargetBuilding[i] = b.Id;
                 u.ChaseRetry[i] = 0;
@@ -367,7 +367,7 @@ public sealed partial class CombatSystem
         if (u.Target[i] != 0)
         {
             t = u.IndexOf(u.Target[i]);
-            if (t >= 0 && u.Owner[t] != u.Owner[i] && (!guard || _sim.Cities.Repels(i, t))
+            if (t >= 0 && Hostile(u.Owner[i], u.Owner[t]) && (!guard || _sim.Cities.Repels(i, t))
                 && (order == CombatOrder.Attack || (!u.Subdued[t] && (Within(i, t, hold ? Reach(i, def, t) : Sight(i, def, t) * Leash)
                     || order == CombatOrder.Guard && !hold && TownGuard(i) && _sim.Vision.SeesUnit(u.Owner[i], t))))
                 && (order != CombatOrder.Guard || NearCharge(i, t, LeashOf(i))))
@@ -388,7 +388,7 @@ public sealed partial class CombatSystem
         // A guard first goes for whoever hits its charge, and fights only near its charge.
         bool guarding = order == CombatOrder.Guard;
         if (guarding && by >= 0 && !NearCharge(i, by, LeashOf(i))) by = -1;
-        if (by >= 0 && u.Owner[by] != u.Owner[i] && !u.Subdued[by] && (!guard || _sim.Cities.Repels(i, by)) && Within(i, by, hold ? Reach(i, def, by) : Sight(i, def, by) * AnswerRange)) t = by;
+        if (by >= 0 && Hostile(u.Owner[i], u.Owner[by]) && !u.Subdued[by] && (!guard || _sim.Cities.Repels(i, by)) && Within(i, by, hold ? Reach(i, def, by) : Sight(i, def, by) * AnswerRange)) t = by;
         else if (guarding && ChargeAttacker(i) is var at && at >= 0) t = at;
         else if ((_sim.Tick + u.Id[i]) % AcquireInterval == 0)
         {
@@ -433,7 +433,7 @@ public sealed partial class CombatSystem
             int c = (cz * _cellsX + cx) * _players;
             for (int p = 0; p < _players; p++)
             {
-                if (p == u.Owner[i]) continue;
+                if (!Hostile(u.Owner[i], p)) continue;
                 for (int j = _head[c + p]; j >= 0; j = _next[j])
                 {
                     if (u.Subdued[j]) continue;
@@ -690,7 +690,7 @@ public sealed partial class CombatSystem
         if (b.Def.IsWall)
         {
             // A wall in the way of the building it is after: another one, then.
-            if (u.BreachFor[i] == 0 || Buildings.Get(u.BreachFor[i]) is not { Def.IsWall: false } goal || goal.Owner == u.Owner[i]) return false;
+            if (u.BreachFor[i] == 0 || Buildings.Get(u.BreachFor[i]) is not { Def.IsWall: false } goal || !Hostile(u.Owner[i], goal.Owner)) return false;
             (not, b) = (b, goal);
         }
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
@@ -740,7 +740,7 @@ public sealed partial class CombatSystem
     private bool BringDown(int i, int t)
     {
         var u = U;
-        if (_sim.Economy.WallUnder(t) is not { } wall || wall.Owner == u.Owner[i]) return false;
+        if (_sim.Economy.WallUnder(t) is not { } wall || !Hostile(u.Owner[i], wall.Owner)) return false;
         u.Target[i] = 0;
         u.TargetBuilding[i] = wall.Id;
         u.ChaseRetry[i] = 0;
@@ -1540,7 +1540,7 @@ public sealed partial class CombatSystem
     internal void Apply(AttackCommand c)
     {
         int t = U.IndexOf(c.Target);
-        if (t < 0 || U.Owner[t] == c.PlayerId) return;
+        if (t < 0 || !Hostile(c.PlayerId, U.Owner[t])) return;
         foreach (int i in _sim.OwnedUnits(c))
         {
             if (!Def(i).CanAttack) continue;
@@ -1553,7 +1553,7 @@ public sealed partial class CombatSystem
     {
         var b = Buildings.Get(c.Building);
         // A player may knock out their own bridge, to cut the way across behind them.
-        if (b == null || b.Planned || (b.Owner == c.PlayerId && !b.Def.IsBridge)) return;
+        if (b == null || b.Planned || (b.Owner == c.PlayerId ? !b.Def.IsBridge : !Hostile(c.PlayerId, b.Owner))) return;
         foreach (int i in _sim.OwnedUnits(c))
         {
             if (!Def(i).CanAttack) continue;
@@ -1622,6 +1622,9 @@ public sealed partial class CombatSystem
     internal void Allies(Fix64 x, int y, Fix64 z, Fix64 radius, int height, int owner, List<int> result) =>
         Near(x, y, z, radius, height, owner, allies: true, result);
 
+    /// <summary>True if units of the two sides fight each other (different sides, not at peace: see <see cref="TruceSystem"/>).</summary>
+    private bool Hostile(int a, int b) => _sim.Truces.Hostile(a, b);
+
     private void Near(Fix64 x, int y, Fix64 z, Fix64 radius, int height, int owner, bool allies, List<int> result)
     {
         result.Clear();
@@ -1634,7 +1637,7 @@ public sealed partial class CombatSystem
             int c = (cz * _cellsX + cx) * _players;
             for (int p = 0; p < _players; p++)
             {
-                if ((p == owner) != allies) continue;
+                if (allies ? p != owner : !Hostile(owner, p)) continue;
                 for (int j = _head[c + p]; j >= 0; j = _next[j])
                 {
                     if (Math.Abs(u.Y[j] - y) > height) continue;

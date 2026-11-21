@@ -883,7 +883,7 @@ public sealed class CityStateSystem
     internal bool Repels(int guard, int t)
     {
         var u = U;
-        if (u.Owner[t] == u.Owner[guard] || Get(u.Town[guard]) is not { } town) return false;
+        if (!_sim.Truces.Hostile(u.Owner[guard], u.Owner[t]) || Get(u.Town[guard]) is not { } town) return false;
         int owner = u.Owner[t];
         // A toll town fights a player's units on its toll ground that did not pay, or whose owner is at feud with it.
         if (town.Toll && owner >= 0 && owner < Simulation.WildPlayer && u.Town[t] == 0)

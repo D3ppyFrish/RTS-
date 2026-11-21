@@ -58,6 +58,8 @@ public sealed class Simulation
     public SpellSystem Spells { get; }
     /// <summary>City-states' towns: their totems and holders, guards, tribute, caravan trade and mercenaries.</summary>
     public CityStateSystem Cities { get; }
+    /// <summary>Short truces between rival players: offers, peace, warnings before it ends.</summary>
+    public TruceSystem Truces { get; }
     /// <summary>Who is still in the match and who won: a player whose town halls are all gone is out.</summary>
     public MatchSystem Match { get; }
     /// <summary>What each player sees, with fog of war on (<see cref="Fog"/>).</summary>
@@ -114,6 +116,7 @@ public sealed class Simulation
         Spells = new SpellSystem(this);
         Cities = new CityStateSystem(this);
         Match = new MatchSystem(this);
+        Truces = new TruceSystem(this);
         Automation = new AutomationSystem(this);
         Vision = new VisionSystem(this);
         Physics = new PhysicsSystem(this);
@@ -362,6 +365,7 @@ public sealed class Simulation
                 Apply(c);
             }
         Sandbox.Step();
+        Truces.Step();
         Conditions.Step();
         Automation.Step();
         Economy.Step();
@@ -399,6 +403,7 @@ public sealed class Simulation
         ^ Buildings.ComputeHash() * 0x165667B19E3779F9UL ^ Economy.ComputeHash() * 0x27D4EB2F165667C5UL
         ^ Combat.ComputeHash() * 0x94D049BB133111EBUL ^ Monsters.ComputeHash() * 0xD6E8FEB86659FD93UL
         ^ Cities.ComputeHash() * 0xA24BAED4963EE407UL ^ Match.ComputeHash() * 0x9FB21C651E98DF25UL
+        ^ Truces.ComputeHash() * 0x8CB92BA72F3D8DD7UL
         ^ Physics.ComputeHash() * 0x61C8864680B583EBUL
         ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL ^ DuskTree.ComputeHash() * 0x3C6EF372FE94F82BUL
         ^ Ruins.ComputeHash() * 0xC6BC279692B5C323UL
@@ -496,6 +501,8 @@ public sealed class Simulation
             case TradeCommand t: Economy.Apply(t); break;
             case HireCommand h: Cities.Apply(h); break;
             case SurrenderCommand s: Match.Apply(s); break;
+            case TruceCommand tr: Truces.Apply(tr); break;
+            case EndTruceCommand et: Truces.Apply(et); break;
         }
         if (command is UnitsCommand uc) Automation.Note(uc);
     }

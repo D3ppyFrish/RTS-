@@ -1103,6 +1103,20 @@ public partial class PlayerControl : Node
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// The rival's truce button (see <see cref="TruceSystem"/>): at peace, breaks the truce off (it ends after a
+    /// warning); with your offer standing, takes it back; otherwise offers one, or accepts the rival's offer.
+    /// </summary>
+    public void Truce(int rival)
+    {
+        var truces = _sim.Truces;
+        if (truces.AtPeace(LocalPlayer, rival) || truces.Offered(LocalPlayer, rival))
+            _sim.Schedule(_sim.Tick, new EndTruceCommand(LocalPlayer, rival));
+        else if (truces.CanOffer(LocalPlayer, rival))
+            _sim.Schedule(_sim.Tick, new TruceCommand(LocalPlayer, rival));
+        Changed?.Invoke();
+    }
+
     /// <summary>You give up the match (see <see cref="SurrenderCommand"/>). The game runs on so that it ends at once.</summary>
     public void Surrender()
     {

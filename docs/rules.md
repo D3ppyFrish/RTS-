@@ -1176,6 +1176,35 @@ goblins your vassals and tribute reaches your hall; another player breaking it t
 neutral guards fight soldiers but not workers or caravans; vassal guards fight the holder's enemies and
 only the holder hires. All the numbers are first guesses for playtesting.
 
+## Truces
+
+`src/Sim/TruceSystem.cs`: the design's "no full diplomacy, only trade deals and short truces". Two rival players can
+agree a short truce; there are no alliances and no shared victories, so a truce only buys time.
+
+- **Offering** (`TruceCommand`): a player offers a truce to a rival; the offer stands 30 seconds, and the rival is told.
+  The rival accepts by offering back while it stands, and the truce starts at once. An offer can be taken back
+  (`EndTruceCommand` with no truce on). Nobody makes a truce with the wild side, a city-state or a player out of the
+  match, nor after the match is over.
+- **At peace** (5 minutes): neither side's units pick the other's as a target, answer the other's blows, or splash
+  them; orders to attack the other's units or buildings, or to capture or burn their storehouses, are refused, and a
+  fight or raid already going stops (blows already swung still land). A town's guards do not fight the soldiers of a
+  player at peace with its holder, so a truce partner's town cannot be taken. Nothing else changes: units do not
+  share sight or pass each other's gates, ancient sites and great works count as before, and the match is won as
+  before.
+- **Ending**: both sides are warned 30 seconds before the end. Either side can break it off early (`EndTruceCommand`),
+  but only with that same 30 seconds' warning, so a truce cannot be broken by surprise; both are told who broke it.
+  After a truce ends the two cannot agree another for 3 minutes.
+- **Computer players** answer offers: they accept unless their own soldiers are worth more than half again the
+  offerer's (`AiPlayer.TruceRefusePercent`, by the worth they weigh fights by), and while at peace they send no wave,
+  raid or defence at the partner, nor count the partner's soldiers as a threat. They do not offer truces themselves.
+- **In the game**: a button per rival under the top bar says the state (offer truce, their offer to accept, your
+  offer standing, the time left at peace, or how long until another can be agreed); clicking it does the one thing
+  that state allows. Alerts tell you of offers, the truce starting, the warning (and who broke it off) and its end.
+- `TruceTests` checks offers and acceptance, offers running out and taken back, armies side by side not fighting and
+  fighting once it ends, a fight stopping when a truce starts, breaking off with a warning and the wait after,
+  storehouses safe from raids, the computer accepting only when not clearly stronger and sending no wave at a
+  partner, and the commands in the replay log and the hash. All numbers are first guesses for playtesting.
+
 ## Winning and computer players
 
 `src/Sim/MatchSystem.cs`: every player given a town hall at the start is in the match. A player with no

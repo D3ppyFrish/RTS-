@@ -800,8 +800,25 @@ public partial class Main : Node3D
         return $"tick={_sim.Tick} screen={screen} player={PlayerControl.LocalPlayer} result={Result()} " +
                $"world={_sim.World.SizeX}x{_sim.World.SizeY}x{_sim.World.SizeZ} lair_kinds={string.Join(",", lairs)} " +
                $"replay={(_replayPath != null ? "saved" : "none")} terrain_tool={(PlayerControl.TerrainTool ? 1 : 0)} " +
+               $"truce={TruceState()} " +
                $"falling={_sim.Physics.Falling.Count} trees_falling={_sim.Physics.FallingTrees.Count} swept={_sim.Physics.Swept} dust={_fallingRenderer.Effects} icons={_unitIcons.Shown} {_hud.AlertFeed.Describe()} {_control.Describe()}" +
                (_testPanel != null ? " " + _testPanel.Describe() : "");
+    }
+
+    /// <summary>
+    /// For scripted tests: the truce with your first rival in the match: peace, ending (broken off), offered (by
+    /// you), asked (by them), open (one can be offered), wait (not yet after the last one) or none (no rival).
+    /// </summary>
+    private string TruceState()
+    {
+        int me = PlayerControl.LocalPlayer;
+        int rival = _sim.Match.Players.FirstOrDefault(p => p != me, -1);
+        if (rival < 0) return "none";
+        var t = _sim.Truces;
+        if (t.AtPeace(me, rival)) return t.BrokenBy(me, rival) >= 0 ? "ending" : "peace";
+        if (t.Offered(me, rival)) return "offered";
+        if (t.Offered(rival, me)) return "asked";
+        return t.CanOffer(me, rival) ? "open" : "wait";
     }
 
     /// <summary>How the match went for you, for scripted tests: none while it goes on.</summary>
