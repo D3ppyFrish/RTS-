@@ -37,6 +37,7 @@ scripts/ui-fog-screenshots.sh         # scripted fog of war: the start screen sw
 scripts/ui-dig-screenshots.sh         # scripted dig tool: workers and sappers dig out a dragged area
 scripts/ui-wall-screenshots.sh        # scripted walls: a gate placed, a wall drawn through it and built, upgraded twice, archers posted on it, a stone tower put onto it and a watchtower beside it
 scripts/ui-bridge-screenshots.sh      # scripted bridge: a deck drawn across a river and laid by the workers
+scripts/ui-ramp-screenshots.sh        # scripted ramp: a ramp drawn up a cliff, heaped by the workers and walked up
 scripts/determinism.sh              # 10-minute headless match, replayed twice, hashes compared
 scripts/ai-matches.sh               # Hard computer against Classic, five matches with fog; each must have a winner within 40 minutes
 scripts/ai-versus.sh [A] [B] [N]    # level A against level B over N seeds with fog (default hard, classic, 20), both sides of the map

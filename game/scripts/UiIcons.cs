@@ -132,6 +132,12 @@ public static class UiIcons
             "t.........v.", "...kkkkkk...", "..kggggggk.t", "..kGGGGGGk..", "..kbbBbbbk..", "v.kbBbbbBk..",
             "..kbbbbBbk..", "..kBbbbbbk..", "..kbbBbbbk..", "kkkbbbbbBkkk", "kBbBbbBbbBbk", "kkkkkkkkkkkk",
         },
+        // Ramp: a slope of earth heaped a step a column up against a stone wall.
+        ["ramp"] = new[]
+        {
+            "........kkkk", "........ksSk", "........kssk", "......kkkSsk", "......kbkssk", "....kkbBksSk",
+            "....kbbbkssk", "..kkbBbbkSsk", "..kbbbbBkssk", "kkbBbbbbksSk", "kbbbbBbbkssk", "kkkkkkkkkkkk",
+        },
         // Ice Bridge: a slab of ice over blue water, with sparks of magic.
         ["ice_bridge"] = new[]
         {

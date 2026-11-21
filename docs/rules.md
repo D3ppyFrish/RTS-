@@ -386,6 +386,33 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   (`AttackBuildingCommand` is allowed on your own bridges) to cut the way across behind them. Bridges are
   never placed from the build menu (`CanPlace` refuses them).
 
+- **Ramps** (`RampCommand`, `EconomySystem.Ramps.cs`, `Ramp`; the design doc's "Place: walls, ramps, stairs,
+  bridges"): workers and sappers heap a slope of rammed earth (`BlockType.Soil`) from a foot up to something they
+  cannot climb: a cliff, a steep hill or the top of a wall. It is drawn from the foot to the face, and runs straight
+  along whichever of x and z the drag goes further in (`RampEnd`). The column it leans on (the far end) sets the
+  top: the level units stand at there, 2 to 10 levels above the foot (`MaxRampRise`). From the foot each column
+  of the line rises a level above the one before, up to a level under the top, and then runs level to the face;
+  ground already that high is left as it is (`PlanRamp`). At most 16 columns lie between the foot and the face
+  (`MaxRamp`), so a ramp needs about a column for each level it climbs, and none goes over a building or a
+  city-state's town, nor where ground or a trunk overhead leaves no headroom; a column takes at most 12 blocks
+  (`MaxRampFill`), so a ramp can also be heaped over a trench or shallow water. A plan that does not get to the top
+  does nothing. The builders fill the columns in order from the foot, each from the bottom up, from a spot
+  beside it (never in it), tipping earth down into a trench up to 12 levels below them; each block takes 2
+  seconds of work (`RampBlockTicks`, at the unit's work speed, so a hero that drives the work helps) and 1 stone
+  (`StonePerRamp`) from the storage nearest it as it goes in. When the stone runs out the builders stop, and a
+  ramp nobody is building any more is dropped (what is heaped stays). Anyone standing where earth goes in is
+  lifted onto it. A finished ramp is plain ground: anyone walks it, the enemy too, and anyone can dig it away
+  (it gives nothing). Against a wall it brings units onto the wall's top, and from there, sent on, they climb
+  down the far side (see Climbing down under Moving), so a ramp is a way over a wall that does not break it; a
+  defender's answer is to dig it away, or to knock the wall down under its top. Leaves in the way are pushed
+  aside.
+
+`RampTests` checks ramps: workers heap a ramp up a cliff 5 levels high from the foot up, a column at a time and a
+stone a block, and a spearman who could not climb it walks up it; a ramp to a wooden wall brings an enemy spearman
+onto the wall and down the far side; builders stop when the stone runs out; a plan needs a top 2 or more levels up,
+a column of room for each level and no building on the way, and is laid straight; the enemy digs a ramp away; and
+the command is logged and the same inputs give the same state.
+
 `BridgeTests` checks bridges: workers bridge a river too deep to wade, a column at a time from the near
 bank, and a spearman who could not get across walks over it; the enemy crosses it too until a spearman
 knocks out its end column, which cuts the way; the deck runs level at the higher end and skips ground; and

@@ -107,6 +107,11 @@ public enum UnitJob : byte
     /// which of the building's goods the next round gives.
     /// </summary>
     Quarry,
+    /// <summary>
+    /// Heap up the ramp <see cref="UnitStore.JobTarget"/> (see <see cref="Economy.Ramp"/>): fill its next block with
+    /// earth from a spot beside it, again and again. Workers and sappers.
+    /// </summary>
+    Ramp,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

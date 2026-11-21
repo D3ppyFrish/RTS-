@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, EarthWall, IceBridge, Chasm, GrowForest, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, EarthWall, IceBridge, Chasm, GrowForest, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -260,7 +260,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Test:
@@ -278,7 +278,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -390,6 +390,7 @@ public partial class PlayerControl : Node
             case Key.T when TerrainTool:
                 SetTool(Tool == ToolMode.Terrain ? ToolMode.Select : ToolMode.Terrain);
                 break;
+            case Key.X when key.ShiftPressed: ToggleRamp(); break;
             case Key.X:
                 SetTool(Tool == ToolMode.Tunnel ? ToolMode.Select : ToolMode.Tunnel);
                 break;
@@ -1025,7 +1026,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1704,6 +1705,9 @@ public partial class PlayerControl : Node
     /// <summary>The Bridge button and key: starts (or stops) drawing bridges for the selected workers to build.</summary>
     public void ToggleBridge() => SetTool(Tool == ToolMode.Bridge ? ToolMode.Select : ToolMode.Bridge);
 
+    /// <summary>The Ramp button and key (Shift+X): starts (or stops) drawing ramps for the selected workers and sappers to heap up.</summary>
+    public void ToggleRamp() => SetTool(Tool == ToolMode.Ramp ? ToolMode.Select : ToolMode.Ramp);
+
     /// <summary>The Earth Wall button and key (Shift+Y): starts (or stops) drawing an earth wall for a selected mage to raise.</summary>
     public void ToggleEarthWall() => SetTool(Tool == ToolMode.EarthWall ? ToolMode.Select : ToolMode.EarthWall);
 
@@ -1768,6 +1772,8 @@ public partial class PlayerControl : Node
                 _sim.Schedule(_sim.Tick, new ChasmCommand(LocalPlayer, OwnCasters(Spell.Chasm).ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.GrowForest)
                 _sim.Schedule(_sim.Tick, new GrowForestCommand(LocalPlayer, OwnCasters(Spell.GrowForest).ToArray(), _wallX, _wallZ, x2, z2));
+            else if (Tool == ToolMode.Ramp)
+                _sim.Schedule(_sim.Tick, new RampCommand(LocalPlayer, OwnDiggers().ToArray(), _wallX, _wallZ, x2, z2));
             else _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
                 ? new BridgeCommand(LocalPlayer, workers, BridgeBuilding, _wallX, _wallZ, x2, z2)
                 : new WallCommand(LocalPlayer, workers, WallBuilding, _wallX, _wallZ, x2, z2));
@@ -1786,6 +1792,11 @@ public partial class PlayerControl : Node
         if (Tool == ToolMode.Bridge)
         {
             UpdateBridgePreview();
+            return;
+        }
+        if (Tool == ToolMode.Ramp)
+        {
+            UpdateRampPreview();
             return;
         }
         if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)
@@ -1814,6 +1825,49 @@ public partial class PlayerControl : Node
     }
 
     private readonly List<BridgeSpan> _bridgePlan = new();
+    private readonly List<RampSpan> _rampPlan = new();
+
+    /// <summary>Your ramps still being heaped up.</summary>
+    private int OwnRamps()
+    {
+        int n = 0;
+        foreach (var r in _sim.Economy.Ramps)
+            if (r.Owner == LocalPlayer) n++;
+        return n;
+    }
+
+    /// <summary>Your units at work on a ramp.</summary>
+    private int RampBuilders()
+    {
+        int n = 0;
+        for (int i = 0; i < _sim.Units.Count; i++)
+            if (_sim.Units.Owner[i] == LocalPlayer && _sim.Units.Job[i] == UnitJob.Ramp) n++;
+        return n;
+    }
+
+    /// <summary>The top the ramp being dragged reaches, or -1 while it would not get there (see <see cref="EconomySystem.PlanRamp"/>).</summary>
+    public int RampTop { get; private set; } = -1;
+    /// <summary>Blocks of earth (each a stone) the ramp being dragged takes.</summary>
+    public int RampBlocks { get; private set; }
+
+    /// <summary>
+    /// The columns of the ramp being dragged, as the simulation plans them (at the level units will stand on each),
+    /// each with whether it goes up as planned: room, a top it gets to, and stone enough by then.
+    /// </summary>
+    private void UpdateRampPreview()
+    {
+        RampTop = -1;
+        RampBlocks = 0;
+        if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
+        RampTop = _sim.Economy.PlanRamp(_wallX, _wallZ, x2, z2, _rampPlan);
+        int stone = _sim.Economy.Stock(LocalPlayer, Good.Stone);
+        foreach (var span in _rampPlan)
+        {
+            RampBlocks += span.Blocks;
+            bool ok = RampTop >= 0 && span.Room && RampBlocks * EconomySystem.StonePerRamp <= stone;
+            _wallPreview.Add((span.X, span.Top, span.Z, ok));
+        }
+    }
     private readonly List<(int X, int Z, int Y, bool Room)> _earthPlan = new();
 
     /// <summary>The columns the earth wall being dragged covers, as the simulation plans them, each with whether earth rises there.</summary>
@@ -2030,6 +2084,7 @@ public partial class PlayerControl : Node
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
+               $"ramps={OwnRamps()} ramp_top={RampTop} ramp_blocks={RampBlocks} ramp_builders={RampBuilders()} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
                $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} " +

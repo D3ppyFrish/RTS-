@@ -265,6 +265,18 @@ public sealed record DigAreaCommand(int PlayerId, int[] Units, int X1, int Z1, i
 }
 
 /// <summary>
+/// The workers and sappers among the units heap a ramp of earth from its foot, column (X1, Z1), up to the column
+/// it leans on at the far end of the line toward (X2, Z2): a cliff, a hill or the top of a wall (see
+/// <see cref="Economy.EconomySystem.PlanRamp"/>). Each block costs stone as it goes in. Other units ignore it.
+/// </summary>
+public sealed record RampCommand(int PlayerId, int[] Units, int X1, int Z1, int X2, int Z2) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(RampCommand? other) =>
+        base.Equals(other) && X1 == other!.X1 && Z1 == other.Z1 && X2 == other.X2 && Z2 == other.Z2;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X1, Z1, X2, Z2);
+}
+
+/// <summary>
 /// The workers among the units take the nearest needed job on their own whenever they have nothing to do
 /// (<paramref name="On"/>), or wait for orders (off). See <see cref="Automation.AutomationSystem"/>.
 /// </summary>
