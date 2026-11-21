@@ -639,6 +639,11 @@ public sealed class MonsterSystem
     internal void Beaten(int i, int player)
     {
         int id = U.Id[i];
+        // A monster with a bounty (the dark power's corrupted beasts) pays it into the player's storage nearest it.
+        var bounty = Def(i).Bounty;
+        if (bounty.Length > 0 && player >= 0 && player < Simulation.WildPlayer
+            && Economy.NearestStorage(player, U.X[i].FloorToInt(), U.Z[i].FloorToInt()) is { } store)
+            foreach (var g in bounty) store.Stock[(int)g.Good] += g.Amount;
         foreach (var lair in _lairs)
             if (!lair.Cleared && lair.PackIds.Contains(id)) lair.LastBeatenBy = player;
     }

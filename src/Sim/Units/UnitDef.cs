@@ -173,6 +173,17 @@ public sealed class UnitDef
 
     /// <summary>For a monster: the lairs its kind keeps in the wild (see <see cref="MonsterSystem"/>); null for other units.</summary>
     public LairDef? Lair { get; init; }
+
+    /// <summary>
+    /// For a corrupted beast of the dark power (see <see cref="World.AwakeningSystem"/>): the stage of its waking from
+    /// which broods of this kind rise out of the Heartscar (1 to <see cref="World.AwakeningSystem.Stages"/>); 0 for
+    /// other units.
+    /// </summary>
+    public int Awakening { get; init; }
+    /// <summary>How many of this kind rise in each brood sent at a player, once its <see cref="Awakening"/> stage has come.</summary>
+    public int Brood { get; init; }
+    /// <summary>Goods a player's storage nearest the spot gets when one of their units kills or beats this monster; none for most.</summary>
+    public GoodAmount[] Bounty { get; init; } = Array.Empty<GoodAmount>();
     /// <summary>
     /// For a monster a taming faction beats (see <see cref="MonsterSystem"/>): who can ride it and what they
     /// become; null if nobody rides it (it can still be recruited).

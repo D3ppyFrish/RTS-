@@ -23,7 +23,11 @@ ancient sites, for 3 minutes: soldiers standing alone in one for 15 seconds take
 top bar says how many you hold and counts down when someone holds most (see
 [Ancient sites and dominion](rules.md#ancient-sites-and-dominion)). A faction's final tech opens its great work, which
 must be built in the deep caves; once it is finished, keep it standing 5 minutes and you win, and the crown button in
-the top bar counts down (see [Ascendancy and great works](rules.md#ascendancy-and-great-works)). The Surrender button under the right end of the top bar gives up. When the match is
+the top bar counts down (see [Ascendancy and great works](rules.md#ascendancy-and-great-works)). Unless switched off on
+the start screen, the dark power under the Heartscar, at the heart of the land, wakes 45 minutes in (sooner if you dig
+near it): corrupted ground spreads from it and hurts your units on it, and broods of corrupted beasts come for your
+town hall every few minutes. The dark power button in the top bar counts down to it and to each next stage; click it
+to look at the Heartscar (see [The dark power](rules.md#the-dark-power-the-awakening)). The Surrender button under the right end of the top bar gives up. When the match is
 over for you, the clock stops, a panel says Victory or Defeat and how, and the match is saved as a
 replay (in `%APPDATA%\Godot\app_userdata\RTS\replays`; the panel has a button that opens the folder).
 New match goes back to the start screen. See [Start screen, match end and replays](rules.md#start-screen-match-end-and-replays).

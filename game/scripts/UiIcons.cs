@@ -426,5 +426,11 @@ public static class UiIcons
             "............", "..kk....kk..", ".kBBk..kBBk.", ".kBBk..kBBk.", "..kkkkkkkk..", "kk.kBBBBk.kk",
             "kBkBBBBBBkBk", "kBkBBBBBBkBk", ".kkBBBBBBkk.", "..kBBBBBBk..", "...kBBBBk...", "....kkkk....",
         },
+        // The dark power: a black heart split with violet veins round a burning eye.
+        ["dark_heart"] = new[]
+        {
+            "............", ".kkk...kkk..", "kcvck.kcccck", "kccvckcvccck", "kcccvkvcccck", "kccckffkccck",
+            ".kcckffkcck.", "..kccvvcck..", "...kcvcck...", "....kcck....", ".....kk.....", "............",
+        },
     };
 }

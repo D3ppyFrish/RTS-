@@ -50,6 +50,8 @@ public sealed class Simulation
     public DominionSystem Sites { get; }
     /// <summary>Ascendancy: a faction's great work in the deep caves, standing long enough, wins.</summary>
     public AscendancySystem Ascendancy { get; }
+    /// <summary>The dark power under the Heartscar, waking late in the match, with <see cref="Awakening"/> on.</summary>
+    public AwakeningSystem DarkPower { get; }
     /// <summary>Relics and the Dusk Staff lying where their bearers fell, until a unit picks them up.</summary>
     public DroppedItemSystem Items { get; }
     /// <summary>Terrain magic: earth walls (see <see cref="SpellSystem"/>).</summary>
@@ -82,6 +84,7 @@ public sealed class Simulation
     private int _dayStart = Conditions.StartMinute;
     private bool _testMode;
     private bool _dominion;
+    private bool _awakening;
 
     /// <summary>Starts a match on a freshly generated region, with the game's own data unless given other content.</summary>
     public Simulation(ulong seed, int sizeX, int sizeY, int sizeZ, ContentDb? content = null, int treeScale = RegionGenerator.DefaultTreeScale)
@@ -106,6 +109,7 @@ public sealed class Simulation
         Ruins.Place();
         Sites = new DominionSystem(this);
         Ascendancy = new AscendancySystem(this);
+        DarkPower = new AwakeningSystem(this);
         Items = new DroppedItemSystem(this);
         Spells = new SpellSystem(this);
         Cities = new CityStateSystem(this);
@@ -177,6 +181,21 @@ public sealed class Simulation
         {
             if (value != _dominion && Tick != 0) throw new InvalidOperationException("Dominion is set before the first tick");
             _dominion = value;
+        }
+    }
+
+    /// <summary>
+    /// The Awakening (see <see cref="AwakeningSystem"/>): the dark power under the Heartscar wakes late in the match,
+    /// spreading corrupted ground and sending broods of corrupted beasts at every player. Off unless set, before the
+    /// first tick; off, it sleeps all match.
+    /// </summary>
+    public bool Awakening
+    {
+        get => _awakening;
+        set
+        {
+            if (value != _awakening && Tick != 0) throw new InvalidOperationException("The Awakening is set before the first tick");
+            _awakening = value;
         }
     }
 
@@ -348,6 +367,7 @@ public sealed class Simulation
         Economy.Step();
         Physics.Step();
         Hazards.Step();
+        DarkPower.Step();
         Combat.Step();
         Blood.Step();
         Evolution.Step();
@@ -384,6 +404,7 @@ public sealed class Simulation
         ^ Ruins.ComputeHash() * 0xC6BC279692B5C323UL
         ^ (_dominion ? 0x2B992DDFA23249D6UL ^ Sites.ComputeHash() * 0x9E3779B185EBCA87UL : 0)
         ^ Ascendancy.ComputeHash() * 0xF1357AEA2E62A9C5UL
+        ^ (_awakening ? 0x3F84D5B5B5470917UL ^ DarkPower.ComputeHash() * 0x9E3779B97F4A7C55UL : 0)
         ^ Spells.ComputeHash() * 0x2127599BF4325C37UL ^ Items.ComputeHash() * 0x5851F42D4C957F2DUL
         ^ (_fog ? Vision.ComputeHash() * 0xBF58476D1CE4E5B9UL : 0)
         ^ (_testMode ? 0x7A3E1C5B9D2F4E61UL ^ Sandbox.ComputeHash() * 0xE7037ED1A0B428DBUL : 0)

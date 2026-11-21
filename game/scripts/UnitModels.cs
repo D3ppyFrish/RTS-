@@ -55,6 +55,11 @@ public static class UnitModels
     private static readonly Color CrabShell = new(0.75f, 0.3f, 0.18f);
     private static readonly Color CrabDark = new(0.5f, 0.17f, 0.1f);
     private static readonly Color CrabBelly = new(0.9f, 0.75f, 0.55f);
+    // The dark power's corrupted beasts: black hide and stone veined with violet, and ember eyes.
+    private static readonly Color BlightHide = new(0.12f, 0.09f, 0.14f);
+    private static readonly Color BlightStone = new(0.2f, 0.16f, 0.24f);
+    private static readonly Color BlightVein = new(0.62f, 0.2f, 0.85f);
+    private static readonly Color BlightEye = new(1f, 0.32f, 0.1f);
     private static readonly Color Bristle = new(0.17f, 0.13f, 0.1f);
     private static readonly Color Iron = new(0.38f, 0.38f, 0.4f);
     private static readonly Color Toxic = new(0.55f, 1f, 0.3f);
@@ -545,6 +550,44 @@ public static class UnitModels
             .Box(-1, 12, 0, 0, 15, 2, Crystal).Box(-3, 10, -6, -2, 13, -4, Crystal)             // crystals down its back
             .Box(1, 9, -10, 2, 12, -8, Crystal).Box(-1, 7, -17, 0, 9, -16, Crystal)
             .Box(-6, 6, -2, 5, 6, 2, TeamDark),                                                 // a band, once it is someone's
+        // A blight hound: a big, lean black wolf with violet veins down its flanks, a ridge of spines and ember eyes.
+        "blight_hound" => new Builder().Wolf(BlightHide, BlightStone, big: true)
+            .Box(-2, 5, -4, -2, 5, 2, BlightVein).Box(1, 5, -4, 1, 5, 2, BlightVein)            // veins down the flanks
+            .Box(-1, 9, -5, 0, 9, -5, BlightVein).Box(-1, 9, -2, 0, 10, -2, BlightVein)         // spines down the back
+            .Box(-1, 9, 1, 0, 10, 1, BlightVein)
+            .Box(-2, 9, 7, -2, 9, 7, BlightEye).Box(1, 9, 7, 1, 9, 7, BlightEye)                // ember eyes
+            .Box(-1, 7, 10, 0, 7, 10, Bone),                                                     // bared fangs
+        // A blight brute: a hunched hulk of black stone as tall as a door, split with glowing violet cracks, its
+        // fists dragging, a shard of corrupt crystal through its back and ember eyes under a heavy brow.
+        "blight_brute" => new Builder()
+            .Box(-5, 0, -2, -2, 9, 2, BlightStone).Box(1, 0, -2, 4, 9, 2, BlightStone)           // legs
+            .Box(-6, 9, -4, 5, 21, 4, BlightStone)                                               // body
+            .Box(-7, 18, -5, 6, 22, 2, BlightHide)                                               // hunched back
+            .Box(-5, 12, 4, -5, 19, 4, BlightVein).Box(1, 10, 4, 1, 16, 4, BlightVein)           // cracks
+            .Box(-3, 15, 4, 3, 15, 4, BlightVein)
+            .Box(-10, 6, -2, -7, 20, 2, BlightStone).Box(6, 6, -2, 9, 20, 2, BlightStone)        // long arms
+            .Box(-11, 1, -3, -6, 6, 3, BlightHide).Box(5, 1, -3, 10, 6, 3, BlightHide)           // dragging fists
+            .Box(-3, 20, 2, 2, 25, 7, BlightStone).Box(-3, 24, 7, 2, 25, 8, BlightHide)          // head and brow
+            .Box(-2, 23, 8, -2, 23, 8, BlightEye).Box(1, 23, 8, 1, 23, 8, BlightEye)             // eyes
+            .Box(-1, 22, -6, 0, 29, -5, BlightVein).Box(-3, 21, -6, -3, 25, -6, BlightVein),     // crystal shards
+        // A blight horror: the dark power's own spawn, a towering thing of black stone and hide twice a man's
+        // height on four thick legs, with a crown of violet crystal, a gaping maw of bone and a burning heart.
+        "blight_horror" => new Builder()
+            .Box(-9, 0, -9, -5, 12, -5, BlightStone).Box(4, 0, -9, 8, 12, -5, BlightStone)       // hind legs
+            .Box(-9, 0, 4, -5, 14, 8, BlightStone).Box(4, 0, 4, 8, 14, 8, BlightStone)           // fore legs
+            .Box(-10, 12, -11, 9, 28, 10, BlightHide)                                            // a vast body
+            .Box(-8, 13, 10, 7, 26, 11, BlightStone)                                             // breast plates
+            .Box(-2, 17, 11, 1, 22, 12, BlightEye)                                               // the burning heart
+            .Box(-10, 20, -6, -10, 26, 6, BlightVein).Box(9, 20, -6, 9, 26, 6, BlightVein)       // veins down the flanks
+            .Box(-6, 24, 10, 5, 34, 18, BlightStone)                                             // head
+            .Box(-5, 22, 14, 4, 24, 19, Bone)                                                    // lower jaw
+            .Box(-5, 25, 19, -4, 27, 19, Bone).Box(-1, 25, 19, 0, 27, 19, Bone).Box(3, 25, 19, 4, 27, 19, Bone) // fangs
+            .Box(-4, 31, 18, -3, 32, 18, BlightEye).Box(2, 31, 18, 3, 32, 18, BlightEye)         // eyes
+            .Box(-5, 35, 12, -4, 41, 13, BlightVein).Box(-1, 35, 13, 0, 43, 14, BlightVein)      // a crown of crystal
+            .Box(3, 35, 12, 4, 41, 13, BlightVein)
+            .Box(-6, 29, -8, -5, 36, -6, BlightVein).Box(4, 29, -4, 5, 37, -2, BlightVein)       // shards down its back
+            .Box(-1, 29, 2, 0, 38, 4, BlightVein)
+            .Box(-10, 13, -2, 9, 14, 2, TeamDark),                                               // a band, once it is someone's
         "wolf_rider" => new Builder().Wolf(DarkFur, Fur, big: true)
             .Box(-3, 6, -4, 2, 9, 1, TeamDark)                                           // saddle cloth down the flanks
             .Orc(lift: 4, legs: false)

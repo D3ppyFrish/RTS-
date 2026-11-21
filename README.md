@@ -32,6 +32,7 @@ scripts/ui-citystate-screenshots.sh   # scripted city-state: break the goblins' 
 scripts/ui-match-screenshots.sh       # scripted match flow: start screen, surrender, defeat and its replay, victory
 scripts/ui-dominion-screenshots.sh    # scripted ancient sites: soldiers walk into a ruin and take it; its banner, the sites button, the alert
 scripts/ui-ascendancy-screenshots.sh  # scripted great work (--great-work): the Hall of Legends in the deep caves, the crown countdown, the win
+scripts/ui-awakening-screenshots.sh   # scripted dark power (--awakening --awaken=2): the corrupted Heartscar, its button, broods rising
 scripts/ui-fog-screenshots.sh         # scripted fog of war: the start screen switch, enemies hidden until in sight
 scripts/ui-dig-screenshots.sh         # scripted dig tool: workers and sappers dig out a dragged area
 scripts/ui-wall-screenshots.sh        # scripted walls: a gate placed, a wall drawn through it and built, upgraded twice, archers posted on it, a stone tower put onto it and a watchtower beside it
@@ -95,7 +96,9 @@ have 500 mana, so the mages can cast).
 `--player=1` plays the Orcs at the east start instead of the Settlers at the west one, `--ai` has
 the computer play the other players (see [Winning and computer players](docs/rules.md#winning-and-computer-players)), at `--ai-level=easy`, `normal` (the default), `hard` or `classic`, and `--fog` turns fog of war on
 (see [Fog of war](docs/rules.md#fog-of-war)). `--dominion` plays with dominion, winning by holding most of the old
-ruins (see [Ancient sites and dominion](docs/rules.md#ancient-sites-and-dominion)); the match runner takes `--dominion` with `--ai` too. `--daynight` plays with day, night and weather, and
+ruins (see [Ancient sites and dominion](docs/rules.md#ancient-sites-and-dominion)); the match runner takes `--dominion` with `--ai` too. `--awakening` plays with the dark power waking (see
+[The dark power](docs/rules.md#the-dark-power-the-awakening)), and `--awaken=N` starts it at stage N; the match
+runner takes `--awakening` with `--ai`. `--daynight` plays with day, night and weather, and
 `--time-of-day=H` does too, starting at hour H (8 morning, 13 noon, 19.3 dusk, 0 midnight);
 `--weather=W` makes the first day's weather W (clear, cloudy, rain, storm or fog), `--lights=N` puts N
 torches and a campfire around your town hall, and `--focus=swamp` or `--focus=lava` looks at the swamp

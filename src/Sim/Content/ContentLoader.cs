@@ -592,7 +592,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -646,6 +646,9 @@ public static class ContentLoader
                 Hasten = o.Int("hasten", 0, 400, 0),
                 WorkPercent = o.Int("work", 10, 1000, 100),
                 Lair = Lair(o),
+                Awakening = o.Int("awakening", 1, Rts.Sim.World.AwakeningSystem.Stages, 0),
+                Brood = o.Int("brood", 1, 50, 0),
+                Bounty = o.Cost("bounty"),
                 FromDen = o.Bool("fromDen"),
                 InStart = !o.Has("start") || o.Bool("start"),
             };
@@ -666,6 +669,12 @@ public static class ContentLoader
                 o.Error("lives in lairs, so it is not trained or evolved into: it cannot have \"trainedAt\", \"evolvesFrom\", \"cost\" or \"trainTime\"");
             if (def.Lair != null && def.Role != UnitRole.Monster)
                 o.Error("lives in lairs, so its \"role\" should be monster");
+            if (def.Awakening > 0 && (def.Role != UnitRole.Monster || def.Lair != null || trainedAt != null || evolvesFrom != null || o.Has("cost")))
+                o.Error("rises with the dark power (\"awakening\"), so it is a monster with no \"lair\", \"trainedAt\", \"evolvesFrom\" or \"cost\"");
+            if ((def.Awakening > 0) != (def.Brood > 0))
+                o.Error("\"awakening\" and \"brood\" go together: the stage a corrupted beast rises from, and how many rise at a time");
+            if (def.Bounty.Length > 0 && def.Role != UnitRole.Monster)
+                o.Error("only a monster pays a \"bounty\"");
             var hiredFrom = o.Str("hiredFrom", false);
             if (hiredFrom != null && (trainedAt != null || evolvesFrom != null || def.Lair != null || o.Has("trainTime")))
                 o.Error("is a mercenary, hired at a city-state's town: it cannot have \"trainedAt\", \"evolvesFrom\", \"lair\" or \"trainTime\"");
@@ -1398,6 +1407,12 @@ public static class ContentLoader
                 h.Add(u.EvolvesFrom?.Index ?? -1);
                 h.Add(u.FromDen ? 1 : 0);
                 h.Add(u.InStart ? 1 : 0);
+                if (u.Awakening > 0 || u.Bounty.Length > 0)
+                {
+                    h.Add(u.Awakening);
+                    h.Add(u.Brood);
+                    h.Add(u.Bounty);
+                }
                 if (u.Lair is { } lair)
                 {
                     h.Add(lair.Pack);

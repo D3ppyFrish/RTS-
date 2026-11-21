@@ -80,6 +80,11 @@ namespace Rts.Game;
 ///   --dominion[=off]      the old ruins are ancient sites, and holding more than half of them for 3 minutes wins
 ///                         (see Rts.Sim.World.DominionSystem). A match started from the command line has it only with
 ///                         --dominion; on the start screen it is ticked unless --dominion=off
+///   --awakening[=off]     the dark power under the Heartscar wakes late in the match, spreading corrupted ground
+///                         and sending broods of corrupted beasts at everyone (see Rts.Sim.World.AwakeningSystem). A
+///                         match started from the command line has it only with --awakening; on the start screen it
+///                         is ticked unless --awakening=off
+///   --awaken=N            with the Awakening on, the dark power is at stage N (1 to 3) from the first tick
 ///   --great-work          your faction's great work stands finished in the deep caves' chamber nearest your
 ///                         start, in a hall dug out for it, its clock running (see Rts.Sim.World.AscendancySystem)
 ///   --lights=N            N torches around your town hall and a campfire south of it, all finished
@@ -118,7 +123,7 @@ public partial class Main : Node3D
     private const int MaxTicksPerFrame = 8;
 
     /// <summary>Options that set a match up other than the usual start, so that its log would not replay it.</summary>
-    private static readonly string[] TestSetups = { "map", "units", "battle", "lineup", "goods", "houses", "raid", "xp", "weather", "lights", "blood", "dusk-party", "great-work" };
+    private static readonly string[] TestSetups = { "map", "units", "battle", "lineup", "goods", "houses", "raid", "xp", "weather", "lights", "blood", "dusk-party", "great-work", "awaken" };
 
     private Dictionary<string, string> _args = new();
     private ContentDb _content = null!;
@@ -151,6 +156,7 @@ public partial class Main : Node3D
     private GhostRenderer _ghostRenderer = null!;
     private CombatRenderer _combatRenderer = null!;
     private BloodRenderer _bloodRenderer = null!;
+    private CorruptionRenderer _corruptionRenderer = null!;
     private IceRenderer _iceRenderer = null!;
     private ItemRenderer _itemRenderer = null!;
     private UnitIcons _unitIcons = null!;
@@ -209,6 +215,7 @@ public partial class Main : Node3D
             : _args.ContainsKey("time-of-day") ? true : null;
         bool test = _args.ContainsKey("test-mode");
         bool? dominion = _args.TryGetValue("dominion", out var dms) ? dms is not ("off" or "0" or "false") : null;
+        bool? awakening = _args.TryGetValue("awakening", out var aws) ? aws is not ("off" or "0" or "false") : _args.ContainsKey("awaken") ? true : null;
         if (_args.TryGetValue("scenario", out var scenarioPath))
         {
             _scenario = ReadScenario(scenarioPath);
@@ -221,11 +228,11 @@ public partial class Main : Node3D
         }
         if (_scenario != null)
             StartMatch(new MatchSetup(_scenario.Seed, player, _args.ContainsKey("ai"), _scenario.Fog, level, _scenario.DayNight, TestMode: true,
-                Dominion: _scenario.Dominion), fromMenu: false);
+                Dominion: _scenario.Dominion, Awakening: _scenario.Awakening), fromMenu: false);
         else if (_args.Count == 0 || _args.ContainsKey("menu"))
-            ShowStartScreen(new MatchSetup(seed ?? StartScreen.RandomSeed(), player, Computer: true, Fog: fog ?? true, level, DayNight: dayNight ?? true, test, dominion ?? true));
+            ShowStartScreen(new MatchSetup(seed ?? StartScreen.RandomSeed(), player, Computer: true, Fog: fog ?? true, level, DayNight: dayNight ?? true, test, dominion ?? true, awakening ?? true));
         else
-            StartMatch(new MatchSetup(seed ?? 1234UL, player, _args.ContainsKey("ai"), Fog: fog ?? false, level, DayNight: dayNight ?? false, test, dominion ?? false), fromMenu: false);
+            StartMatch(new MatchSetup(seed ?? 1234UL, player, _args.ContainsKey("ai"), Fog: fog ?? false, level, DayNight: dayNight ?? false, test, dominion ?? false, awakening ?? false), fromMenu: false);
     }
 
     public override void _Process(double delta)
@@ -317,6 +324,7 @@ public partial class Main : Node3D
         _sim.DayNight = setup.DayNight;
         _sim.TestMode = setup.TestMode;
         _sim.Dominion = setup.Dominion;
+        _sim.Awakening = setup.Awakening;
         if (scenario == null && _args.ContainsKey("time-of-day"))
             _sim.DayStart = (int)(Mathf.PosMod(ArgFloat(_args, "time-of-day", 8f), 24f) * 60f);
         _issue = c => _sim.Schedule(_sim.Tick, c);
@@ -401,6 +409,9 @@ public partial class Main : Node3D
         _bloodRenderer = new BloodRenderer();
         _match.AddChild(_bloodRenderer);
         _bloodRenderer.Init(_sim, _fog);
+        _corruptionRenderer = new CorruptionRenderer();
+        _match.AddChild(_corruptionRenderer);
+        _corruptionRenderer.Init(_sim, _fog);
         _iceRenderer = new IceRenderer();
         _match.AddChild(_iceRenderer);
         _iceRenderer.Init(_sim, _fog);
@@ -497,6 +508,7 @@ public partial class Main : Node3D
         _ghostRenderer.UpdateGhosts(_control);
         _combatRenderer.UpdateFrame(alpha, _control.Selected);
         _bloodRenderer.UpdateFrame(alpha);
+        _corruptionRenderer.UpdateFrame();
         _iceRenderer.UpdateFrame();
         _itemRenderer.UpdateFrame((float)delta);
         _unitIcons.UpdateFrame(alpha);
@@ -673,6 +685,7 @@ public partial class Main : Node3D
         if (_args.TryGetValue("xp", out var xs) && int.TryParse(xs, out var xp) && xp > 0) GiveExperience(xp);
         if (_args.TryGetValue("dusk-party", out var ds) && int.TryParse(ds, out var party) && party > 0) SpawnDuskParty(party);
         if (_args.ContainsKey("great-work")) GiveGreatWork();
+        if (_args.TryGetValue("awaken", out var aw) && int.TryParse(aw, out var stage) && stage > 0) _sim.DarkPower.WakeTo(stage);
         if (_args.TryGetValue("blood", out var bls) && int.TryParse(bls, out var stains) && stains > 0) SpillBlood(stains, fx, fz);
         // A match from the usual start is recorded as it is played, to be saved as a replay at its end.
         var odd = new List<string>();
@@ -680,7 +693,7 @@ public partial class Main : Node3D
             if (_args.ContainsKey(option)) odd.Add("--" + option);
         _noReplay = odd.Count > 0 ? $"the match was set up with {string.Join(", ", odd)}" : "";
         if (odd.Count == 0) _sim.Recording = CommandLog.UsualStart(setup.Seed, WorldX, WorldY, WorldZ, _content, setup.Fog,
-            setup.DayNight, _sim.DayStart, setup.TestMode, _sim.World.TreeScale, setup.Dominion);
+            setup.DayNight, _sim.DayStart, setup.TestMode, _sim.World.TreeScale, setup.Dominion, setup.Awakening);
     }
 
     /// <summary>
@@ -695,7 +708,7 @@ public partial class Main : Node3D
             Seed = scenario.Seed, SizeX = scenario.SizeX, SizeY = scenario.SizeY, SizeZ = scenario.SizeZ, StartUnits = scenario.StartUnits,
             StartBuildings = scenario.StartBuildings, StartLairs = scenario.StartLairs, StartCities = scenario.StartCities,
             ContentHash = scenario.ContentHash, Fog = scenario.Fog, DayNight = scenario.DayNight, DayStart = scenario.DayStart, TestMode = true,
-            TreeScale = scenario.TreeScale, Dominion = scenario.Dominion,
+            TreeScale = scenario.TreeScale, Dominion = scenario.Dominion, Awakening = scenario.Awakening,
         };
         int next = 0;
         while (_sim.Tick < scenario.Ticks)
@@ -739,7 +752,7 @@ public partial class Main : Node3D
         LeaveMatch();
         _scenario = scenario;
         StartMatch(last with { Seed = scenario.Seed, Fog = scenario.Fog, DayNight = scenario.DayNight, TestMode = true,
-            Dominion = scenario.Dominion }, fromMenu: true);
+            Dominion = scenario.Dominion, Awakening = scenario.Awakening }, fromMenu: true);
         if (sameWorld) FocusCamera(cx, cz, yaw, pitch, distance);
     }
 
@@ -813,6 +826,7 @@ public partial class Main : Node3D
         _ghostRenderer.SetSlice(y);
         _combatRenderer.Material.SetShaderParameter("slice_y", y);
         _bloodRenderer.Material.SetShaderParameter("slice_y", y);
+        _corruptionRenderer.Material.SetShaderParameter("slice_y", y);
         _iceRenderer.Material.SetShaderParameter("slice_y", y);
         _itemRenderer.SetSlice(y);
         _unitIcons.Material.SetShaderParameter("slice_y", y);
