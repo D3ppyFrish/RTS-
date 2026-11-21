@@ -269,7 +269,8 @@ public sealed class MonsterSystem
         for (int c = 0; c < _sim.Map.Caverns.Count; c++)
         {
             var cave = _sim.Map.Caverns[c];
-            var floor = CavernFloor(cave.X, cave.Y, cave.Z);
+            // On a deep map the cavern's tunnel down to the deep caves is not the cavern: its lairs stay in it.
+            var floor = CavernFloor(cave.X, cave.Y, cave.Z, _sim.Map.Deeps.Count > 0 ? cave.Y - CavernDrop : int.MinValue);
             _groundCache = null;
             if (floor.Count == 0) continue;
             int deepest = floor[^1].Steps;
@@ -288,14 +289,40 @@ public sealed class MonsterSystem
                 }
             }
         }
+        PlaceDeeps(monsters, placed);
         return placed;
+    }
+
+    /// <summary>How far below its first chamber (layers) a hill cavern's lairs may be, on a map with deep caves.</summary>
+    public const int CavernDrop = 8;
+
+    /// <summary>
+    /// The nests in the deep caves (see <see cref="RegionMap.Deeps"/>): in every
+    /// <see cref="Rts.Sim.World.RegionGenerator.DeepNestEvery"/>th chamber, a lair of a monster that lives along a cavern, taking
+    /// those monsters in turn, bar a chamber under a start (within <see cref="WildStartGap"/>).
+    /// </summary>
+    private void PlaceDeeps(IReadOnlyList<UnitDef> monsters, List<Lair> placed)
+    {
+        var along = new List<UnitDef>();
+        foreach (var m in monsters) if (m.Lair!.Cavern == CavernSpot.Along) along.Add(m);
+        if (along.Count == 0) return;
+        for (int k = 0, n = 0; k < _sim.Map.Deeps.Count; k += Rts.Sim.World.RegionGenerator.DeepNestEvery)
+        {
+            var (x, y, z) = _sim.Map.Deeps[k];
+            bool underStart = false;
+            foreach (var s in _sim.Map.Starts)
+                if (IntMath.Distance(x, z, s.X, s.Z) < WildStartGap) underStart = true;
+            if (underStart) continue;
+            if (Place(along[n++ % along.Count], x, z, near: y) is { } lair) placed.Add(lair);
+        }
     }
 
     /// <summary>
     /// The cave floor reachable on foot from the cavern's first chamber, staying under the roof (a solid block
-    /// above, so not up the way in), in walking order: each cell with its steps from the start.
+    /// above, so not up the way in) and no lower than <paramref name="lowest"/>, in walking order: each cell with its
+    /// steps from the start.
     /// </summary>
-    public List<(int X, int Y, int Z, int Steps)> CavernFloor(int cx, int cy, int cz)
+    public List<(int X, int Y, int Z, int Steps)> CavernFloor(int cx, int cy, int cz, int lowest = int.MinValue)
     {
         var cells = new List<(int X, int Y, int Z, int Steps)>();
         int sy = Walk.NearestStandLevel(World, cx, cz, cy, GuardHeight * 2);
@@ -312,7 +339,7 @@ public sealed class MonsterSystem
             {
                 int nx = x + dx, nz = z + dz;
                 if (!World.InBounds(nx, 0, nz) || !Walk.TryStep(World, x, z, y, nx, nz, out int ny)) continue;
-                if (!Roofed(nx, ny, nz) || !seen.Add(Key(nx, ny, nz))) continue;
+                if (ny < lowest || !Roofed(nx, ny, nz) || !seen.Add(Key(nx, ny, nz))) continue;
                 cells.Add((nx, ny, nz, steps + 1));
             }
         }

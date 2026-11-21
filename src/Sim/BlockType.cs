@@ -67,7 +67,7 @@ public enum BlockType : byte
     PineWood,
     /// <summary>Birch trunk: white bark with dark marks.</summary>
     BirchWood,
-    /// <summary>A giant mushroom's stalk (swamps).</summary>
+    /// <summary>A giant mushroom's stalk (swamps, and the deep caves' upper chambers).</summary>
     MushroomStem,
     /// <summary>Pine needles: a dark, tiered cone.</summary>
     PineNeedles,

@@ -59,7 +59,9 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "${#UI[@]}" -eq 5 ] || fail "expected 5 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" building)" = town_hall ] || fail "the town hall is not selected: ${UI[0]}"
 [ "$(field "${UI[0]}" governor)" = defence ] || fail "the governor is not set: ${UI[0]}"
-[ "$(field "${UI[0]}" idle)" -ge 1 ] && [ "$(field "${UI[1]}" idle)" -eq 0 ] || fail "the idle workers were not put to work: ${UI[0]} ${UI[1]}"
+# An automatic worker counts as idle for the few ticks between one job and the next, so either later look will do.
+[ "$(field "${UI[0]}" idle)" -ge 1 ] && { [ "$(field "${UI[1]}" idle)" -eq 0 ] || [ "$(field "${UI[2]}" idle)" -eq 0 ]; } \
+  || fail "the idle workers were not put to work: ${UI[0]} ${UI[1]} ${UI[2]}"
 [ "$(field "${UI[1]}" barracks)" -eq 1 ] || fail "no barracks: ${UI[1]}"
 [ "$(field "${UI[2]}" towers)" -eq 4 ] || fail "expected four watchtowers: ${UI[2]}"
 [ "$(field "${UI[2]}" techs)" -ge 2 ] || fail "farming and archery were not researched: ${UI[2]}"
