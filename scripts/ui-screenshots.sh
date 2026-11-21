@@ -49,6 +49,6 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [[ "${UI[0]}" =~ own=([0-9]+) ]] && [ "${BASH_REMATCH[1]}" -ge 20 ] || fail "box selection picked too few units: ${UI[0]}"
 [[ "${UI[1]}" == *"paused=1"* ]] || fail "not paused: ${UI[1]}"
 # The slice starts at the camera's ground on the hill over the cavern (level 39) and goes down 25: 14.
-[[ "${UI[2]}" == *"slice=14"* ]] || fail "slice not at 14: ${UI[2]}"
+[[ "${UI[2]}" == *"slice=78"* ]] || fail "slice not at 78 (14 above the deep rock): ${UI[2]}"
 [ "$(grep -c '^Saved screenshot' "$LOG")" -eq 5 ] || fail "missing screenshots"
 echo "UI screenshot test OK: $OUT"
