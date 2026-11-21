@@ -264,6 +264,7 @@ public sealed partial class EconomySystem
             foreach (int form in p.AutoForm) Mix(form);
         }
         MixDigAreas(ref h);
+        MixRamps(ref h);
         MixSaplings(ref h);
         return h;
     }
@@ -277,6 +278,7 @@ public sealed partial class EconomySystem
         for (int i = 0; i < U.Count; i++)
             if (U.Job[i] != UnitJob.None) StepJob(i);
         PruneDigAreas();
+        PruneRamps();
         StepSaplings();
 
         var all = Buildings.All;

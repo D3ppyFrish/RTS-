@@ -76,6 +76,7 @@ public partial class Hud : CanvasLayer
     private Button _chasmButton = null!;
     private Button _growForestButton = null!;
     private Button _iceBridgeButton = null!;
+    private Button _rampButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
@@ -513,6 +514,16 @@ public partial class Hud : CanvasLayer
             grid.AddChild(bridge);
             _buildButtons.Add((bridge, bridgeDef, Key.Apostrophe));
         }
+        _rampButton = MakeToolButton("");
+        _rampButton.Name = "build_ramp";
+        _rampButton.Icon = UiIcons.Get("ramp");
+        _rampButton.TooltipText = "Drag from the foot of a cliff, a hill or a wall to its face for the selected workers and " +
+                                  "sappers to heap a ramp of earth up to its top, a level a column. Units walk up it onto " +
+                                  "the cliff or the wall, and from a wall they climb down the far side. Each block costs " +
+                                  $"{EconomySystem.StonePerRamp} stone as it goes in. It is plain ground once it is built: the " +
+                                  "enemy can walk it too, and anyone can dig it away.";
+        _rampButton.Pressed += () => _control.ToggleRamp();
+        grid.AddChild(_rampButton);
         var road = MakeToolButton("");
         road.Name = "build_road";
         road.Icon = UiIcons.Get("road");
@@ -1102,6 +1113,9 @@ public partial class Hud : CanvasLayer
             }
             button.SetPressedNoSignal(def != null ? _control.BuildDef == def : _control.Tool == PlayerControl.ToolMode.Road);
         }
+        _rampButton.Text = $"Ramp  [Shift+X]\n{EconomySystem.StonePerRamp} stone a block";
+        _rampButton.Disabled = econ.Stock(player, Good.Stone) < EconomySystem.StonePerRamp;
+        _rampButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Ramp);
         _planModeButton.SetPressedNoSignal(_control.PlanMode);
         _planModeButton.Text = _control.PlanMode ? "Plan mode: on  [Tab]" : "Plan mode: off  [Tab]";
         var b = _sim.Buildings.Get(_control.SelectedBuilding);
@@ -1789,13 +1803,25 @@ public partial class Hud : CanvasLayer
                        (_control.OwnWorkers().Count == 0 ? "   (select workers first)" : "") +
                        "\nShift: draw another   Right click or Esc to stop   (Ctrl+right click a bridge: knock that column out)";
             }
+            case PlayerControl.ToolMode.Ramp:
+            {
+                var preview = _control.WallPreview;
+                int stone = _control.RampBlocks * EconomySystem.StonePerRamp;
+                return (!_control.WallStarted ? "Ramp: drag from the foot to the face of a cliff, a hill or a wall for the selected workers and sappers to heap a ramp up to its top"
+                           : _control.RampTop < 0
+                               ? $"Ramp: it must lean on something 2 to {EconomySystem.MaxRampRise} levels higher, with a column of room for each level to climb (up to {EconomySystem.MaxRamp} columns)"
+                               : $"Ramp: let go to heap {_control.RampBlocks} blocks of earth up to level {_control.RampTop} ({stone} stone" +
+                                 (stone > _sim.Economy.Stock(PlayerControl.LocalPlayer, Good.Stone) ? ", more than you have" : "") + ")") +
+                       (_control.OwnDiggers().Count == 0 ? "   (select workers or sappers first)" : "") +
+                       "\nShift: draw another   Right click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Road:
                 return _control.RoadStarted
                     ? $"Road: click where it ends ({_control.RoadPreview.Count} blocks, {_control.RoadPreview.Count * EconomySystem.StonePerRoad} stone; Shift carries on)\nRight click or Esc to stop"
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Shift+L: grow forest";
         }
     }
@@ -2207,6 +2233,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Capture => "capturing a storehouse",
         UnitJob.Burn => "burning a storehouse",
         UnitJob.Tunnel => "tunnelling",
+        UnitJob.Ramp => u.Phase[i] == JobPhase.Working ? "heaping earth onto a ramp" : "going to the ramp",
         UnitJob.Clean => u.Phase[i] == JobPhase.Working ? "scrubbing blood" : "cleaning blood",
         UnitJob.Post => u.Phase[i] == JobPhase.Working ? "climbing a wall" : "going to its post on a wall",
         UnitJob.Dig => u.Phase[i] switch

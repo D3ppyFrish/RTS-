@@ -37,6 +37,7 @@ public sealed partial class EconomySystem
             case UnitJob.Post: StepPost(i); break;
             case UnitJob.Supply: StepSupply(i); break;
             case UnitJob.Quarry: StepQuarry(i); break;
+            case UnitJob.Ramp: StepRamp(i); break;
         }
     }
 
