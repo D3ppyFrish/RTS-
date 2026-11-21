@@ -11,8 +11,9 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
 # Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it. The deep
-# river crosses z = 342 between x = 407 and 419, its banks level at x = 405 and 421: the deck spans it. The
-# units walk north to 150,342 first, so the builders keep well clear of the wolf den 40 columns east of the start.
+# river crosses z = 300 between x = 415 and 427 (north of the shadowed wilds and their shade stalker dens), its
+# banks level at x = 413 and 429: the deck spans it. The units walk north to 150,300 first, so the builders keep
+# well clear of the wolf den 40 columns east of the start.
 STEPS="
 wait 20
 camera 141,392 30 50 20
@@ -23,15 +24,15 @@ mouse 1080,640
 up 1080,640
 wait 2
 print
-clickworld 150,g,342 right
+clickworld 150,g,300 right
 ticks 600
-camera 413,342 10 45 18
+camera 421,300 10 45 18
 wait 5
 key apostrophe
 wait 2
-mouseworld 405,g,342
+mouseworld 413,g,300
 down here
-mouseworld 421,g,342
+mouseworld 429,g,300
 wait 3
 print
 shot $OUT/ui-bridge-drag.png

@@ -11,40 +11,40 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, map centre: open ground at levels 20 to 22. With --battle=16 your army stands in two ranks
-# at x 369..370, z 353..367, the enemy's at x 382..383 (they stand their ground until something comes near).
-# The chasm runs north to south at x 382 (three wide: x 381..383), under both enemy ranks; the mages walk a
+# Seed 1234, west of the map centre (the centre is the gloom forest): open ground. With --battle=16 your army stands in two ranks
+# at x 253..254, z 409..423, the enemy's at x 266..267 (they stand their ground until something comes near).
+# The chasm runs north to south at x 266 (three wide: x 265..267), under both enemy ranks; the mages walk a
 # block or two to have it in reach.
 STEPS="
 wait 20
-camera 376,360 300 50 20
+camera 260,416 300 50 20
 wait 5
-dragworld 364,g,350 373,g,371
+dragworld 248,g,406 257,g,427
 wait 2
 print
 key shift+z
 wait 2
-mouseworld 382,g,356
+mouseworld 266,g,412
 down here
-mouseworld 382,g,363
+mouseworld 266,g,419
 wait 3
 print
 shot $OUT/ui-chasm-drag.png
 up here
 ticks 80
 print
-camera 382,360 250 35 16
+camera 266,416 250 35 16
 wait 5
 shot $OUT/ui-chasm-open.png
 ticks 640
 print
-camera 382,360 250 35 16
+camera 266,416 250 35 16
 wait 5
 shot $OUT/ui-chasm-closed.png
 "
 LOG="$OUT/ui-chasm.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --trees=1 --focus=376,360 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --trees=1 --focus=260,416 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI chasm test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

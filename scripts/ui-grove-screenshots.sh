@@ -11,39 +11,39 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, map centre: open ground at levels 20 to 22. With --battle=16 your army stands in two ranks
-# at x 369..370, z 353..367, the enemy's at x 382..383 (they stand their ground until something comes near).
-# The grove runs north to south at x 376, between them (rows at x 374, 376 and 378 for three mages).
+# Seed 1234, west of the map centre (the centre is the gloom forest): open ground. With --battle=16 your army stands in two ranks
+# at x 253..254, z 409..423, the enemy's at x 266..267 (they stand their ground until something comes near).
+# The grove runs north to south at x 260, between them (rows at x 258, 260 and 262 for three mages).
 STEPS="
 wait 20
-camera 376,360 300 50 20
+camera 260,416 300 50 20
 wait 5
-dragworld 364,g,350 373,g,371
+dragworld 248,g,406 257,g,427
 wait 2
 print
 key shift+l
 wait 2
-mouseworld 376,g,356
+mouseworld 260,g,412
 down here
-mouseworld 376,g,363
+mouseworld 260,g,419
 wait 3
 print
 shot $OUT/ui-grove-drag.png
 up here
 ticks 80
 print
-camera 376,360 250 35 18
+camera 260,416 250 35 18
 wait 5
 shot $OUT/ui-grove-grown.png
 ticks 1200
 print
-camera 368,360 270 25 22
+camera 252,416 270 25 22
 wait 5
 shot $OUT/ui-grove-later.png
 "
 LOG="$OUT/ui-grove.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --trees=1 --focus=376,360 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --trees=1 --focus=260,416 --battle=16 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI grove test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
