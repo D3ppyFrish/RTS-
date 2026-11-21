@@ -4,8 +4,9 @@
 # road east, then march on the goblin town and break its totem: the town is yours, its guards change sides
 # and the totem stands again in your colour. A goblin of each kind is hired at its market, and a caravan is
 # trained at the town hall and sent to trade at the town, while tribute comes in. Last the ogres' hold
-# (issue #46) is picked from the top bar: neutral, its stone idol plain and four ogre guards round it. Saves
-# PNGs to OUT_DIR and fails if the UI state is not as expected.
+# (issue #46) is picked from the top bar: neutral, its stone idol plain and four ogre guards round it, and then
+# the kobolds' warren, dug into a chamber of the deep caves, seen through the height slice: neutral, its great
+# crystal plain and five kobold guards round it. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-citystate-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/ui}")"
@@ -18,7 +19,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # 128..134 x 381..387 with the starting units in rows just south of it, and the wolf lair 40 blocks east
 # (den at 171,384), which a lone caravan would not get past. --goods gives enough for the hires and the
 # caravan; --houses makes room for them behind the hall (the start has more people than its hall houses).
-# The ogres' hold has its market at 393,632.
+# The ogres' hold has its market at 393,632, and the kobolds' warren at 418,46,437 (under the forest).
 STEPS="
 wait 20
 clickui city_goblins
@@ -88,6 +89,19 @@ shot $OUT/ui-ogres.png
 camera 394,633 -30 40 11
 wait 5
 shot $OUT/ui-ogres-close.png
+clickui city_kobolds
+wait 5
+key home
+camera 418,437 20 75 30
+wait 3
+key pagedown*34
+camera 418,437 20 60 30
+wait 20
+print
+shot $OUT/ui-kobolds.png
+camera 419,440 -30 55 14
+wait 10
+shot $OUT/ui-kobolds-close.png
 "
 LOG="$OUT/ui-citystate.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -98,7 +112,7 @@ fail() { echo "UI city-state test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
 mapfile -t UI < <(grep '^UI ' "$LOG")
-[ "${#UI[@]}" -eq 8 ] || fail "expected 8 UI lines, got ${#UI[@]}"
+[ "${#UI[@]}" -eq 9 ] || fail "expected 9 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" city)" = goblins ] && [ "$(field "${UI[0]}" holder)" -eq -1 ] && [ "$(field "${UI[0]}" totem_owner)" -eq 7 ] \
   && [ "$(field "${UI[0]}" guards)" -eq 6 ] && [ "$(field "${UI[0]}" guards_owner)" -eq 7 ] \
   || fail "the goblin town is not selected, or it is not neutral with its totem and guards: ${UI[0]}"
@@ -113,5 +127,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
   || fail "no tribute or trade came in from the goblins: ${UI[6]}"
 [ "$(field "${UI[7]}" city)" = ogres ] && [ "$(field "${UI[7]}" holder)" -eq -1 ] && [ "$(field "${UI[7]}" totem_owner)" -eq 7 ] \
   && [ "$(field "${UI[7]}" guards)" -eq 4 ] || fail "the ogres' hold is not selected, or it is not neutral with its idol and guards: ${UI[7]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 7 ] || fail "missing screenshots"
+[ "$(field "${UI[8]}" city)" = kobolds ] && [ "$(field "${UI[8]}" holder)" -eq -1 ] && [ "$(field "${UI[8]}" totem_owner)" -eq 7 ] \
+  && [ "$(field "${UI[8]}" guards)" -eq 5 ] || fail "the kobolds' warren is not selected, or it is not neutral with its crystal and guards: ${UI[8]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 9 ] || fail "missing screenshots"
 echo "UI city-state screenshot test OK: $OUT"

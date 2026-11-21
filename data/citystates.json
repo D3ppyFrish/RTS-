@@ -17,6 +17,9 @@
 //     (the home rate in roles.json, wounds bound) once out of the fight. Leave it out for no healing there.
 //   lair (optional): a monster (see "lair" in units.json) whose lair lies near the town.
 //   wall, roof: what the town's huts are built of (planks, thatch, roof_tile or stone_brick).
+//   ground (optional): what the town's square is paved with (grass, the default, stone or stone_brick).
+//   deep (optional): true for a town dug out of a chamber of the deep caves rather than standing in the open; it
+//     is left out on a map with no deep caves.
 // All the numbers are first guesses for playtesting.
 [
   { "id": "goblins", "name": "Goblin town",
@@ -38,5 +41,14 @@
     "mercenaries": { "pool": 3, "refill": 60 },
     "heal": { "range": 6 },
     "lair": "stone_giant",
-    "wall": "stone_brick", "roof": "roof_tile" }
+    "wall": "stone_brick", "roof": "roof_tile" },
+  { "id": "kobolds", "name": "Kobold warren", "deep": true,
+    "description": "Kobold miners dug a hall out of a cave far under the ground, round a great crystal. Break it and they bow to you: they send you crystal, guard their warren against your enemies and sell you diggers and spears for food and crystal.",
+    "totem": { "building": "kobold_crystal", "respawn": 5 },
+    "guards": { "units": ["kobold_spear", "kobold_spear", "kobold_spear", "kobold_digger", "kobold_digger"], "reach": 4, "refill": 40 },
+    "tribute": { "caravan": "caravan", "good": "crystal", "amount": 8, "every": 60 },
+    "trade": { "buys": "food", "load": 20, "sells": "crystal", "price": 2, "holderBonus": 50 },
+    "mercenaries": { "pool": 4, "refill": 40 },
+    "heal": { "range": 6 },
+    "wall": "stone_brick", "roof": "stone_brick", "ground": "stone" }
 ]

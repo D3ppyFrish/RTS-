@@ -73,4 +73,12 @@ public sealed class CityStateDef
     public BlockType Wall { get; init; } = BlockType.Planks;
     /// <summary>What the huts' roofs are built of.</summary>
     public BlockType Roof { get; init; } = BlockType.Thatch;
+    /// <summary>What the town square is paved with (its top layer): grass unless the data says otherwise.</summary>
+    public BlockType Ground { get; init; } = BlockType.Grass;
+
+    /// <summary>
+    /// True for a town dug out of a chamber of the deep caves (see <c>RegionMap.Deeps</c>) instead of standing in
+    /// the open; on a map with no deep caves it is left out. See <c>CityStateSystem.PlaceDeep</c>.
+    /// </summary>
+    public bool Deep { get; init; }
 }

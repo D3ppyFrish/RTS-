@@ -375,7 +375,7 @@ public sealed class MonsterSystem
         foreach (var lair in _lairs)
             if (IntMath.Distance(x, z, lair.X, lair.Z) < WildGap) return false;
         foreach (var town in _sim.Cities.Towns)
-            if (IntMath.Distance(x, z, town.X, town.Z) < WildGap) return false;
+            if (!town.Deep && IntMath.Distance(x, z, town.X, town.Z) < WildGap) return false;
         if (!SiteFits(x, z)) return false;
         int y = Walk.GroundLevel(World, x, z);
         return World.Get(x, y - 1, z) is not (BlockType.Water or BlockType.Lava or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock);
@@ -423,7 +423,7 @@ public sealed class MonsterSystem
         foreach (var b in _sim.Buildings.All)
             if (b.ColumnDistance(x, z) <= BuildingGap) return false;
         foreach (var town in _sim.Cities.Towns)
-            if (town.ColumnDistance(x, z) <= BuildingGap) return false;
+            if (!town.Deep && town.ColumnDistance(x, z) <= BuildingGap) return false;
         return true;
     }
 

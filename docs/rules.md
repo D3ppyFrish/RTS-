@@ -895,8 +895,9 @@ hurts the units on or near it.
 ## City-states
 
 `src/Sim/Economy/CityStateSystem.cs`: towns of other races, too small to win, that trade with everyone
-and are won by force. There are two, the goblins and the ogres (`data/citystates.json`); everything below
-holds for both, with the goblins' numbers unless the ogres' section says otherwise.
+and are won by force. There are three, the goblins, the ogres and the kobolds (`data/citystates.json`);
+everything below holds for all of them, with the goblins' numbers unless the ogres' or the kobolds' section
+says otherwise.
 
 - **The town**: at match start each city-state gets a town about as far from every start area as from
   the others (on a 512 map about 96 blocks from their middle, where the ground allows): a levelled
@@ -957,6 +958,30 @@ holds for both, with the goblins' numbers unless the ogres' section says otherwi
   - Both **regenerate**: they heal 1% of their hit points every second even in a fight (`"regen"` in
     `units.json`), and out of the fight at that rate or the usual one, whichever is faster.
 
+- **The kobolds' warren** (`"deep": true` in `citystates.json`): a third city-state, dug out of a chamber of the
+  deep caves rather than standing in the open, placed last. Its chamber is one of the upper level's that is not a
+  nest's (see the deep caves under Monsters), at least one and a half times the usual distance (216 blocks on the
+  default map) from every start, scored as the other towns' sites are (fair to the starts, about the usual
+  distance from their middle, away from the towns already placed), from which a unit can walk up to the open (the
+  shafts, tunnels and ramps of the deep caves). There the kobolds dug a square hall into the rock: the same 15 by 15
+  square at the chamber's floor, paved with stone (`"ground"`), the rock cleared 8 high over it and the giant
+  mushrooms in it gone, a pool in its floor filled; the chamber must have no water or lava beside the square or
+  over the hall, no tree in it, and the land more than 4 layers over the hall. Its four huts are stone brick, and
+  its totem is the **kobold crystal** (`kobold_crystal`: a stone pillar 6 high on a 3×3 plinth, topped with a great
+  violet crystal, banded in the holder's colour). It keeps no lair of its own: the deep caves' nests are near
+  enough. Five kobolds guard it, three spears and two diggers (a fallen one is replaced every 40 seconds). Its
+  holder gets 8 crystal a minute as tribute (walked up out of the caves to the town hall), caravans bring back
+  crystal there (2 per 100 blocks of route) for food, and its holder hires kobolds, at most 4 ready at a time and one
+  more every 40 seconds, paid partly in crystal:
+  - **Kobold digger**: a sapper (40 hit points, speed 4.5, a pick that pierces), so a holder of any faction can
+    tunnel and undermine walls with it; 25 food and 5 crystal.
+  - **Kobold spear**: line infantry (45 hit points, speed 5, a long spear, reach 1.75, that pierces), with a hide
+    shield that stops 15% of the blows from in front; 30 food and 5 crystal.
+  - **Only its own level**: a deep town's guards fight soldiers within their reach of the square only within 8
+    levels of it, and its healing reaches only that far up or down, so the land far over it is not theirs. Building
+    over the warren is allowed (only straight over its crystal is taken), and the wild lairs spread across the map
+    do not keep away from it. A map with no deep caves (64 high) has no warren.
+
 This replaced the earlier influence alliance (gifts, influence from trade and lairs, raiding caravans
 for influence), which is gone. `CityStateTests` has the issue's checks: breaking the totem makes the
 goblins your vassals and tribute reaches your hall; another player breaking it takes the town over;
@@ -999,7 +1024,9 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   town hall. From 3 minutes on, when there are 12 more than the home guard (a fifth, at least 2), they
   go as a wave to the nearest enemy town hall, fighting what they meet on the way, then go for its
   defenders (soldiers within 18 columns of its door) and bring it down. Defenders that hold the wave up
-  for 30 seconds without one of them falling, out of reach on a wall say, stop holding it back. Each
+  for 30 seconds without one of them falling, out of reach on a wall say, stop holding it back. The wave
+  is there once its middle is within 14 columns of the target, or most of it is (a few stuck far behind
+  do not hold it back). Each
   wave needs 4 more soldiers than the last (half as many after 25 minutes), and a wave of at least 4
   goes anyway when the enemy has less than half as many soldiers in all. A wave down to a quarter of
   its soldiers comes home. Enemies within 32 columns of its town hall are met by every soldier at home,

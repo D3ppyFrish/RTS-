@@ -838,7 +838,7 @@ public sealed partial class AiPlayer
         }
         var (tx, tz) = (foe.AX, foe.AZ);
         int far = (int)IntMath.ISqrt(Dist2(cx, cz, tx, tz));
-        if (far > SiegeRadius)
+        if (far > SiegeRadius && !MostAt(sim, tx, tz))
         {
             // On the way: units that have stopped (they fought something, or gave up) set out again, every
             // few seconds; a wave that has not got any nearer for a minute is sent again from where it is.
@@ -904,6 +904,22 @@ public sealed partial class AiPlayer
         if (_scratch.Count == 0) return;
         if (defended) issue(new AttackMoveCommand(Player, _scratch.ToArray(), u.X[defender].FloorToInt(), u.Z[defender].FloorToInt()));
         else issue(new AttackBuildingCommand(Player, _scratch.ToArray(), target.Id));
+    }
+
+    /// <summary>
+    /// True if most of the wave is within <see cref="SiegeRadius"/> of (tx, tz): it has got there, though a few
+    /// stuck far behind (on the way out of its own town, say) hold its middle back.
+    /// </summary>
+    private bool MostAt(Simulation sim, int tx, int tz)
+    {
+        var u = sim.Units;
+        int at = 0;
+        foreach (int id in _wave)
+        {
+            int i = u.IndexOf(id);
+            if (i >= 0 && Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), tx, tz) <= (long)SiegeRadius * SiegeRadius) at++;
+        }
+        return 2 * at > _wave.Count;
     }
 
     private void EndWave()
