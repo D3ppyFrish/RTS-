@@ -1024,7 +1024,9 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   town hall. From 3 minutes on, when there are 12 more than the home guard (a fifth, at least 2), they
   go as a wave to the nearest enemy town hall, fighting what they meet on the way, then go for its
   defenders (soldiers within 18 columns of its door) and bring it down. Defenders that hold the wave up
-  for 30 seconds without one of them falling, out of reach on a wall say, stop holding it back. Each
+  for 30 seconds without one of them falling, out of reach on a wall say, stop holding it back. The wave
+  is there once its middle is within 14 columns of the target, or most of it is (a few stuck far behind
+  do not hold it back). Each
   wave needs 4 more soldiers than the last (half as many after 25 minutes), and a wave of at least 4
   goes anyway when the enemy has less than half as many soldiers in all. A wave down to a quarter of
   its soldiers comes home. Enemies within 32 columns of its town hall are met by every soldier at home,
