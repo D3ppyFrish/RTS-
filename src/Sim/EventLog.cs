@@ -70,6 +70,15 @@ public enum GameEventKind : byte
     GreatWorkFinished,
     /// <summary>A player's (<see cref="GameEvent.Subject"/>) great work was brought down. <see cref="GameEvent.Def"/> is the building type.</summary>
     GreatWorkLost,
+    /// <summary>
+    /// The dark power under the Heartscar (see <see cref="World.AwakeningSystem"/>) will wake in
+    /// <see cref="World.AwakeningSystem.WarnTicks"/> or less; (x, y, z) is the ground over its heart.
+    /// </summary>
+    AwakeningNear,
+    /// <summary>A stage of the dark power's waking came (<see cref="GameEvent.Def"/>, from 1); (x, y, z) is the ground over its heart.</summary>
+    AwakeningStage,
+    /// <summary>A brood of corrupted beasts (<see cref="GameEvent.Def"/> of them) rose out of the Heartscar at (x, y, z) and is coming for the player.</summary>
+    BroodRising,
 }
 
 /// <summary>
@@ -201,6 +210,14 @@ public sealed class EventLog
     /// <summary>Tells the player about a great work: begun, finished or brought down (one of the GreatWork kinds).</summary>
     internal void GreatWork(int player, GameEventKind kind, World.AscendancySystem.Work work) =>
         Add(player, kind, work.X, work.Y, work.Z, work.Owner, work.Def);
+
+    /// <summary>Tells the player about the dark power's waking (<see cref="GameEventKind.AwakeningNear"/> or <see cref="GameEventKind.AwakeningStage"/>).</summary>
+    internal void Awakening(int player, GameEventKind kind, int x, int y, int z, int stage) =>
+        Add(player, kind, x, y, z, 0, stage);
+
+    /// <summary>A brood of <paramref name="count"/> corrupted beasts rose at (x, y, z) and is coming for the player.</summary>
+    internal void BroodRising(int player, int x, int y, int z, int count) =>
+        Add(player, GameEventKind.BroodRising, x, y, z, 0, count);
 
     /// <summary>True (and remembered) if no attack on the player was reported near (x, z) lately.</summary>
     private bool Throttle(int player, int x, int z)

@@ -110,6 +110,8 @@ public sealed class CommandLog
     public bool TestMode { get; init; }
     /// <summary>The match is played with dominion, the ancient sites' win (see <see cref="Simulation.Dominion"/>).</summary>
     public bool Dominion { get; init; }
+    /// <summary>The match is played with the Awakening, the dark power waking late on (see <see cref="Simulation.Awakening"/>).</summary>
+    public bool Awakening { get; init; }
     /// <summary>
     /// How big the map's trees grow (see <see cref="VoxelWorld.TreeScale"/>): "trees N" in the log, and 1, the
     /// first trees, for logs recorded before trees grew bigger.
@@ -126,14 +128,14 @@ public sealed class CommandLog
     /// </summary>
     public static CommandLog UsualStart(ulong seed, int sizeX, int sizeY, int sizeZ, ContentDb? content = null, bool fog = false, bool dayNight = false,
         int dayStart = Conditions.StartMinute, bool testMode = false, int treeScale = Rts.Sim.World.RegionGenerator.DefaultTreeScale,
-        bool dominion = false)
+        bool dominion = false, bool awakening = false)
     {
         content ??= ContentDb.Default;
         return new CommandLog
         {
             Seed = seed, SizeX = sizeX, SizeY = sizeY, SizeZ = sizeZ, StartUnits = Simulation.UsualStartUnits(content),
             StartBuildings = true, StartLairs = true, StartCities = true, ContentHash = content.Hash, Fog = fog, DayNight = dayNight, DayStart = dayStart,
-            TestMode = testMode, TreeScale = treeScale, Dominion = dominion,
+            TestMode = testMode, TreeScale = treeScale, Dominion = dominion, Awakening = awakening,
         };
     }
 
@@ -148,7 +150,7 @@ public sealed class CommandLog
             throw new InvalidOperationException(
                 $"This match was played with different game data (content {hash:x16}, this game has {content.Hash:x16})");
         var sim = new Simulation(Seed, SizeX, SizeY, SizeZ, content, TreeScale) { Fog = Fog, DayNight = DayNight, DayStart = DayStart, TestMode = TestMode,
-            Dominion = Dominion };
+            Dominion = Dominion, Awakening = Awakening };
         if (StartBuildings) sim.PlaceStartingBuildings();
         if (StartUnits > 0) sim.SpawnStartingUnits(StartUnits);
         if (StartLairs) sim.SpawnLairs();
@@ -180,6 +182,7 @@ public sealed class CommandLog
         if (DayStart != Conditions.StartMinute) w.WriteLine($"daystart {DayStart}");
         if (TestMode) w.WriteLine("test-mode 1");
         if (Dominion) w.WriteLine("dominion 1");
+        if (Awakening) w.WriteLine("awakening 1");
         if (TreeScale != 1) w.WriteLine(string.Create(ci, $"trees {TreeScale}"));
         foreach (var (tick, cmd) in Commands)
         {
@@ -275,7 +278,7 @@ public sealed class CommandLog
         int[]? world = null;
         long ticks = 0;
         int startUnits = 0;
-        bool startBuildings = false, startLairs = false, startCities = false, fog = false, dayNight = false, testMode = false, dominion = false;
+        bool startBuildings = false, startLairs = false, startCities = false, fog = false, dayNight = false, testMode = false, dominion = false, awakening = false;
         int treeScale = 1;
         int dayStart = Conditions.StartMinute;
         ulong? content = null;
@@ -313,6 +316,7 @@ public sealed class CommandLog
                     case "daystart": dayStart = Int(f[1]); break;
                     case "test-mode": testMode = Flag(f); break;
                     case "dominion": dominion = Flag(f); break;
+                    case "awakening": awakening = Flag(f); break;
                     case "trees": treeScale = Int(f[1]); break;
                     default:
                         long tick = long.Parse(f[0], CultureInfo.InvariantCulture);
@@ -411,6 +415,7 @@ public sealed class CommandLog
             DayStart = dayStart,
             TestMode = testMode,
             Dominion = dominion,
+            Awakening = awakening,
             TreeScale = treeScale,
         };
         log.Commands.AddRange(commands);

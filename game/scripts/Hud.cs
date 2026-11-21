@@ -83,6 +83,8 @@ public partial class Hud : CanvasLayer
     private Button _sitesButton = null!;
     // Great works (see AscendancySystem): the one nearest winning, or your site (click to look at it).
     private Button _greatWorkButton = null!;
+    private Button _darkPowerButton = null!;
+    private int _darkPowerFramed = -1;
     // The owner the great work button was last framed for (-1 nobody, -2 not yet).
     private int _greatWorkFramedFor = -2;
     private int _nextSite;
@@ -279,6 +281,18 @@ public partial class Hud : CanvasLayer
             if (ShownGreatWork() is { } w) _control.FocusAt(w.X, w.Y, w.Z);
         };
         under.AddChild(_greatWorkButton);
+
+        _darkPowerButton = MakeButton("");
+        _darkPowerButton.Name = "dark_power_button";
+        _darkPowerButton.ToggleMode = false;
+        _darkPowerButton.Icon = UiIcons.Get("dark_heart");
+        _darkPowerButton.Visible = false;
+        _darkPowerButton.Pressed += () =>
+        {
+            var dp = _sim.DarkPower;
+            _control.LookAt(dp.HeartX, dp.ScarY, dp.HeartZ);
+        };
+        under.AddChild(_darkPowerButton);
         Place(under, Control.LayoutPreset.CenterTop, 0, 54);
         under.GrowHorizontal = Control.GrowDirection.Both;
         bar.GetParent().AddChild(under);
@@ -1130,6 +1144,7 @@ public partial class Hud : CanvasLayer
         RefreshCities();
         RefreshSites();
         RefreshGreatWork();
+        RefreshDarkPower();
     }
 
     /// <summary>A build key as it is written on its button.</summary>
@@ -1326,6 +1341,41 @@ public partial class Hud : CanvasLayer
             $"Great works: each faction's final tech opens its great work, built in the deep caves. Once one is finished, " +
             $"its owner wins if it still stands {minutes} minutes later; bring it down before then and the clock is gone with it." +
             "\nClick to look at it.";
+    }
+
+    /// <summary>
+    /// The dark power button, in a match with the Awakening: how long until it wakes, then its stage and how long
+    /// until the next (red once it is awake). Click it to look at the Heartscar.
+    /// </summary>
+    private void RefreshDarkPower()
+    {
+        var dp = _sim.DarkPower;
+        _darkPowerButton.Visible = _sim.Awakening && !_sim.Match.Over;
+        if (!_darkPowerButton.Visible) return;
+        long ticks = dp.TicksToNextStage;
+        string Clock(long t)
+        {
+            long s = (t + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond;
+            return $"{s / 60}:{s % 60:00}";
+        }
+        _darkPowerButton.Text = dp.Stage == 0 ? $"The dark power wakes in {Clock(ticks)}"
+            : ticks >= 0 ? $"Dark power {dp.Stage} of {AwakeningSystem.Stages}: grows in {Clock(ticks)}"
+            : "The dark power is awake";
+        if (_darkPowerFramed != dp.Stage)
+        {
+            _darkPowerFramed = dp.Stage;
+            Frame(_darkPowerButton, dp.Stage == 0 ? PlainColour : MatchEndPanel.DefeatColor.Darkened(0.45f));
+        }
+        int first = (int)(AwakeningSystem.FirstStageTicks / (60 * Simulation.TicksPerSecond));
+        int gap = (int)(AwakeningSystem.StageGapTicks / (60 * Simulation.TicksPerSecond));
+        int brood = (int)(AwakeningSystem.BroodTicks / (60 * Simulation.TicksPerSecond));
+        _darkPowerButton.TooltipText =
+            $"The dark power sleeps under the Heartscar, at the heart of the land. It wakes {first} minutes in and grows every " +
+            $"{gap} minutes after, {AwakeningSystem.Stages} times; digging near its heart wakes it sooner." +
+            $"\nAwake, it spreads corrupted ground that hurts your units on it, and every {brood} minutes a brood of corrupted " +
+            "beasts claws up out of the Heartscar and comes for your town hall. Each beast killed leaves crystal." +
+            (dp.Unrest > 0 ? $"\nDigging near its heart has woken it {Clock(dp.Unrest)} sooner." : "") +
+            "\nClick to look at the Heartscar.";
     }
 
     /// <summary>Who holds the town, as the player sees it: neutral, yours, or another player's.</summary>

@@ -14,7 +14,7 @@ namespace Rts.Game;
 /// <see cref="Rts.Sim.Conditions"/>), and whether it is a test mode match (see <see cref="TestPanel"/>).
 /// </summary>
 public sealed record MatchSetup(ulong Seed, int Player, bool Computer, bool Fog, AiLevel Level = AiLevel.Normal, bool DayNight = false,
-    bool TestMode = false, bool Dominion = false);
+    bool TestMode = false, bool Dominion = false, bool Awakening = false);
 
 /// <summary>
 /// The start screen: pick your faction, the world seed, whether a computer player plays the other side and
@@ -44,6 +44,7 @@ public partial class StartScreen : CanvasLayer
     private CheckButton _dayNight = null!;
     private CheckButton _test = null!;
     private CheckButton _dominion = null!;
+    private CheckButton _awakening = null!;
     private OptionButton _level = null!;
 
     /// <summary>The computer player's levels on the start screen, in the order shown.</summary>
@@ -197,6 +198,20 @@ public partial class StartScreen : CanvasLayer
         _dominion.AddThemeFontSizeOverride("font_size", 16);
         column.AddChild(_dominion);
 
+        _awakening = new CheckButton
+        {
+            Name = "start_awakening",
+            Text = "The dark power wakes",
+            ButtonPressed = setup.Awakening,
+            FocusMode = Control.FocusModeEnum.None,
+            SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin,
+            TooltipText = "Something sleeps under the Heartscar, at the heart of the land. It wakes 45 minutes in, sooner if you dig " +
+                          "near it, and grows twice more: corrupted ground spreads from it, and broods of corrupted beasts claw up " +
+                          "and come for every town hall. Off: it sleeps all match.",
+        };
+        _awakening.AddThemeFontSizeOverride("font_size", 16);
+        column.AddChild(_awakening);
+
         _test = new CheckButton
         {
             Name = "start_test",
@@ -250,7 +265,7 @@ public partial class StartScreen : CanvasLayer
     /// <summary>The choices as they stand, for scripted tests.</summary>
     public string Describe() =>
         $"player={_player} seed={(_seed.Text.Length > 0 ? _seed.Text : "random")} computer={(_computer.ButtonPressed ? 1 : 0)} " +
-        $"level={SelectedLevel.ToString().ToLowerInvariant()} fog={(_fog.ButtonPressed ? 1 : 0)} test={(_test.ButtonPressed ? 1 : 0)} dominion={(_dominion.ButtonPressed ? 1 : 0)}";
+        $"level={SelectedLevel.ToString().ToLowerInvariant()} fog={(_fog.ButtonPressed ? 1 : 0)} test={(_test.ButtonPressed ? 1 : 0)} dominion={(_dominion.ButtonPressed ? 1 : 0)} awakening={(_awakening.ButtonPressed ? 1 : 0)}";
 
     private AiLevel SelectedLevel => _level.Selected >= 0 ? Levels[_level.Selected].Level : AiLevel.Normal;
 
@@ -264,7 +279,7 @@ public partial class StartScreen : CanvasLayer
     {
         ulong seed = ulong.TryParse(_seed.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var s) ? s : RandomSeed();
         return new MatchSetup(seed, _player, _computer.ButtonPressed, _fog.ButtonPressed, SelectedLevel, _dayNight.ButtonPressed, _test.ButtonPressed,
-            _dominion.ButtonPressed);
+            _dominion.ButtonPressed, _awakening.ButtonPressed);
     }
 
     private Button FactionButton(FactionDef faction, int player)

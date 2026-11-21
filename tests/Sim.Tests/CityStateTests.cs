@@ -659,8 +659,8 @@ public class CityStateTests
             Assert.True(u.Speed < spearman.Speed);
             Assert.True(u.Regen > 0);
         });
-        // Only the ogres and the swamp's bog horrors, which heal in the muck, regenerate.
-        Assert.All(db.Units.Where(u => u.HiredFrom != ogres && u.Id != "bog_horror"), u => Assert.Equal(0, u.Regen));
+        // Only the ogres, the swamp's bog horrors, which heal in the muck, and the dark power's blight horror regenerate.
+        Assert.All(db.Units.Where(u => u.HiredFrom != ogres && u.Id is not ("bog_horror" or "blight_horror")), u => Assert.Equal(0, u.Regen));
     }
 
     /// <summary>

@@ -893,6 +893,45 @@ entry is the tech, the goods and the trip into the deep caves.
   at it, with the height slice cutting the land over it away. The end of match panel says when a match was won by a
   great work. All numbers are first guesses for playtesting.
 
+## The dark power (the Awakening)
+
+`src/Sim/World/AwakeningSystem.cs` (tests in `AwakeningTests`): the design doc's Awakening phase. Something sleeps
+under the heart of the continent, and late in the match it wakes and turns on every faction alike. It is a match
+option (`Simulation.Awakening`, the start screen's "The dark power wakes", ticked unless `--awakening=off`; "awakening 1"
+in a replay's header); off, it sleeps all match. All numbers are first guesses for playtesting.
+
+- **The heart**: it lies in the deep caves' chamber nearest the middle of the map, on their lower level (on a map
+  with no deep caves, under the middle of the map). The ground over it is the **Heartscar**.
+- **Waking**: three stages. The first comes 45 minutes into the match (`FirstStageTicks`), and each other one 15
+  minutes after the one before (`StageGapTicks`); everyone is warned 2 minutes before the first ("The ground trembles
+  at the heart of the land") and told as each stage comes. **Digging into it wakes it sooner**: every block taken
+  out (dug, blasted or fallen) within 48 columns of the heart and no more than 12 levels over it brings the next
+  stage 2 seconds nearer (`UnrestTicks`), so a thousand blocks dug round it bring it 33 minutes sooner.
+- **Corrupted ground**: from the first stage the Heartscar's ground turns corrupt, creeping out from the column over
+  the heart one column a second to a 32nd of the map's width at the first stage, a 16th at the second and a 10th at
+  the third (24, 48 and 76 columns on the default map), with a ragged edge. A player's unit on it, or no more than 6
+  levels under its ground, loses 2 hit points every 2 seconds; monsters do not mind it.
+- **Broods**: at each stage, and every 4 minutes after while it is awake, a brood of corrupted beasts claws up out
+  of the Heartscar for every player still in, and goes for that player's town hall nearest the heart (with none
+  left, their building nearest), fighting everything on the way; once within 10 columns of it they batter it, and
+  when it is down they go for the next of that player's buildings. A player with 16 beasts after them already gets
+  no new brood. What rises is data (`awakening`, the stage a beast first rises at, and `brood`, how many in each, in
+  `data/units.json`):
+  - **Blight hound** (from the first stage, 4 a brood): 90 hit points, quick (6.5), slashing bites, follows blood.
+  - **Blight brute** (from the second, 2 a brood): 320 hit points, slow, crushing fists, armoured.
+  - **Blight horror** (at the third, 1 a brood): 700 hit points, slow, crushing blows with a splash, heavily
+    armoured, and it heals 1% of its hit points a second even in a fight.
+- **Bounty**: the beasts are wild monsters (Orcs beat them rather than kill them, and can keep them), and each pays
+  its `bounty` into the storage nearest it of the player whose unit got it: 2 crystal a hound, 6 a brute, 15 crystal
+  and 10 gold a horror.
+- **In the game**: the top bar's dark power button counts down to its waking ("The dark power wakes in 44:12"), then
+  says its stage and how long to the next ("Dark power 2 of 3: grows in 14:53"), framed red once it is awake; its
+  tooltip says how much digging has woken it sooner, and clicking it looks at the Heartscar. Corrupted ground is drawn
+  black-violet with glowing veins that pulse and thicken towards the heart, and a violet light burns over the heart.
+  The beasts are black with violet veins and ember eyes. `--awaken=N` starts a match with it at stage N.
+- **Computer players** fight the broods as they fight any attacker; they do not yet keep away from the Heartscar or
+  stop digging near the heart.
+
 ## Natural hazards
 
 `src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, `HazardTests`, `QuicksandTests` and `RockfallTests`, issues #45, #66 and #78): ground that

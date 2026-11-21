@@ -186,6 +186,14 @@ public partial class Alerts : VBoxContainer
             GameEventKind.GreatWorkLost => e.Subject == e.Player
                 ? ($"Your {GreatWork(e)} was brought down", AttackColour)
                 : ($"The {Faction(e.Subject)}' {GreatWork(e)} was brought down", GoodColour),
+            GameEventKind.AwakeningNear => ("The ground trembles at the heart of the land: something below is waking", AttackColour),
+            GameEventKind.AwakeningStage => (e.Def switch
+            {
+                1 => "The dark power stirs: corruption spreads from the Heartscar",
+                2 => "The dark power grows: brutes rise with its broods",
+                _ => "The dark power is fully awake",
+            }, AttackColour),
+            GameEventKind.BroodRising => ($"A brood of {e.Def} corrupted beasts rises from the Heartscar and comes for you", AttackColour),
             _ => (null, Hud.PlainColour),
         };
     }

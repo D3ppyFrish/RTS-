@@ -240,6 +240,23 @@
     "attack": "crush", "armor": { "head": 2, "torso": 3, "arms": 2, "legs": 2 },
     "lair": { "pack": 1, "guard": 10, "leash": 16, "duskTree": true } },
 
+  // The dark power's corrupted beasts: broods of them claw up out of the Heartscar as it wakes (see the Awakening).
+  { "id": "blight_hound", "name": "Blight hound", "role": "monster",
+    "description": "A hound of the dark power, lean and black with ember eyes. Packs of them claw up out of the Heartscar from its first stirring and run down on the nearest town. Each one killed leaves a little crystal.",
+    "speed": 6.5, "hp": 90, "model": "blight_hound", "damage": 9, "attackTime": 1, "range": 1.25, "sight": 10,
+    "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true,
+    "awakening": 1, "brood": 4, "bounty": { "crystal": 2 } },
+  { "id": "blight_brute", "name": "Blight brute", "role": "monster",
+    "description": "A hunched hulk of corrupted stone and sinew that rises with the second stage of the dark power's waking and batters walls and halls.",
+    "speed": 4, "hp": 320, "model": "blight_brute", "damage": 20, "attackTime": 1.6, "range": 1.75, "sight": 10,
+    "attack": "crush", "armor": { "head": 2, "torso": 3, "arms": 2, "legs": 2 },
+    "awakening": 2, "brood": 2, "bounty": { "crystal": 6 } },
+  { "id": "blight_horror", "name": "Blight horror", "role": "monster",
+    "description": "The dark power's own spawn, risen once it is fully awake: a towering horror whose blows crush everything round it and whose wounds close as you watch.",
+    "speed": 3.5, "hp": 700, "model": "blight_horror", "damage": 28, "attackTime": 2, "range": 2, "sight": 11, "splash": 1.5,
+    "attack": "crush", "armor": { "head": 3, "torso": 4, "arms": 3, "legs": 3 }, "regen": 1,
+    "awakening": 3, "brood": 1, "bounty": { "crystal": 15, "gold": 10 } },
+
   // Orc units that come from taming.
   { "id": "wolf_rider", "name": "Wolf rider", "faction": "orcs", "role": "cavalry",
     "description": "An orc spearman on a wolf it beat: twice as fast.",

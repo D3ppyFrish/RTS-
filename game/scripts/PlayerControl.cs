@@ -2046,6 +2046,8 @@ public partial class PlayerControl : Node
                $"sites_active={(_sim.Sites.Active ? 1 : 0)} sites_held={_sim.Sites.Held(LocalPlayer)} sites_leader={_sim.Sites.Leader} " +
                $"great_works={_sim.Ascendancy.Works.Count} great_work_left={(_sim.Ascendancy.Leading is { } gw ? _sim.Ascendancy.TicksLeft(gw) : -1)} " +
                $"great_work_owner={_sim.Ascendancy.Leading?.Owner ?? -1} by_ascendancy={(_sim.Match.ByAscendancy ? 1 : 0)} " +
+               $"dark_stage={_sim.DarkPower.Stage} dark_radius={_sim.DarkPower.Radius} dark_next={_sim.DarkPower.TicksToNextStage} " +
+               $"broods={_sim.DarkPower.Broods.Count} brood_beasts={_sim.DarkPower.Broods.Sum(b => b.Beasts.Count)} " +
                $"sites_left={_sim.Sites.TicksLeft} sites_claim={_sim.Ruins.Ruins.Max(r => (int?)r.Claim) ?? 0} " +
                $"ore={stock[(int)Good.IronOre]} coal={stock[(int)Good.Coal]} crystal={stock[(int)Good.Crystal]} gold={stock[(int)Good.Gold]} mining_gold={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Gather && u.JobBlock[i] == BlockType.GoldOre)} mana={_sim.Economy.Player(LocalPlayer).Mana} " +
                $"shrines={OwnKind(BuildingKind.Shrine)} keepers={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Haul && _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind == BuildingKind.Shrine)} " +

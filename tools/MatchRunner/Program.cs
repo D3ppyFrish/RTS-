@@ -20,6 +20,7 @@ using Rts.Sim.Replay;
 //                         default classic for all; the last one given goes for the rest)
 //     --fog               with --ai: play with fog of war
 //     --dominion          with --ai: play with dominion (holding most of the ancient sites for 3 minutes wins)
+//     --awakening         with --ai: play with the Awakening (the dark power wakes from 45 minutes and sends broods)
 //     --story             with --ai: print what each computer player from Easy up decided, as it decides
 //                         it (its journal; Hard's says the most)
 //     --trace             with --ai: print every minute what each player has (workers, soldiers and their
@@ -142,7 +143,8 @@ try
                 ? level : throw new ArgumentException($"--levels: unknown level '{name}' (classic, easy, normal or hard)"));
         var result = AiMatch.Play(ulong.Parse(Opt("seed", "1234"), ci),
             int.Parse(size[0], ci), int.Parse(size[1], ci), int.Parse(size[2], ci), ticks, levels: levels, fog: opts.ContainsKey("fog"),
-            watch: opts.ContainsKey("trace") || opts.ContainsKey("story") ? Trace : null, dominion: opts.ContainsKey("dominion"));
+            watch: opts.ContainsKey("trace") || opts.ContainsKey("story") ? Trace : null, dominion: opts.ContainsKey("dominion"),
+            awakening: opts.ContainsKey("awakening"));
         log = result.Log;
         aiWinner = result.Winner;
         aiEnd = result.EndTick;
