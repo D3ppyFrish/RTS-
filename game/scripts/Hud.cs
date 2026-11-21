@@ -35,6 +35,7 @@ public partial class Hud : CanvasLayer
 
     private readonly Label[] _stockLabels = new Label[Goods.Count];
     private Label _popLabel = null!;
+    private Label _manaLabel = null!;
     private Label _foodRateLabel = null!;
     private Label _clockLabel = null!;
     private WorldLighting _lighting = null!;
@@ -177,7 +178,7 @@ public partial class Hud : CanvasLayer
         bar.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
         root.AddChild(bar);
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 10);
+        row.AddThemeConstantOverride("separation", 6);
         bar.AddChild(row);
 
         foreach (var good in Goods.All)
@@ -191,6 +192,7 @@ public partial class Hud : CanvasLayer
             _foodRateLabel.MouseFilter = Control.MouseFilterEnum.Pass;
             _stockLabels[(int)good].GetParent().AddChild(_foodRateLabel);
         }
+        _manaLabel = Stat(row, UiIcons.Get("mana"), "Mana: channelled from crystal at your shrines, and spent on spells");
         _popLabel = Stat(row, UiIcons.Get("people"), "People over housing");
         row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
         _clockLabel = Stat(row, UiIcons.Get("time"), "Match time and game speed");
@@ -211,14 +213,14 @@ public partial class Hud : CanvasLayer
         _techButton.Name = "techs_button";
         _techButton.Pressed += () => _control.ToggleTechTree();
         row.AddChild(_techButton);
-        _autoButton = MakeButton("Auto workers [Shift+J]");
+        _autoButton = MakeButton("Auto workers");
         _autoButton.Name = "auto_button";
-        _autoButton.TooltipText = "All your workers, and those you train, find their own jobs; houses and farms go up when needed";
+        _autoButton.TooltipText = "[Shift+J] All your workers, and those you train, find their own jobs; houses and farms go up when needed";
         _autoButton.Pressed += () => _control.ToggleAutoAll();
         row.AddChild(_autoButton);
-        _rebuildButton = MakeButton("Rebuild [Shift+P]");
+        _rebuildButton = MakeButton("Rebuild");
         _rebuildButton.Name = "rebuild_button";
-        _rebuildButton.TooltipText = "Rebuild orders: your destroyed buildings are cleared and put back where they stood, once no enemy is near and you can pay";
+        _rebuildButton.TooltipText = "[Shift+P] Rebuild orders: your destroyed buildings are cleared and put back where they stood, once no enemy is near and you can pay";
         _rebuildButton.Pressed += () => _control.ToggleRebuild();
         row.AddChild(_rebuildButton);
         _prioritiesButton = MakeButton("Priorities");
@@ -440,6 +442,10 @@ public partial class Hud : CanvasLayer
                                 $"columns of it, clear of buildings and other trees. A sapling grows into a tree in " +
                                 $"{EconomySystem.SaplingGrowTicks / Simulation.TicksPerSecond / 60} minutes, for your wood cutters to fell. " +
                                 "Automatic workers leave it to you.";
+            if (def.Kind == BuildingKind.Shrine)
+                b.TooltipText = $"Right click it with a worker: they bring it crystal from storage, and it channels each crystal " +
+                                $"into {def.Mana} mana in {def.ChannelTicks / Simulation.TicksPerSecond} seconds. Spells cost mana. " +
+                                "Crystal grows on the cavern walls: send workers to dig it. Automatic workers keep it once you have crystal.";
             if (def.IsTower)
                 b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +
@@ -1180,7 +1186,7 @@ public partial class Hud : CanvasLayer
         var better = new List<string>();
         int housing = to.Housing - b.Def.Housing;
         if (housing > 0) better.Add($"houses {housing} more");
-        if (to.Speed > b.Def.Speed) better.Add($"{(to.Kind == BuildingKind.Smelter ? "smelts" : "trains")} at {to.Speed}% of the usual pace");
+        if (to.Speed > b.Def.Speed) better.Add($"{(to.Kind == BuildingKind.Smelter ? "smelts" : to.Kind == BuildingKind.Shrine ? "channels" : "trains")} at {to.Speed}% of the usual pace");
         if (to.WorkerSlots > b.Def.WorkerSlots) better.Add($"takes {to.WorkerSlots} workers");
         if (to.Sight > b.Def.Sight) better.Add($"sees {to.Sight} columns round it");
         if (b.Def.Raidable && !to.Raidable) better.Add("cannot be captured or burned");
@@ -1328,6 +1334,7 @@ public partial class Hud : CanvasLayer
                                        $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage makes the wall " +
                                        $"a column thicker and {SpellSystem.WallPerHelper} columns longer.";
         _earthWallButton.Disabled = ready == 0 && !tool;
+        ManaGate(_earthWallButton, Spell.EarthWall, "Earth Wall", tool);
     }
 
     /// <summary>The Ice Bridge button while a mage of yours is selected (greyed out while none is ready).</summary>
@@ -1350,6 +1357,7 @@ public partial class Hud : CanvasLayer
                                        $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage makes the bridge " +
                                        $"{SpellSystem.IceWidthPerHelper} columns wider.";
         _iceBridgeButton.Disabled = ready == 0 && !tool;
+        ManaGate(_iceBridgeButton, Spell.IceBridge, "Ice Bridge", tool);
     }
 
     /// <summary>The Chasm button while a mage of yours is selected (greyed out while none is ready).</summary>
@@ -1373,6 +1381,7 @@ public partial class Hud : CanvasLayer
                                    $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage makes the chasm " +
                                    $"a column wider and {SpellSystem.WallPerHelper} columns longer.";
         _chasmButton.Disabled = ready == 0 && !tool;
+        ManaGate(_chasmButton, Spell.Chasm, "Chasm", tool);
     }
 
     /// <summary>The Grow Forest button while a mage of yours is selected (greyed out while none is ready).</summary>
@@ -1395,6 +1404,20 @@ public partial class Hud : CanvasLayer
                                         $"Up to {SpellSystem.MaxGroup} ready mages selected together cast as one: each extra mage adds a row of trees " +
                                         "on the gaps of the first and makes it " + $"{SpellSystem.WallPerHelper} columns longer.";
         _growForestButton.Disabled = ready == 0 && !tool;
+        ManaGate(_growForestButton, Spell.GrowForest, "Grow Forest", tool);
+    }
+
+    /// <summary>
+    /// A spell button says what the spell costs, and is greyed out while the local player has too little mana
+    /// for one mage to cast it.
+    /// </summary>
+    private void ManaGate(Button button, Spell spell, string name, bool tool)
+    {
+        int cost = SpellSystem.ManaCost(spell);
+        button.TooltipText += $" Each mage that casts it pays {cost} mana; shrines channel mana from crystal dug in the caverns.";
+        if (tool || _sim.Economy.Player(PlayerControl.LocalPlayer).Mana >= cost) return;
+        button.Text = $"{name}: needs {cost} mana";
+        button.Disabled = true;
     }
 
     private void RefreshRuin()
@@ -1803,8 +1826,12 @@ public partial class Hud : CanvasLayer
             if (b.Def.Plants > 0) parts.Add($"{_sim.Economy.SaplingsOf(b)} saplings growing");
             if (b.Def.Kind == BuildingKind.Smelter && b.SmeltTicks > 0)
                 parts.Add($"smelting {100 - 100L * b.SmeltTicks / EconomySystem.SmeltTicks}%");
+            if (b.Def.Kind == BuildingKind.Shrine)
+                parts.Add(b.SmeltTicks > 0
+                    ? $"channelling a crystal {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.ChannelTicks)}% ({b.Def.Mana} mana each)"
+                    : $"no crystal to channel ({b.Def.Mana} mana each; dig crystal in the caverns)");
             text.Append(string.Join("    ", parts));
-            if (b.Def.Storage || b.Def.Kind == BuildingKind.Smelter)
+            if (b.Def.Storage || b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine)
             {
                 var goods = new List<string>();
                 foreach (var g in Goods.All)
@@ -1869,7 +1896,7 @@ public partial class Hud : CanvasLayer
     {
         var text = new StringBuilder();
         if (b.Def.Speed > 100)
-            text.Append($"\n{(b.Def.Kind == BuildingKind.Smelter ? "Smelts" : "Trains")} at {b.Def.Speed}% of the usual pace");
+            text.Append($"\n{(b.Def.Kind == BuildingKind.Smelter ? "Smelts" : b.Def.Kind == BuildingKind.Shrine ? "Channels" : "Trains")} at {b.Def.Speed}% of the usual pace");
         if (b.Def.UpgradeOf is { } from && from.Raidable && !b.Def.Raidable) text.Append("\nToo stout to be captured or burned");
         if (b.Upgrade is { } to)
         {
@@ -2032,7 +2059,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Build => "building",
         UnitJob.Farm => "farming",
         UnitJob.Quarry => _sim.Buildings.Get(u.JobTarget[i]) is { } q ? q.Def.Shore ? "fishing" : q.Def.Plants > 0 ? "planting trees" : $"working the {q.Def.Name.ToLowerInvariant()}" : "quarrying",
-        UnitJob.Haul => "supplying the smelter",
+        UnitJob.Haul => _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind == BuildingKind.Shrine ? "keeping the shrine" : "supplying the smelter",
         UnitJob.Supply => u.Phase[i] switch
         {
             JobPhase.Fetch => "on supply duty: fetching a load",
@@ -2078,6 +2105,7 @@ public partial class Hud : CanvasLayer
         var stock = econ.Stockpile(player);
         foreach (var good in Goods.All) _stockLabels[(int)good].Text = stock[(int)good].ToString(CultureInfo.InvariantCulture);
         _popLabel.Text = $"{econ.Population(player)} / {econ.Housing(player)}";
+        _manaLabel.Text = econ.Player(player).Mana.ToString(CultureInfo.InvariantCulture);
         int rate = econ.FoodPerMinute(player);
         _foodRateLabel.Text = (rate > 0 ? "+" : "") + rate.ToString(CultureInfo.InvariantCulture) + "/min";
         _foodRateLabel.AddThemeColorOverride("font_color", rate > 0 ? new Color(0.55f, 0.9f, 0.45f) : new Color(0.8f, 0.8f, 0.75f));

@@ -5,8 +5,9 @@ How each game system works, for players and for anyone changing the rules. Contr
 
 ## Economy
 
-`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal and iron ingots, every
-unit of it carried by a worker or held in a building. A player's stock is what their storage buildings
+`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal, iron ingots and crystal, every
+unit of it carried by a worker or held in a building. Mana, which spells cost, is the one exception: a
+player's own pool, channelled from crystal at a shrine (see Crystal, shrines and mana below). A player's stock is what their storage buildings
 (town hall and storehouses) hold, and costs are taken from the storage nearest the work.
 
 - **Gathering** (`GatherCommand`): workers dig stone, ore and coal a block at a time, fell trees and
@@ -62,6 +63,20 @@ unit of it carried by a worker or held in a building. A player's stock is what t
 - **Farms and the smelter** (`WorkCommand`): two farmers each bring 5 food every 15 seconds. The
   smelter's worker keeps it supplied with ore and coal from storage and carries its ingots back
   (2 ore + 1 coal = 1 iron in 10 seconds).
+- **Crystal, shrines and mana** (`ManaTests`; the design doc's Resources table: crystal from the deep caverns,
+  channelled into mana at a shrine): crystal grows on the cavern walls (`BlockType.Crystal`). Workers dig it like
+  ore, 3 seconds a block, and carry it to storage as the good `Crystal` (rubble of it is stone). A **shrine**
+  (kind `shrine` in `data/buildings.json`: 3 by 3, stone and roof tiles, 40 stone and 20 wood, needs Basic magic)
+  takes one keeper (`WorkCommand`), who keeps it supplied with crystal from storage, a load (5) at a time, as a
+  smelter's worker does ore. It channels each crystal into 10 mana for its owner, 4 seconds a crystal
+  (`StepShrine`; `mana` and `channelTime` in the data). It upgrades to a **crystal sanctum** (5 by 5, 80 stone and
+  30 wood) that takes two keepers and channels twice as fast. Mana (`PlayerEconomy.Mana`) is a number for the
+  player, not a good: nobody carries it, it cannot be captured or burned, and every player starts with 50,
+  enough for a spell or two before the first shrine. Spells spend it (see Terrain magic). Automatic workers keep
+  a shrine when there is crystal in storage, but do not dig crystal on their own: the caverns are dangerous, so
+  sending workers there is the player's call. Test mode's goods cheat and `--goods` also give mana; both sides
+  of a `--battle` have 500. Computer players do not cast spells, so they build no shrines yet. All numbers are
+  first guesses for playtesting.
 - **Quarries and mines** (`WorkCommand`, kind `quarry` in `data/buildings.json`, #50): buildings workers work, like
   a farm, for goods that never run out, wherever they stand. A quarry (5 by 5, 60 wood) takes three workers, each
   bringing 5 stone every 12 seconds of work; a mine (5 by 5, 60 wood and 40 stone, needs Smelting) takes two, each
@@ -1138,6 +1153,13 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
   under falls as rubble, which stays.
 - **Waiting**: a mage that cast a spell (either one) waits 40 seconds before it can cast again; others are
   not held up.
+- **Mana** (`SpellSystem.ManaCost`): every spell costs its player mana, channelled from crystal at a shrine
+  (see Crystal, shrines and mana under Economy): Earth Wall and Grow Forest 20, Ice Bridge 25, Chasm 30, for each
+  mage that casts it, so a group spell of three costs three times as much. With too little for one mage, nothing
+  is cast and nobody waits; a group casts with only as many mages as the pool covers (the ones already in range
+  first), counted again when it goes off, so mana spent while some walked up leaves the last ones out. A spell
+  that changes nothing (an ice bridge with no water, a grove with no room) costs nothing. The spell buttons show
+  the cost and grey out while there is too little.
 - **Ice Bridge** (`IceBridgeCommand`, `"iceBridge": true`: the mage): the mage freezes the water into a
   level way of ice from bank to bank, the way a bridge is laid: both ends must be ground about level with each
   other (at most a climb apart), and the ice runs one block under the higher end's standing level, in every

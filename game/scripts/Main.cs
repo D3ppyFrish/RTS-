@@ -55,13 +55,15 @@ namespace Rts.Game;
 ///                         that is trained (not the forms units evolve into) stands at each start area,
 ///                         a wolf lair lies on the way from each start area to the map centre, and each
 ///                         city-state has a town (with a lair of its own) about as far from every start
-///   --goods=N             every town hall starts with N more of every good (for trying things out)
+///   --goods=N             every town hall starts with N more of every good, and its player with N more mana
+///                         (for trying things out)
 ///   --houses=N            N finished houses of yours behind your town hall (the start has more people than
 ///                         room, so this makes room to try out training and hiring)
 ///   --raid=N              N of player 1's sappers stand beside your house nearest your start (with --houses)
 ///                         and are ordered to knock it down (to try out rebuild orders)
 ///   --battle=N            two armies of N soldiers each (every soldier type matches start with, in turn) face each other at
-///                         the camera focus, yours to the west, with an enemy house to the north
+///                         the camera focus, yours to the west, with an enemy house to the north; both sides
+///                         have 500 mana, so the mages can cast
 ///   --lineup              every unit type each of the first two players can have (its faction's own, the
 ///                         shared ones, monsters, caravans and mercenaries) stands in a row at the camera
 ///                         focus, player 0's north of player 1's and too far apart to fight; no usual start
@@ -931,10 +933,11 @@ public partial class Main : Node3D
     /// --battle: n soldiers a side, every soldier type in turn, in ranks of eight two columns apart: yours
     /// six columns west of the focus facing east, the enemy's six columns east of it, and an enemy house
     /// about fourteen columns north of the focus where the ground allows. Nobody moves until ordered (or
-    /// attacked).
+    /// attacked). Both sides get <see cref="BattleMana"/> mana, so their mages can cast without a shrine.
     /// </summary>
     private void SpawnBattle(int n, int fx, int fz)
     {
+        for (int side = 0; side < 2; side++) _sim.Economy.Player(side).Mana = Math.Max(_sim.Economy.Player(side).Mana, BattleMana);
         var soldiers = new List<string>();
         foreach (var d in _sim.Content.StartUnits)
             if (d.Role != UnitRole.Worker && d.CanAttack) soldiers.Add(d.Id);
@@ -983,9 +986,15 @@ public partial class Main : Node3D
         }
     }
 
-    /// <summary>--goods: every town hall gets this much more of every good (match setup, before the first tick).</summary>
+    /// <summary>Mana each side of a --battle has.</summary>
+    private const int BattleMana = 500;
+
+    /// <summary>--goods: every town hall gets this much more of every good, and its player as much more mana (match setup, before the first tick).</summary>
     private void GiveGoods(int amount)
     {
+        var given = new HashSet<int>();
+        foreach (var b in _sim.Buildings.All)
+            if (b.Def.Kind == Rts.Sim.Economy.BuildingKind.TownHall && given.Add(b.Owner)) _sim.Economy.Player(b.Owner).Mana += amount;
         foreach (var b in _sim.Buildings.All)
             if (b.Def.Kind == Rts.Sim.Economy.BuildingKind.TownHall)
                 for (int g = 0; g < b.Stock.Length; g++) b.Stock[g] += amount;

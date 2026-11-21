@@ -127,6 +127,17 @@ public sealed class SpellSystem
     public const int MaxGroup = 3;
     /// <summary>Columns each caster beyond the first adds to an earth wall's length.</summary>
     public const int WallPerHelper = 4;
+    /// <summary>
+    /// Mana each caster pays to cast the spell, from its player's pool (see <see cref="Economy.PlayerEconomy.Mana"/>):
+    /// a group spell costs this for each caster in it. Mana is channelled from crystal at a shrine.
+    /// </summary>
+    public static int ManaCost(Spell spell) => spell switch
+    {
+        Spell.IceBridge => 25,
+        Spell.Chasm => 30,
+        _ => 20, // Earth Wall, Grow Forest
+    };
+
     /// <summary>Columns each caster beyond the first adds to an ice bridge's width (one on each side).</summary>
     public const int IceWidthPerHelper = 2;
 
@@ -507,7 +518,9 @@ public sealed class SpellSystem
         }
         var group = new List<int>(near);
         group.AddRange(far);
-        if (group.Count > MaxGroup) group.RemoveRange(MaxGroup, group.Count - MaxGroup);
+        // As many casters as the player has mana for, up to a full group.
+        int afford = Math.Min(MaxGroup, _sim.Economy.Player(c.PlayerId).Mana / ManaCost(spell));
+        if (group.Count > afford) group.RemoveRange(afford, group.Count - afford);
         if (group.Count == 0) return;
         if (far.Count == 0 || group.Count == near.Count)
         {
@@ -573,12 +586,18 @@ public sealed class SpellSystem
     /// <summary>The casters (unit indices, the first leading) cast the spell together; each then waits.</summary>
     private void Cast(List<int> casters, Spell spell, int x1, int z1, int x2, int z2)
     {
+        // Each caster pays its mana; those the pool no longer covers (it was spent while they walked) drop out.
+        int owner = U.Owner[casters[0]], cost = ManaCost(spell);
+        int afford = _sim.Economy.Player(owner).Mana / cost;
+        if (afford <= 0) return;
+        if (casters.Count > afford) casters.RemoveRange(afford, casters.Count - afford);
         int i = casters[0], n = casters.Count;
         // A plan that spans nothing (no ground at its ends, no water between) freezes nothing and costs nothing.
         if (spell == Spell.IceBridge && !Freeze(i, n, x1, z1, x2, z2)) return;
         if (spell == Spell.Chasm && !Open(i, n, x1, z1, x2, z2)) return;
         if (spell == Spell.GrowForest && !Grow(n, x1, z1, x2, z2)) return;
         if (spell == Spell.EarthWall) Raise(i, n, x1, z1, x2, z2);
+        _sim.Economy.SpendMana(owner, cost * n);
         // A caster near a hero that quickens the spells (as it stood when the tick began) waits less.
         foreach (int k in casters) _ready[U.Id[k]] = _sim.Tick + WaitAfterSpell(k);
     }

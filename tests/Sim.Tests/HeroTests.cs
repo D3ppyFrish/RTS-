@@ -645,6 +645,7 @@ public class HeroTests
     public void AMageBesideTheArchmageCastsAgainInHalfTheTime()
     {
         var sim = Flat();
+        sim.Economy.Player(Settlers).Mana = 1000; // spells cost mana: plenty for every cast here
         int am = Archmage(sim, 30, 30);
         int near = sim.SpawnUnit(Settlers, "mage", 32, 30);
         int far = sim.SpawnUnit(Settlers, "mage", 70, 70);

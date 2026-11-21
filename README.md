@@ -78,11 +78,12 @@ Godot draws them with one MultiMesh per model; the placeholder models are built 
 of a terrain block across, tinted in the owner's colour. Each player starts with a town hall at their
 start area and four of every unit type that is trained in front of it (except caravans), a wolf lair
 lies on the way to the map centre (see [Monsters and taming](docs/rules.md#monsters-and-taming)) and each city-state has a town (see
-[City-states](docs/rules.md#city-states)); `--goods=N` gives every town hall N more of every good, and `--houses=N` puts N houses
+[City-states](docs/rules.md#city-states)); `--goods=N` gives every town hall N more of every good (and its player N more mana), and `--houses=N` puts N houses
 behind yours, since the start has more people than room; `--raid=N` sends N enemy sappers at the one of
 those nearest your start (to try out rebuild orders, see [Automation](docs/rules.md#automation)). `--units=N` instead spawns N of your units
 around the camera focus (all on one side, so they walk rather than fight), and `--battle=N` sets two
-armies of N soldiers each facing each other at the camera focus, with an enemy house nearby.
+armies of N soldiers each facing each other at the camera focus, with an enemy house nearby (both sides
+have 500 mana, so the mages can cast).
 `--player=1` plays the Orcs at the east start instead of the Settlers at the west one, `--ai` has
 the computer play the other players (see [Winning and computer players](docs/rules.md#winning-and-computer-players)), at `--ai-level=easy`, `normal` (the default), `hard` or `classic`, and `--fog` turns fog of war on
 (see [Fog of war](docs/rules.md#fog-of-war)). `--dominion` plays with dominion, winning by holding most of the old
@@ -200,7 +201,9 @@ between two blocks; `waitmatch` waits for a match started from the start screen)
 `scripts/ui-screenshots.sh` uses it to box-select the starting units, order them to move, pause, and
 cut a hill with the height slice; `scripts/ui-economy-screenshots.sh` sends the workers to dig the
 stone outcrop, researches roads from the tech tree, places and builds a house, queues a worker at the
-town hall and lays a road; `scripts/ui-combat-screenshots.sh` starts with `--battle=16` at the map
+town hall and lays a road; `scripts/ui-shrine-screenshots.sh` starts with `--goods=100`, researches Basic
+magic, puts up a shrine beside the town hall and has a worker keep it, so the mana in the top bar rises as it
+channels the crystal; `scripts/ui-combat-screenshots.sh` starts with `--battle=16` at the map
 centre, sends a sapper to tunnel under the enemy house and attack-moves the rest of the army through
 the enemy; `scripts/ui-automation-screenshots.sh` makes the starting workers automatic and the soldiers
 hold their ground, puts the town hall on repeat, then makes every worker automatic and waits for them

@@ -85,6 +85,7 @@ public class SpellTests
     public void ACasterWaitsBeforeItsNextWallButAnotherCanCast()
     {
         var sim = Flat();
+        sim.Economy.Player(P).Mana = 1000; // spells cost mana: plenty for every cast here
         int a = Spawn(sim, P, "mage", 20, 30), b = Spawn(sim, P, "mage", 20, 31);
         Cast(sim, new[] { a }, 26, 20, 26, 24);
         Assert.False(sim.Spells.CanCast(Index(sim, a)));
@@ -118,6 +119,7 @@ public class SpellTests
     {
         // Two mages: two rows thick (the line and the row before it), twelve columns long.
         var sim = Flat();
+        sim.Economy.Player(P).Mana = 1000; // spells cost mana: plenty for every cast here
         int a = Spawn(sim, P, "mage", 30, 22), b = Spawn(sim, P, "mage", 31, 22);
         Cast(sim, new[] { a, b }, 20, 30, 45, 30);
         Assert.Single(sim.Spells.Walls);
@@ -130,6 +132,7 @@ public class SpellTests
 
         // Three: three rows, sixteen long.
         sim = Flat();
+        sim.Economy.Player(P).Mana = 1000;
         int[] three = { Spawn(sim, P, "mage", 30, 22), Spawn(sim, P, "mage", 31, 22), Spawn(sim, P, "mage", 32, 22) };
         Cast(sim, three, 20, 30, 45, 30);
         for (int z = 29; z <= 31; z++) Assert.Equal(16, Row(sim, z));
@@ -141,6 +144,7 @@ public class SpellTests
     public void AtMostThreeMagesJoinOneSpell()
     {
         var sim = Flat();
+        sim.Economy.Player(P).Mana = 1000; // spells cost mana: plenty for every cast here
         int[] four = new int[4];
         for (int k = 0; k < 4; k++) four[k] = Spawn(sim, P, "mage", 28 + k, 22);
         Cast(sim, four, 20, 30, 45, 30);

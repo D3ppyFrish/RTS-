@@ -204,6 +204,9 @@ public sealed class SandboxSystem
         if (store == null) return;
         int amount = Math.Min(c.Amount, 1_000_000);
         for (int g = 0; g < store.Stock.Length; g++) store.Stock[g] = (int)Math.Min(int.MaxValue / 2, (long)store.Stock[g] + amount);
+        // Mana too, so spells can be tried without a shrine.
+        var p = _sim.Economy.Player(c.Owner);
+        p.Mana = (int)Math.Min(int.MaxValue / 2, (long)p.Mana + amount);
     }
 
     private void Tech(SandboxTechCommand c)

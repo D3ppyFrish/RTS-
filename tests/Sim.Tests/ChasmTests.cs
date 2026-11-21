@@ -145,6 +145,7 @@ public class ChasmTests
     public void MagesTogetherOpenAWiderChasm()
     {
         var sim = Flat();
+        sim.Economy.Player(P).Mana = 1000; // spells cost mana: plenty for every cast here
         int a = Spawn(sim, P, "mage", 20, 30), b = Spawn(sim, P, "mage", 20, 31);
         Open(sim, new[] { a, b }, 26, 27, 26, 33);
         for (int z = 27; z <= 33; z++)

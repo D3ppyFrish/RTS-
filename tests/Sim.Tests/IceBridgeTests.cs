@@ -83,6 +83,7 @@ public class IceBridgeTests
     public void MagesFreezingTogetherMakeAWiderBridge()
     {
         var sim = River();
+        sim.Economy.Player(P).Mana = 1000; // spells cost mana: plenty for every cast here
         int a = Spawn(sim, P, "mage", 30, 24), b = Spawn(sim, P, "mage", 31, 24);
         Freeze(sim, new[] { a, b }, 30, 26, 30, 35);
         Assert.Equal(5, SpellSystem.IceWidthFor(2));
@@ -93,6 +94,7 @@ public class IceBridgeTests
         Assert.False(sim.Spells.CanCast(Index(sim, b), Spell.IceBridge));
 
         sim = River();
+        sim.Economy.Player(P).Mana = 1000;
         int[] three = { Spawn(sim, P, "mage", 30, 24), Spawn(sim, P, "mage", 31, 24), Spawn(sim, P, "mage", 29, 24) };
         Freeze(sim, three, 30, 26, 30, 35);
         Assert.Equal(6 * 7, IceIn(sim, 27, 33, RiverZ1, RiverZ2));

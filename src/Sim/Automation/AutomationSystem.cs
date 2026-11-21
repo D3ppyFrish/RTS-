@@ -405,7 +405,7 @@ public sealed partial class AutomationSystem
 
     /// <summary>
     /// How much building b wants another worker: 0 for a site short of builders, 1 for a farm with room,
-    /// 2 for a smelter with no hauler and something to smelt or carry away, 3 for storage short under its
+    /// 2 for a smelter with no hauler and something to smelt or carry away (a shrine with crystal to channel), 3 for storage short under its
     /// supply rules with fewer than <see cref="SupplyWorkers"/> on supply duty; -1 if it wants none.
     /// </summary>
     private int Wants(Building b, Stats s)
@@ -416,6 +416,8 @@ public sealed partial class AutomationSystem
         if (b.WantsBuilders) return working < MaxBuilders(b.Upgrade ?? b.Def) && (!b.Def.IsBridge || Economy.BridgeAccess(b, out _, out _, out _)) ? 0 : -1;
         if (b.Def.Storage) return b.HasSupply && working < SupplyWorkers && Economy.WantsSupply(b) ? 3 : -1;
         if (b.Def.Kind == BuildingKind.Farm) return working < b.Def.WorkerSlots ? 1 : -1;
+        if (b.Def.Kind == BuildingKind.Shrine)
+            return working < b.Def.WorkerSlots && b.Stock[(int)Good.Crystal] + s.Stock[(int)Good.Crystal] > 0 ? 2 : -1;
         if (b.Def.Kind != BuildingKind.Smelter || working >= b.Def.WorkerSlots) return -1;
         bool inputs = b.Stock[(int)Good.IronOre] + s.Stock[(int)Good.IronOre] >= EconomySystem.OrePerIngot
                       && b.Stock[(int)Good.Coal] + s.Stock[(int)Good.Coal] >= EconomySystem.CoalPerIngot;

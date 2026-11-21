@@ -15,6 +15,8 @@ public enum Good : byte
     Coal,
     /// <summary>Iron ingots, made by the smelter.</summary>
     Iron,
+    /// <summary>Crystal dug from the cavern walls; a shrine channels it into mana (see <see cref="BuildingKind.Shrine"/>).</summary>
+    Crystal,
 }
 
 /// <summary>An amount of one good, as in a cost.</summary>
@@ -22,9 +24,9 @@ public readonly record struct GoodAmount(Good Good, int Amount);
 
 public static class Goods
 {
-    public const int Count = 6;
+    public const int Count = 7;
 
-    public static readonly Good[] All = { Good.Food, Good.Wood, Good.Stone, Good.IronOre, Good.Coal, Good.Iron };
+    public static readonly Good[] All = { Good.Food, Good.Wood, Good.Stone, Good.IronOre, Good.Coal, Good.Iron, Good.Crystal };
 
     public static string Name(Good g) => g switch
     {
@@ -34,6 +36,7 @@ public static class Goods
         Good.IronOre => "Iron ore",
         Good.Coal => "Coal",
         Good.Iron => "Iron",
+        Good.Crystal => "Crystal",
         _ => throw new ArgumentOutOfRangeException(nameof(g)),
     };
 

@@ -455,7 +455,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "mana", "channelTime");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -465,7 +465,7 @@ public static class ContentLoader
             var kind = o.Enum("kind", BuildingKind.House, required: true);
             var (sizeX, sizeZ) = o.Size("size");
             int slots = o.Int("workerSlots", 0, 20, 0);
-            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry && slots == 0)
+            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine && slots == 0)
                 o.Error($"a {SnakeName(kind)} needs \"workerSlots\" of 1 or more, or nobody can work it");
             int wallHeight = o.Int("wallHeight", 1, 12, 3);
             if (kind is BuildingKind.Wall or BuildingKind.Tower && wallHeight <= Walk.MaxClimb)
@@ -507,7 +507,13 @@ public static class ContentLoader
                 WorkTicks = o.Int("workTime", 1, MaxSeconds, 0) * Tps,
                 Shore = o.Bool("shore"),
                 Plants = o.Int("plants", 0, 32, 0),
+                Mana = o.Int("mana", 0, 1000, 0),
+                ChannelTicks = o.Int("channelTime", 1, MaxSeconds, 0) * Tps,
             };
+            if (kind == BuildingKind.Shrine && (def.Mana == 0 || def.ChannelTicks == 0))
+                o.Error("a shrine needs \"mana\" (what one crystal gives) and \"channelTime\" (the seconds it takes)");
+            if (kind != BuildingKind.Shrine && (def.Mana > 0 || def.ChannelTicks > 0))
+                o.Error("only a shrine has \"mana\" and \"channelTime\"");
             if (def.Shore && kind is BuildingKind.Wall or BuildingKind.Gate or BuildingKind.Bridge or BuildingKind.Tower or BuildingKind.Totem)
                 o.Error($"a {SnakeName(kind)} cannot need the water's edge (\"shore\")");
             if (def.Plants > 0 && kind != BuildingKind.Quarry) o.Error("only a quarry \"plants\" trees");
@@ -1333,6 +1339,8 @@ public static class ContentLoader
                 h.Add(b.WorkTicks);
                 h.Add(b.Shore ? 1 : 0);
                 h.Add(b.Plants);
+                h.Add(b.Mana);
+                h.Add(b.ChannelTicks);
             }
             h.Add(db.Units.Count);
             foreach (var u in db.Units)

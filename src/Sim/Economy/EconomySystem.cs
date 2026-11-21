@@ -51,6 +51,15 @@ public sealed class PlayerEconomy
     public int[] Gathered { get; } = new int[Goods.Count];
     /// <summary>Goods paid for buildings, roads and training.</summary>
     public int[] Spent { get; } = new int[Goods.Count];
+    /// <summary>
+    /// Mana, channelled from crystal at the player's shrines and spent on spells (see
+    /// <see cref="Units.SpellSystem.ManaCost"/>). Not a good: nobody carries it, and it cannot be raided. Like a
+    /// building's <see cref="Building.Stock"/>, tests and match setup may set it directly; play changes it only
+    /// through shrines and spells.
+    /// </summary>
+    public int Mana { get; set; } = EconomySystem.StartingMana;
+    /// <summary>Mana channelled at the player's shrines this match.</summary>
+    public int ManaChannelled { get; internal set; }
     /// <summary>Food gathered in the last minute (see <see cref="EconomySystem.FoodPerMinute"/>).</summary>
     public int FoodGathered { get; internal set; }
 
@@ -111,6 +120,9 @@ public sealed partial class EconomySystem
     public const int MaxMisses = 3;
     /// <summary>Ticks a unit with nothing to do waits before looking again.</summary>
     public const int WaitTicks = Tps;
+
+    /// <summary>Mana every player has at the start of a match: enough for a spell or two before the first shrine.</summary>
+    public const int StartingMana = 50;
 
     /// <summary>What a player's town hall holds at the start of a match.</summary>
     public static readonly GoodAmount[] StartingGoods =
@@ -239,6 +251,7 @@ public sealed partial class EconomySystem
             Mix((long)p.DefaultPriorities);
             Mix(p.Researching);
             Mix(p.ResearchTicks);
+            Mix(p.Mana);
             for (int t = 0; t < p.Researched.Length; t++)
                 if (p.Researched[t]) Mix(t);
             foreach (int form in p.AutoForm) Mix(form);
@@ -271,6 +284,7 @@ public sealed partial class EconomySystem
             {
                 if (b.Upgrade != null) StepUpgrade(b);
                 if (b.Def.Kind == BuildingKind.Smelter) StepSmelter(b);
+                else if (b.Def.Kind == BuildingKind.Shrine) StepShrine(b);
                 if (b.Queue.Count > 0) StepTraining(b);
                 if (b.Def.YieldTicks > 0 && (_sim.Tick + b.Id) % b.Def.YieldTicks == 0) BringYield(b);
             }
@@ -657,6 +671,32 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>
+    /// A shrine channels the crystal its worker brought, one at a time (<see cref="BuildingDef.ChannelTicks"/>
+    /// each, at its <see cref="BuildingDef.Speed"/>), and each one gives its owner <see cref="BuildingDef.Mana"/>.
+    /// The crystal being channelled is counted in <see cref="Building.SmeltTicks"/>.
+    /// </summary>
+    private void StepShrine(Building b)
+    {
+        if (b.SmeltTicks > 0 && (b.SmeltTicks = Math.Max(0, b.SmeltTicks - Steps(b))) == 0)
+        {
+            var p = Player(b.Owner);
+            p.Mana += b.Def.Mana;
+            p.ManaChannelled += b.Def.Mana;
+        }
+        if (b.SmeltTicks == 0 && b.Stock[(int)Good.Crystal] > 0)
+        {
+            b.Stock[(int)Good.Crystal]--;
+            b.SmeltTicks = b.Def.ChannelTicks;
+        }
+    }
+
+    /// <summary>The player has at least <paramref name="mana"/> mana.</summary>
+    public bool HasMana(int player, int mana) => player >= 0 && Player(player).Mana >= mana;
+
+    /// <summary>Takes <paramref name="mana"/> mana from the player (they must have it).</summary>
+    internal void SpendMana(int player, int mana) => Player(player).Mana -= mana;
+
+    /// <summary>
     /// Trains the first unit in the queue while the owner has room; it steps out at the door. A
     /// worker comes out automatic if its player has said so; on repeat, the unit is owed to the queue again.
     /// </summary>
@@ -948,7 +988,7 @@ public sealed partial class EconomySystem
             {
                 StartJob(i, UnitJob.Build, b.Id);
             }
-            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry)
+            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine)
             {
                 var job = JobAt(b.Def);
                 if (U.Job[i] == job && U.JobTarget[i] == b.Id) continue;
@@ -1066,7 +1106,7 @@ public sealed partial class EconomySystem
         return result;
     }
 
-    /// <summary>The job of a worker working a building of this kind: farming, hauling for a smelter, or quarrying.</summary>
+    /// <summary>The job of a worker working a building of this kind: farming, hauling for a smelter or shrine, or quarrying.</summary>
     public static UnitJob JobAt(BuildingDef def) => def.Kind switch
     {
         BuildingKind.Farm => UnitJob.Farm,
