@@ -37,6 +37,7 @@ public static class UiIcons
         Good.IronOre => "iron_ore",
         Good.Coal => "coal",
         Good.Crystal => "crystal",
+        Good.Gold => "gold",
         _ => "iron",
     });
 
@@ -178,6 +179,12 @@ public static class UiIcons
         {
             "............", "............", "............", "....kkkkkk..", "...kllllllk.", "..kliiiiilk.",
             ".kkkkkkkkIk.", ".kliiiiilkIk", ".kiiiiiiikk.", ".kIIIIIIIk..", ".kkkkkkkkk..", "............",
+        },
+        // Gold: a little heap of gold nuggets, one glinting.
+        ["gold"] = new[]
+        {
+            "............", "............", ".....kk.....", "....kywk....", "...kyyyYk...", "..kkYyYkkk..",
+            ".kyykkkyywk.", ".kyyyYkyyyYk", "kyywyYkyYYk.", "kYyyYYkYYk..", ".kkkkkkkkk..", "............",
         },
         // Crystal: a cluster of cyan points growing from a rock.
         ["crystal"] = new[]

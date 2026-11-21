@@ -36,7 +36,7 @@ public partial class TestPanel : CanvasLayer
     /// <summary>The blocks the brush lays, in the order listed.</summary>
     public static readonly BlockType[] BrushBlocks =
     {
-        BlockType.Stone, BlockType.Soil, BlockType.Grass, BlockType.Sand, BlockType.Mud, BlockType.IronOre, BlockType.Coal,
+        BlockType.Stone, BlockType.Soil, BlockType.Grass, BlockType.Sand, BlockType.Mud, BlockType.IronOre, BlockType.Coal, BlockType.GoldOre,
         BlockType.Crystal, BlockType.BerryBush, BlockType.Water, BlockType.Lava, BlockType.Air,
     };
 

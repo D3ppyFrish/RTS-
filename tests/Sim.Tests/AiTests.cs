@@ -230,6 +230,7 @@ public class AiTests
         var hall = sim.Economy.TownHall(0)!;
         hall.Stock[(int)Good.Food] = 2000;
         hall.Stock[(int)Good.Iron] = 200;
+        hall.Stock[(int)Good.Gold] = 200; // the goblins' blades are paid in gold
         for (int k = 0; k < 14; k++) sim.SpawnUnit(0, "spearman", 20 + k % 7, hall.MaxZ + 2 + k / 7);
         // Room for a mercenary however many of the spearmen come back (bleeding decides that, issue #72).
         Assert.NotNull(sim.Economy.PlaceFinished(0, sim.Content.Building("house"), 10, hall.Z));

@@ -88,7 +88,7 @@ public sealed partial class AutomationSystem
     private static readonly (Good Good, BlockType Block, int Share)[] Gatherable =
     {
         (Good.Food, BlockType.BerryBush, 3), (Good.Wood, BlockType.Wood, 3), (Good.Stone, BlockType.Stone, 2),
-        (Good.IronOre, BlockType.IronOre, 1), (Good.Coal, BlockType.Coal, 1),
+        (Good.IronOre, BlockType.IronOre, 1), (Good.Coal, BlockType.Coal, 1), (Good.Gold, BlockType.GoldOre, 1),
     };
 
     private readonly Simulation _sim;
@@ -135,13 +135,15 @@ public sealed partial class AutomationSystem
         public int Waiting;
         public int FarmSlots, FreeFarmSlots;
         public bool Smelter, HouseSite, FarmSite;
+        /// <summary>The player holds a city-state town whose mercenaries cost gold: gold is worth digging.</summary>
+        public bool WantsGold;
 
         public void Clear()
         {
             Array.Clear(Stock);
             Array.Clear(Gatherers);
             Population = Workers = Housing = Waiting = FarmSlots = FreeFarmSlots = 0;
-            Smelter = HouseSite = FarmSite = false;
+            Smelter = HouseSite = FarmSite = WantsGold = false;
         }
     }
 
@@ -438,7 +440,7 @@ public sealed partial class AutomationSystem
         for (int k = 0; k < Gatherable.Length; k++)
         {
             var (good, _, share) = Gatherable[k];
-            if (only >= 0 ? k != only : good is Good.IronOre or Good.Coal && !s.Smelter) continue;
+            if (only >= 0 ? k != only : good is Good.IronOre or Good.Coal && !s.Smelter || good == Good.Gold && !s.WantsGold) continue;
             long n = share * 1000L / (s.Gatherers[(int)good] + 1);
             if (good == Good.Food && s.Stock[(int)Good.Food] < FoodLow)
                 n *= 4;
@@ -475,7 +477,7 @@ public sealed partial class AutomationSystem
     /// levels that no other worker has claimed and that a worker can stand next to (for a tree, the base
     /// of its trunk). With <paramref name="only"/> (an index in <see cref="Gatherable"/>) it looks for that
     /// good alone, smelter or not; with -1, for all of them by need. A good's need is its share of the gatherers (food and wood 3, stone 2, iron ore and
-    /// coal 1, those two only with a smelter) over its gatherers plus one; four times that for food when
+    /// coal 1, those two only with a smelter; gold 1, only while the player holds a town whose mercenaries cost gold) over its gatherers plus one; four times that for food when
     /// the player has less than <see cref="FoodLow"/>, and a sixteenth for a good they have
     /// <see cref="Plenty"/> of. The search goes out ring by ring and stops once the most needed good is found.
     /// If there is nothing to gather within <see cref="SearchRadius"/> it goes on out to
@@ -858,6 +860,17 @@ public sealed partial class AutomationSystem
             }
             if (b.Def.Kind == BuildingKind.Smelter) s.Smelter = true;
         }
+        foreach (var town in _sim.Cities.Towns)
+            if (town.Holder >= 0 && town.Holder < _stats.Count && Pays(town, Good.Gold)) _stats[town.Holder].WantsGold = true;
+    }
+
+    /// <summary>True if any of the town's mercenaries costs <paramref name="good"/>.</summary>
+    private static bool Pays(CityState town, Good good)
+    {
+        foreach (var m in town.Def.Mercenaries)
+            foreach (var c in m.Cost)
+                if (c.Good == good) return true;
+        return false;
     }
 
     /// <summary>Forgets workers that are gone and places that may be tried again.</summary>

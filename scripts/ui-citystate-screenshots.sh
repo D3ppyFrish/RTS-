@@ -3,7 +3,7 @@
 # its totem in plain wood and six wild guards round it). The starting units clear the wolf lair on the
 # road east, then march on the goblin town and break its totem: the town is yours, its guards change sides
 # and the totem stands again in your colour. A goblin of each kind is hired at its market, and a caravan is
-# trained at the town hall and sent to trade at the town, while tribute comes in. Last the ogres' hold
+# trained at the town hall and sent to trade at the town, while tribute (gold) comes in. Last the ogres' hold
 # (issue #46) is picked from the top bar: neutral, its stone idol plain and four ogre guards round it, and then
 # the kobolds' warren, dug into a chamber of the deep caves, seen through the height slice: neutral, its great
 # crystal plain and five kobold guards round it. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
@@ -123,7 +123,10 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[4]}" unit)" = caravan ] && [ "$(field "${UI[4]}" selected)" -eq 1 ] && [ "$(field "${UI[4]}" caravans)" -eq 1 ] \
   || fail "no caravan trained and selected: ${UI[4]}"
 [ "$(field "${UI[5]}" trading)" -eq 1 ] || fail "the caravan is not trading: ${UI[5]}"
-[ "$(field "${UI[6]}" holder)" -eq 0 ] && [ "$(field "${UI[6]}" caravans)" -eq 1 ] && [ "$(field "${UI[6]}" iron)" -gt "$(field "${UI[5]}" iron)" ] \
+# The goblins' tribute is gold, and their trade brings back iron: either counts.
+GOT_BEFORE=$(( $(field "${UI[5]}" iron) + $(field "${UI[5]}" gold) ))
+GOT_AFTER=$(( $(field "${UI[6]}" iron) + $(field "${UI[6]}" gold) ))
+[ "$(field "${UI[6]}" holder)" -eq 0 ] && [ "$(field "${UI[6]}" caravans)" -eq 1 ] && [ "$GOT_AFTER" -gt "$GOT_BEFORE" ] \
   || fail "no tribute or trade came in from the goblins: ${UI[6]}"
 [ "$(field "${UI[7]}" city)" = ogres ] && [ "$(field "${UI[7]}" holder)" -eq -1 ] && [ "$(field "${UI[7]}" totem_owner)" -eq 7 ] \
   && [ "$(field "${UI[7]}" guards)" -eq 4 ] || fail "the ogres' hold is not selected, or it is not neutral with its idol and guards: ${UI[7]}"

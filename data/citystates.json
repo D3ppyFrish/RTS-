@@ -23,10 +23,10 @@
 // All the numbers are first guesses for playtesting.
 [
   { "id": "goblins", "name": "Goblin town",
-    "description": "Goblin traders and blades for hire. Break their totem and they bow to you: they send you tribute, guard their town against your enemies and sell you their blades.",
+    "description": "Goblin traders and blades for hire. Break their totem and they bow to you: they send you gold, guard their town against your enemies and sell you their blades.",
     "totem": { "building": "goblin_totem", "respawn": 5 },
     "guards": { "units": ["goblin_cutthroat", "goblin_cutthroat", "goblin_cutthroat", "goblin_slinger", "goblin_slinger", "goblin_slinger"], "reach": 4, "refill": 45 },
-    "tribute": { "caravan": "caravan", "good": "iron", "amount": 15, "every": 60 },
+    "tribute": { "caravan": "caravan", "good": "gold", "amount": 10, "every": 60 },
     "trade": { "buys": "food", "load": 20, "sells": "iron", "price": 5, "holderBonus": 50 },
     "mercenaries": { "pool": 6, "refill": 30 },
     "heal": { "range": 6 },
