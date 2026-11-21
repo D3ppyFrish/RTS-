@@ -932,6 +932,44 @@ in a replay's header); off, it sleeps all match. All numbers are first guesses f
 - **Computer players** fight the broods as they fight any attacker; they do not yet keep away from the Heartscar or
   stop digging near the heart.
 
+## The shadowed wilds
+
+`src/Sim/World/RegionGenerator.Wilds.cs` (`PlaceWilds`), `Conditions.InGloom`, `MonsterSystem.Grow` (tests in
+`ShadowedWildsTests`): the design doc's far interior, a perilous biome round the middle of the continent, over the
+Heartscar. All numbers are first guesses for playtesting.
+
+- **Where**: every grassland and forest column within 48 columns of the middle of the map (on a 512 map; 72 on
+  the default 768 one), with a ragged edge, and at least 120 columns (180) from both starts, is the shadowed wilds
+  (`Biome.Wilds`). Hills, swamp, river and beach inside that ring stay as they are, so the middle ford runs through
+  it. A map smaller than 384 across (test and scripted maps) has none.
+- **The look of the land**: gloom moss (`BlockType.Gloom`), cold and dark blue-green, instead of grass (ground like
+  grass in every other way: dug away for nothing, levelled for buildings, saplings root in it); the broad-leaved
+  trees and birches in it have blue-black crowns, and gloom pines (taller than other pines, with blue-black
+  needles flecked with pale specks that glimmer) stand close together between them. A forester's lodge in the
+  wilds plants gloom pines.
+- **The gloom**: something standing in the wilds sees 60% as far as it would outside (`Conditions.GloomSight`),
+  at every hour and in every weather, on top of the night's and the weather's, and even with day, night and weather
+  off, since it is the ground and not the sky. Ranged shots at a target in the wilds miss 20 in a hundred more
+  (`GloomMiss`). Light beats the gloom as it beats the night: within a torch's, a campfire's, a lantern's or
+  lava's light (see [Day, night and weather](#day-night-and-weather)) units see as far as ever and shots land as
+  they would outside, so lights in the wilds burn by day too.
+- **Shadow crystal**: four outcrops of crystal (`BlockType.Crystal`) for each 512 by 512 blocks of map (eight on
+  the default map) stand on level gloom moss, at least 24 columns apart and off the river's banks: a mound three
+  columns across with a spire four blocks tall in its middle, 34 blocks of crystal in all, two layers of it in the
+  ground. It is the only crystal on the surface: workers dig it as they dig it in the caves, for crystal to channel
+  into mana.
+- **Shade stalkers**: corrupted beasts touched by the dark power, in dens in the wilds (two for each 512 by 512
+  blocks of map, four on the default map; `shade_stalker` in `data/units.json`, `"biome": "wilds"`). A stalker is a
+  gaunt blue-black wolf: 110 hit points, quick (6.5), slashing bites, sees 11, follows blood. A den starts with a
+  pack of 3 that guards 12 columns round it, but **the pack grows the longer it is left**: every 150 seconds while
+  the den stands another stalker is born at it (`"grow": 150`), up to 9 (`"growTo": 9`), so a den cleared early is
+  cheap and one left for half an hour is a war. Six spearmen clear a fresh den; the same six cannot clear one left 15
+  minutes. Clearing a den pays 40 crystal and 20 gold (to a side that does not tame monsters), and either faction
+  takes up the **shade pelt** from its den (a relic: +3 damage, +1 armour). Orcs beat stalkers as they beat any
+  monster, and keep them.
+- **In the game**: the stalkers have their own model (a big blue-black wolf with a grey-blue mane and pale eyes)
+  and the shade pelt its own icon.
+
 ## Natural hazards
 
 `src/Sim/World/HazardSystem.cs` (tests in `WildsTests`, `HazardTests`, `QuicksandTests` and `RockfallTests`, issues #45, #66 and #78): ground that

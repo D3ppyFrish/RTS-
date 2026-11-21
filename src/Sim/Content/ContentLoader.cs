@@ -361,7 +361,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -370,7 +370,7 @@ public static class ContentLoader
             if (o.Str("biome", false) is { } name)
             {
                 if (Enum.TryParse<Biome>(name, ignoreCase: true, out var b) && b is not (Biome.Ocean or Biome.River)) biome = b;
-                else o.Error($"\"biome\" is \"{name}\": it should be grassland, forest, hills, swamp or beach");
+                else o.Error($"\"biome\" is \"{name}\": it should be grassland, forest, hills, swamp, beach or wilds");
             }
             var cavern = CavernSpot.None;
             if (o.Str("cavern", false) is { } spot)
@@ -384,12 +384,18 @@ public static class ContentLoader
             if (count > 0 && biome == null && cavern == CavernSpot.None) o.Error("\"count\" needs a \"biome\" or \"cavern\" to spread the lairs over");
             int roam = o.Int("roam", 0, 128, 0);
             if (roam > 0 && biome == null) o.Error("\"roam\" needs a \"biome\": only the lairs spread across the map roam");
+            int grow = o.Int("grow", 0, 3600, 0);
+            int pack = o.Int("pack", 1, 50, 4, required: true);
+            int growTo = o.Int("growTo", 1, 50, grow > 0 ? pack * 2 : pack);
+            if (e.TryGetProperty("growTo", out _) && grow == 0) o.Error("\"growTo\" needs a \"grow\" (seconds between births)");
+            if (grow > 0 && growTo <= pack) o.Error($"\"growTo\" is {growTo}, but the pack starts {pack} strong, so it should be more");
+            if (grow > 0 && dusk) o.Error("the dusk tree's warden does not \"grow\"");
             bool atStarts = !dusk && (e.TryGetProperty("atStarts", out _) ? o.Bool("atStarts") : biome == null && cavern == CavernSpot.None);
             if (dusk && (biome != null || cavern != CavernSpot.None || o.Bool("atStarts") || e.TryGetProperty("prizes", out _)))
                 o.Error("a lair with \"duskTree\" guards the dusk tree only: no \"biome\", \"cavern\", \"atStarts\" or \"prizes\"");
             var def = new LairDef
             {
-                Pack = o.Int("pack", 1, 50, 4, required: true),
+                Pack = pack,
                 Guard = guard,
                 Leash = Math.Max(leash, guard),
                 Reward = o.Cost("reward"),
@@ -399,6 +405,8 @@ public static class ContentLoader
                 AtStarts = atStarts,
                 Cavern = cavern,
                 Roam = biome != null ? roam : 0,
+                GrowTicks = dusk ? 0 : grow * Simulation.TicksPerSecond,
+                GrowTo = grow > 0 && !dusk ? growTo : pack,
             };
             if (!dusk) Prizes(o, def);
             return def;

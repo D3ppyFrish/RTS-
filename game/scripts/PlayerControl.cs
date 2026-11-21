@@ -2046,6 +2046,8 @@ public partial class PlayerControl : Node
                $"sites_active={(_sim.Sites.Active ? 1 : 0)} sites_held={_sim.Sites.Held(LocalPlayer)} sites_leader={_sim.Sites.Leader} " +
                $"great_works={_sim.Ascendancy.Works.Count} great_work_left={(_sim.Ascendancy.Leading is { } gw ? _sim.Ascendancy.TicksLeft(gw) : -1)} " +
                $"great_work_owner={_sim.Ascendancy.Leading?.Owner ?? -1} by_ascendancy={(_sim.Match.ByAscendancy ? 1 : 0)} " +
+               $"wilds={(_sim.Map.HasWilds ? 1 : 0)} stalker_dens={_sim.Monsters.Lairs.Count(l => l.Monster.Id == "shade_stalker" && !l.Cleared)} " +
+               $"stalkers={_sim.Monsters.Lairs.Where(l => l.Monster.Id == "shade_stalker").Sum(l => l.Pack.Count)} " +
                $"dark_stage={_sim.DarkPower.Stage} dark_radius={_sim.DarkPower.Radius} dark_next={_sim.DarkPower.TicksToNextStage} " +
                $"broods={_sim.DarkPower.Broods.Count} brood_beasts={_sim.DarkPower.Broods.Sum(b => b.Beasts.Count)} " +
                $"sites_left={_sim.Sites.TicksLeft} sites_claim={_sim.Ruins.Ruins.Max(r => (int?)r.Claim) ?? 0} " +

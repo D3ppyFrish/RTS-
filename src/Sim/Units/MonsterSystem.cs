@@ -54,6 +54,8 @@ public sealed class Lair
     public int HomeZ { get; internal set; }
     // The tick a roaming pack next moves on, if it is not fighting.
     internal long NextRoam;
+    /// <summary>The tick the next monster is born to a growing pack (see <see cref="LairDef.GrowTicks"/>), or 0 if it never grows.</summary>
+    public long NextBirth { get; internal set; }
 
     internal readonly List<int> PackIds = new();
     /// <summary>The pack's monsters (ids) following a blood trail, in the order they picked it up.</summary>
@@ -170,7 +172,7 @@ public sealed class MonsterSystem
             Mix(lair.Id); Mix(lair.Monster.Index); Mix(lair.X); Mix(lair.Y); Mix(lair.Z);
             Mix(lair.Cleared ? 1 : 0); Mix(lair.ClearedBy); Mix(lair.LastBeatenBy);
             Mix(lair.Used ? 1 : 0); Mix(lair.UsedBy); Mix(lair.Building);
-            Mix(lair.Roam); Mix(lair.HomeX); Mix(lair.HomeY); Mix(lair.HomeZ); Mix(lair.NextRoam);
+            Mix(lair.Roam); Mix(lair.HomeX); Mix(lair.HomeY); Mix(lair.HomeZ); Mix(lair.NextRoam); Mix(lair.NextBirth);
             Mix(lair.PackIds.Count);
             foreach (int id in lair.PackIds) Mix(id);
             Mix(lair.TrackerIds.Count);
@@ -406,6 +408,7 @@ public sealed class MonsterSystem
             int id = _sim.SpawnUnit(Simulation.WildPlayer, monster.Id, px, pz, py);
             if (id > 0) lair.PackIds.Add(id);
         }
+        if (def.GrowTicks > 0) lair.NextBirth = _sim.Tick + def.GrowTicks;
         _lairs.Add(lair);
         return lair;
     }
@@ -460,7 +463,35 @@ public sealed class MonsterSystem
             // A tracker that lost its quarry (it died, or the tracker gave up the fight) is a plain guard again.
             lair.TrackerIds.RemoveAll(id => U.IndexOf(id) is var i && (i < 0 || !IsWild(i) || U.Target[i] == 0));
             if (lair.PackIds.Count == 0) Clear(lair);
-            else if ((tick + lair.Id) % GuardInterval == 0) Guard(lair);
+            else
+            {
+                if (lair.NextBirth > 0 && tick >= lair.NextBirth) Grow(lair);
+                if ((tick + lair.Id) % GuardInterval == 0) Guard(lair);
+            }
+        }
+    }
+
+    /// <summary>
+    /// A growing pack's time has come (see <see cref="LairDef.GrowTicks"/>): one more of its monster is born on the
+    /// ground by the den, at the first of the pack's spots round it that is no more than <see cref="GuardHeight"/>
+    /// levels off the den's, unless the pack is already <see cref="LairDef.GrowTo"/> strong. The next birth is
+    /// due a while later either way.
+    /// </summary>
+    private void Grow(Lair lair)
+    {
+        var def = lair.Monster.Lair!;
+        lair.NextBirth = _sim.Tick + def.GrowTicks;
+        if (lair.PackIds.Count >= def.GrowTo) return;
+        for (int k = 0; k < PackSpots.Length; k++)
+        {
+            var (ox, oz) = PackSpots[(lair.PackIds.Count + k) % PackSpots.Length];
+            int px = lair.X + ox, pz = lair.Z + oz;
+            if (!World.InBounds(px, 0, pz)) continue;
+            int py = Walk.GroundLevel(World, px, pz);
+            if (py < 0 || Math.Abs(py - lair.Y) > GuardHeight) continue;
+            int id = _sim.SpawnUnit(Simulation.WildPlayer, lair.Monster.Id, px, pz, py);
+            if (id > 0) lair.PackIds.Add(id);
+            return;
         }
     }
 

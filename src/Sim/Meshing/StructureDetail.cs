@@ -34,14 +34,16 @@ public static class StructurePalette
     public const byte StakeA = 70, StakeB = 71;
     /// <summary>A rampart's dressed stone: paler than a house's stone, in three shades, and its mortar.</summary>
     public const byte RampartA = 72, RampartB = 73, RampartC = 74, RampartMortar = 75;
+    /// <summary>A gloom pine's needles (the shadowed wilds): blue-blacks, their shadow, and the pale specks that glimmer.</summary>
+    public const byte GloomA = 76, GloomB = 77, GloomDark = 78, GloomGlow = 79;
     /// <summary>One more than the highest colour.</summary>
-    public const byte Count = 76;
+    public const byte Count = 80;
 
     /// <summary>Leaf colours: drawn swaying in the wind.</summary>
-    public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark;
+    public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark || c is >= GloomA and <= GloomDark;
 
-    /// <summary>Colours that glow by themselves (a dusk tree's specks).</summary>
-    public static bool IsGlow(byte c) => c is DuskGlow or DuskVein;
+    /// <summary>Colours that glow by themselves (a dusk tree's specks, a gloom pine's).</summary>
+    public static bool IsGlow(byte c) => c is DuskGlow or DuskVein or GloomGlow;
     public const byte Occluder = 255;
 }
 
@@ -749,7 +751,7 @@ public static class StructureDetail
             int sides = 0;
             for (int d = 0; d < 6; d++)
                 if (Open(d) && Depth(d, x, y, z) >> 2 == 0) sides++;
-            if (sides >= 3 || sides == 2 && (h % 4 != 0 || _self == BlockType.PineNeedles)) return StructurePalette.Empty;
+            if (sides >= 3 || sides == 2 && (h % 4 != 0 || _self is BlockType.PineNeedles or BlockType.GloomLeaves)) return StructurePalette.Empty;
             // Birches are airy: now and then an outer clump is missing.
             if (_self == BlockType.BirchLeaves && sides == 1 && h % 5 == 0) return StructurePalette.Empty;
             bool top = Open(PY), bottom = Open(NY) && Depth(NY, x, y, z) < 4;
@@ -760,6 +762,8 @@ public static class StructureDetail
                 if (h % 4 == 0 && depth < 2) return StructurePalette.Empty;
                 if (_self == BlockType.DuskLeaves && depth == 0 && Hash(_wx * Size + x, _wy, _wz * Size + z) % 13 == 0)
                     return StructurePalette.DuskGlow;
+                if (_self == BlockType.GloomLeaves && depth == 0 && Hash(_wx * Size + x, _wy, _wz * Size + z) % 61 == 0)
+                    return StructurePalette.GloomGlow;
                 if (depth < 4) return h % 4 == 1 ? light : h % 4 == 2 ? c : a;
             }
             if (bottom) return under;
@@ -777,6 +781,8 @@ public static class StructureDetail
                 StructurePalette.BirchLeafA, StructurePalette.WillowB),
             BlockType.DuskLeaves => (StructurePalette.DuskA, StructurePalette.DuskB, StructurePalette.DuskA,
                 StructurePalette.DuskB, StructurePalette.DuskDark),
+            BlockType.GloomLeaves => (StructurePalette.GloomA, StructurePalette.GloomB, StructurePalette.GloomA,
+                StructurePalette.GloomB, StructurePalette.GloomDark),
             _ => (StructurePalette.LeafA, StructurePalette.LeafB, StructurePalette.LeafC, StructurePalette.LeafYellow,
                 StructurePalette.LeafDark),
         };

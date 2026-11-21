@@ -326,6 +326,10 @@ public static class ChunkMesher
         StructurePalette.RampartB => new Color(0.7f, 0.69f, 0.66f),
         StructurePalette.RampartC => new Color(0.89f, 0.88f, 0.83f),
         StructurePalette.RampartMortar => new Color(0.5f, 0.49f, 0.46f),
+        StructurePalette.GloomA => new Color(0.17f, 0.25f, 0.3f),
+        StructurePalette.GloomB => new Color(0.22f, 0.3f, 0.37f),
+        StructurePalette.GloomDark => new Color(0.1f, 0.14f, 0.19f),
+        StructurePalette.GloomGlow => new Color(0.45f, 0.75f, 0.85f),
         _ => new Color(1, 0, 1),
     };
 
@@ -341,12 +345,14 @@ public static class ChunkMesher
         BlockType.BirchLeaves => face == 2 ? new Color(0.51f, 0.66f, 0.22f) : new Color(0.49f, 0.66f, 0.23f),
         BlockType.WillowLeaves => face == 2 ? new Color(0.44f, 0.59f, 0.27f) : new Color(0.4f, 0.54f, 0.27f),
         BlockType.DuskLeaves => face == 2 ? new Color(0.55f, 0.34f, 0.68f) : new Color(0.48f, 0.29f, 0.62f),
+        BlockType.GloomLeaves => face == 2 ? new Color(0.21f, 0.29f, 0.35f) : new Color(0.17f, 0.25f, 0.3f),
         _ => ColorOf(t),
     };
 
     public static Color ColorOf(BlockType t) => t switch
     {
         BlockType.Grass => new Color(0.35f, 0.53f, 0.25f),
+        BlockType.Gloom => new Color(0.24f, 0.31f, 0.3f), // gloom moss: a cold, dark blue-green, unlike any grass
         BlockType.Soil => new Color(0.47f, 0.33f, 0.2f),
         BlockType.Sand => new Color(0.86f, 0.8f, 0.55f),
         BlockType.Stone => new Color(0.5f, 0.5f, 0.52f),
@@ -392,6 +398,7 @@ public static class ChunkMesher
         BlockType.BirchLeaves => new Color(0.5f, 0.66f, 0.26f),
         BlockType.WillowLeaves => new Color(0.4f, 0.55f, 0.25f),
         BlockType.DuskLeaves => new Color(0.5f, 0.3f, 0.62f),
+        BlockType.GloomLeaves => new Color(0.17f, 0.25f, 0.3f),
         BlockType.MushroomCap => new Color(0.72f, 0.2f, 0.16f),
         BlockType.DuskWood or BlockType.DuskBranch => new Color(0.33f, 0.32f, 0.38f),
         _ => new Color(1, 0, 1),

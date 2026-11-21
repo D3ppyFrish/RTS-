@@ -83,7 +83,7 @@ public class GoldTests
         // It is rock: it falls like stone, and breaks into stone rubble.
         Assert.True(BlockInfo.CanFall(BlockType.GoldOre));
         Assert.Equal(BlockType.StoneRubble, BlockInfo.RubbleOf(BlockType.GoldOre));
-        Assert.Equal(BlockType.GoldOre, BlockInfo.Last);
+        Assert.True(BlockInfo.Last >= BlockType.GoldOre, "saved maps may hold gold ore");
     }
 
     [Fact]

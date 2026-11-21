@@ -48,8 +48,11 @@
 // theirs to ride or to recruit. A lair with duskTree guards the map's one dusk tree instead (see "Dusk tree" in
 // docs/rules.md): it is not placed at the starts and leaves no den.
 // biome and count (optional) spread count lairs of the monster over that biome (grassland, forest, hills,
-// swamp or beach) for each 512 by 512 blocks of map, well away from the starts, the towns and each other;
-// such a monster has no lair at the starts unless atStarts is true.
+// swamp, beach or wilds, the shadowed wilds round the middle of the map) for each 512 by 512 blocks of map,
+// well away from the starts, the towns and each other; such a monster has no lair at the starts unless
+// atStarts is true. grow (optional, seconds) makes the pack grow the longer it is left: every grow seconds
+// while the lair stands, one more of the monster is born at its den, until the pack is growTo strong
+// (twice pack if left out).
 // prizes (optional): what each faction gets for beating the monster, by faction id. A cleared lair leaves
 // a den that one player of a faction with a prize can use, once: { "building": id } puts that building (one
 // with "fromDen" in buildings.json) up on the den as a site to build, { "form": id } has the nearest unit
@@ -239,6 +242,15 @@
     "speed": 3.5, "hp": 500, "model": "dusk_warden", "damage": 18, "attackTime": 1.5, "range": 1.75, "sight": 10,
     "attack": "crush", "armor": { "head": 2, "torso": 3, "arms": 2, "legs": 2 },
     "lair": { "pack": 1, "guard": 10, "leash": 16, "duskTree": true } },
+
+  // The shadowed wilds' corrupted beasts: they den in the gloom round the middle of the map, and their packs grow.
+  { "id": "shade_stalker", "name": "Shade stalker", "role": "monster",
+    "description": "A gaunt, blue-black hunter of the shadowed wilds with cold pale eyes, touched by the dark power under the Heartscar. Its pack dens in the gloom and grows every few minutes it is left, so a den found late is a den grown dangerous. Whoever clears one finds shadow crystal and gold in its den.",
+    "speed": 6.5, "hp": 110, "model": "shade_stalker", "damage": 10, "attackTime": 1, "range": 1.25, "sight": 11,
+    "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true,
+    "lair": { "pack": 3, "guard": 12, "leash": 18, "reward": { "crystal": 40, "gold": 20 }, "biome": "wilds", "count": 2,
+      "grow": 150, "growTo": 9,
+      "prizes": { "orcs": { "relic": "shade_pelt" }, "settlers": { "relic": "shade_pelt" } } } },
 
   // The dark power's corrupted beasts: broods of them claw up out of the Heartscar as it wakes (see the Awakening).
   { "id": "blight_hound", "name": "Blight hound", "role": "monster",

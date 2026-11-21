@@ -409,6 +409,12 @@ public static class UiIcons
             "............", "...kkkkkk...", "..krrRRrrk..", ".krrRrrRrrk.", ".krRrrrrRrk.", ".krrrRRrrrk.",
             ".krRrrrrRrk.", ".krrRrrRrrk.", "..krrRRrrk..", "...kkkkkk...", "....kppk....", ".....kk.....",
         },
+        // The shade pelt: a blue-black wolf's pelt worn as a hooded cloak, its pale eyes still in the hood.
+        ["shade_pelt"] = new[]
+        {
+            "....kkkk....", "...kcCCck...", "..kcCttCck..", "..kcCCCCck..", ".kcCcCCcCck.", ".kcIcCCcIck.",
+            "kcCIcCCcICck", "kcCcCCCCcCck", "kcCcCIICcCck", "kcCcCCCCcCck", ".kkcICCIckk.", "...kkkkkk...",
+        },
         // The wyrm crystal: a violet crystal, glowing at its heart.
         ["wyrm_crystal"] = new[]
         {

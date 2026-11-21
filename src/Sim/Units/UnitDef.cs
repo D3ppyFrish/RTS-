@@ -254,6 +254,14 @@ public sealed class LairDef
     /// </summary>
     public int Roam { get; init; }
     /// <summary>
+    /// The pack grows the longer it is left (the shadowed wilds' corrupted beasts, see <see cref="MonsterSystem"/>):
+    /// every this many ticks while the lair is not cleared, one more of the monster is born at the den, until the
+    /// pack is <see cref="GrowTo"/> strong; 0 for a pack that never grows. <c>grow</c> in the data, in seconds.
+    /// </summary>
+    public int GrowTicks { get; init; }
+    /// <summary>The most monsters a growing pack (see <see cref="GrowTicks"/>) grows to.</summary>
+    public int GrowTo { get; init; }
+    /// <summary>
     /// What each faction gets for beating this monster: what it makes of the den a cleared lair leaves (see
     /// <see cref="MonsterSystem"/>), in data order. Two factions can share a prize; one not listed gets none.
     /// </summary>

@@ -77,6 +77,10 @@ public sealed class Conditions
     public const int RainSight = 85, StormSight = 70, FogSight = 60;
     /// <summary>Sight, in percent, from inside the swamp's mist.</summary>
     public const int MistSight = 75;
+    /// <summary>Sight, in percent, from the gloom of the shadowed wilds, away from light, at any hour.</summary>
+    public const int GloomSight = 60;
+    /// <summary>In a hundred, the ranged shots at a target in the shadowed wilds, away from light, that miss for the gloom.</summary>
+    public const int GloomMiss = 20;
     /// <summary>The least sight, in percent, whatever the conditions.</summary>
     public const int MinSight = 40;
 
@@ -179,12 +183,20 @@ public sealed class Conditions
     /// </summary>
     public int SightPercent(int x, int z, bool lit)
     {
-        if (!On) return 100;
+        int gloom = !lit && InGloom(x, z) ? GloomSight : 100;
+        if (!On) return gloom;
         int p = WeatherSight(Weather);
         if (!lit) p = p * TimeSight(Part) / 100;
         if (InMist(x, z)) p = p * MistSight / 100;
+        p = p * gloom / 100;
         return Math.Max(MinSight, p);
     }
+
+    /// <summary>
+    /// True if column (x, z) is in the gloom of the shadowed wilds (<see cref="Biome.Wilds"/>): at every hour and in
+    /// every weather, and even with day, night and weather off, since it is the ground and not the sky.
+    /// </summary>
+    public bool InGloom(int x, int z) => _sim.Map.BiomeAt(x, z) == Biome.Wilds;
 
     /// <summary>Sight, in percent, in the weather <paramref name="w"/>.</summary>
     public static int WeatherSight(Weather w) => w switch
@@ -206,7 +218,8 @@ public sealed class Conditions
     /// <summary>Chance, in percent, that a ranged shot at a target in column (x, z) lands now.</summary>
     public int HitChance(int x, int z)
     {
-        if (!On) return 100;
+        int gloom = InGloom(x, z) && !Lights.Lit(x, z) ? GloomMiss : 0;
+        if (!On) return 100 - gloom;
         int miss = Weather switch
         {
             Weather.Rain => RainMiss,
@@ -221,7 +234,7 @@ public sealed class Conditions
                 DayPart.Twilight => NightMiss / 2,
                 _ => 0,
             };
-        return Math.Max(MinHit, 100 - miss);
+        return Math.Max(MinHit, 100 - miss - gloom);
     }
 
     /// <summary>
@@ -240,7 +253,13 @@ public sealed class Conditions
     /// <summary>Once a tick: the weather turns when its spell is over, and the light is kept up to date.</summary>
     internal void Step()
     {
-        if (!On) return;
+        // The wilds are dark at every hour, so lights there count by day too (and with day and night off).
+        bool gloom = _sim.Map.HasWilds;
+        if (!On)
+        {
+            if (gloom) Lights.Step(true, false);
+            return;
+        }
         if (_sim.Tick >= _changesAt)
         {
             _rng ??= new DeterministicRandom(_sim.Seed ^ 0x3EA7E5UL);
@@ -258,7 +277,7 @@ public sealed class Conditions
                 if (end > 11 * 60) _changesAt -= (long)(end - 11 * 60) * DayTicks / 1440;
             }
         }
-        Lights.Step(Part != DayPart.Day, Weather == Weather.Storm);
+        Lights.Step(Part != DayPart.Day || gloom, Weather == Weather.Storm);
     }
 }
 

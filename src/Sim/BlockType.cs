@@ -143,12 +143,20 @@ public enum BlockType : byte
     /// Workers dig it slowly for gold; it falls like stone, and its rubble is stone rubble.
     /// </summary>
     GoldOre,
+    /// <summary>
+    /// Gloom moss: the dark, cold moss that carpets the shadowed wilds in the far interior instead of grass (see
+    /// <see cref="World.Biome.Wilds"/>). Ground like grass in every other way: units walk on it, workers dig it away
+    /// (it gives nothing), buildings level it and saplings take root in it.
+    /// </summary>
+    Gloom,
+    /// <summary>A gloom pine's crown (the shadowed wilds): blue-black needles with pale specks that glimmer.</summary>
+    GloomLeaves,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.GoldOre;
+    public const BlockType Last = BlockType.GloomLeaves;
 
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
 
@@ -192,7 +200,7 @@ public static class BlockInfo
     /// Ground that falls when nothing holds it up (see <see cref="World.PhysicsSystem"/>). Plants hold
     /// themselves up, buildings look after their own blocks, and bedrock never moves.
     /// </summary>
-    public static bool CanFall(BlockType t) => t is BlockType.Grass or BlockType.Soil or BlockType.Sand
+    public static bool CanFall(BlockType t) => t is BlockType.Grass or BlockType.Gloom or BlockType.Soil or BlockType.Sand
         or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.GoldOre or BlockType.Mud or BlockType.Bog
         or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock || IsRubble(t);
 
@@ -200,7 +208,7 @@ public static class BlockInfo
     public static bool IsTrunk(BlockType t) => t is BlockType.Wood or BlockType.PineWood or BlockType.BirchWood or BlockType.MushroomStem;
 
     /// <summary>Any tree's crown: foliage that gives nothing, goes with its tree, and that units see through.</summary>
-    public static bool IsLeaves(BlockType t) => t == BlockType.Leaves || t >= BlockType.PineNeedles && t <= BlockType.MushroomCap;
+    public static bool IsLeaves(BlockType t) => t == BlockType.Leaves || t >= BlockType.PineNeedles && t <= BlockType.MushroomCap || t == BlockType.GloomLeaves;
 
     /// <summary>Any kind of rubble.</summary>
     public static bool IsRubble(BlockType t) => t >= BlockType.Rubble && t <= BlockType.WoodRubble || t == BlockType.TreeRubble;
@@ -222,5 +230,5 @@ public static class BlockInfo
 
     /// <summary>Natural ground a building site can be levelled through or a road laid on.</summary>
     public static bool IsGround(BlockType t) =>
-        t is BlockType.Grass or BlockType.Soil or BlockType.Sand or BlockType.Mud or BlockType.Bog or BlockType.Quicksand or BlockType.Scree or BlockType.Stone;
+        t is BlockType.Grass or BlockType.Gloom or BlockType.Soil or BlockType.Sand or BlockType.Mud or BlockType.Bog or BlockType.Quicksand or BlockType.Scree or BlockType.Stone;
 }

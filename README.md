@@ -68,7 +68,7 @@ map has two of each. `RegionMap.Caverns` and `RegionMap.Ruins` list where they a
 player starts in a clearing near their coast with berry bushes, a grove, a stone outcrop and an iron
 outcrop mirrored around it. Each biome grows its own trees (`RegionGenerator.KindFor`): broad-leaved
 trees and birches in the grassland, those and pines in the forest, pines in the hills (plus the one dusk tree, see
-`docs/rules.md`), and willows and giant mushrooms in the swamp; the start grove has two birches and a pine.
+`docs/rules.md`), and willows and giant mushrooms in the swamp; the start grove has two birches and a pine. Round the middle of a map at least `RegionGenerator.WildsMapSize` across lie the shadowed wilds (`Biome.Wilds`, `RegionGenerator.Wilds.cs`, `PlaceWilds`, laid out last from streams of their own): gloom moss (`BlockType.Gloom`) for grass, gloom pines (`TreeKind.Gloom`, `BlockType.GloomLeaves`) close together and outcrops of shadow crystal (see [The shadowed wilds](docs/rules.md#the-shadowed-wilds)).
 Every kind is its own trunk and leaf block (`BlockInfo.IsTrunk`, `BlockInfo.IsLeaves`). `RegionMap.Save`/`Load` read and write a run-length-encoded binary map,
 so handmade maps can be loaded with `--map=PATH` (format 3 lists every cavern, ruin and deep chamber; formats 1 and 2 still load).
 The `ui-*` screenshot scripts and CI's AI matches play the default map (issue #67); the ones CI skips

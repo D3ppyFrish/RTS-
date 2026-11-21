@@ -214,7 +214,7 @@ public class WildsTests
         Assert.True(db.Unit("wolf").Lair!.Den);
         Assert.False(db.Unit("dusk_warden").Lair!.Den);
         Assert.Equal(new[] { "wolf" }, db.LairMonsters.Select(u => u.Id));
-        Assert.Equal(new[] { "wolf", "boar", "stone_giant", "bog_horror", "giant_crab" }, db.WildMonsters.Select(u => u.Id));
+        Assert.Equal(new[] { "wolf", "boar", "stone_giant", "bog_horror", "giant_crab", "shade_stalker" }, db.WildMonsters.Select(u => u.Id));
 
         var hall = sim.Economy.PlaceFinished(Settlers, db.Building("town_hall"), 10, 40)!;
         var lair = sim.Monsters.Place(db.Unit("stone_giant"), 60, 48)!;
