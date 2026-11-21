@@ -465,7 +465,7 @@ public class CityStateTests
         sim.SpawnStartingUnits(24);
         var startLairs = sim.SpawnLairs();
         var towns = sim.SpawnCities();
-        Assert.Equal(new[] { "goblins", "ogres", "trolls" }, towns.Select(t => t.Def.Id));
+        Assert.Equal(new[] { "goblins", "ogres", "trolls", "centaurs" }, towns.Select(t => t.Def.Id));
         var town = towns[0];
         Assert.Same(town, sim.Cities.Get(town.Id));
         Assert.Equal("goblins", town.Def.Id);
@@ -590,7 +590,7 @@ public class CityStateTests
         for (int run = 0; run < 2; run++)
         {
             var sim = log.CreateSimulation();
-            Assert.Equal(3, sim.Cities.Towns.Count); // the goblins, the ogres and the trolls (no deep caves for the kobolds)
+            Assert.Equal(4, sim.Cities.Towns.Count); // the goblins, the ogres, the trolls and the centaurs (no deep caves for the kobolds)
             totemAttacks = log.Commands.Count(c => c.Command is AttackBuildingCommand a && sim.Cities.Towns.Any(t => t.TotemId == a.Building));
             foreach (var c in log.Commands) sim.Schedule(c.Tick, c.Command);
             sim.Run((int)log.Ticks);
@@ -606,7 +606,7 @@ public class CityStateTests
     public void TheGoblinsAreData()
     {
         var db = ContentDb.Default;
-        Assert.Equal(4, db.CityStates.Count);
+        Assert.Equal(5, db.CityStates.Count);
         var goblins = db.CityStates[0];
         Assert.Same(goblins, db.CityState("goblins"));
         Assert.Same(db.Building("goblin_totem"), goblins.Totem);
@@ -778,7 +778,7 @@ public class CityStateTests
     public void TheKoboldsAreData()
     {
         var db = ContentDb.Default;
-        Assert.Equal(new[] { "goblins", "ogres", "kobolds", "trolls" }, db.CityStates.Select(c => c.Id));
+        Assert.Equal(new[] { "goblins", "ogres", "kobolds", "trolls", "centaurs" }, db.CityStates.Select(c => c.Id));
         var kobolds = db.CityState("kobolds");
         Assert.True(kobolds.Deep);
         Assert.False(db.CityState("goblins").Deep);
@@ -821,7 +821,7 @@ public class CityStateTests
         var sim = CavernTests.DefaultMatch(seed);
         var w = sim.World;
         int deep = Rts.Sim.World.RegionGenerator.DeepLayers(w.SizeY);
-        Assert.Equal(new[] { "goblins", "ogres", "kobolds", "trolls" }, sim.Cities.Towns.Select(t => t.Def.Id));
+        Assert.Equal(new[] { "goblins", "ogres", "kobolds", "trolls", "centaurs" }, sim.Cities.Towns.Select(t => t.Def.Id));
         var warren = sim.Cities.Towns[2];
         Assert.True(warren.Deep);
         int chamber = sim.Map.Deeps.FindIndex(d => d.X == warren.X && d.Z == warren.Z);
@@ -883,7 +883,7 @@ public class CityStateTests
         sim.PlaceStartingBuildings();
         sim.SpawnStartingUnits(24);
         sim.SpawnLairs();
-        Assert.Equal(new[] { "goblins", "ogres", "trolls" }, sim.SpawnCities().Select(t => t.Def.Id));
+        Assert.Equal(new[] { "goblins", "ogres", "trolls", "centaurs" }, sim.SpawnCities().Select(t => t.Def.Id));
     }
 
     /// <summary>

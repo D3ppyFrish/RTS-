@@ -299,13 +299,22 @@ public sealed class CityStateSystem
                 PlaceLair(crossing, cx, cz);
                 continue;
             }
-            foreach (var (x, z) in Spread(scored, want, cx, cz))
+            var sites = Spread(scored, want, cx, cz);
+            // A town that keeps to a biome (the centaurs' open grassland) takes the best site in it; with none, the
+            // best site anywhere.
+            for (int pass = def.Biome is null ? 1 : 0; pass < 2; pass++)
             {
-                if (!SiteFits(x, z)) continue;
-                var town = Place(def, x, z)!;
-                placed.Add(town);
-                PlaceLair(town, cx, cz);
-                break;
+                CityState? town = null;
+                foreach (var (x, z) in sites)
+                {
+                    if (pass == 0 && (!InBiome(x, z, def.Biome!.Value) || NearestTown(x, z) < want)) continue;
+                    if (!SiteFits(x, z)) continue;
+                    town = Place(def, x, z)!;
+                    placed.Add(town);
+                    PlaceLair(town, cx, cz);
+                    break;
+                }
+                if (town != null) break;
             }
         }
         return placed;
@@ -373,6 +382,39 @@ public sealed class CityStateSystem
         var sites = new List<(int X, int Z)>(ranked.Count);
         foreach (var s in ranked) sites.Add((s.X, s.Z));
         return sites;
+    }
+
+    /// <summary>Columns from (x, z) to the nearest town's market in the open (deep towns left out), or int.MaxValue.</summary>
+    private int NearestTown(int x, int z)
+    {
+        int nearest = int.MaxValue;
+        foreach (var town in _towns)
+            if (!town.Deep) nearest = Math.Min(nearest, IntMath.Distance(town.X, town.Z, x, z));
+        return nearest;
+    }
+
+    /// <summary>How far round a market (columns) <see cref="InBiome"/> looks at the land.</summary>
+    public const int BiomeReach = 24;
+
+    /// <summary>
+    /// True if the market at column (x, z) is in the biome and so is at least half the land within
+    /// <see cref="BiomeReach"/> columns of it (every fourth column looked at), so the town stands well inside it.
+    /// </summary>
+    public bool InBiome(int x, int z, World.Biome biome)
+    {
+        var map = _sim.Map;
+        if (map.BiomeAt(x, z) != biome) return false;
+        int inside = 0, all = 0;
+        for (int dz = -BiomeReach; dz <= BiomeReach; dz += 4)
+        for (int dx = -BiomeReach; dx <= BiomeReach; dx += 4)
+        {
+            if (dx * dx + dz * dz > BiomeReach * BiomeReach) continue;
+            int sx = x + dx, sz = z + dz;
+            if ((uint)sx >= (uint)World.SizeX || (uint)sz >= (uint)World.SizeZ) continue;
+            all++;
+            if (map.BiomeAt(sx, sz) == biome) inside++;
+        }
+        return inside * 2 >= all;
     }
 
     /// <summary>

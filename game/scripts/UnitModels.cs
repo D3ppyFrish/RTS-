@@ -217,6 +217,25 @@ public static class UnitModels
             .Box(-3, 17, 5, -3, 18, 5, Bone).Box(2, 17, 5, 2, 18, 5, Bone)                 // tusks
             .Box(-1, 22, 0, 0, 23, 2, Moss);                                               // a mossy tuft
 
+        /// <summary>
+        /// A centaur facing +Z: a horse's body and legs with a person's upper body rising from its front instead of a
+        /// neck, bare-armed, with a sash in its owner's colour and a mane of hair down its back.
+        /// </summary>
+        public Builder Centaur(Color coat) =>
+            Box(-2, 5, -6, 1, 9, 3, coat)                                                // horse body
+            .Box(-2, 0, -6, -1, 4, -5, coat).Box(0, 0, -6, 1, 4, -5, coat)              // hind legs
+            .Box(-2, 0, 2, -1, 4, 3, coat).Box(0, 0, 2, 1, 4, 3, coat)                  // forelegs
+            .Box(-2, 0, 3, -1, 0, 3, Dark).Box(0, 0, 3, 1, 0, 3, Dark)                  // hooves
+            .Box(-1, 6, -7, 0, 9, -7, Hair).Box(-1, 4, -8, 0, 6, -8, Hair)              // tail
+            .Box(-2, 10, 1, 1, 14, 3, Skin)                                             // upper body
+            .Box(-2, 10, 1, 1, 10, 3, coat)                                             // where it meets the horse
+            .Box(-2, 12, 1, 1, 13, 3, Team).Box(-2, 11, 2, -1, 14, 2, TeamDark)         // sash
+            .Box(-3, 11, 2, -3, 14, 2, Skin).Box(2, 11, 2, 2, 14, 2, Skin)              // bare arms
+            .Box(-2, 15, 0, 1, 18, 3, Skin)                                             // head
+            .Box(-2, 18, 0, 1, 18, 3, Hair).Box(-2, 16, 0, 1, 17, 0, Hair)              // hair
+            .Box(-1, 12, 0, 0, 16, 0, Hair)                                             // mane down the back
+            .Box(-1, 16, 3, -1, 16, 3, Dark).Box(0, 16, 3, 0, 16, 3, Dark);             // eyes
+
         /// <summary>The gold belt every form wears.</summary>
         public Builder Rank(int lift = 0) => Box(-2, lift + 5, -1, 1, lift + 5, 0, Gold);
 
@@ -704,6 +723,17 @@ public static class UnitModels
             .Box(3, 1, 1, 3, 12, 1, Wood).Box(3, 13, 1, 3, 14, 1, Steel)                // long spear
             .Box(-4, 3, -1, -4, 7, 2, Hide).Box(-4, 5, 0, -4, 5, 1, Team),              // hide shield
 
+        "centaur_archer" => new Builder().Centaur(Horse)
+            .Box(-4, 11, 4, -4, 17, 4, Wood).Box(-4, 10, 3, -4, 10, 3, Wood).Box(-4, 18, 3, -4, 18, 3, Wood) // short horse bow
+            .Box(-3, 12, 3, -3, 12, 3, Leather)                                         // its grip
+            .Box(0, 10, -4, 1, 13, -3, Leather).Box(0, 14, -4, 1, 14, -3, Cloth)        // a quiver on its back, fletched
+            .Box(-3, 7, -3, 2, 8, 0, TeamDark),                                         // a saddle cloth
+        "centaur_lancer" => new Builder().Centaur(PaleHorse)
+            .Box(3, 10, 4, 3, 24, 4, Wood).Box(3, 25, 4, 3, 27, 4, Steel)               // long lance
+            .Box(-4, 10, 1, -4, 14, 4, Hide).Box(-4, 12, 1, -4, 12, 4, Team)            // hide shield with a stripe
+            .Box(-2, 18, 0, 1, 19, 3, Iron)                                             // an iron cap
+            .Box(-3, 7, -3, 2, 8, 0, TeamDark),                                         // a saddle cloth
+
         "troll" => new Builder().Troll()
             .Box(7, 4, 0, 7, 18, 0, Wood).Box(6, 15, -2, 9, 20, 2, Rock)                // a maul of stone on a pole
             .Box(6, 17, -2, 9, 17, 2, Hide)                                            // lashed on
@@ -759,6 +789,19 @@ public static class UnitModels
             .Box(-1, 2, 5, 0, 6, 7, DarkRock).Box(-1, 1, 7, 0, 1, 7, DarkRock)                                    // the long nose
             .Box(-4, 1, 5, -3, 3, 6, Bone).Box(2, 1, 5, 3, 3, 6, Bone)                                            // tusks
             .Box(-3, 11, -2, 2, 11, 1, Moss).Box(-1, 12, -1, 0, 12, 0, Moss),                                     // moss on top
+
+        // The centaurs' standard, over its pole of wood: bands bound with leather and a stripe of the holder's colour, and
+        // on top a crossbar hung with long horse tails and a pennant in the holder's colour, under a gilt horseshoe.
+        "centaur_standard_band" => new Builder()
+            .Box(-5, 0, -5, 4, 7, 4, Wood).Box(-5, 1, -5, 4, 1, 4, Leather).Box(-5, 6, -5, 4, 6, 4, Leather)
+            .Box(-5, 3, -5, 4, 4, 4, Team).Box(-6, 2, 0, -6, 5, 0, Hair).Box(5, 2, -1, 5, 5, -1, Hair),
+        "centaur_standard_head" => new Builder()
+            .Box(-2, 0, -2, 1, 12, 1, Wood).Box(-2, 0, -2, 1, 0, 1, Leather)                                      // the pole
+            .Box(-9, 10, -1, 8, 11, 0, Wood)                                                                      // crossbar
+            .Box(-9, 2, -1, -8, 9, 0, Hair).Box(7, 2, -1, 8, 9, 0, Hair).Box(-9, 1, -1, -9, 1, 0, Hair).Box(8, 1, -1, 8, 1, 0, Hair) // horse tails
+            .Box(-6, 4, -1, -5, 9, 0, PaleFur).Box(4, 4, -1, 5, 9, 0, PaleFur)
+            .Box(-3, 4, 2, 2, 9, 2, Team).Box(-3, 4, 2, 2, 4, 2, TeamDark).Box(-1, 3, 2, 0, 3, 2, TeamDark)        // pennant
+            .Box(-3, 13, -1, 2, 13, 0, Gold).Box(-3, 14, -1, -3, 16, 0, Gold).Box(2, 14, -1, 2, 16, 0, Gold),     // gilt horseshoe
 
         // The ogres' idol, over its pole of stone: rough stone bands with a painted stripe, and on top a broad
         // ogre face with a heavy brow, glaring eyes, an underbite of tusks, a brow band in the holder's colour

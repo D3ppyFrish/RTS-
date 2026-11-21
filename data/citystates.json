@@ -23,6 +23,11 @@
 //   crossing (optional): true for a town on a river bank whose people built a stone bridge over the river beside it.
 //     It is placed where the river comes within a few columns of a fair site; with no such site (a map without a
 //     river) it stands like any other town, without a bridge.
+//   watch (optional): range is how far (columns) round the town its holder sees, fog of war or not, while they hold it:
+//     the land its scouts ride (the centaurs'). Leave it out for none beyond the totem's own sight.
+//   biome (optional): the town keeps to that biome (grassland, forest, hills, swamp...): its market and at least half
+//     the land within 24 columns of it are of that biome, wherever the map has such a site; otherwise it is placed as
+//     any other town. Not for a deep town or a crossing.
 //   toll (optional): gold is the toll a player pays for each unit of theirs that comes onto the town's toll ground
 //     (its square, its bridge and the guards' reach round them), once while it stays on it, unless they hold the
 //     town. The toll goes to the town's holder. The guards let units that paid through, soldiers too, and fight
@@ -69,5 +74,15 @@
     "trade": { "buys": "food", "load": 20, "sells": "iron", "price": 6, "holderBonus": 50 },
     "mercenaries": { "pool": 3, "refill": 60 },
     "heal": { "range": 6 },
-    "wall": "stone_brick", "roof": "roof_tile", "ground": "stone" }
+    "wall": "stone_brick", "roof": "roof_tile", "ground": "stone" },
+  { "id": "centaurs", "name": "Centaur camp",
+    "description": "Centaur herders who camp on the open plains and ride them end to end. Break their standard and they ride for you: they send you food from their herds, guard their camp against your enemies, their scouts show you the land all round it, and they sell you horse archers and lancers as fast as any rider.",
+    "totem": { "building": "centaur_standard", "respawn": 5 },
+    "guards": { "units": ["centaur_archer", "centaur_archer", "centaur_archer", "centaur_lancer", "centaur_lancer"], "reach": 6, "refill": 45 },
+    "watch": { "range": 40 }, "biome": "grassland",
+    "tribute": { "caravan": "caravan", "good": "food", "amount": 40, "every": 60 },
+    "trade": { "buys": "wood", "load": 20, "sells": "food", "price": 12, "holderBonus": 50 },
+    "mercenaries": { "pool": 4, "refill": 45 },
+    "heal": { "range": 6 },
+    "wall": "planks", "roof": "thatch" }
 ]

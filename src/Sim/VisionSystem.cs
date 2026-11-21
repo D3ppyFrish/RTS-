@@ -124,6 +124,23 @@ public sealed class VisionSystem
                 Stamp(b.Owner, b.X, b.Z, b.MaxX, b.MaxZ, s * s, litOnly: true);
             }
         }
+        // A held town whose scouts ride the land round it (the centaurs' camp) shows its holder that land, as a
+        // building's sight would: less of it in the dark, more where it is lit.
+        foreach (var town in _sim.Cities.Towns)
+        {
+            int range = town.Def.WatchRange;
+            if (range <= 0 || (uint)town.Holder >= (uint)_grids.Length) continue;
+            int r0 = Economy.CityStateSystem.TownRadius;
+            int dark = c.SightPercent(town.X, town.Z, false);
+            int s = range * dark / 100;
+            Stamp(town.Holder, town.X - r0, town.Z - r0, town.X + r0, town.Z + r0, s * s);
+            int lit = lights ? c.SightPercent(town.X, town.Z, true) : dark;
+            if (lit > dark)
+            {
+                s = range * lit / 100;
+                Stamp(town.Holder, town.X - r0, town.Z - r0, town.X + r0, town.Z + r0, s * s, litOnly: true);
+            }
+        }
         Version++;
     }
 

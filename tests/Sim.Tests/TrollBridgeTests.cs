@@ -128,7 +128,7 @@ public class TrollBridgeTests
     {
         var sim = CavernTests.DefaultMatch(seed);
         var w = sim.World;
-        Assert.Equal(new[] { "goblins", "ogres", "kobolds", "trolls" }, sim.Cities.Towns.Select(t => t.Def.Id));
+        Assert.Equal(new[] { "goblins", "ogres", "kobolds", "trolls", "centaurs" }, sim.Cities.Towns.Select(t => t.Def.Id));
         var town = sim.Cities.Towns[3];
         Assert.True(town.HasBridge);
         Assert.Equal("troll_stone", sim.Cities.Totem(town)!.Def.Id);
