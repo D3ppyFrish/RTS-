@@ -818,6 +818,18 @@ public partial class PlayerControl : Node
                 return;
             }
         }
+        if (b.Def.Kind == BuildingKind.TownHall && _sim.Economy.PartnerHall(LocalPlayer, b.Id) != null)
+        {
+            // A trade partner's town hall (see TradeDealSystem): caravans trade there; soldiers still attack it.
+            var caravans = OwnWithRole(own, UnitRole.Trader);
+            if (caravans.Count > 0) _sim.Schedule(_sim.Tick, new MarketCommand(LocalPlayer, caravans.ToArray(), b.Id));
+            own.RemoveAll(caravans.Contains);
+            if (own.Count == 0)
+            {
+                _rings.ShowMarker(centre, SelectionRenderer.Work);
+                return;
+            }
+        }
         if (b.Owner != LocalPlayer)
         {
             var units = own.ToArray();
@@ -1114,6 +1126,20 @@ public partial class PlayerControl : Node
             _sim.Schedule(_sim.Tick, new EndTruceCommand(LocalPlayer, rival));
         else if (truces.CanOffer(LocalPlayer, rival))
             _sim.Schedule(_sim.Tick, new TruceCommand(LocalPlayer, rival));
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// The rival's trade deal button (see <see cref="TradeDealSystem"/>): with a deal, ends it; with your offer
+    /// standing, takes it back; otherwise offers one, or accepts the rival's offer.
+    /// </summary>
+    public void Deal(int rival)
+    {
+        var deals = _sim.Deals;
+        if (deals.Partners(LocalPlayer, rival) || deals.Offered(LocalPlayer, rival))
+            _sim.Schedule(_sim.Tick, new EndTradeDealCommand(LocalPlayer, rival));
+        else if (deals.CanOffer(LocalPlayer, rival))
+            _sim.Schedule(_sim.Tick, new TradeDealCommand(LocalPlayer, rival));
         Changed?.Invoke();
     }
 
@@ -2034,7 +2060,7 @@ public partial class PlayerControl : Node
         }
         foreach (var b in _sim.Buildings.All)
             if (b.Owner == LocalPlayer && b.Def.FromDen && b.Active) lodges++;
-        int caravans = 0, trading = 0, mercs = 0;
+        int caravans = 0, trading = 0, markets = 0, mercs = 0;
         for (int i = 0; i < u.Count; i++)
         {
             if (u.Owner[i] != LocalPlayer || u.Town[i] != 0) continue; // a city-state's own are counted apart
@@ -2043,6 +2069,7 @@ public partial class PlayerControl : Node
             {
                 caravans++;
                 if (u.Job[i] == UnitJob.Trade) trading++;
+                if (u.Job[i] == UnitJob.Market) markets++;
             }
             if (def.HiredFrom != null) mercs++;
         }
@@ -2130,7 +2157,7 @@ public partial class PlayerControl : Node
                $"city={(_sim.Cities.Get(SelectedCity)?.Def.Id ?? "none")} holder={town?.Holder ?? -1} " +
                $"totem_owner={(town != null ? _sim.Cities.Totem(town)?.Owner ?? -1 : -1)} guards={town?.Guards.Count() ?? 0} " +
                $"guards_owner={(town != null && town.Guards.Any() ? u.Owner[u.IndexOf(town.Guards.First())] : -1)} tribute={town?.Caravans.Count ?? 0} " +
-               $"pool={town?.Ready ?? 0} caravans={caravans} trading={trading} mercs={mercs} " +
+               $"pool={town?.Ready ?? 0} caravans={caravans} trading={trading} markets={markets} mercs={mercs} " +
                $"bridge={(town?.HasBridge == true ? 1 : 0)} tolls={town?.Tolls ?? 0} feud={town?.FeudWith(LocalPlayer) ?? 0} " +
                $"idle={_sim.Economy.IdleWorkers(LocalPlayer).Count} army={_sim.Combat.ArmyUnits(LocalPlayer).Count} " +
                $"selected_workers={_selected.Count(id => u.IndexOf(id) is int k && k >= 0 && _sim.Content.Units[u.Def[k]].Role == UnitRole.Worker)} camera={cam.X},{cam.Z} " +

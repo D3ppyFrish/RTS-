@@ -171,4 +171,141 @@ public sealed partial class EconomySystem
         }
         return best;
     }
+
+    // --- Market trips: trading at a deal partner's town hall (see TradeDealSystem) ---------------------------
+
+    /// <summary>The town hall a caravan of the player's may trade at: a finished town hall of a trade partner's; null if not.</summary>
+    public Building? PartnerHall(int player, int hall) =>
+        Buildings.Get(hall) is { Active: true, Planned: false } b && b.Def.Kind == BuildingKind.TownHall && _sim.Deals.Partners(player, b.Owner)
+            ? b : null;
+
+    /// <summary>The caravans among the command's units start trading at the partner's town hall (those already trading there carry on).</summary>
+    internal void Apply(MarketCommand c)
+    {
+        if (PartnerHall(c.PlayerId, c.Hall) is not { } hall) return;
+        foreach (int i in OwnedUnits(c))
+        {
+            if (!Content.Units[U.Def[i]].IsTrader) continue;
+            if (U.Job[i] == UnitJob.Market && U.JobTarget[i] == hall.Id) continue;
+            StartJob(i, UnitJob.Market, hall.Id);
+            DecideMarket(i, hall);
+        }
+    }
+
+    private void StepMarket(int i)
+    {
+        var u = U;
+        var hall = PartnerHall(u.Owner[i], u.JobTarget[i]);
+        if (hall == null)
+        {
+            // The deal is over or the hall is gone: gold already bought still goes home, a load not yet sold too.
+            if (u.CarryAmount[i] == 0) EndJob(i);
+            else if (u.Phase[i] != JobPhase.ToStore) GoToStorage(i);
+            else if (StepToStore(i)) EndJob(i);
+            return;
+        }
+        switch (u.Phase[i])
+        {
+            case JobPhase.Fetch:
+                StepMarketLoad(i, hall);
+                return;
+            case JobPhase.ToStore:
+                if (StepToStore(i)) DecideMarket(i, hall);
+                return;
+            case JobPhase.Wait:
+                if (--u.JobTimer[i] <= 0) DecideMarket(i, hall);
+                return;
+            case JobPhase.ToWork:
+                switch (Approach(i, AtBuilding(i, hall)))
+                {
+                    case Travel.Arrived:
+                        SellAt(i, hall);
+                        return;
+                    case Travel.NeedSpot:
+                        if (AccessSpot(hall, out int x, out int z, out int y)) _sim.SendUnit(i, x, z, y);
+                        else Wait(i);
+                        return;
+                    case Travel.Failed:
+                        Wait(i);
+                        return;
+                }
+                return;
+            default:
+                DecideMarket(i, hall);
+                return;
+        }
+    }
+
+    /// <summary>As <see cref="DecideTrade"/>, for a trip to a partner's town hall with a load of food.</summary>
+    private void DecideMarket(int i, Building hall)
+    {
+        var u = U;
+        if (u.Carry[i] == Good.Food && u.CarryAmount[i] >= TradeDealSystem.Load && u.JobX[i] > 0)
+        {
+            SetPhase(i, JobPhase.ToWork);
+            return;
+        }
+        if (u.CarryAmount[i] > 0)
+        {
+            GoToStorage(i);
+            return;
+        }
+        var store = StorageHolding(u.Owner[i], Good.Food, TradeDealSystem.Load, hall.X, hall.Z);
+        if (store == null)
+        {
+            Wait(i);
+            return;
+        }
+        u.JobStore[i] = store.Id;
+        SetPhase(i, JobPhase.Fetch);
+    }
+
+    private void StepMarketLoad(int i, Building hall)
+    {
+        var u = U;
+        var s = Buildings.Get(u.JobStore[i]);
+        if (s == null || s.Owner != u.Owner[i] || !s.Active || !s.Def.Storage || s.Stock[(int)Good.Food] < TradeDealSystem.Load)
+        {
+            DecideMarket(i, hall);
+            return;
+        }
+        switch (Approach(i, AtBuilding(i, s)))
+        {
+            case Travel.Arrived:
+                s.Stock[(int)Good.Food] -= TradeDealSystem.Load;
+                u.Carry[i] = Good.Food;
+                u.CarryAmount[i] = TradeDealSystem.Load;
+                u.JobX[i] = Math.Max(1, MarketRoute(s, hall));
+                SetPhase(i, JobPhase.ToWork);
+                return;
+            case Travel.NeedSpot:
+                if (AccessSpot(s, out int x, out int z, out int y)) _sim.SendUnit(i, x, z, y);
+                else Wait(i);
+                return;
+            case Travel.Failed:
+                Wait(i);
+                return;
+        }
+    }
+
+    /// <summary>
+    /// At the partner's hall: the food goes into the hall's stock (the partner's to keep), and the caravan takes
+    /// gold home for it (see <see cref="TradeDealSystem.Earnings"/>), so both sides gain.
+    /// </summary>
+    private void SellAt(int i, Building hall)
+    {
+        var u = U;
+        int owner = u.Owner[i];
+        int gain = TradeDealSystem.Earnings(u.JobX[i]);
+        Player(owner).Spent[(int)Good.Food] += u.CarryAmount[i];
+        hall.Stock[(int)Good.Food] += u.CarryAmount[i];
+        u.Carry[i] = Good.Gold;
+        u.CarryAmount[i] = gain;
+        if (gain > 0) GoToStorage(i);
+        else DecideMarket(i, hall);
+    }
+
+    /// <summary>The length of a market route from the storage building to the hall: the straight-line distance between their middles.</summary>
+    public static int MarketRoute(Building store, Building hall) =>
+        (int)(IntMath.ISqrt(store.CentreDistance2(hall.X + hall.Def.SizeX / 2, hall.Z + hall.Def.SizeZ / 2)) / 2);
 }

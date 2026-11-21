@@ -60,6 +60,7 @@ public sealed class Simulation
     public CityStateSystem Cities { get; }
     /// <summary>Short truces between rival players: offers, peace, warnings before it ends.</summary>
     public TruceSystem Truces { get; }
+    public TradeDealSystem Deals { get; }
     /// <summary>Who is still in the match and who won: a player whose town halls are all gone is out.</summary>
     public MatchSystem Match { get; }
     /// <summary>What each player sees, with fog of war on (<see cref="Fog"/>).</summary>
@@ -117,6 +118,7 @@ public sealed class Simulation
         Cities = new CityStateSystem(this);
         Match = new MatchSystem(this);
         Truces = new TruceSystem(this);
+        Deals = new TradeDealSystem(this);
         Automation = new AutomationSystem(this);
         Vision = new VisionSystem(this);
         Physics = new PhysicsSystem(this);
@@ -366,6 +368,7 @@ public sealed class Simulation
             }
         Sandbox.Step();
         Truces.Step();
+        Deals.Step();
         Conditions.Step();
         Automation.Step();
         Economy.Step();
@@ -403,7 +406,7 @@ public sealed class Simulation
         ^ Buildings.ComputeHash() * 0x165667B19E3779F9UL ^ Economy.ComputeHash() * 0x27D4EB2F165667C5UL
         ^ Combat.ComputeHash() * 0x94D049BB133111EBUL ^ Monsters.ComputeHash() * 0xD6E8FEB86659FD93UL
         ^ Cities.ComputeHash() * 0xA24BAED4963EE407UL ^ Match.ComputeHash() * 0x9FB21C651E98DF25UL
-        ^ Truces.ComputeHash() * 0x8CB92BA72F3D8DD7UL
+        ^ Truces.ComputeHash() * 0x8CB92BA72F3D8DD7UL ^ Deals.ComputeHash() * 0xE7037ED1A0B428DBUL
         ^ Physics.ComputeHash() * 0x61C8864680B583EBUL
         ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL ^ DuskTree.ComputeHash() * 0x3C6EF372FE94F82BUL
         ^ Ruins.ComputeHash() * 0xC6BC279692B5C323UL
@@ -503,6 +506,9 @@ public sealed class Simulation
             case SurrenderCommand s: Match.Apply(s); break;
             case TruceCommand tr: Truces.Apply(tr); break;
             case EndTruceCommand et: Truces.Apply(et); break;
+            case TradeDealCommand td: Deals.Apply(td); break;
+            case EndTradeDealCommand ed: Deals.Apply(ed); break;
+            case MarketCommand mk: Economy.Apply(mk); break;
         }
         if (command is UnitsCommand uc) Automation.Note(uc);
     }

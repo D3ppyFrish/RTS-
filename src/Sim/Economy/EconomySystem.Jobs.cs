@@ -32,6 +32,7 @@ public sealed partial class EconomySystem
             case UnitJob.Capture:
             case UnitJob.Burn: StepRaider(i); break;
             case UnitJob.Trade: StepTrade(i); break;
+            case UnitJob.Market: StepMarket(i); break;
             case UnitJob.Dig: StepDig(i); break;
             case UnitJob.Clean: StepClean(i); break;
             case UnitJob.Post: StepPost(i); break;

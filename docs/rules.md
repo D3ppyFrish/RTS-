@@ -1205,6 +1205,39 @@ agree a short truce; there are no alliances and no shared victories, so a truce 
   storehouses safe from raids, the computer accepting only when not clearly stronger and sending no wave at a
   partner, and the commands in the replay log and the hash. All numbers are first guesses for playtesting.
 
+## Trade deals
+
+`src/Sim/TradeDealSystem.cs`: the design's "factions can open a trade route to a rival or a city-state; caravans
+travel the route and can be raided by anyone". Two rival players can agree a trade deal, and then each side's
+caravans trade at the other's town halls.
+
+- **Offering** (`TradeDealCommand`): a player offers a deal to a rival; the offer stands 30 seconds, and the rival is
+  told. The rival accepts by offering back while it stands, and the deal starts at once. An offer can be taken back
+  (`EndTradeDealCommand` with no deal on). Nobody deals with the wild side, a city-state or a player out of the match,
+  nor after the match is over.
+- **The deal** has no end of its own. Either side ends it at once (`EndTradeDealCommand`), and both are told who did;
+  it also ends when either is out of the match. After a deal ends the two cannot agree another for 1 minute.
+- **Trading** (`MarketCommand`, `UnitJob.Market`): right-click a partner's finished town hall with caravans selected.
+  Each fetches 20 food from your storage nearest that hall, walks it there, and leaves it in the hall's stock (the
+  partner's to keep); it brings back 3 gold per 100 blocks between that storage and the hall (nothing under 50 blocks)
+  to your nearest storage, and goes again. So both sides gain: the host food, the caravan's owner gold, more the
+  further the route. When the deal ends, a caravan takes what it carries home and stops.
+- **Caravans on the road**: neither partner's units pick the other's caravans as a target on their own (they still
+  fight each other's soldiers: a deal is not a truce). An explicit attack order still kills one, and any other
+  player's units, and monsters, go after them as before, so a long route is a risk to guard.
+- **Computer players** take every deal they are offered (the food is theirs to keep, and a deal stops none of their
+  fights). They do not offer deals themselves or send caravans to a partner.
+- **In the game**: a trade button per rival under the top bar, beside its truce button, says the state (offer trade,
+  their offer to accept, your offer standing, trading, or how long until another can be agreed); clicking it does the
+  one thing that state allows. Alerts tell you of offers, the deal starting and its end. A caravan's panel says when
+  it is trading with a rival.
+- `TradeDealTests` checks offers and acceptance, offers running out and taken back, ending a deal and the wait after,
+  a caravan selling food at a partner's hall for gold, only a partner's finished town hall taking trade, a caravan
+  going home when the deal ends, a player out of the match ending their deals, partners letting each other's caravans
+  be while a third player's soldiers kill them, the computer accepting, and the commands in the replay log and the
+  hash; `ui-trade-screenshots.sh` agrees a deal with the computer and sends a caravan to its hall. All numbers are
+  first guesses for playtesting.
+
 ## Winning and computer players
 
 `src/Sim/MatchSystem.cs`: every player given a town hall at the start is in the match. A player with no

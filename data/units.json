@@ -276,9 +276,9 @@
     "speed": 9, "hp": 110, "model": "wolf_rider", "damage": 11, "attackTime": 1, "range": 1.5, "sight": 11,
     "attack": "pierce", "armor": { "head": 1, "torso": 2, "legs": 1 } },
 
-  // Trade with the city-states.
+  // Trade with the city-states, and with rivals under a trade deal.
   { "id": "caravan", "name": "Caravan", "role": "trader",
-    "description": "A mule and its driver. Right-click a city-state's town to trade there: food out, iron back, and influence with them.",
+    "description": "A mule and its driver. Right-click a city-state's town to trade there (food out, its goods back), or a trade partner's town hall (food out, gold back).",
     "speed": 3.5, "hp": 80, "model": "caravan",
     "armor": { "torso": 1 },
     "cost": { "food": 20, "wood": 40 }, "trainTime": 20, "trainedAt": "town_hall" },

@@ -53,6 +53,7 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// 61 tame 1 ride 90,91              (player 1's beaten monsters 90 and 91 are ridden; recruit: they join the army)
 /// 62 den 1 2 5,6                   (player 1 uses cleared den 2, with units 5 and 6 near it)
 /// 63 trade 0 1 7,8                  (caravans 7 and 8 trade with town 1)
+/// 64 market 0 12 7,8                 (caravans 7 and 8 trade at a deal partner's town hall, building 12)
 /// 64 hire 0 1 goblin_slinger        (player 0, who holds town 1, hires a goblin slinger there)
 /// 65 surrender 1                    (player 1 gives up the match)
 /// </code>
@@ -237,6 +238,7 @@ public sealed class CommandLog
                 AutoEvolveCommand ae => string.Create(ci, $"{tick} auto-evolve {ae.PlayerId} {ae.Unit} {ae.Form ?? "off"}"),
                 TameCommand tm => string.Create(ci, $"{tick} tame {tm.PlayerId} {ChoiceName(tm.Choice)} {Ids(tm.Units)}"),
                 TradeCommand tr => string.Create(ci, $"{tick} trade {tr.PlayerId} {tr.City} {Ids(tr.Units)}"),
+                MarketCommand mk => string.Create(ci, $"{tick} market {mk.PlayerId} {mk.Hall} {Ids(mk.Units)}"),
                 DenCommand dn => string.Create(ci, $"{tick} den {dn.PlayerId} {dn.Lair} {Ids(dn.Units)}"),
                 DuskTreeCommand dt => string.Create(ci, $"{tick} dusk-tree {dt.PlayerId} {Ids(dt.Units)}"),
                 BloomCommand bl => string.Create(ci, $"{tick} bloom {bl.PlayerId} {Ids(bl.Units)}"),
@@ -249,6 +251,8 @@ public sealed class CommandLog
                 SurrenderCommand su => string.Create(ci, $"{tick} surrender {su.PlayerId}"),
                 TruceCommand tr => string.Create(ci, $"{tick} truce {tr.PlayerId} {tr.Other}"),
                 EndTruceCommand et => string.Create(ci, $"{tick} endtruce {et.PlayerId} {et.Other}"),
+                TradeDealCommand td => string.Create(ci, $"{tick} deal {td.PlayerId} {td.Other}"),
+                EndTradeDealCommand ed => string.Create(ci, $"{tick} enddeal {ed.PlayerId} {ed.Other}"),
                 SandboxUnitCommand x => string.Create(ci, $"{tick} sandbox-unit {x.PlayerId} {x.Owner} {Name(x.Unit)} {x.X} {x.Z} {x.Count}"),
                 SandboxBuildingCommand x => string.Create(ci, $"{tick} sandbox-building {x.PlayerId} {x.Owner} {Name(x.Building)} {x.X} {x.Z}"),
                 SandboxTreeCommand x => string.Create(ci, $"{tick} sandbox-tree {x.PlayerId} {EnumName(x.Kind)} {x.X} {x.Z}"),
@@ -372,6 +376,7 @@ public sealed class CommandLog
                             "auto-evolve" => new AutoEvolveCommand(Int(f[2]), Name(f[3]), f[4] == "off" ? null : Name(f[4])),
                             "tame" => new TameCommand(Int(f[2]), ParseIds(f[4]), ParseChoice(f[3])),
                             "trade" => new TradeCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
+                            "market" => new MarketCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
                             "den" => new DenCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
                             "dusk-tree" => new DuskTreeCommand(Int(f[2]), ParseIds(f[3])),
                             "bloom" => new BloomCommand(Int(f[2]), ParseIds(f[3])),
@@ -384,6 +389,8 @@ public sealed class CommandLog
                             "surrender" => new SurrenderCommand(Int(f[2])),
                             "truce" => new TruceCommand(Int(f[2]), Int(f[3])),
                             "endtruce" => new EndTruceCommand(Int(f[2]), Int(f[3])),
+                            "deal" => new TradeDealCommand(Int(f[2]), Int(f[3])),
+                            "enddeal" => new EndTradeDealCommand(Int(f[2]), Int(f[3])),
                             "sandbox-unit" => new SandboxUnitCommand(Int(f[2]), Int(f[3]), Name(f[4]), Int(f[5]), Int(f[6]), Int(f[7])),
                             "sandbox-building" => new SandboxBuildingCommand(Int(f[2]), Int(f[3]), Name(f[4]), Int(f[5]), Int(f[6])),
                             "sandbox-tree" => new SandboxTreeCommand(Int(f[2]), ParseEnum<Rts.Sim.World.TreeKind>(f[3]), Int(f[4]), Int(f[5])),
