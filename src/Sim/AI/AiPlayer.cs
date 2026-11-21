@@ -217,6 +217,7 @@ public sealed partial class AiPlayer
             AnswerTruces(sim, issue);
             AnswerDeals(sim, issue);
         }
+        if (Smart && (sim.Tick + Player * 11) % TradeTicks == 0) Trade(sim, hall, issue);
         if (!_started)
         {
             _started = true;
@@ -259,20 +260,6 @@ public sealed partial class AiPlayer
             if (mine * 100 > theirs * TruceRefusePercent) continue;
             Note(sim, $"agrees a truce with player {p}");
             issue(new TruceCommand(Player, p));
-        }
-    }
-
-    /// <summary>
-    /// Answers the trade deals it is offered (see <see cref="TradeDealSystem"/>): it takes every one, since the food a
-    /// partner's caravans bring is its to keep and a deal stops none of its fights.
-    /// </summary>
-    private void AnswerDeals(Simulation sim, Action<Command> issue)
-    {
-        for (int p = 0; p < Simulation.WildPlayer; p++)
-        {
-            if (!sim.Deals.Offered(p, Player) || !sim.Deals.CanOffer(Player, p)) continue;
-            Note(sim, $"agrees a trade deal with player {p}");
-            issue(new TradeDealCommand(Player, p));
         }
     }
 

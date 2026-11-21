@@ -1225,8 +1225,19 @@ caravans trade at the other's town halls.
 - **Caravans on the road**: neither partner's units pick the other's caravans as a target on their own (they still
   fight each other's soldiers: a deal is not a truce). An explicit attack order still kills one, and any other
   player's units, and monsters, go after them as before, so a long route is a risk to guard.
-- **Computer players** take every deal they are offered (the food is theirs to keep, and a deal stops none of their
-  fights). They do not offer deals themselves or send caravans to a partner.
+- **Computer players** (`AI/AiPlayer.Trade.cs`) take the deals they are offered (the food is theirs to keep, and a deal
+  stops none of their fights); the classic one takes every one. From Easy up they also trade on their own, looking
+  every 5 seconds:
+  - **Offering**: from 6 minutes in, with no deal on, they offer one to the nearest rival with a town hall at least 50
+    blocks off (an offer costs nothing, and a partner's caravans bring them food) (a caravan earns about the same gold a minute on any paying route, and a short one
+    is safer to guard), and offer the same rival again no sooner than 3 minutes later.
+  - **Caravans**: food is what a computer player's town is usually short of, so its own caravans go only when it has
+    plenty: while a deal is on and it has 140 food in hand, it keeps 2 caravans (trained at the town hall when it has
+    three times the price to spare) and sends the idle ones to the nearest partner town hall that pays. Below 80 food
+    the caravans stop, so trade never starves the town.
+  - **Ending**: a rival whose soldiers are worth more than twice their own gets no offer from them, has its offers
+    refused, and has a deal that has stood 2 minutes ended, rather than feed the stronger side food and gold.
+  All of these numbers are first guesses for playtesting.
 - **In the game**: a trade button per rival under the top bar, beside its truce button, says the state (offer trade,
   their offer to accept, your offer standing, trading, or how long until another can be agreed); clicking it does the
   one thing that state allows. Alerts tell you of offers, the deal starting and its end. A caravan's panel says when
@@ -1234,7 +1245,9 @@ caravans trade at the other's town halls.
 - `TradeDealTests` checks offers and acceptance, offers running out and taken back, ending a deal and the wait after,
   a caravan selling food at a partner's hall for gold, only a partner's finished town hall taking trade, a caravan
   going home when the deal ends, a player out of the match ending their deals, partners letting each other's caravans
-  be while a third player's soldiers kill them, the computer accepting, and the commands in the replay log and the
+  be while a third player's soldiers kill them, the computer accepting, a smart computer offering the nearest rival a
+  deal and sending caravans while it is on (and stopping them short of food), ending a deal with a rival grown too
+  strong and refusing its offers, and the commands in the replay log and the
   hash; `ui-trade-screenshots.sh` agrees a deal with the computer and sends a caravan to its hall. All numbers are
   first guesses for playtesting.
 
