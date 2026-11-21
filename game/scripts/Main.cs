@@ -6,6 +6,7 @@ using Godot;
 using Rts.Sim;
 using Rts.Sim.AI;
 using Rts.Sim.Content;
+using Rts.Sim.Economy;
 using Rts.Sim.Replay;
 using Rts.Sim.Units;
 
@@ -79,6 +80,8 @@ namespace Rts.Game;
 ///   --dominion[=off]      the old ruins are ancient sites, and holding more than half of them for 3 minutes wins
 ///                         (see Rts.Sim.World.DominionSystem). A match started from the command line has it only with
 ///                         --dominion; on the start screen it is ticked unless --dominion=off
+///   --great-work          your faction's great work stands finished in the deep caves' chamber nearest your
+///                         start, in a hall dug out for it, its clock running (see Rts.Sim.World.AscendancySystem)
 ///   --lights=N            N torches around your town hall and a campfire south of it, all finished
 ///   --time-of-day=H       the match starts at hour H (0 to 24; 8 is morning, 13 noon, 19.5 dusk, 0 midnight),
 ///                         with day and night on
@@ -115,7 +118,7 @@ public partial class Main : Node3D
     private const int MaxTicksPerFrame = 8;
 
     /// <summary>Options that set a match up other than the usual start, so that its log would not replay it.</summary>
-    private static readonly string[] TestSetups = { "map", "units", "battle", "lineup", "goods", "houses", "raid", "xp", "weather", "lights", "blood", "dusk-party" };
+    private static readonly string[] TestSetups = { "map", "units", "battle", "lineup", "goods", "houses", "raid", "xp", "weather", "lights", "blood", "dusk-party", "great-work" };
 
     private Dictionary<string, string> _args = new();
     private ContentDb _content = null!;
@@ -535,6 +538,8 @@ public partial class Main : Node3D
         string time = Clock(at);
         string Name(int p) => _sim.Economy.Player(p).Faction.Name;
         const int DominionMinutes = Rts.Sim.World.DominionSystem.DominionTicks / (60 * Simulation.TicksPerSecond);
+        const int AscendancyMinutes = Rts.Sim.World.AscendancySystem.AscendancyTicks / (60 * Simulation.TicksPerSecond);
+        string Work(int p) => _sim.Ascendancy.Finished(p) is { } w ? _sim.Content.Buildings[w.Def].Name : "great work";
         // Out with a town hall still standing means they gave up.
         string Fall(int p) => p == me
             ? _sim.Economy.TownHall(p) != null ? "You surrendered." : "You have lost your last town hall."
@@ -548,13 +553,14 @@ public partial class Main : Node3D
         if (!playing)
         {
             (title, color) = ("Match over", MatchEndPanel.DrawColor);
-            summary = match.Winner >= 0 ? $"The {Name(match.Winner)} (player {match.Winner}) won{(match.ByDominion ? " by holding the ancient sites" : "")}."
+            summary = match.Winner >= 0 ? $"The {Name(match.Winner)} (player {match.Winner}) won{(match.ByDominion ? " by holding the ancient sites" : match.ByAscendancy ? " by their great work" : "")}."
                 : "It ended in a draw.";
         }
         else if (match.InPlay(me))
         {
             (title, color) = ("Victory", MatchEndPanel.VictoryColor);
             summary = match.ByDominion ? $"You held most of the ancient sites for {DominionMinutes} minutes."
+                : match.ByAscendancy ? $"Your {Work(me)} stood in the deep caves for {AscendancyMinutes} minutes."
                 : others.Count == 1 ? Fall(others[0]) : "You are the last one left in the match.";
         }
         else if (match.Over && match.Winner < 0)
@@ -567,9 +573,11 @@ public partial class Main : Node3D
         {
             (title, color) = ("Defeat", MatchEndPanel.DefeatColor);
             summary = match.ByDominion && match.OutAt(me) == match.EndTick && match.Winner >= 0
-                ? $"The {Name(match.Winner)} held most of the ancient sites for {DominionMinutes} minutes." : Fall(me);
+                ? $"The {Name(match.Winner)} held most of the ancient sites for {DominionMinutes} minutes."
+                : match.ByAscendancy && match.OutAt(me) == match.EndTick && match.Winner >= 0
+                ? $"The {Name(match.Winner)}' {Work(match.Winner)} stood in the deep caves for {AscendancyMinutes} minutes." : Fall(me);
         }
-        string outcome = !match.Over ? $"player {me} is out" : match.Winner >= 0 ? $"player {match.Winner} won{(match.ByDominion ? " by dominion" : "")}" : "a draw";
+        string outcome = !match.Over ? $"player {me} is out" : match.Winner >= 0 ? $"player {match.Winner} won{(match.ByDominion ? " by dominion" : match.ByAscendancy ? " by ascendancy" : "")}" : "a draw";
 
         if (_sim.Recording is { } log)
         {
@@ -664,6 +672,7 @@ public partial class Main : Node3D
         if (_args.TryGetValue("lights", out var ls) && int.TryParse(ls, out var lights) && lights > 0) GiveLights(lights);
         if (_args.TryGetValue("xp", out var xs) && int.TryParse(xs, out var xp) && xp > 0) GiveExperience(xp);
         if (_args.TryGetValue("dusk-party", out var ds) && int.TryParse(ds, out var party) && party > 0) SpawnDuskParty(party);
+        if (_args.ContainsKey("great-work")) GiveGreatWork();
         if (_args.TryGetValue("blood", out var bls) && int.TryParse(bls, out var stains) && stains > 0) SpillBlood(stains, fx, fz);
         // A match from the usual start is recorded as it is played, to be saved as a replay at its end.
         var odd = new List<string>();
@@ -1009,6 +1018,41 @@ public partial class Main : Node3D
     /// are not south of it, where the town hall's door and the starting units are (every fifth column,
     /// nearest first, then north to south and west to east; match setup, before the first tick).
     /// </summary>
+    /// <summary>
+    /// --great-work: your faction's great work stands finished in the deep caves' chamber nearest your start, in a
+    /// hall dug out for it (13 by 13, 14 high, paved with stone), so its clock is running from the first tick (see
+    /// Rts.Sim.World.AscendancySystem). Nothing on a map with no deep caves.
+    /// </summary>
+    private void GiveGreatWork()
+    {
+        int player = PlayerControl.LocalPlayer;
+        var faction = _sim.Economy.Faction(player);
+        BuildingDef? def = null;
+        foreach (var b in _content.Buildings)
+            if (b.Kind == BuildingKind.GreatWork && b.Faction == faction) def = b;
+        int sx = -1, sz = -1;
+        foreach (var start in _sim.Map.Starts)
+            if (start.Player == player) (sx, sz) = (start.X, start.Z);
+        if (def == null || sx < 0) return;
+        (int X, int Y, int Z) best = (-1, -1, -1);
+        long bestD = long.MaxValue;
+        foreach (var n in _sim.Map.Deeps)
+        {
+            long d = (long)(n.X - sx) * (n.X - sx) + (long)(n.Z - sz) * (n.Z - sz);
+            if (_sim.Economy.DeepGround(n.Y) && n.Y > _sim.World.SizeY / 4 && d < bestD) (bestD, best) = (d, n);
+        }
+        if (best.X < 0) return;
+        int floor = best.Y - 2, half = 6;
+        var w = _sim.World;
+        for (int x = best.X - half; x <= best.X + half; x++)
+        for (int z = best.Z - half; z <= best.Z + half; z++)
+        {
+            w.Set(x, floor - 1, z, BlockType.Stone);
+            for (int y = floor; y < floor + 14; y++) w.Set(x, y, z, BlockType.Air);
+        }
+        _sim.Economy.PlaceFinished(player, def, best.X - def.SizeX / 2, best.Z - def.SizeZ / 2, floor);
+    }
+
     private void GiveHouses(int count)
     {
         int player = PlayerControl.LocalPlayer;

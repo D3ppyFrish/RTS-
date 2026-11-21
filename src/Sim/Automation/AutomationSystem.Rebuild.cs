@@ -88,10 +88,12 @@ public sealed partial class AutomationSystem
                 continue;
             }
             if (Threatened(r) || HasRubble(r)) continue;
-            switch (Economy.CanPlace(r.Owner, r.Def, r.X, r.Z, out _))
+            // A great work stands under other ground: put back at its own level, not on top.
+            int level = r.Def.Kind == BuildingKind.GreatWork ? r.Y : -1;
+            switch (Economy.CanPlace(r.Owner, r.Def, r.X, r.Z, out _, level: level))
             {
                 case PlaceResult.Ok:
-                    Issue(new BuildCommand(r.Owner, Array.Empty<int>(), r.Def.Id, r.X, r.Z));
+                    Issue(new BuildCommand(r.Owner, Array.Empty<int>(), r.Def.Id, r.X, r.Z, level));
                     _ruins.RemoveAt(k--);
                     break;
                 case PlaceResult.Crowded or PlaceResult.Locked or PlaceResult.OutOfBounds:

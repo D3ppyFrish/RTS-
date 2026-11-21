@@ -38,17 +38,17 @@ public class ContentTests
     {
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs" }, db.Factions.Select(f => f.Id));
-        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "barracks", "great_barracks", "smelter", "foundry", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "boar_pen", "crab_pots", "goblin_totem", "ogre_idol", "kobold_crystal", "bridge" }, db.Buildings.Select(b => b.Id));
+        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "barracks", "great_barracks", "smelter", "foundry", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "torch", "campfire", "wolf_lodge", "boar_pen", "crab_pots", "hall_of_legends", "beast_throne", "goblin_totem", "ogre_idol", "kobold_crystal", "bridge" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "healer" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "master_builder", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
             "bowmaster", "ranger", "lancer", "horselord", "outrider", "tunneller", "demolisher", "breachmaster", "battle_mage", "archmage", "seer", "wolfheart" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
-        Assert.Equal(18, db.Techs.Count);
+        Assert.Equal(20, db.Techs.Count);
 
         // A branching tree: shared roots, techs that lead to more than one, long chains, a few per faction.
         Assert.True(db.Techs.Count(t => t.Requires.Count == 0 && t.Faction == null) >= 3);
         Assert.True(db.Techs.Count(t => db.LeadsTo(t).Count >= 2) >= 2);
-        Assert.Equal(3, db.Techs.Max(t => t.Depth));
+        Assert.Equal(4, db.Techs.Max(t => t.Depth)); // the final techs
         foreach (var f in db.Factions) Assert.InRange(db.Techs.Count(t => t.Faction == f), 2, 4);
 
         // What the loader works out.
@@ -517,7 +517,10 @@ public class ContentTests
         Assert.Contains("units.json: unit 'giant_crab', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'crab_pots': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains("units.json: unit 'cave_wyrm', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
-        Assert.Equal(15, e.Errors.Count);
+        // And the Orcs' final tech and great work.
+        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'orc_beast_king': \"faction\" is \"orcs\", which is not a faction"));
+        Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'beast_throne': \"faction\" is \"orcs\", which is not a faction"));
+        Assert.Equal(17, e.Errors.Count);
     }
 
     [Fact]

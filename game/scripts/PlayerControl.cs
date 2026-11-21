@@ -1441,6 +1441,19 @@ public partial class PlayerControl : Node
         _rig.Position = new Vector3(ruin.X + 0.5f, ruin.Y + 1, ruin.Z + 0.5f) * ChunkMesher.BlockSize;
     }
 
+    /// <summary>
+    /// Moves the camera to (x, y, z), ground in the deep caves maybe: when the land is over it, the height slice is
+    /// set to cut it away a little above (a great work, say).
+    /// </summary>
+    public void FocusAt(int x, int y, int z)
+    {
+        _rig.Position = new Vector3(x + 0.5f, y + 1, z + 0.5f) * ChunkMesher.BlockSize;
+        // The top of the column, land or water.
+        int cx = Math.Clamp(x, 0, _sim.World.SizeX - 1), cz = Math.Clamp(z, 0, _sim.World.SizeZ - 1), top = _sim.World.SizeY - 1;
+        while (top > 0 && _sim.World.Get(cx, top, cz) == BlockType.Air) top--;
+        if (top > y + 12) _slice.Set(y + 10);
+    }
+
     /// <summary>Starts researching a tech at your town hall.</summary>
     public void Research(TechDef tech) => _sim.Schedule(_sim.Tick, new ResearchCommand(LocalPlayer, tech.Id));
 
@@ -1499,7 +1512,9 @@ public partial class PlayerControl : Node
         }
         if (def.IsTower) SnapToWall(ref x, ref z);
         int cx = x - def.SizeX / 2, cz = z - def.SizeZ / 2;
-        var result = _sim.Economy.CanPlace(LocalPlayer, def, cx, cz, out int baseY);
+        // A great work stands in the deep caves, under other ground: at the level the cursor is on (the height slice
+        // cuts the land over it away), not on top of the ground.
+        var result = _sim.Economy.CanPlace(LocalPlayer, def, cx, cz, out int baseY, level: def.Kind == BuildingKind.GreatWork ? y : -1);
         Ghost = new Placement(true, cx, baseY >= 0 ? baseY : y, cz, result);
     }
 
@@ -1527,9 +1542,10 @@ public partial class PlayerControl : Node
     {
         if (BuildDef is not { } def || !Ghost.Visible || Ghost.Result is not (PlaceResult.Ok or PlaceResult.CannotAfford)) return;
         bool plan = Planning;
+        int level = def.Kind == BuildingKind.GreatWork ? Ghost.Y : -1;
         _sim.Schedule(_sim.Tick, plan
-            ? new PlanCommand(LocalPlayer, def.Id, Ghost.X, Ghost.Z)
-            : new BuildCommand(LocalPlayer, OwnWorkers(OwnSelected()).ToArray(), def.Id, Ghost.X, Ghost.Z));
+            ? new PlanCommand(LocalPlayer, def.Id, Ghost.X, Ghost.Z, level)
+            : new BuildCommand(LocalPlayer, OwnWorkers(OwnSelected()).ToArray(), def.Id, Ghost.X, Ghost.Z, level));
         float bs = ChunkMesher.BlockSize;
         _rings.ShowMarker(new Vector3(Ghost.X + def.SizeX / 2f, Ghost.Y, Ghost.Z + def.SizeZ / 2f) * bs,
             plan ? GhostRenderer.PlannedColor : SelectionRenderer.Work);
@@ -2028,6 +2044,8 @@ public partial class PlayerControl : Node
                $"ruin_near={NearRuin()?.Index ?? -1} ruin_searching={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Ruins.Searching(u.Id[i]) >= 0)} " +
                $"ruins_found={_sim.Ruins.Ruins.Count(r => r.SearchedBy == LocalPlayer)} " +
                $"sites_active={(_sim.Sites.Active ? 1 : 0)} sites_held={_sim.Sites.Held(LocalPlayer)} sites_leader={_sim.Sites.Leader} " +
+               $"great_works={_sim.Ascendancy.Works.Count} great_work_left={(_sim.Ascendancy.Leading is { } gw ? _sim.Ascendancy.TicksLeft(gw) : -1)} " +
+               $"great_work_owner={_sim.Ascendancy.Leading?.Owner ?? -1} by_ascendancy={(_sim.Match.ByAscendancy ? 1 : 0)} " +
                $"sites_left={_sim.Sites.TicksLeft} sites_claim={_sim.Ruins.Ruins.Max(r => (int?)r.Claim) ?? 0} " +
                $"ore={stock[(int)Good.IronOre]} coal={stock[(int)Good.Coal]} crystal={stock[(int)Good.Crystal]} gold={stock[(int)Good.Gold]} mining_gold={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Gather && u.JobBlock[i] == BlockType.GoldOre)} mana={_sim.Economy.Player(LocalPlayer).Mana} " +
                $"shrines={OwnKind(BuildingKind.Shrine)} keepers={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Haul && _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind == BuildingKind.Shrine)} " +

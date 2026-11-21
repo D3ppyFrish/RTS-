@@ -10,7 +10,8 @@ namespace Rts.Sim;
 /// player is left in, they win. If the last players go out on the same tick, the match ends in a draw. A
 /// match with fewer than two players (a sandbox, most tests) never ends. Checked at the end of every tick. With
 /// <see cref="Simulation.Dominion"/> on, a player holding most of the ancient sites long enough wins at once
-/// (<see cref="World.DominionSystem"/>).
+/// (<see cref="World.DominionSystem"/>), and so does a player whose great work stands finished long enough
+/// (<see cref="World.AscendancySystem"/>).
 /// </summary>
 public sealed class MatchSystem
 {
@@ -33,6 +34,8 @@ public sealed class MatchSystem
     public int Winner { get; private set; } = -1;
     /// <summary>True if the winner won by dominion, holding most of the ancient sites (see <see cref="World.DominionSystem"/>).</summary>
     public bool ByDominion { get; private set; }
+    /// <summary>True if the winner won by ascendancy, their great work standing long enough (see <see cref="World.AscendancySystem"/>).</summary>
+    public bool ByAscendancy { get; private set; }
     /// <summary>The tick the match ended on, or -1.</summary>
     public long EndTick { get; private set; } = -1;
 
@@ -71,13 +74,25 @@ public sealed class MatchSystem
     /// <summary>The player held most of the ancient sites long enough: they win, and every other player still in goes out.</summary>
     internal void WinByDominion(int player)
     {
-        if (Over || !InPlay(player)) return;
+        if (WinOutright(player)) ByDominion = true;
+    }
+
+    /// <summary>The player's great work stood long enough: they win, and every other player still in goes out.</summary>
+    internal void WinByAscendancy(int player)
+    {
+        if (WinOutright(player)) ByAscendancy = true;
+    }
+
+    /// <summary>The player wins at once and everyone else still in goes out; false if the match is over or they are out.</summary>
+    private bool WinOutright(int player)
+    {
+        if (Over || !InPlay(player)) return false;
         for (int k = 0; k < _players.Count; k++)
             if (_players[k] != player && _outAt[k] < 0) _outAt[k] = _sim.Tick;
         Over = true;
         Winner = player;
-        ByDominion = true;
         EndTick = _sim.Tick;
+        return true;
     }
 
     internal void Step()
@@ -109,6 +124,7 @@ public sealed class MatchSystem
         ulong h = 0xCBF29CE484222325UL;
         for (int k = 0; k < _players.Count; k++)
             h = (h ^ (ulong)_players[k] ^ (ulong)_outAt[k] << 8) * 0x100000001B3UL;
-        return h ^ (ulong)(Winner + 1) << 56 ^ (ulong)EndTick ^ (ByDominion ? 0x40000000000000UL : 0);
+        return h ^ (ulong)(Winner + 1) << 56 ^ (ulong)EndTick ^ (ByDominion ? 0x40000000000000UL : 0)
+            ^ (ByAscendancy ? 0x20000000000000UL : 0);
     }
 }
