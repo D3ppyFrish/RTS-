@@ -105,6 +105,26 @@ public sealed partial class AiPlayer
         "orc_war_drums", "orc_beast_pens", "settler_guilds", "roads", "carts", "smelting", "settler_drill",
     };
 
+    /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
+    public const int DiscoveriesAfter = 2;
+
+    /// <summary>
+    /// Its tech order as it researches it: for the smart levels, each discovery tech (in the data's order) whose
+    /// discovery it has made comes in after the first <see cref="DiscoveriesAfter"/> of the order. They are cheap and
+    /// each pays off at once (ruins and lairs out of the fog for its parties, workers safe beside a lair). The
+    /// classic level never researches them.
+    /// </summary>
+    private IEnumerable<string> InLine(Simulation sim, string[] order)
+    {
+        for (int i = 0; i < order.Length; i++)
+        {
+            if (i == DiscoveriesAfter && Smart)
+                foreach (var tech in sim.Content.Techs)
+                    if (tech.Discovery != Discovery.None && sim.Economy.Discovered(Player, tech.Discovery)) yield return tech.Id;
+            yield return order[i];
+        }
+    }
+
     /// <summary>How often (out of the weights of what a barracks can train) each role is picked.</summary>
     private static int RoleWeight(UnitRole r) => r switch
     {
@@ -335,10 +355,10 @@ public sealed partial class AiPlayer
         }
         if (Smart) SaveForBarracks(sim, barracks, site);
 
-        // Research, one tech at a time, in order.
+        // Research, one tech at a time, in order (the smart levels: with the discovery techs it has opened, see InLine).
         if (econ.Researching(Player) == null)
         {
-            foreach (string id in TechOrder)
+            foreach (string id in InLine(sim, TechOrder))
             {
                 if (!sim.Content.TryGetTech(id, out var tech)) continue;
                 var r = econ.CanResearch(Player, tech);
@@ -492,9 +512,13 @@ public sealed partial class AiPlayer
         return false;
     }
 
-    /// <summary>True if column (x, z) is near a lair whose monsters are still about (for the smart levels, one they have seen).</summary>
+    /// <summary>
+    /// True if column (x, z) is near a lair whose monsters are still about (for the smart levels, one they have
+    /// seen, and never once they have Beast lore).
+    /// </summary>
     private bool NearLair(Simulation sim, int x, int z)
     {
+        if (Smart && sim.Economy.SparesWorkers(Player)) return false; // Beast lore: the monsters leave its workers be
         foreach (var lair in sim.Monsters.Lairs)
             if (!lair.Cleared && Dist2(x, z, lair.X, lair.Z) <= (long)LairKeepOff * LairKeepOff && (!Smart || LairKnown(sim, lair))) return true;
         return false;

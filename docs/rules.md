@@ -804,8 +804,12 @@ A discovery is the player's for the rest of the match (`PlayerEconomy.Discoverie
   does nothing.
 - **In the game**: the player hears of each discovery tech they can now research ("Discovery: Wardens' charts
   can be researched"). In the tech tree (K) a discovery tech not yet discovered says what to do for it ("Search an
-  old ruin", "Clear a monster lair", "Take a city-state town"), and its tooltip says so too. Computer players do not
-  research discovery techs yet. All numbers are first guesses for playtesting.
+  old ruin", "Clear a monster lair", "Take a city-state town"), and its tooltip says so too. All numbers are first
+  guesses for playtesting.
+- **Computer players** (`AiPlayer.InLine`, tests in `AiDiscoveryTests`): every level but Classic researches the discovery
+  techs it has opened, in the data's order, as soon as it has its first two techs (Farming and Better tools); Hard saves
+  up for them at once. What they reveal is then known to it like anything it has seen, so its ruin and hunting parties
+  go for the ruins and lairs they show. With Beast lore it no longer keeps its workers off the trees near a lair.
 
 ## Ancient sites and dominion
 

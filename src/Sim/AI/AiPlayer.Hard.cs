@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Rts.Sim.Content;
 using Rts.Sim.Economy;
 using Rts.Sim.Units;
 
@@ -274,11 +275,12 @@ public sealed partial class AiPlayer
         }
 
         // Research, one tech at a time, in order. The first two (fields, and better tools) come before
-        // anything below; for the rest it saves up once it has a barracks.
+        // anything below; then the discovery techs it has opened (see InLine), which it saves up for at once;
+        // for the rest it saves up once it has a barracks.
         if (econ.Researching(Player) == null)
         {
             int k = 0;
-            foreach (string id in HardTechOrder)
+            foreach (string id in InLine(sim, HardTechOrder))
             {
                 k++;
                 if (!sim.Content.TryGetTech(id, out var tech)) continue;
@@ -291,7 +293,7 @@ public sealed partial class AiPlayer
                     Spend(tech.Cost);
                     Note(sim, $"researches {tech.Name}");
                 }
-                else if (calm && (k <= 2 || c.Barracks >= 1)) SaveUp(sim, tech.Cost);
+                else if (calm && (k <= DiscoveriesAfter || tech.Discovery != Discovery.None || c.Barracks >= 1)) SaveUp(sim, tech.Cost);
                 break;
             }
         }
