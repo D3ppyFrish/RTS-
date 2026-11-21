@@ -4,7 +4,7 @@
 # swamp, a stone giant in the hills (clicked, so its panel shows), a herd of wild boar, a pair of bog horrors
 # in the swamp, a pair of giant crabs on a beach, and (issue #65) the cavern under the hills cut open by the
 # height slice, with a cave crawler nest and the cave wyrm at its far end, and (issue #66) a sinkhole's pale
-# crust in the grassland, (issue #78) a patch of quicksand on the west beach and a rockfall (loose rock over scree) in the hills, and (issue #67) one of the old stone ruins in the open country. Saves PNGs to
+# crust in the grassland, the deep caves under the land, (issue #78) a patch of quicksand on the west beach and a rockfall (loose rock over scree) in the hills, and (issue #67) one of the old stone ruins in the open country. Saves PNGs to
 # OUT_DIR and fails if the map is not the default size or its lairs are missing.
 # Usage: scripts/ui-wilds-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -18,9 +18,11 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # the swamp north of the river's middle; a stone giant's den is at 337,631 in the hills (the giant stands
 # two columns north of it), a boar herd's den at 453,386, a bog horrors' den at 414,174 and a giant crabs'
 # den at 103,67. Under the hills the cavern's crawler nests are at 351,625, 352,645 and 333,667 and the
-# cave wyrm's den at 316,672, at levels 5 to 9 (the ground above is at about 26). A sinkhole's crust is
-# centred on 365,350 (its top at 20). A patch of quicksand lies on the west beach round 71,307 (at 14). Loose rock
-# stands on a cliff's brink at 306,601 (top rock at 35), over scree at its foot. A ruin stands round 574,157 (its floor at 19).
+# cave wyrm's den at 316,672, at levels 69 to 73 (the ground above is at about 90; the map is 128 high, the land
+# on 64 layers of deep rock). A deep chamber of the upper level, with a pool and giant mushrooms, is at 174,314 (its
+# floor at 47): the last shot cuts the slice down to 52 over it. A sinkhole's crust is
+# centred on 365,350 (its top at 84). A patch of quicksand lies on the west beach round 71,307 (at 78). Loose rock
+# stands on a cliff's brink at 306,601 (top rock at 99), over scree at its foot. A ruin stands round 574,157 (its floor at 83).
 STEPS="
 wait 20
 print
@@ -29,7 +31,7 @@ wait 15
 shot $OUT/ui-wilds-bog.png
 camera 337,629 210 30 22
 wait 15
-clickworld 337,g,629
+clickworld 337,g+1,629
 wait 3
 print
 shot $OUT/ui-wilds-giant.png
@@ -59,6 +61,12 @@ wait 5
 key pagedown*20
 wait 20
 shot $OUT/ui-wilds-cavern.png
+key home
+camera 174,314 30 55 28
+wait 3
+key pagedown*37
+wait 20
+shot $OUT/ui-wilds-deep.png
 "
 LOG="$OUT/ui-wilds.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -70,9 +78,9 @@ field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step failed: $(grep '^Input script' "$LOG")"
 mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "${#UI[@]}" -eq 2 ] || fail "expected 2 UI lines, got ${#UI[@]}"
-[ "$(field "${UI[0]}" world)" = 768x64x768 ] || fail "the default map is not 768 by 768: ${UI[0]}"
+[ "$(field "${UI[0]}" world)" = 768x128x768 ] || fail "the default map is not 768 by 768: ${UI[0]}"
 lairs="$(field "${UI[0]}" lair_kinds)"
 for kind in boar stone_giant wolf bog_horror giant_crab cave_crawler cave_wyrm; do [[ ",$lairs," == *",$kind:"* ]] || fail "no $kind lair on the map: $lairs"; done
 [ "$(field "${UI[1]}" unit)" = stone_giant ] || fail "the stone giant was not selected: ${UI[1]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 10 ] || fail "missing screenshots"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 11 ] || fail "missing screenshots"
 echo "UI wilds screenshot test OK: $OUT"

@@ -63,14 +63,15 @@ public class CavernTests
         var cavern = all.Take(4).ToList();
         Assert.Equal(new[] { "cave_crawler", "cave_crawler", "cave_crawler", "cave_wyrm" }, cavern.Select(l => l.Monster.Id));
         Assert.Equal(2, sim.Map.Caverns.Count);
-        var second = all.Skip(4).ToList();
+        // (The deep caves' crawler nests come after them, see DeepCaveTests.)
+        var second = all.Skip(4).Take(3).ToList();
         Assert.Equal(new[] { "cave_crawler", "cave_crawler", "cave_crawler" }, second.Select(l => l.Monster.Id));
         var (c2x, c2y, c2z) = sim.Map.Caverns[1];
-        var floor2 = sim.Monsters.CavernFloor(c2x, c2y, c2z);
+        var floor2 = sim.Monsters.CavernFloor(c2x, c2y, c2z, c2y - MonsterSystem.CavernDrop);
         foreach (var lair in second)
             Assert.Contains(floor2, c => c.X == lair.X && c.Z == lair.Z && c.Y == lair.Y);
 
-        var floor = sim.Monsters.CavernFloor(cave.X, cave.Y, cave.Z);
+        var floor = sim.Monsters.CavernFloor(cave.X, cave.Y, cave.Z, cave.Y - MonsterSystem.CavernDrop);
         int Steps(Lair l) => floor.First(c => c.X == l.X && c.Z == l.Z && c.Y == l.Y).Steps;
         foreach (var lair in cavern)
         {

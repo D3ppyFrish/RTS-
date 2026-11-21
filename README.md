@@ -44,9 +44,16 @@ scripts/setup.sh --with-export-templates && scripts/export-windows.sh
 
 ### Maps
 
-`RegionGenerator` (src/Sim/World) builds the region from a seed with integer maths, 768×64×768 by default
-(`RegionGenerator.DefaultSize`, issue #45; `--world=WxHxD` picks another size, and the features are laid out
-for 512 and scale with it):
+`RegionGenerator` (src/Sim/World) builds the region from a seed with integer maths, 768×128×768 by default
+(`RegionGenerator.DefaultSize`, issue #45, and `DefaultHeight`; `--world=WxHxD` picks another size, and the features are laid out
+for 512 across and 64 high and scale with it). On a map at least 96 high, the land's 64 layers sit on
+`RegionGenerator.DeepLayers` more of deep rock (64 on the default map), with **the deep caves** running through it:
+two levels of domed chambers on a grid about `DeepSpacing` (120) blocks apart under most of the map, joined by
+winding tunnels, sloping shafts between the levels, a tunnel down from each hill cavern and a few long ramps up to
+open country. Their walls are seamed with iron, coal and crystal (more crystal deeper), crystal and stone spikes
+rise from the floors and hang from the roofs, giant mushrooms stand in the upper chambers, pools of water and lava
+lie in the floors, and every `DeepNestEvery`th chamber is a crawler nest (`RegionMap.Deeps` lists the chambers;
+`DeepCaveTests`). A lower map has no deep rock and is laid out as before:
 ocean and beaches on the west and east edges, a river running north–south that can be waded at three
 shallow fords (about a quarter, half and three quarters of the way down), grassland and forests,
 a hill range with stone ridges and pools of lava, a swamp with patches of poison bog (see
@@ -61,7 +68,7 @@ outcrop mirrored around it. Each biome grows its own trees (`RegionGenerator.Kin
 trees and birches in the grassland, those and pines in the forest, pines in the hills (plus the one dusk tree, see
 `docs/rules.md`), and willows and giant mushrooms in the swamp; the start grove has two birches and a pine.
 Every kind is its own trunk and leaf block (`BlockInfo.IsTrunk`, `BlockInfo.IsLeaves`). `RegionMap.Save`/`Load` read and write a run-length-encoded binary map,
-so handmade maps can be loaded with `--map=PATH` (format 2 lists every cavern and ruin; format 1 still loads).
+so handmade maps can be loaded with `--map=PATH` (format 3 lists every cavern, ruin and deep chamber; formats 1 and 2 still load).
 The `ui-*` screenshot scripts and CI's AI matches play the default map (issue #67); the ones CI skips
 (`ui-structure`, `ui-tree`, `ui-collapse-detail`, `ui-lineup`, `ui-sculpt`, `ui-detail`) still pin
 `--world=512x64x512`, which their coordinates were written for. `--focus=start0|start1|cavern|dusk|X,Z` points the camera; `--dusk-party=N` puts a party of yours near the dusk tree.

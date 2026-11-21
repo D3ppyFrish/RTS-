@@ -38,7 +38,7 @@ wait 2
 print
 camera 152,367 200 35 18
 wait 10
-clickworld 155,19,363 right
+clickworld 155,83,363 right
 ticks 300
 shot $OUT/trees-$s-workers.png
 ticks 1600

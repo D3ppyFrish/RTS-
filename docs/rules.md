@@ -605,6 +605,15 @@ areas, and Orcs who beat a wolf keep it.
   120 iron, and its den gives the **wyrm crystal**. In the data, `cavern` in a `lair` is `along` or `deepest`, with
   `count` lairs. A bigger map's further hill ranges each have a cavern of their own (issue #67; two on the
   default map), with the crawler nests but no wyrm: the wyrm lives in the main one only.
+- **The deep caves**: the default map is 128 layers high, and under the land lie 64 layers of rock with two levels
+  of caves running under most of the map: big domed chambers about 120 blocks apart, joined by winding tunnels,
+  with sloping shafts between the levels, a tunnel down from each hill cavern, and a few long ramps that come up in
+  open country well away from the starts. Units walk all of it. The walls are seamed with iron ore, coal and
+  crystal, and the deeper down, the more crystal. Crystal and stone spikes rise from the floors and hang from the
+  roofs, giant mushrooms stand from floor to roof in the upper chambers, and pools of
+  water lie in the floors, with pools of lava in the lower level. Every fourth chamber (none within 100 blocks of a
+  start) is a nest of cave crawlers, one nest a chamber; a hill cavern's own lairs stay in the cavern, not down its
+  tunnel to the deep caves (`DeepCaveTests`).
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.

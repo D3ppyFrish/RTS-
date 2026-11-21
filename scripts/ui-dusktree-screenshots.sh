@@ -43,7 +43,7 @@ ticks 700
 print
 camera 413,590 30 35 26
 wait 5
-clickworld 413,31,590 right
+clickworld 413,95,590 right
 ticks 2
 print
 ticks 60
@@ -69,7 +69,7 @@ print
 clickworld 415,g,588 right ctrl
 ticks 700
 print
-clickworld 413,31,590 right
+clickworld 413,95,590 right
 ticks 2
 print
 ticks 300
@@ -91,7 +91,7 @@ dragworld 425,g,580 434,g,600
 wait 2
 clickworld 415,g,588 right ctrl
 ticks 700
-clickworld 413,31,590 right
+clickworld 413,95,590 right
 ticks 320
 print
 camera 428,590 0 75 40

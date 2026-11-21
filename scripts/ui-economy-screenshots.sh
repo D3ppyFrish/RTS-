@@ -21,7 +21,7 @@ mouse 800,450
 mouse 1080,640
 up 1080,640
 wait 2
-clickworld 164,22,390 right
+clickworld 164,86,390 right
 ticks 40
 print
 key k

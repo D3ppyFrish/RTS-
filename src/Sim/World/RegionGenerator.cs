@@ -19,7 +19,7 @@ namespace Rts.Sim.World;
 /// Feature sizes are defined for a 512x64x512 region and scale with the world size, so small test
 /// worlds still get every feature.
 /// </summary>
-public static class RegionGenerator
+public static partial class RegionGenerator
 {
     /// <summary>Distance (blocks, horizontal) within which each start is guaranteed its basic resources.</summary>
     public const int StartResourceRadius = 40;
@@ -49,9 +49,11 @@ public static class RegionGenerator
 
     /// <summary>
     /// The default map's width and depth in blocks (issue #45: half again as wide as the first slice's 512, so
-    /// 2.25 times the land), and its height. Features are laid out for 512 and scale with the size.
+    /// 2.25 times the land), and its height: the 64 layers the land is laid out in, and under them
+    /// <see cref="DeepLayers"/> more of solid rock with the deep caves running through it. Features are laid out
+    /// for 512 and scale with the size.
     /// </summary>
-    public const int DefaultSize = 768, DefaultHeight = 64;
+    public const int DefaultSize = 768, DefaultHeight = SurfaceLayers + 64;
 
     /// <summary>
     /// How many times bigger than the first trees a generated map's trees grow (see
@@ -65,7 +67,11 @@ public static class RegionGenerator
     /// <summary>Fills an existing empty world. The map's biomes and starts are returned.</summary>
     public static RegionMap Generate(VoxelWorld world, ulong seed) => new Builder(seed, world).Build();
 
-    public static int WaterLevel(int sizeY) => Math.Max(3, sizeY * 14 / 64);
+    public static int WaterLevel(int sizeY)
+    {
+        int deep = DeepLayers(sizeY);
+        return deep + Math.Max(3, (sizeY - deep) * 14 / 64);
+    }
 
     /// <summary>
     /// The kind of tree a biome grows, from a roll of 0 to 99: broad-leaved trees and birches in the
@@ -139,12 +145,14 @@ public static class RegionGenerator
         }
     }
 
-    private sealed class Builder
+    private sealed partial class Builder
     {
         private readonly ulong _seed;
         private readonly VoxelWorld _w;
         private readonly RegionMap _map;
         private readonly int _sx, _sy, _sz, _water;
+        /// <summary>Layers of deep rock under the land (see <see cref="DeepLayers"/>), and the layers the land is laid out in.</summary>
+        private readonly int _deep, _top;
         private readonly int[] _height;
         private readonly BlockType[] _surface;
         private readonly DeterministicRandom _rng;
@@ -163,6 +171,8 @@ public static class RegionGenerator
             _w = world;
             _map = new RegionMap(seed, world);
             _sx = world.SizeX; _sy = world.SizeY; _sz = world.SizeZ;
+            _deep = DeepLayers(_sy);
+            _top = _sy - _deep;
             _water = WaterLevel(_sy);
             _height = new int[_sx * _sz];
             _surface = new BlockType[_sx * _sz];
@@ -216,7 +226,8 @@ public static class RegionGenerator
         /// </summary>
         private int Sx(int v) => v < 0 ? -Math.Max(1, -v * _sx / 512) : Math.Max(1, v * _sx / 512);
         private int Sz(int v) => v < 0 ? -Math.Max(1, -v * _sz / 512) : Math.Max(1, v * _sz / 512);
-        private int Sy(int v) => Math.Max(1, v * _sy / 64);
+        /// <summary>Scales a height defined for a 64-layer map (the land's layers, not the deep rock under them).</summary>
+        private int Sy(int v) => Math.Max(1, v * _top / 64);
 
         public RegionMap Build()
         {
@@ -226,6 +237,7 @@ public static class RegionGenerator
             PlaceStarts();
             Fill();
             CarveCaverns();
+            CarveDeeps();
             PlaceLava();
             PlaceBogs();
             PlaceDuskTree();
@@ -235,6 +247,7 @@ public static class RegionGenerator
             PlaceSinkholes();
             PlaceQuicksand();
             PlaceRockfalls();
+            CarveDeepRamps();
             return _map;
         }
 
@@ -412,7 +425,9 @@ public static class RegionGenerator
             int r = Noise.Permille(x, y, z, _seed ^ 0xA5A5UL);
             if (r < 7) return BlockType.IronOre;
             if (r < 13) return BlockType.Coal;
-            if (r < 14 && y < Sy(6)) return BlockType.Crystal;
+            if (r < 14 && y < _deep + Sy(6)) return BlockType.Crystal;
+            // Deeper down, a little more crystal still: up to twice as much at the bottom of the deep rock.
+            if (y < _deep && r < 14 + 7 * (_deep - y) / _deep) return BlockType.Crystal;
             return BlockType.Stone;
         }
 
@@ -771,7 +786,7 @@ public static class RegionGenerator
 
         private void CarveCavern(int hillX, int hillZ, DeterministicRandom rng)
         {
-            int floor = Math.Max(2, Sy(4));
+            int floor = Math.Max(2, _deep + Sy(4));
             int cy = Math.Clamp(_water - Sy(3), floor + 2, _sy - 4);
             int x = Math.Clamp(hillX + Sx(rng.Range(-30, 31)), 2, _sx - 3);
             int z = Math.Clamp(hillZ + Sz(rng.Range(-20, 21)), 2, _sz - 3);
