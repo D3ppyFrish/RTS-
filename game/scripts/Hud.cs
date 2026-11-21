@@ -82,6 +82,8 @@ public partial class Hud : CanvasLayer
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
     // A button per rival player in the match, for truces (see TruceSystem).
     private readonly List<(Button Button, int Rival)> _rivalButtons = new();
+    // A button per rival player in the match, for trade deals (see TradeDealSystem).
+    private readonly List<(Button Button, int Rival)> _dealButtons = new();
     // The ancient sites, with dominion on: who holds how many, and the dominion clock (click to look at the next site).
     private Button _sitesButton = null!;
     // Great works (see AscendancySystem): the one nearest winning, or your site (click to look at it).
@@ -270,6 +272,14 @@ public partial class Hud : CanvasLayer
             b.Pressed += () => _control.Truce(rival);
             under.AddChild(b);
             _rivalButtons.Add((b, rival));
+
+            var d = MakeButton("");
+            d.Name = $"deal_{rival}";
+            d.ToggleMode = false;
+            d.AddThemeFontSizeOverride("font_size", 14);
+            d.Pressed += () => _control.Deal(rival);
+            under.AddChild(d);
+            _dealButtons.Add((d, rival));
         }
 
         _sitesButton = MakeButton("");
@@ -1321,6 +1331,56 @@ public partial class Hud : CanvasLayer
         }
     }
 
+    /// <summary>The rivals' trade deal buttons in the top bar: a deal on, an offer standing either way, or how long until another.</summary>
+    private void RefreshDeals()
+    {
+        var deals = _sim.Deals;
+        int me = PlayerControl.LocalPlayer;
+        long now = _sim.Tick;
+        string pay = $"Each load of {TradeDealSystem.Load} food your caravans take to their town hall stays theirs, and brings you back " +
+                     $"{TradeDealSystem.Price} gold per 100 blocks of the way.";
+        foreach (var (button, rival) in _dealButtons)
+        {
+            string name = _sim.Economy.Player(rival).Faction.Name;
+            bool inPlay = _sim.Match.InPlay(rival);
+            button.Visible = inPlay;
+            if (!inPlay) continue;
+            button.Disabled = false;
+            Color frame = PlainColour;
+            if (deals.Partners(me, rival))
+            {
+                button.Text = $"{name}: trading";
+                button.TooltipText = $"A trade deal with the {name}: right-click their town hall with caravans selected to trade there. {pay}\n" +
+                                     "Neither side's soldiers go after the other's caravans on their own, but a deal is not a truce: " +
+                                     "soldiers still fight, and anyone else can raid the caravans.\nClick to end the deal at once.";
+                frame = new Color(0.55f, 0.45f, 0.15f);
+            }
+            else if (deals.Offered(rival, me))
+            {
+                button.Text = $"{name} offer trade: accept {Countdown(deals.OfferEnds(rival, me) - now)}";
+                button.TooltipText = $"The {name} offer a trade deal. Click to accept it. {pay}";
+                frame = new Color(0.22f, 0.36f, 0.62f);
+            }
+            else if (deals.Offered(me, rival))
+            {
+                button.Text = $"{name}: trade offered {Countdown(deals.OfferEnds(me, rival) - now)}";
+                button.TooltipText = $"You offered the {name} a trade deal: it starts if they accept before the offer runs out. Click to take it back.";
+            }
+            else if (deals.CanOffer(me, rival))
+            {
+                button.Text = $"{name}: offer trade";
+                button.TooltipText = $"Offer the {name} a trade deal: then each side's caravans can trade at the other's town hall. {pay}";
+            }
+            else
+            {
+                button.Text = $"{name}: no trade for {Countdown(deals.FreeAt(me, rival) - now)}";
+                button.TooltipText = $"After a deal ends, the two sides cannot agree another for {TradeDealSystem.CooldownTicks / (60 * Simulation.TicksPerSecond)} minute.";
+                button.Disabled = true;
+            }
+            Frame(button, frame);
+        }
+    }
+
     /// <summary>Ticks as m:ss.</summary>
     private static string Countdown(long ticks)
     {
@@ -1343,6 +1403,7 @@ public partial class Hud : CanvasLayer
             button.SetPressedNoSignal(_control.SelectedCity == town.Id);
         }
         RefreshTruces();
+        RefreshDeals();
         var selected = _sim.Cities.Get(_control.SelectedCity);
         if (selected?.Def != _cityFor) BuildCityButtons(selected?.Def);
         _cityBox.Visible = selected != null;
@@ -2328,6 +2389,13 @@ public partial class Hud : CanvasLayer
             JobPhase.ToWork => "trading: taking a load to market",
             JobPhase.ToStore => "trading: bringing back its pay",
             _ => "trading: waiting for a whole load in storage",
+        },
+        UnitJob.Market => u.Phase[i] switch
+        {
+            JobPhase.Fetch => "trading with a rival: fetching a load of food",
+            JobPhase.ToWork => "trading with a rival: taking food to their town hall",
+            JobPhase.ToStore => "trading with a rival: bringing back gold",
+            _ => "trading with a rival: waiting for a whole load in storage",
         },
         _ => null,
     };

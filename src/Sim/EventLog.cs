@@ -99,6 +99,18 @@ public enum GameEventKind : byte
     TruceEnding,
     /// <summary>The truce with a rival (<see cref="GameEvent.Subject"/>) is over; <see cref="GameEvent.Def"/> as for <see cref="TruceEnding"/>.</summary>
     TruceEnded,
+    /// <summary>
+    /// A rival (<see cref="GameEvent.Subject"/>) offers the player a trade deal (see <see cref="TradeDealSystem"/>); it
+    /// stands for <see cref="GameEvent.Def"/> ticks.
+    /// </summary>
+    DealOffered,
+    /// <summary>The player and a rival (<see cref="GameEvent.Subject"/>) are trade partners now.</summary>
+    DealStarted,
+    /// <summary>
+    /// The trade deal with a rival (<see cref="GameEvent.Subject"/>) is over; <see cref="GameEvent.Def"/> is the player
+    /// who ended it, or -1 if one of the two is out of the match.
+    /// </summary>
+    DealEnded,
 }
 
 /// <summary>

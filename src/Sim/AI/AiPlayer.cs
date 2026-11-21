@@ -212,7 +212,11 @@ public sealed partial class AiPlayer
         var hall = sim.Economy.TownHall(Player);
         if (hall == null) return;
         for (int p = 0; p < Simulation.WildPlayer; p++) _peace[p] = sim.Truces.AtPeace(Player, p);
-        if ((sim.Tick + Player * 5) % ArmyTicks == 0) AnswerTruces(sim, issue);
+        if ((sim.Tick + Player * 5) % ArmyTicks == 0)
+        {
+            AnswerTruces(sim, issue);
+            AnswerDeals(sim, issue);
+        }
         if (!_started)
         {
             _started = true;
@@ -255,6 +259,20 @@ public sealed partial class AiPlayer
             if (mine * 100 > theirs * TruceRefusePercent) continue;
             Note(sim, $"agrees a truce with player {p}");
             issue(new TruceCommand(Player, p));
+        }
+    }
+
+    /// <summary>
+    /// Answers the trade deals it is offered (see <see cref="TradeDealSystem"/>): it takes every one, since the food a
+    /// partner's caravans bring is its to keep and a deal stops none of its fights.
+    /// </summary>
+    private void AnswerDeals(Simulation sim, Action<Command> issue)
+    {
+        for (int p = 0; p < Simulation.WildPlayer; p++)
+        {
+            if (!sim.Deals.Offered(p, Player) || !sim.Deals.CanOffer(Player, p)) continue;
+            Note(sim, $"agrees a trade deal with player {p}");
+            issue(new TradeDealCommand(Player, p));
         }
     }
 

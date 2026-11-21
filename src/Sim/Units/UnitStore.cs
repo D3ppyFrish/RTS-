@@ -112,6 +112,12 @@ public enum UnitJob : byte
     /// earth from a spot beside it, again and again. Workers and sappers.
     /// </summary>
     Ramp,
+    /// <summary>
+    /// A caravan trades at the town hall <see cref="UnitStore.JobTarget"/> of a trade partner (see
+    /// <see cref="TradeDealSystem"/>): it fetches a load of food from storage, sells it at the hall and brings back
+    /// gold. While it carries a load, <see cref="UnitStore.JobX"/> is the length of its route.
+    /// </summary>
+    Market,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

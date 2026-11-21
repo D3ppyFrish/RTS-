@@ -434,9 +434,12 @@ public sealed partial class CombatSystem
             for (int p = 0; p < _players; p++)
             {
                 if (!Hostile(u.Owner[i], p)) continue;
+                // A trade partner's caravans are let be (see TradeDealSystem); an explicit order still attacks one.
+                bool spareCaravans = _sim.Deals.Partners(u.Owner[i], p);
                 for (int j = _head[c + p]; j >= 0; j = _next[j])
                 {
                     if (u.Subdued[j]) continue;
+                    if (spareCaravans && Def(j).IsTrader) continue;
                     if (guard ? !_sim.Cities.Repels(i, j) : u.Town[j] != 0 && u.Owner[j] == Simulation.WildPlayer) continue;
                     if (monster && _sim.Monsters.Spares(i, j)) continue;
                     int dy = u.Y[i] - u.Y[j];

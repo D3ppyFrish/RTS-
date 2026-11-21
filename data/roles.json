@@ -42,7 +42,7 @@
       "strongAgainst": ["structures"], "weakAgainst": ["cavalry", "heavy_infantry"] },
     { "role": "monster", "job": "Guard their lairs",
       "strongAgainst": [], "weakAgainst": [] },
-    { "role": "trader", "job": "Trade with city-states",
+    { "role": "trader", "job": "Trade with city-states and partners",
       "strongAgainst": [],
       "weakAgainst": ["line_infantry", "heavy_infantry", "ranged", "cavalry", "sapper", "caster", "siege", "monster"] }
   ]

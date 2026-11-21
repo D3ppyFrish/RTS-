@@ -481,6 +481,29 @@ public sealed record TruceCommand(int PlayerId, int Other) : Command(PlayerId);
 public sealed record EndTruceCommand(int PlayerId, int Other) : Command(PlayerId);
 
 /// <summary>
+/// The player offers a trade deal to the rival player <paramref name="Other"/>, or accepts the rival's standing
+/// offer, which starts it (see <see cref="TradeDealSystem"/>).
+/// </summary>
+public sealed record TradeDealCommand(int PlayerId, int Other) : Command(PlayerId);
+
+/// <summary>
+/// The player ends the trade deal with <paramref name="Other"/> at once, or withdraws their standing offer of one
+/// (see <see cref="TradeDealSystem"/>).
+/// </summary>
+public sealed record EndTradeDealCommand(int PlayerId, int Other) : Command(PlayerId);
+
+/// <summary>
+/// The caravans among the units trade at a trade partner's town hall (building id <paramref name="Hall"/>; see
+/// <see cref="TradeDealSystem"/>): they carry loads of food there from the player's storage and bring back gold,
+/// until given another order or the deal ends.
+/// </summary>
+public sealed record MarketCommand(int PlayerId, int[] Units, int Hall) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(MarketCommand? other) => base.Equals(other) && Hall == other!.Hall;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Hall);
+}
+
+/// <summary>
 /// The player gives up the match: they are out at once, as if their last town hall had fallen (see
 /// <see cref="MatchSystem"/>). Their units and buildings stay where they are.
 /// </summary>
