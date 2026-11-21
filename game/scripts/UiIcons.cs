@@ -257,6 +257,12 @@ public static class UiIcons
             "....kkkk....", "...kggggk...", "..kgGggGgk..", "..kggGgggk.k", "..kgggGggkkk", "...kgggk.kbk",
             "....kbk..kb.", "....kbk..kb.", "....kbk.kSSk", "..kkkbkkkSSk", ".kGGGGGGGkkk", "kkkkkkkkkkkk",
         },
+        // Hunter's lodge: a stag's head with its antlers.
+        ["hunting_lodge"] = new[]
+        {
+            "kw.kw..wk.wk", ".kwkw..wkwk.", "..kwwkkwwk..", "...kkbbkk...", "....kbbk....", "...kbuubk...",
+            "...kbkkbk...", "...kbuubk...", "....kuuk....", "....kwwk....", ".....kk.....", "............",
+        },
         ["farm"] = new[]
         {
             "..y...y...y.", ".yyy.yyy.yyy", ".yYy.yYy.yYy", ".yyy.yyy.yyy", "..Y...Y...Y.", "..g...g...g.",

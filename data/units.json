@@ -340,5 +340,13 @@
     "description": "Small and quick with a long spear, stabbing from behind a hide shield.",
     "speed": 5, "hp": 45, "model": "kobold_spear", "damage": 5, "attackTime": 0.9, "range": 1.75, "sight": 9,
     "attack": "pierce", "shield": 15,
-    "cost": { "food": 30, "crystal": 5 } }
+    "cost": { "food": 30, "crystal": 5 } },
+
+  // Wild game: herds of deer graze and roam the grassland. They never fight; hunters from a hunter's lodge shoot them
+  // for food (see Hunting), and the herds grow back while a few are left.
+  { "id": "deer", "name": "Red deer", "role": "monster",
+    "description": "A herd of red deer grazing the open grassland. They never fight back. Hunters from a hunter's lodge shoot them for food and leave the last few to breed, so a herd grows back; one killed off to the last is gone for good.",
+    "speed": 6, "hp": 30, "model": "deer", "sight": 10, "body": "beast",
+    "game": { "food": 25 },
+    "lair": { "pack": 4, "guard": 1, "leash": 20, "biome": "grassland", "count": 3, "roam": 28, "grow": 60, "growTo": 6 } }
 ]

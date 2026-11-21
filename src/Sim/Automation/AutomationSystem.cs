@@ -835,7 +835,10 @@ public sealed partial class AutomationSystem
             if (u.Job[i] == UnitJob.Gather && Harvest.Yields(u.JobBlock[i], out var good)) s.Gatherers[(int)good]++;
             else if (u.Job[i] == UnitJob.Farm) s.Gatherers[(int)Good.Food]++;
             else if (u.Job[i] == UnitJob.Quarry && Buildings.Get(u.JobTarget[i]) is { } q)
+            {
                 foreach (var w in q.Def.Works) s.Gatherers[(int)w.Good]++;
+                if (q.Def.Hunts > 0) s.Gatherers[(int)Good.Food]++;
+            }
             if (u.Job[i] is UnitJob.Build or UnitJob.Farm or UnitJob.Haul or UnitJob.Supply or UnitJob.Quarry)
                 _working[u.JobTarget[i]] = _working.GetValueOrDefault(u.JobTarget[i]) + 1;
         }

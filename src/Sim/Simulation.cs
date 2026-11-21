@@ -326,6 +326,7 @@ public sealed class Simulation
         {
             Monsters.PlaceWild();
             Monsters.PlaceCavern();
+            Monsters.PlaceHerds();
         }
         return towns;
     }

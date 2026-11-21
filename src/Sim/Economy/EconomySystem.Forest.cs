@@ -197,6 +197,7 @@ public sealed partial class EconomySystem
     private void MixSaplings(ref ulong h)
     {
         h = (h ^ (ulong)TreesGrown) * 1099511628211UL;
+        h = (h ^ (ulong)GameHunted) * 1099511628211UL;
         foreach (var p in _saplings)
         {
             h = (h ^ (ulong)(p.X * 73856093L ^ p.Y * 19349663L ^ p.Z * 83492791L)) * 1099511628211UL;

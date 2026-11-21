@@ -115,6 +115,18 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   nobody stands on its trunk's columns, and wood cutters fell it like any other. A sapling dug up, built over or
   knocked off by a tree felled beside it is gone. When there is no room left the foresters wait and try again. The
   rounds give no goods, so automatic workers leave the lodge alone.
+- **Hunting** (kind `quarry` with `"hunts"` in `data/buildings.json`; `EconomySystem.Hunt.cs`, `HuntingTests`): herds of
+  **red deer** (`deer` in `data/units.json`, with `game`) graze the grassland: one herd for every start, 48 to 88 blocks
+  from it, and 3 more for each 512 by 512 blocks of map (`MonsterSystem.PlaceHerds`), each four deer that roam up to 28
+  blocks from where they started and grow back by one a minute up to six. Deer belong to the wild side but never fight,
+  and nobody goes after them on their own (an attack order still does; Orcs kill them rather than beating them). A
+  **hunter's lodge** (4 by 4, 40 wood, no tech) takes two hunters. Each picks the deer nearest the lodge within 32 columns
+  that no other hunter is after, stalks it to within 6 blocks, aims for a round of work (6 seconds, at its work speed
+  and with its player's gathering techs), shoots it dead, walks to where it fell and carries its 25 food to the nearest
+  storage, then sets out from the lodge again. Hunters leave the last two of a herd alone, so a herd worked by lodges
+  only always grows back; soldiers sent at it can still kill it off, and a herd killed to the last is gone for good.
+  With no deer in reach, hunters wait at the lodge. A herd gives roughly 25 food a minute for as long as it lasts, more
+  while it is full. Automatic workers hunt there when food is the good needed most. All numbers are first guesses.
 - **Population**: the town hall houses 25 (every town hall, including one built later) and each house 5; the town hall trains workers for 30 food
   and the barracks trains soldiers (`TrainCommand`) while there is room. A building that trains units can have a
   rally point (`RallyCommand`, snapped to ground a unit can stand on): each unit it trains walks there

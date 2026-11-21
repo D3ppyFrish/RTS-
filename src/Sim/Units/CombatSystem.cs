@@ -242,6 +242,14 @@ public sealed partial class CombatSystem
             if (c >= 0) _pending[c] += damage;
         }
         _crushed.Clear();
+        foreach (var (id, by, damage) in _hunted)
+        {
+            int c = u.IndexOf(id);
+            if (c < 0) continue;
+            _pending[c] += damage;
+            _hitBy[c] = by;
+        }
+        _hunted.Clear();
         int old = 0;
         while (old < _shots.Count && _shots[old].Tick <= tick - ShotTicks) old++;
         _shots.RemoveRange(0, old);
@@ -269,6 +277,20 @@ public sealed partial class CombatSystem
     internal void Crush(int i, int damage)
     {
         if (damage > 0) _crushed.Add((U.Id[i], damage));
+    }
+
+    // Wild game a hunter shot this tick (see Shoot): the game, the hunter and the damage.
+    private readonly List<(int Id, int By, int Damage)> _hunted = new();
+
+    /// <summary>
+    /// Unit i, wild game, is shot dead by hunter <paramref name="by"/> (see <see cref="Economy.EconomySystem"/>'s
+    /// hunting): the arrow flies now, and the kill lands with this tick's blows, the hunter's. Called before <see cref="Step"/>.
+    /// </summary>
+    internal void Shoot(int i, int by)
+    {
+        var u = U;
+        _hunted.Add((u.Id[i], u.Id[by], Math.Max(1, u.Hp[i])));
+        _shots.Add(new Shot(_sim.Tick, u.Id[by], u.X[by], u.Y[by], u.Z[by], u.X[i], u.Y[i], u.Z[i], true, false));
     }
 
     // Units struck dead by test mode this tick: even the invulnerable die.
@@ -440,6 +462,8 @@ public sealed partial class CombatSystem
                 {
                     if (u.Subdued[j]) continue;
                     if (spareCaravans && Def(j).IsTrader) continue;
+                    // Nobody goes after wild game on their own: hunters shoot it, and an explicit order still attacks it.
+                    if (Def(j).IsGame) continue;
                     if (guard ? !_sim.Cities.Repels(i, j) : u.Town[j] != 0 && u.Owner[j] == Simulation.WildPlayer) continue;
                     if (monster && _sim.Monsters.Spares(i, j)) continue;
                     int dy = u.Y[i] - u.Y[j];
