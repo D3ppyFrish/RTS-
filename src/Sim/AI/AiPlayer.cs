@@ -424,6 +424,7 @@ public sealed partial class AiPlayer
             PlaceNear(sim, barracksDef, Middle(hall), Automation.AutomationSystem.PlanRadius, issue);
 
         if (Smart) SiegeEconomy(sim, hall, workers, issue);
+        if (Smart) Carts(sim, hall, issue);
         if (Smart) Hunting(sim, hall, issue);
         if (Smart) SmartEconomy(sim, hall, issue);
     }
