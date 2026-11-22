@@ -77,6 +77,8 @@ public partial class Hud : CanvasLayer
     private Button _growForestButton = null!;
     private Button _iceBridgeButton = null!;
     private Button _rampButton = null!;
+    private Button _damButton = null!;
+    private Button _sluiceButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
@@ -572,6 +574,17 @@ public partial class Hud : CanvasLayer
                                   "enemy can walk it too, and anyone can dig it away.";
         _rampButton.Pressed += () => _control.ToggleRamp();
         grid.AddChild(_rampButton);
+        _damButton = MakeToolButton("");
+        _damButton.Name = "build_dam";
+        _damButton.Icon = UiIcons.Get("dam");
+        _damButton.TooltipText = "Drag from bank to bank across water or a dug channel for the selected workers and sappers to " +
+                                 "build a dam of rammed earth from the bed up to the level of the higher bank. It holds the water " +
+                                 "back, and units walk across on top. Its deepest column is a timber sluice: select units near the " +
+                                 "dam to open it and let the water pour through into lower ground on the far side, or shut it again. " +
+                                 $"Each block costs {EconomySystem.StonePerRamp} stone as it goes in. Anyone can dig the earth away " +
+                                 "and breach it.";
+        _damButton.Pressed += () => _control.ToggleDam();
+        grid.AddChild(_damButton);
         var road = MakeToolButton("");
         road.Name = "build_road";
         road.Icon = UiIcons.Get("road");
@@ -695,6 +708,14 @@ public partial class Hud : CanvasLayer
         _ruinButton.Visible = false;
         _ruinButton.Pressed += () => _control.SearchRuin();
         column.AddChild(_ruinButton);
+
+        _sluiceButton = MakeToolButton("Open the sluice");
+        _sluiceButton.Name = "dam_sluice";
+        _sluiceButton.Icon = UiIcons.Get("dam");
+        _sluiceButton.ToggleMode = false;
+        _sluiceButton.Visible = false;
+        _sluiceButton.Pressed += () => _control.ToggleSluice();
+        column.AddChild(_sluiceButton);
 
         _bloomButton = MakeToolButton("Dusk Bloom [,]");
         _bloomButton.Name = "dusk_bloom";
@@ -1164,6 +1185,9 @@ public partial class Hud : CanvasLayer
         _rampButton.Text = $"Ramp  [Shift+X]\n{EconomySystem.StonePerRamp} stone a block";
         _rampButton.Disabled = econ.Stock(player, Good.Stone) < EconomySystem.StonePerRamp;
         _rampButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Ramp);
+        _damButton.Text = $"Dam  [Shift+O]\n{EconomySystem.StonePerRamp} stone a block";
+        _damButton.Disabled = econ.Stock(player, Good.Stone) < EconomySystem.StonePerRamp;
+        _damButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Dam);
         _planModeButton.SetPressedNoSignal(_control.PlanMode);
         _planModeButton.Text = _control.PlanMode ? "Plan mode: on  [Tab]" : "Plan mode: off  [Tab]";
         var b = _sim.Buildings.Get(_control.SelectedBuilding);
@@ -1198,6 +1222,7 @@ public partial class Hud : CanvasLayer
         RefreshTaming();
         RefreshDen();
         RefreshRuin();
+        RefreshSluice();
         RefreshBloom();
         RefreshEarthWall();
         RefreshIceBridge();
@@ -1720,6 +1745,19 @@ public partial class Hud : CanvasLayer
         button.Disabled = true;
     }
 
+    private void RefreshSluice()
+    {
+        var dam = _control.NearDam();
+        _sluiceButton.Visible = dam != null;
+        if (dam == null) return;
+        _sluiceButton.Text = dam.Open ? "Shut the dam's sluice" : "Open the dam's sluice";
+        _sluiceButton.TooltipText = dam.Open
+            ? "The boards go back into the sluice and the dam holds the water back again (not while anyone stands in the gap). " +
+              "Water that has already poured through stays where it is."
+            : "The sluice's boards under the top one come out, and the water pours through into any lower ground on the far side: " +
+              "a dug channel, a pit or the enemy's tunnels. The top board stays, so units still walk across.";
+    }
+
     private void RefreshRuin()
     {
         var ruin = _control.NearRuin();
@@ -1980,13 +2018,24 @@ public partial class Hud : CanvasLayer
                        (_control.OwnDiggers().Count == 0 ? "   (select workers or sappers first)" : "") +
                        "\nShift: draw another   Right click or Esc to stop";
             }
+            case PlayerControl.ToolMode.Dam:
+            {
+                int stone = _control.DamBlocks * EconomySystem.StonePerRamp;
+                return (!_control.WallStarted ? "Dam: drag from bank to bank across water or a dug channel for the selected workers and sappers to dam it"
+                           : _control.DamTop < 0
+                               ? $"Dam: both ends must be ground about level with each other, with water or a channel between and room over it (up to {EconomySystem.MaxDam} columns, {EconomySystem.MaxDamFill} deep)"
+                               : $"Dam: let go to fill {_control.DamBlocks} blocks up to level {_control.DamTop}, with a sluice in its deepest column ({stone} stone" +
+                                 (stone > _sim.Economy.Stock(PlayerControl.LocalPlayer, Good.Stone) ? ", more than you have" : "") + ")") +
+                       (_control.OwnDiggers().Count == 0 ? "   (select workers or sappers first)" : "") +
+                       "\nShift: draw another   Right click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Road:
                 return _control.RoadStarted
                     ? $"Road: click where it ends ({_control.RoadPreview.Count} blocks, {_control.RoadPreview.Count * EconomySystem.StonePerRoad} stone; Shift carries on)\nRight click or Esc to stop"
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+O: dam   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Shift+L: grow forest";
         }
     }
@@ -2421,6 +2470,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Burn => "burning a storehouse",
         UnitJob.Tunnel => "tunnelling",
         UnitJob.Ramp => u.Phase[i] == JobPhase.Working ? "heaping earth onto a ramp" : "going to the ramp",
+        UnitJob.Dam => u.Phase[i] == JobPhase.Working ? "building a dam" : "going to the dam",
         UnitJob.Clean => u.Phase[i] == JobPhase.Working ? "scrubbing blood" : "cleaning blood",
         UnitJob.Post => u.Phase[i] == JobPhase.Working ? "climbing a wall" : "going to its post on a wall",
         UnitJob.Dig => u.Phase[i] switch

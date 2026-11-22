@@ -468,6 +468,37 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   defender's answer is to dig it away, or to knock the wall down under its top. Leaves in the way are pushed
   aside.
 
+- **Dams** (`DamCommand`, `SluiceCommand`, `EconomySystem.Dams.cs`, `Dam`; the design doc's "Place: ... dams" and
+  "Flood: breaching a dam or bank sends water into lower dug areas"): workers and sappers build a wall of rammed earth
+  (`BlockType.Soil`) across water or a dug channel. It is drawn from bank to bank like a bridge: both ends must be
+  ground to stand on, at most a climb apart, and its top runs level at the higher end's standing level (`PlanDam`).
+  Each column in between is filled from its bed (the first solid block under any water) up to a level under that, so
+  units walk across on top at the height of the banks; ground already that high is left as it is. At most 32 columns
+  (`MaxDam`) and 12 blocks a column (`MaxDamFill`), and the whole dam must fit (every column with headroom, no
+  building or city-state's town on it) and hold something: a column two or more deep. The builders fill the columns
+  in order from the end it was drawn from, each from the bed up, tipping earth down from the bank or the finished
+  dam beside it, 2 seconds of work and 1 stone a block, as for a ramp (they stop when the stone runs out, and a dam
+  nobody builds any more is dropped, what is built staying). The water a block goes into is pushed out.
+  - **The sluice**: the column with the most blocks (nearest the middle of those as deep) is built of timber boards
+    (`BlockType.Planks`) instead. Once the dam is done its owner opens it at any time, from anywhere
+    (`SluiceCommand`; in the game, with units selected within 24 columns of it): every board under the top one comes
+    out, and water on either side flows through into lower ground on the other (see Floods under Natural hazards),
+    so a channel dug dry beside a river, or an enemy's tunnels below it, can be flooded at the moment of your
+    choosing. The top board stays, so the way across stays open. Shutting it puts boards back into every open block
+    of the gap, through the water, and is refused while anyone stands in it; water already through stays where it
+    is. Nobody else can open or shut it, and the boards are not dug.
+  - **Breaching**: the earth is plain ground. Anyone digs it away (workers and sappers, a dig area across it), and
+    once a block beside the water and below its top is gone, the water pours through as from any bank.
+  - Computer players do not build or breach dams yet.
+
+`DamTests` checks dams: workers dam a river two deep from bank to bank, a column at a time from the bed up and a
+stone a block, with timber boards in the middle column, and a spearman who could not cross walks over it; with the
+river dug dry beyond it the dam holds the water back, only its owner opens the sluice, the water pours through
+into the dry channel, and shutting it puts the boards back through the water; the sluice does not shut on a unit
+in the gap; an enemy sapper digging into the dam lets the water through; a dam needs banks, water and room, and
+workers or sappers, a dam nobody builds is dropped and its sluice does not open before it is done; and the commands
+are logged and the same inputs give the same state.
+
 `RampTests` checks ramps: workers heap a ramp up a cliff 5 levels high from the foot up, a column at a time and a
 stone a block, and a spearman who could not climb it walks up it; a ramp to a wooden wall brings an enemy spearman
 onto the wall and down the far side; builders stop when the stone runs out; a plan needs a top 2 or more levels up,
@@ -1099,7 +1130,8 @@ hurts the units on or near it.
   (`PhysicsSystem.FloodDamage`). One with no such ground near (in the middle of a wide flooded pit, or deep in
   a tunnel) stays under and drowns, 10 hit points a second (`HazardSystem.DrownDamage`), and its panel says
   "(drowning)". Wading water one block deep is safe. So sappers tunnelling below a moat, or an army sheltering
-  in a dug pit beside a river, can be flooded out (`FloodTests`).
+  in a dug pit beside a river, can be flooded out (`FloodTests`). A dam's sluice lets the water through when its
+  owner chooses (see Dams under Combat).
 - **Keeping off**: move orders path around all of them where there is another way (see Moving). Computer
   players (every level) keep their workers off them too: they never send wood cutters to a tree whose work
   spot is hazard ground, nor lay out a building whose footprint, or the ring round it where its builders

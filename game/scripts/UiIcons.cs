@@ -141,6 +141,12 @@ public static class UiIcons
             "........kkkk", "........ksSk", "........kssk", "......kkkSsk", "......kbkssk", "....kkbBksSk",
             "....kbbbkssk", "..kkbBbbkSsk", "..kbbbbBkssk", "kkbBbbbbksSk", "kbbbbBbbkssk", "kkkkkkkkkkkk",
         },
+        // Dam: an earth dam holding back deep water from dry ground, with a timber sluice in its middle.
+        ["dam"] = new[]
+        {
+            "............", "...kkkkkk...", "nnnkbOobk...", "ntnkbooBk...", "nnnkBOobk...", "nnnkbooBk...",
+            "nnnkbOobk...", "nntkBoobk...", "nnnkbOobk...", "nnnkbooBkggg", "tnnkBOobkGgG", "kkkkkkkkkkkk",
+        },
         // Ice Bridge: a slab of ice over blue water, with sparks of magic.
         ["ice_bridge"] = new[]
         {
