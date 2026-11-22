@@ -113,6 +113,7 @@ public static class UiIcons
         ['I'] = Color.Color8(100, 112, 135),
         ['u'] = Color.Color8(176, 96, 52),
         ['p'] = Color.Color8(232, 184, 140),
+        ['P'] = Color.Color8(196, 136, 104),
         ['n'] = Color.Color8(80, 120, 210),
         ['v'] = Color.Color8(160, 110, 230),
         ['t'] = Color.Color8(90, 210, 220),
@@ -471,6 +472,12 @@ public static class UiIcons
         {
             "............", "..kk....kk..", ".kBBk..kBBk.", ".kBBk..kBBk.", "..kkkkkkkk..", "kk.kBBBBk.kk",
             "kBkBBBBBBkBk", "kBkBBBBBBkBk", ".kkBBBBBBkk.", "..kBBBBBBk..", "...kBBBBk...", "....kkkk....",
+        },
+        // An ear: the listening post, which hears units underground (see Rts.Sim.VisionSystem).
+        ["ear"] = new[]
+        {
+            "............", "....kkkk....", "...kppppk...", "..kpPPPppk..", "..kpPkkPpk..", "..kpPk.kpk..",
+            "...kPPkpk...", "....kkPpk...", "......kpk...", "...kk.kpk...", "...kpkppk...", "....kkkk....",
         },
         // The dark power: a black heart split with violet veins round a burning eye.
         ["dark_heart"] = new[]

@@ -34,6 +34,9 @@
 // wall material wallHeight high (see src/Sim/Conditions.cs). Kind totem is a city-state's totem, which nobody
 // builds (see citystates.json): a plinth of its footing across the footprint with a pole of its wall material
 // in the middle, wallHeight high in all.
+// Kind listening_post is a listening post: hearing (required, and only for it) is how far (columns beyond its
+// walls) it hears units underground, so its owner sees them under fog of war, which nobody on the surface does
+// otherwise (see src/Sim/VisionSystem.cs).
 // fromDen (optional): built only on a cleared monster den, by a faction whose prize there names it ("prizes" in units.json),
 // never from the build menu. yield and yieldTime (optional, together): goods it brings in on its own every
 // yieldTime seconds once finished, into its owner's storage nearest it.
@@ -156,6 +159,9 @@
   { "id": "stone_tower", "name": "Stone tower", "kind": "tower", "size": [5, 5], "wallHeight": 9, "wall": "rampart",
     "cost": { "cut_stone": 60, "wood": 20 }, "buildTime": 60, "sight": 18, "thick": true, "walkway": true, "aim": 75, "icon": "tower",
     "requires": "masonry" },
+  { "id": "listening_post", "name": "Listening post", "kind": "listening_post", "size": [2, 2], "wallHeight": 2,
+    "wall": "planks", "footing": "stone_brick", "roof": "thatch", "icon": "ear",
+    "cost": { "wood": 20, "stone": 10 }, "buildTime": 15, "sight": 3, "hearing": 20 },
   { "id": "torch", "name": "Torch", "kind": "light", "size": [1, 1], "wallHeight": 2, "wall": "planks",
     "cost": { "wood": 1 }, "buildTime": 2, "sight": 2, "light": 7 },
   { "id": "campfire", "name": "Campfire", "kind": "light", "size": [1, 1], "wallHeight": 1, "wall": "stone_brick",

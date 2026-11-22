@@ -1698,6 +1698,19 @@ them (`src/Sim/WorldMemory.cs`): a change out of your sight shows once you see t
 Other players' units, their health bars and their shots show only where you can see, and buildings and
 towns can only be picked where you have looked. When the match is over, the fog lifts.
 
+**Underground.** A unit with natural ground over its head (rock, earth or rubble somewhere above it in its
+column: in a tunnel, a pit roofed over, or a cave; not a building, a bridge, ice or a tree) is underground
+(`VisionSystem.Covered`, worked out at each look for every player's unit, not the wild monsters). Another
+player sees a unit underground only where they *hear* it, whether or not the column is in their sight
+(`VisionSystem.Hears`, `SeesUnit`): within 2 columns of one of their units (`HearClose`: someone standing right
+over the digging), within the sight of one of their own units that is underground too (in the same tunnels or
+caves), or within a finished **listening post**'s hearing. So sappers tunnel under a wall unseen, the town guard
+and computer players do not see them coming, and the way to watch for them is a listening post by the wall.
+The listening post (`listening_post` in `data/buildings.json`, kind `listening_post`) is a small 2 by 2 hut for
+20 wood and 10 stone, with no tech needed; it sees only 3 columns round it but hears units underground 20
+columns beyond its walls (`hearing`). A post still being built hears nothing. What is heard is worked out with
+the rest of the fog every 4 ticks and is not history, so it is not part of the state hash.
+
 The start screen has a Fog of war switch, on unless switched off (or started with `--fog=off`). A match
 started from the command line has fog of war only with `--fog`. With day, night and weather, sight is
 shortened in the dark and in bad weather, except into the light (see [Day, night and weather](#day-night-and-weather)). It is recorded in the command log (a
