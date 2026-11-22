@@ -730,7 +730,7 @@ areas, and Orcs who beat a wolf keep it.
   earns no experience.
 - **Across the map** (issue #45): more lairs are spread over the map by biome, for each 512 by 512 blocks
   of it: a wolf pack in the grassland, two herds of **wild boar** in the forests and a **stone giant** in the
-  hills, two pairs of **bog horrors** in the swamp and two pairs of **giant crabs** on the beaches (on the
+  hills (in its mountain pass, below), two pairs of **bog horrors** in the swamp and two pairs of **giant crabs** on the beaches (on the
   default 768 map, twice that, rounded down: 2, 4, 2, 4 and 4). Each den is at least 100 blocks from
   every start and 40 from any other lair or town. A boar herd is three boars (80 hit points, quick, tusks
   that pierce) that pay 200 food; Orcs who beat a boar can ride it, and the spearman becomes a rider (the
@@ -741,6 +741,20 @@ areas, and Orcs who beat a wolf keep it.
   shelled hard all over (head 3, body 5, legs 2); a pair pays 150 food. Each leaves a den with its own
   prizes (see "Cleared dens"). In the data, `biome` and `count` in a `lair` spread it, and `atStarts` keeps
   it at the starts too.
+- **Stone giants guard the passes** (`PassTests`; `pass` in a lair in `data/units.json`; the design doc's "Mountains:
+  centre ridges" and stone giants that "guard passes", for "gold, iron vein access"): across each hill range a **ridge**
+  of sheer stone runs roughly west to east, a third of the way from the range's middle towards the nearer north or south
+  edge of the map (`RegionGenerator.RaiseRidges`). It stands 9 blocks or more above the hill, too high to climb, and 7
+  columns thick on the default map, and it stops where the hills do or where the river cuts through. Halfway along it
+  or nearer, a **pass** 9 columns wide goes through on a level stone floor, the ground on each side eased down or up to
+  it a block a column, so it is the short way over the hills (`RegionMap.Passes`); the way round is past the ridge's
+  ends. The ridge's rock for 15 columns along it each side of the pass is seamed with **iron ore** (about one block in
+  seven) and **gold ore** (one in thirty), a mine in the pass's walls once it is safe to dig there. No lava pool,
+  sinkhole, rockfall, gold lode or tree is put in or by a pass, none on a ridge, and no cavern or deep cave comes up on
+  a ridge's top (it is brought down round a cavern's way in). The stone giant's lair stands in the middle of each pass
+  (one a pass, `MonsterSystem.PlaceInPasses`), where it fits as any lair spread across the map does; a map with no
+  pass spreads its giants over the hills as before. Sappers can still tunnel the ridge and workers dig it like any
+  stone.
 - **Roaming** (issue #65): the wolf packs and boar herds spread across the map roam (`roam` in a `lair`: 32
   blocks for wolves, 24 for boars). Every 20 seconds, unless it is fighting, the pack wanders on together to
   another spot within that distance of its den (on dry ground, away from buildings), and it guards round where it

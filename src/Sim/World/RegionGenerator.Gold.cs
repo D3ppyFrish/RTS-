@@ -51,7 +51,7 @@ public static partial class RegionGenerator
         private bool LodeFits(int x, int z, int keepOff)
         {
             if (x < 2 || z < 2 || x >= _sx - 2 || z >= _sz - 2) return false;
-            if (_map.BiomeAt(x, z) != Biome.Hills || NearStart(x, z, keepOff)) return false;
+            if (_map.BiomeAt(x, z) != Biome.Hills || NearStart(x, z, keepOff) || NearPass(x, z, PassClear)) return false;
             int h = _height[Idx(x, z)];
             return h > _water + 2 && _w.Get(x, h, z) == BlockType.Stone;
         }

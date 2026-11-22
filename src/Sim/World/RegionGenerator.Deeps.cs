@@ -245,9 +245,9 @@ public static partial class RegionGenerator
                     int sh = _height[Idx(sx, sz)];
                     if (_map.BiomeAt(sx, sz) is not (Biome.Grassland or Biome.Forest or Biome.Hills) || sh <= _water + 1
                         || _w.Get(sx, sh, sz) is not (BlockType.Grass or BlockType.Soil or BlockType.Stone)
-                        || _w.Get(sx, sh + 1, sz) != BlockType.Air) return false;
+                        || _w.Get(sx, sh + 1, sz) != BlockType.Air || RidgeAt(sx, sz) > 0) return false;
                 }
-                if (NearStart(x, z, keepOff)) return false;
+                if (NearStart(x, z, keepOff) || NearPass(x, z, PassClear)) return false;
                 foreach (var cave in _map.Caverns)
                     if (Math.Abs(cave.X - x) + Math.Abs(cave.Z - z) < Sx(24)) return false;
             }

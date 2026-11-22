@@ -56,7 +56,9 @@
 // (twice pack if left out). lurk (optional) has the pack wait in the shallow water by its den, one monster to
 // a pool column, unseen while it lies there until another player's unit comes within 3 columns (with fog of
 // war on); ambush (optional, percent, needs lurk) is how much harder the first blow is that a monster strikes
-// coming up out of the water.
+// coming up out of the water. pass (optional, needs biome) puts a lair in the middle of each of the map's
+// mountain passes, the gaps through the stone ridges across the hill ranges, instead of spreading count over
+// the biome (which it falls back to on a map with no pass).
 // prizes (optional): what each faction gets for beating the monster, by faction id. A cleared lair leaves
 // a den that one player of a faction with a prize can use, once: { "building": id } puts that building (one
 // with "fromDen" in buildings.json) up on the den as a site to build, { "form": id } has the nearest unit
@@ -226,7 +228,7 @@
     "description": "A hulk of living rock that guards a pass in the hills. Slow, but each blow crushes; it leaves stone and iron behind. Orcs who beat one keep it; Settlers take up its glowing heart.",
     "speed": 3, "hp": 450, "model": "stone_giant", "damage": 22, "attackTime": 1.75, "range": 1.75, "sight": 10,
     "attack": "crush", "armor": { "head": 3, "torso": 4, "arms": 3, "legs": 3 },
-    "lair": { "pack": 1, "guard": 10, "leash": 14, "reward": { "stone": 200, "iron": 60 }, "biome": "hills", "count": 1,
+    "lair": { "pack": 1, "guard": 10, "leash": 14, "reward": { "stone": 200, "iron": 60 }, "biome": "hills", "count": 1, "pass": true,
       "prizes": { "settlers": { "relic": "giant_heart" } } } },
   { "id": "bog_horror", "name": "Bog horror", "role": "monster",
     "description": "A hunched thing of mud and reeds that lurks under the swamp's pools in pairs, comes up out of the water at whoever wades too near, heals in the muck and follows the smell of blood. Whoever clears a pair takes up its bog lantern.",

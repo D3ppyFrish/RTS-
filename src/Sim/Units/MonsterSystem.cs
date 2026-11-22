@@ -280,6 +280,7 @@ public sealed class MonsterSystem
             var def = monster.Lair!;
             int count = (int)(def.Count * area / (512L * 512L));
             var rng = new DeterministicRandom(_sim.Seed ^ 0x3A1D5EEDUL ^ (ulong)(k + 1) * 0x9E3779B97F4A7C15UL);
+            if (def.Pass && PlaceInPasses(monster, placed) > 0) continue;
             for (int n = 0; n < count; n++)
             for (int t = 0; t < WildTries; t++)
             {
@@ -295,6 +296,36 @@ public sealed class MonsterSystem
         }
         return placed;
     }
+
+    /// <summary>
+    /// The design doc's stone giants that "guard passes": a lair of the monster in the middle of each of the map's
+    /// mountain passes (<see cref="RegionMap.Passes"/>), so the short way over the hills goes past it. A pass already
+    /// held by a lair of the monster (a city-state's own, within <see cref="PassHeld"/> columns) keeps that one; a
+    /// pass is otherwise taken whatever towns or lairs are near, but not within <see cref="WildStartGap"/> of a start.
+    /// Returns how many passes are guarded (none on a map with no pass, and the monster is then spread over its biome
+    /// instead).
+    /// </summary>
+    private int PlaceInPasses(UnitDef monster, List<Lair> placed)
+    {
+        int got = 0;
+        foreach (var (x, _, z) in _sim.Map.Passes)
+        {
+            bool held = false;
+            foreach (var other in _lairs)
+                if (other.Monster == monster && IntMath.Distance(x, z, other.X, other.Z) <= PassHeld) held = true;
+            if (held) { got++; continue; }
+            bool nearStart = false;
+            foreach (var s in _sim.Map.Starts)
+                if (IntMath.Distance(x, z, s.X, s.Z) < WildStartGap) nearStart = true;
+            if (nearStart || !SiteFits(x, z) || Place(monster, x, z) is not { } lair) continue;
+            placed.Add(lair);
+            got++;
+        }
+        return got;
+    }
+
+    /// <summary>Columns from a pass's middle within which a lair of the pass's monster already guards it.</summary>
+    public const int PassHeld = 8;
 
     /// <summary>The nearest a herd of wild game is placed to a start (blocks): near enough to hunt from a first town.</summary>
     public const int HerdStartGap = 48;

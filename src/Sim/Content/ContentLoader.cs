@@ -361,7 +361,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush", "pass");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -398,6 +398,9 @@ public static class ContentLoader
             if (ambush > 0 && !lurk) o.Error("\"ambush\" needs \"lurk\": it is the first blow struck coming up out of the water");
             if (lurk && (dusk || cavern != CavernSpot.None)) o.Error("a lair that lurks (\"lurk\") waits in the shallow water by its den: not one with \"duskTree\" or \"cavern\"");
             if (lurk && roam > 0) o.Error("a lair that lurks (\"lurk\") waits in the water by its den, so it does not \"roam\"");
+            bool inPass = o.Bool("pass");
+            if (inPass && biome == null) o.Error("a lair in the mountain passes (\"pass\") needs a \"biome\" to spread over on a map with none");
+            if (inPass && (roam > 0 || lurk)) o.Error("a lair in a mountain pass (\"pass\") guards it: it does not \"roam\" or \"lurk\"");
             var def = new LairDef
             {
                 Pack = pack,
@@ -414,6 +417,7 @@ public static class ContentLoader
                 GrowTo = grow > 0 && !dusk ? growTo : pack,
                 Lurk = lurk,
                 Ambush = lurk ? ambush : 0,
+                Pass = inPass && biome != null,
             };
             if (!dusk) Prizes(o, def);
             return def;
@@ -1500,6 +1504,7 @@ public static class ContentLoader
                     h.Add(lair.Roam);
                     h.Add(lair.Lurk ? 1 : 0);
                     h.Add(lair.Ambush);
+                    h.Add(lair.Pass ? 1 : 0);
                     h.Add(lair.Prizes.Count);
                     foreach (var p in lair.Prizes)
                     {
