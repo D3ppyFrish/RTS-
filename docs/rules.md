@@ -5,7 +5,7 @@ How each game system works, for players and for anyone changing the rules. Contr
 
 ## Economy
 
-`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal, iron ingots, crystal and gold, every
+`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal, iron ingots, crystal, gold and planks, every
 unit of it carried by a worker or held in a building. Mana, which spells cost, is the one exception: a
 player's own pool, channelled from crystal at a shrine (see Crystal, shrines and mana below). A player's stock is what their storage buildings
 (town hall and storehouses) hold, and costs are taken from the storage nearest the work.
@@ -63,6 +63,18 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
 - **Farms and the smelter** (`WorkCommand`): two farmers each bring 5 food every 15 seconds. The
   smelter's worker keeps it supplied with ore and coal from storage and carries its ingots back
   (2 ore + 1 coal = 1 iron in 10 seconds).
+- **Sawmills and planks** (`SawmillTests`; the design doc's Resources table: wood is processed into planks at a
+  sawmill, and planks build bridges): a **sawmill** (kind `sawmill` in `data/buildings.json`: 4 by 4, planks on a
+  stone footing under thatch, 40 wood and 10 stone, no tech) takes one sawyer (`WorkCommand`), who keeps it supplied
+  with wood from storage, a load at a time (up to 10 wood in it), and carries its planks back to the nearest storage,
+  as a smelter's worker does ore and iron. It saws one wood into one plank every 3 seconds (`StepSawmill`, `sawTime`
+  in the data). Planks (`Good.Planks`) are a good like any other: stored, carried, captured or burned with a
+  storehouse. **Bridges** are laid with them, 2 planks a deck column (see Bridges under Combat), so a town that wants
+  to cross a river needs a sawmill first. The sawyer stops fetching wood while its player has 50 planks or more in
+  storage (`SawmillKeep`), so a sawmill left running does not saw up all the town's wood; it goes on once planks are
+  spent below that. Automatic workers keep a sawmill while there is wood in storage and planks are short. Nobody
+  starts with planks; test mode's goods cheat and `--goods` give them like any good. Computer players do not lay
+  bridges, so they build no sawmills. All numbers are first guesses for playtesting.
 - **Crystal, shrines and mana** (`ManaTests`; the design doc's Resources table: crystal from the deep caverns,
   channelled into mana at a shrine): crystal grows on the cavern walls (`BlockType.Crystal`). Workers dig it like
   ore, 3 seconds a block, and carry it to storage as the good `Crystal` (rubble of it is stone). A **shrine**
@@ -390,8 +402,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
 - **Bridges** (`BridgeCommand`, `EconomySystem.Bridges.cs`): drawn from bank to bank like a wall, a bridge
   is a level plank deck at the standing height of the higher end (the two ends must be ground at most a
   climb apart). Every column of the line that nobody could walk across at about that height (deep water,
-  a drop of two or more, a dug trench) gets a deck block, up to 32 of them, 3 wood each, paid for column by
-  column until the wood runs out; ground on the way is left as it is. Each deck column is its own one-block
+  a drop of two or more, a dug trench) gets a deck block, up to 32 of them, 2 planks each (sawn at a sawmill, see
+  Economy), paid for column by column until the planks run out; ground on the way is left as it is. Each deck column is its own one-block
   building that workers build from ground or finished deck beside it, so a bridge goes out from the bank a
   column at a time, and each worker starts at the end on its side. Anyone can walk over a bridge, the enemy
   too, so a crossing you open is a way in as well as out. A few blows (a plank's toughness) knock a deck column

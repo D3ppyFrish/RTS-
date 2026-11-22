@@ -38,6 +38,7 @@ public static class UiIcons
         Good.Coal => "coal",
         Good.Crystal => "crystal",
         Good.Gold => "gold",
+        Good.Planks => "planks",
         _ => "iron",
     });
 
@@ -272,6 +273,16 @@ public static class UiIcons
         {
             "kk........kk", "klk......klk", ".klk....klk.", "..klk..klk..", "...klkklk...", "....kllk....",
             "....kllk....", "...klkklk...", ".kkbk..kbkk.", ".kbbk..kbbk.", "kbk......kbk", "kk........kk",
+        },
+        ["planks"] = new[]
+        {
+            "............", "............", "kkkkkkkkkkk.", "koooooOoook.", "kOOOOOOOOOk.", ".kkkkkkkkkkk",
+            ".kooOooooook", ".kOOOOOOOOOk", "kkkkkkkkkkk.", "kooooooOook.", "kOOOOOOOOOk.", "kkkkkkkkkkk.",
+        },
+        ["sawmill"] = new[]
+        {
+            "....kkkk....", "..kkiiiikk..", ".kiiliiiiik.", ".kiikkkkiik.", "kiikIkkIkiik", "kiikkIIkkiik",
+            "kkkkkkkkkkkk", "kooooOooooOk", "kOOOOOOOOOOk", "kkkkkkkkkkkk", ".kBk....kBk.", ".kkk....kkk.",
         },
         ["smelter"] = new[]
         {

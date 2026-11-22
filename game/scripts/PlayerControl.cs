@@ -82,7 +82,7 @@ public partial class PlayerControl : Node
     public static readonly (Key Key, string Building)[] BuildKeys =
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
-        (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "hunting_lodge"), (Key.None, "shrine"),
+        (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "hunting_lodge"), (Key.None, "sawmill"), (Key.None, "shrine"),
         (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
@@ -2149,6 +2149,7 @@ public partial class PlayerControl : Node
                $"broods={_sim.DarkPower.Broods.Count} brood_beasts={_sim.DarkPower.Broods.Sum(b => b.Beasts.Count)} " +
                $"sites_left={_sim.Sites.TicksLeft} sites_claim={_sim.Ruins.Ruins.Max(r => (int?)r.Claim) ?? 0} " +
                $"ore={stock[(int)Good.IronOre]} coal={stock[(int)Good.Coal]} crystal={stock[(int)Good.Crystal]} gold={stock[(int)Good.Gold]} mining_gold={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Gather && u.JobBlock[i] == BlockType.GoldOre)} mana={_sim.Economy.Player(LocalPlayer).Mana} " +
+               $"planks={stock[(int)Good.Planks]} sawmills={OwnKind(BuildingKind.Sawmill)} sawyers={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Haul && _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind == BuildingKind.Sawmill)} " +
                $"shrines={OwnKind(BuildingKind.Shrine)} keepers={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Haul && _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind == BuildingKind.Shrine)} " +
                $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +

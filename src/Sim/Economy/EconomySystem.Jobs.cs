@@ -325,7 +325,8 @@ public sealed partial class EconomySystem
 
     /// <summary>
     /// A smelter's hauler: brings its iron to storage, and keeps it supplied with ore and coal from storage
-    /// (enough for two ingots), one load at a time. A shrine's keeper keeps it supplied with crystal the same
+    /// (enough for two ingots), one load at a time. A sawmill's sawyer does the same with wood and planks
+    /// (<see cref="SawmillWood"/> wood at a time). A shrine's keeper keeps it supplied with crystal the same
     /// way (<see cref="ShrineCrystal"/> at a time); a shrine makes no goods to carry back.
     /// </summary>
     private void StepHaul(int i)
@@ -355,17 +356,18 @@ public sealed partial class EconomySystem
             SetPhase(i, JobPhase.ToWork);
             return;
         }
-        // At the smelter: drop off ore or coal, or pick up iron.
+        // At the smelter: drop off ore or coal (wood at a sawmill), or pick up iron (planks).
+        var made = Makes(smelter.Def);
         if (u.CarryAmount[i] > 0 && Feeds(smelter, u.Carry[i]))
         {
             smelter.Stock[(int)u.Carry[i]] += u.CarryAmount[i];
             u.CarryAmount[i] = 0;
         }
-        else if (u.CarryAmount[i] == 0 && smelter.Stock[(int)Good.Iron] > 0)
+        else if (u.CarryAmount[i] == 0 && made is { } good && smelter.Stock[(int)good] > 0)
         {
-            int take = System.Math.Min(Capacity(u.Owner[i]), smelter.Stock[(int)Good.Iron]);
-            smelter.Stock[(int)Good.Iron] -= take;
-            u.Carry[i] = Good.Iron;
+            int take = System.Math.Min(Capacity(u.Owner[i]), smelter.Stock[(int)good]);
+            smelter.Stock[(int)good] -= take;
+            u.Carry[i] = good;
             u.CarryAmount[i] = take;
         }
         DecideHaul(i, smelter);
@@ -374,9 +376,30 @@ public sealed partial class EconomySystem
     /// <summary>Crystal a shrine's keeper keeps in it: one load.</summary>
     public const int ShrineCrystal = CarryCapacity;
 
-    /// <summary>The good goes into the building to be worked: ore and coal into a smelter, crystal into a shrine.</summary>
-    private static bool Feeds(Building b, Good g) =>
-        b.Def.Kind == BuildingKind.Shrine ? g == Good.Crystal : g is Good.IronOre or Good.Coal;
+    /// <summary>Wood a sawmill's sawyer keeps in it: two loads.</summary>
+    public const int SawmillWood = 2 * CarryCapacity;
+
+    /// <summary>
+    /// Planks in its player's storage at which a sawyer stops fetching wood, so a sawmill left running does not
+    /// saw up all the wood a town has; it goes on once planks are spent below this.
+    /// </summary>
+    public const int SawmillKeep = 50;
+
+    /// <summary>The good goes into the building to be worked: ore and coal into a smelter, crystal into a shrine, wood into a sawmill.</summary>
+    private static bool Feeds(Building b, Good g) => b.Def.Kind switch
+    {
+        BuildingKind.Shrine => g == Good.Crystal,
+        BuildingKind.Sawmill => g == Good.Wood,
+        _ => g is Good.IronOre or Good.Coal,
+    };
+
+    /// <summary>The good a building of this kind makes for its hauler to carry to storage: iron, planks, or none (a shrine).</summary>
+    public static Good? Makes(BuildingDef def) => def.Kind switch
+    {
+        BuildingKind.Smelter => Good.Iron,
+        BuildingKind.Sawmill => Good.Planks,
+        _ => null,
+    };
 
     private void DecideHaul(int i, Building smelter)
     {
@@ -387,7 +410,7 @@ public sealed partial class EconomySystem
             else GoToStorage(i);
             return;
         }
-        if (smelter.Stock[(int)Good.Iron] > 0)
+        if (Makes(smelter.Def) is { } made && smelter.Stock[(int)made] > 0)
         {
             SetPhase(i, JobPhase.ToWork);
             return;
@@ -399,6 +422,12 @@ public sealed partial class EconomySystem
         {
             need = Good.Crystal;
             if (smelter.Stock[(int)Good.Crystal] < ShrineCrystal) from = NearestStorage(u.Owner[i], ux, uz, Good.Crystal);
+        }
+        else if (smelter.Def.Kind == BuildingKind.Sawmill)
+        {
+            need = Good.Wood;
+            if (smelter.Stock[(int)Good.Wood] < SawmillWood && Stock(u.Owner[i], Good.Planks) < SawmillKeep)
+                from = NearestStorage(u.Owner[i], ux, uz, Good.Wood);
         }
         else if (smelter.Stock[(int)Good.IronOre] < 2 * OrePerIngot)
             from = NearestStorage(u.Owner[i], ux, uz, Good.IronOre);
