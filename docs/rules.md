@@ -166,8 +166,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   storage can spare for, and takes the duty there (it counts towards the two on duty a building takes), and lets it go
   once there is nothing left to fetch. It brings no more than is missing, like a worker on duty. It takes a place in
   your housing, is not a worker (houses, farms and the governor count workers; making all your workers automatic
-  leaves it as it is), and enemies kill it like a caravan. Matches do not start with carts, and computer players do
-  not train them yet. All numbers are first guesses for playtesting.
+  leaves it as it is), and enemies kill it like a caravan. Matches do not start with carts; computer players train them once they have a sawmill and
+  storehouses out by their work (see Carts under Computer players). All numbers are first guesses for playtesting.
 - **Raids** (`CaptureCommand`, `BurnCommand`): units at an enemy storehouse capture it with its goods
   in 10 seconds or burn it and its goods in 5, unless one of the owner's units is within 8 blocks (and
   a soldier among them will fight the raiders).
@@ -1485,6 +1485,14 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   an enemy soldier in its dead ground backs off 8 columns; and up to 4 of the wave's other soldiers go for the
   enemy soldiers that come within 9 columns of a catapult, so they screen it. The classic level never builds them. All
   numbers are first guesses.
+- **Carts** (Easy, Normal and Hard; `AI/AiPlayer.Carts.cs`, tests in `AiCartTests`): once it has a finished sawmill
+  and at least 2 storage buildings besides its town hall (storehouses by its work, a second town hall), it trains
+  carts at the town hall, one at a time while it has room and the goods, up to 2 (the two a building takes on supply
+  duty; Hard: only while no enemies are at its buildings). Once the first is out it gives the town hall Keep stocked
+  rules of 300 food, wood, stone, iron ore, coal and gold, so the carts bring what piles up in its far storehouses
+  home, where raiders reach it last and its workshops are. Its workers leave the supply duty to the carts: Easy and
+  Normal take supply off their default work list then (Hard's lists never have it). The classic level never trains
+  carts. All numbers are first guesses.
 - **Ruin parties** (Easy, Normal and Hard; `AI/AiPlayer.Ruins.cs`, tests in `AiRuinTests`): from 6 minutes
   on (after the early rushes; a pair out looking sooner found lairs that drew Hard's hunting party away just
   as Classic's first attack came), never while it sees enemy soldiers within 64 columns of its town hall (Hard:

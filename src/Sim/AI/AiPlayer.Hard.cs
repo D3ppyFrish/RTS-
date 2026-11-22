@@ -314,6 +314,7 @@ public sealed partial class AiPlayer
         if (calm) HardExpand(sim, hall, c, issue);
         if (calm) Hunting(sim, hall, issue);
         if (calm) SiegeEconomy(sim, hall, c.Workers, issue);
+        if (calm) Carts(sim, hall, issue);
         if (!armyFirst) SmartTrain(sim, issue, anyAffordable: false);
         if (sim.Tick >= _assignAt)
         {
