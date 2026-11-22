@@ -36,10 +36,10 @@ public class BridgeTests
         return maxTicks;
     }
 
-    private static Building Store(Simulation sim, int owner, int wood, int x = 10)
+    private static Building Store(Simulation sim, int owner, int planks, int x = 10)
     {
         var store = sim.Economy.PlaceFinished(owner, sim.Content.Building("storehouse"), x, 10)!;
-        store.Stock[(int)Good.Wood] = wood;
+        store.Stock[(int)Good.Planks] = planks;
         return store;
     }
 
@@ -62,7 +62,7 @@ public class BridgeTests
     public void WorkersBridgeARiverAColumnAtATimeAndUnitsWalkAcross()
     {
         var sim = River();
-        var store = Store(sim, 0, wood: 100);
+        var store = Store(sim, 0, planks: 100);
 
         // Before: a spearman cannot get across.
         int spearman = sim.SpawnUnit(0, "spearman", 25, Z);
@@ -78,7 +78,7 @@ public class BridgeTests
         var bridge = Bridge(sim);
         Assert.Equal(Enumerable.Range(RiverX0, RiverX1 - RiverX0 + 1), bridge.Select(b => b.X).OrderBy(x => x));
         Assert.All(bridge, b => Assert.Equal((Z, Ground, BuildingState.Site), (b.Z, b.Y, b.State)));
-        Assert.Equal(100 - 3 * bridge.Count, store.Stock[(int)Good.Wood]);
+        Assert.Equal(100 - 2 * bridge.Count, store.Stock[(int)Good.Planks]);
         // Only the column by the bank can be built at first; the workers start there.
         Assert.All(workers, id => Assert.Equal(sim.Buildings.AtColumn(RiverX0, Z)!.Id, sim.Units.JobTarget[Index(sim, id)]));
 
@@ -106,7 +106,7 @@ public class BridgeTests
     public void TheEnemyCrossesYourBridgeTooUntilAPlankIsKnockedOut()
     {
         var sim = River();
-        Store(sim, 0, wood: 100);
+        Store(sim, 0, planks: 100);
         BuildBridge(sim);
 
         // An enemy on the far side walks over it.
@@ -163,16 +163,30 @@ public class BridgeTests
     }
 
     [Fact]
-    public void ABridgeStopsWhereTheWoodRunsOut()
+    public void ABridgeStopsWhereThePlanksRunOut()
     {
         var sim = River();
-        var store = Store(sim, 0, wood: 10);
+        var store = Store(sim, 0, planks: 7);
         int worker = sim.SpawnUnit(0, "worker", 26, Z);
         sim.Schedule(0, new BridgeCommand(0, new[] { worker }, "bridge", 28, Z, 37, Z));
         sim.Step();
-        // Wood for three columns, from the start of the line.
+        // Planks for three columns, from the start of the line.
         Assert.Equal(new[] { 30, 31, 32 }, Bridge(sim).Select(b => b.X).OrderBy(x => x));
-        Assert.Equal(1, store.Stock[(int)Good.Wood]);
+        Assert.Equal(1, store.Stock[(int)Good.Planks]);
+    }
+
+    [Fact]
+    public void WoodAloneLaysNoBridge()
+    {
+        // Bridges are laid with planks, sawn at a sawmill: a town with only wood cannot bridge.
+        var sim = River();
+        var store = Store(sim, 0, planks: 0);
+        store.Stock[(int)Good.Wood] = 200;
+        int worker = sim.SpawnUnit(0, "worker", 26, Z);
+        sim.Schedule(0, new BridgeCommand(0, new[] { worker }, "bridge", 28, Z, 37, Z));
+        sim.Step();
+        Assert.Empty(Bridge(sim));
+        Assert.Equal(200, store.Stock[(int)Good.Wood]);
     }
 
     [Fact]

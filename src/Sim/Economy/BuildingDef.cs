@@ -72,6 +72,11 @@ public enum BuildingKind : byte
     /// wins the match for its owner if it is still standing <see cref="Rts.Sim.World.AscendancySystem.AscendancyTicks"/> later.
     /// </summary>
     GreatWork,
+    /// <summary>
+    /// A sawmill: its worker brings it wood from storage and carries its planks back, as a smelter's does ore and
+    /// iron. It saws one wood into one plank every <see cref="BuildingDef.SawTicks"/> (at its <see cref="BuildingDef.Speed"/>).
+    /// </summary>
+    Sawmill,
 }
 
 /// <summary>One block of a building, relative to its footprint corner and base level.</summary>
@@ -146,6 +151,8 @@ public sealed class BuildingDef
     public int Mana { get; init; }
     /// <summary>A shrine: ticks it takes to channel one crystal (before its <see cref="Speed"/>); 0 for every other building.</summary>
     public int ChannelTicks { get; init; }
+    /// <summary>A sawmill's ticks to saw one wood into a plank (see <see cref="BuildingKind.Sawmill"/>); 0 for anything else.</summary>
+    public int SawTicks { get; init; }
     /// <summary>Unit ids this building trains (the units whose <c>trainedAt</c> names it), in data order.</summary>
     public string[] Trains { get; internal set; } = Array.Empty<string>();
     /// <summary>Techs the player must have before placing it.</summary>

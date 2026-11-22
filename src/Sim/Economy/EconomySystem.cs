@@ -294,6 +294,7 @@ public sealed partial class EconomySystem
                 if (b.Upgrade != null) StepUpgrade(b);
                 if (b.Def.Kind == BuildingKind.Smelter) StepSmelter(b);
                 else if (b.Def.Kind == BuildingKind.Shrine) StepShrine(b);
+                else if (b.Def.Kind == BuildingKind.Sawmill) StepSawmill(b);
                 if (b.Queue.Count > 0) StepTraining(b);
                 if (b.Def.YieldTicks > 0 && (_sim.Tick + b.Id) % b.Def.YieldTicks == 0) BringYield(b);
             }
@@ -704,6 +705,21 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>
+    /// A sawmill saws the wood its worker brought into planks, one wood into one plank every
+    /// <see cref="BuildingDef.SawTicks"/> (at its <see cref="BuildingDef.Speed"/>); the plank being sawn is counted
+    /// in <see cref="Building.SmeltTicks"/>, and the planks wait in its stock for the worker to carry to storage.
+    /// </summary>
+    private void StepSawmill(Building b)
+    {
+        if (b.SmeltTicks > 0 && (b.SmeltTicks = Math.Max(0, b.SmeltTicks - Steps(b))) == 0) b.Stock[(int)Good.Planks]++;
+        if (b.SmeltTicks == 0 && b.Stock[(int)Good.Wood] > 0)
+        {
+            b.Stock[(int)Good.Wood]--;
+            b.SmeltTicks = b.Def.SawTicks;
+        }
+    }
+
+    /// <summary>
     /// A shrine channels the crystal its worker brought, one at a time (<see cref="BuildingDef.ChannelTicks"/>
     /// each, at its <see cref="BuildingDef.Speed"/>), and each one gives its owner <see cref="BuildingDef.Mana"/>.
     /// The crystal being channelled is counted in <see cref="Building.SmeltTicks"/>.
@@ -1027,7 +1043,7 @@ public sealed partial class EconomySystem
             {
                 StartJob(i, UnitJob.Build, b.Id);
             }
-            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine)
+            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Sawmill)
             {
                 var job = JobAt(b.Def);
                 if (U.Job[i] == job && U.JobTarget[i] == b.Id) continue;
@@ -1145,7 +1161,7 @@ public sealed partial class EconomySystem
         return result;
     }
 
-    /// <summary>The job of a worker working a building of this kind: farming, hauling for a smelter or shrine, or quarrying.</summary>
+    /// <summary>The job of a worker working a building of this kind: farming, hauling for a smelter, shrine or sawmill, or quarrying.</summary>
     public static UnitJob JobAt(BuildingDef def) => def.Kind switch
     {
         BuildingKind.Farm => UnitJob.Farm,

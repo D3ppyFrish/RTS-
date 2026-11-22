@@ -510,6 +510,11 @@ public partial class Hud : CanvasLayer
                 b.TooltipText = $"Right click it with a worker: they bring it crystal from storage, and it channels each crystal " +
                                 $"into {def.Mana} mana in {def.ChannelTicks / Simulation.TicksPerSecond} seconds. Spells cost mana. " +
                                 "Crystal grows on the cavern walls: send workers to dig it. Automatic workers keep it once you have crystal.";
+            if (def.Kind == BuildingKind.Sawmill)
+                b.TooltipText = $"Right click it with a worker: they bring it wood from storage, it saws each wood into a plank in " +
+                                $"{def.SawTicks / Simulation.TicksPerSecond} seconds, and they carry the planks back to storage. Bridges " +
+                                $"are laid with planks. The sawyer stops fetching wood once you have {EconomySystem.SawmillKeep} planks " +
+                                "in storage. Automatic workers keep it while you have wood.";
             if (def.IsTower)
                 b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +
@@ -538,7 +543,8 @@ public partial class Hud : CanvasLayer
             bridge.Name = "build_bridge";
             bridge.Icon = UiIcons.Get(bridgeDef.Icon.Length > 0 ? bridgeDef.Icon : bridgeDef.Id);
             bridge.TooltipText = "Drag from bank to bank for the selected workers to lay a level deck across deep water, a " +
-                                 "chasm or a trench, a column at a time from the ends. Anyone can walk over it; Ctrl+right " +
+                                 "chasm or a trench, a column at a time from the ends. Each column takes planks: saw them from wood at a " +
+                                 "sawmill. Anyone can walk over it; Ctrl+right " +
                                  "click a bridge with soldiers selected to knock that column out.";
             bridge.Pressed += () => _control.ToggleBridge();
             grid.AddChild(bridge);
@@ -1265,7 +1271,7 @@ public partial class Hud : CanvasLayer
         var better = new List<string>();
         int housing = to.Housing - b.Def.Housing;
         if (housing > 0) better.Add($"houses {housing} more");
-        if (to.Speed > b.Def.Speed) better.Add($"{(to.Kind == BuildingKind.Smelter ? "smelts" : to.Kind == BuildingKind.Shrine ? "channels" : "trains")} at {to.Speed}% of the usual pace");
+        if (to.Speed > b.Def.Speed) better.Add($"{(to.Kind == BuildingKind.Smelter ? "smelts" : to.Kind == BuildingKind.Shrine ? "channels" : to.Kind == BuildingKind.Sawmill ? "saws" : "trains")} at {to.Speed}% of the usual pace");
         if (to.WorkerSlots > b.Def.WorkerSlots) better.Add($"takes {to.WorkerSlots} workers");
         if (to.Sight > b.Def.Sight) better.Add($"sees {to.Sight} columns round it");
         if (b.Def.Raidable && !to.Raidable) better.Add("cannot be captured or burned");
@@ -2124,12 +2130,18 @@ public partial class Hud : CanvasLayer
             if (b.Def.Hunts > 0) parts.Add(_sim.Economy.GameInReach(b) is var game and > 0 ? $"{game} deer within reach" : "no deer within reach");
             if (b.Def.Kind == BuildingKind.Smelter && b.SmeltTicks > 0)
                 parts.Add($"smelting {100 - 100L * b.SmeltTicks / EconomySystem.SmeltTicks}%");
+            if (b.Def.Kind == BuildingKind.Sawmill)
+                parts.Add(b.SmeltTicks > 0
+                    ? $"sawing a plank {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.SawTicks)}%"
+                    : _sim.Economy.Stock(b.Owner, Good.Planks) >= EconomySystem.SawmillKeep
+                        ? $"enough planks in storage ({EconomySystem.SawmillKeep})"
+                        : "no wood to saw");
             if (b.Def.Kind == BuildingKind.Shrine)
                 parts.Add(b.SmeltTicks > 0
                     ? $"channelling a crystal {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.ChannelTicks)}% ({b.Def.Mana} mana each)"
                     : $"no crystal to channel ({b.Def.Mana} mana each; dig crystal in the caverns)");
             text.Append(string.Join("    ", parts));
-            if (b.Def.Storage || b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine)
+            if (b.Def.Storage || b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine or BuildingKind.Sawmill)
             {
                 var goods = new List<string>();
                 foreach (var g in Goods.All)
@@ -2194,7 +2206,7 @@ public partial class Hud : CanvasLayer
     {
         var text = new StringBuilder();
         if (b.Def.Speed > 100)
-            text.Append($"\n{(b.Def.Kind == BuildingKind.Smelter ? "Smelts" : b.Def.Kind == BuildingKind.Shrine ? "Channels" : "Trains")} at {b.Def.Speed}% of the usual pace");
+            text.Append($"\n{(b.Def.Kind == BuildingKind.Smelter ? "Smelts" : b.Def.Kind == BuildingKind.Shrine ? "Channels" : b.Def.Kind == BuildingKind.Sawmill ? "Saws" : "Trains")} at {b.Def.Speed}% of the usual pace");
         if (b.Def.UpgradeOf is { } from && from.Raidable && !b.Def.Raidable) text.Append("\nToo stout to be captured or burned");
         if (b.Upgrade is { } to)
         {
@@ -2380,7 +2392,12 @@ public partial class Hud : CanvasLayer
         UnitJob.Build => "building",
         UnitJob.Farm => "farming",
         UnitJob.Quarry => _sim.Buildings.Get(u.JobTarget[i]) is { } q ? q.Def.Shore ? "fishing" : q.Def.Plants > 0 ? "planting trees" : q.Def.Hunts > 0 ? "hunting" : $"working the {q.Def.Name.ToLowerInvariant()}" : "quarrying",
-        UnitJob.Haul => _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind == BuildingKind.Shrine ? "keeping the shrine" : "supplying the smelter",
+        UnitJob.Haul => _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind switch
+        {
+            BuildingKind.Shrine => "keeping the shrine",
+            BuildingKind.Sawmill => "sawing planks",
+            _ => "supplying the smelter",
+        },
         UnitJob.Supply => u.Phase[i] switch
         {
             JobPhase.Fetch => "on supply duty: fetching a load",

@@ -25,7 +25,7 @@
 // far: give it a large sight.
 // buildTime is the seconds one worker takes; cost is in goods; housing is the people it houses; storage
 // means goods are delivered and kept there; raidable means enemies can capture or burn it; workerSlots is
-// how many workers can work a farm or smelter at once; sight is how far (columns) beyond its walls its
+// how many workers can work a farm, smelter or sawmill at once; sight is how far (columns) beyond its walls its
 // player sees under fog of war (6 if not given); requires names the tech (or list of techs) the player must
 // have researched first; faction (optional) limits it to one faction; icon (optional, the id if not given)
 // names the picture the game shows for it (see game/scripts/UiIcons.cs). light (optional) is how far (columns
@@ -44,6 +44,8 @@
 // Kind shrine: its worker (up to workerSlots) brings it crystal from storage, and it channels each crystal
 // into mana for its owner, channelTime seconds a crystal (at its speed). Spells cost mana. mana (a shrine
 // only, needed) is the mana one crystal gives.
+// Kind sawmill: its worker (up to workerSlots) brings it wood from storage and carries its planks back; it saws one
+// wood into one plank every sawTime seconds (a sawmill only, needed; at its speed). Bridges are laid with planks.
 // shore: true means it must stand at the water's edge, with open water in a column right beside its footprint
 // (the fishing hut, a quarry whose rounds give food).
 // Kind great_work is a faction's great work (see "Ascendancy" in docs/rules.md): it stands only in the deep caves,
@@ -94,6 +96,9 @@
   { "id": "foundry", "name": "Foundry", "kind": "smelter", "size": [5, 5], "wallHeight": 4,
     "wall": "stone_brick", "roof": "stone_brick", "chimney": true, "icon": "smelter",
     "cost": { "stone": 60, "wood": 20 }, "buildTime": 30, "workerSlots": 2, "light": 4, "sturdy": 2, "speed": 200 },
+  { "id": "sawmill", "name": "Sawmill", "kind": "sawmill", "size": [4, 4], "wallHeight": 3,
+    "wall": "planks", "footing": "stone_brick", "roof": "thatch",
+    "cost": { "wood": 40, "stone": 10 }, "buildTime": 20, "workerSlots": 1, "sawTime": 3 },
   { "id": "shrine", "name": "Shrine", "kind": "shrine", "size": [3, 3], "wallHeight": 3,
     "wall": "stone_brick", "roof": "roof_tile",
     "cost": { "stone": 40, "wood": 20 }, "buildTime": 25, "workerSlots": 1, "requires": "basic_magic", "light": 3,
@@ -175,5 +180,5 @@
   { "id": "merfolk_conch", "name": "Merfolk conch", "kind": "totem", "size": [3, 3], "wallHeight": 6,
     "wall": "stone_brick", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
   { "id": "bridge", "name": "Bridge", "kind": "bridge", "size": [1, 1], "wallHeight": 1, "wall": "planks",
-    "cost": { "wood": 3 }, "buildTime": 3, "sight": 2 }
+    "cost": { "planks": 2 }, "buildTime": 3, "sight": 2 }
 ]

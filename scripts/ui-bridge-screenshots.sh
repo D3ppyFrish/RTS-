@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Scripted-input screenshot test for bridges: the starting units are selected and ' draws a bridge across the
 # ravine north-east of the west start. The workers walk there and lay the deck from the near bank, a column at
-# a time. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
+# a time (--goods gives the planks a bridge is laid with). Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-bridge-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/bridges}")"
@@ -50,7 +50,7 @@ shot $OUT/ui-bridge-done.png
 "
 LOG="$OUT/ui-bridge.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --goods=60 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot|Input script)" | tee "$LOG"
 
 fail() { echo "UI bridge test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }
