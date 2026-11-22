@@ -71,7 +71,10 @@
 // Siege engines: minRange (optional, blocks) is how near an enemy unit can be and still be hit (a catapult's dead
 // ground: anything closer is safe from it; buildings are hit at any distance), lobs (optional) sends its shots up in
 // a high arc, so it needs no clear line and hits what stands behind walls and hills, and machine (optional) marks a
-// machine that never breaks and runs and does not bleed.
+// machine that never breaks and runs and does not bleed. ram (optional) makes it a ram: it attacks buildings only,
+// never units (not even when ordered to), striking a column's bottom block so the rest falls, as a sapper does;
+// gates (optional, percent, default 100) is what its blows on a gate deal next to any other building. cover
+// (optional, percent) is how much less arrows and other ranged piercing shots hurt it (a roof over it).
 // City-states (see citystates.json): a unit with the trader role is a caravan, which trades with a
 // city-state's town; caravans are trained but no player starts with one. A unit with hiredFrom is a
 // mercenary: not trained, but hired for its cost at that city-state's town by the city-state's ally.
@@ -105,6 +108,12 @@
     "damage": 30, "attackTime": 5, "range": 15, "minRange": 5, "sight": 12, "splash": 1.5,
     "blast": true, "lobs": true, "machine": true, "attack": "crush", "armor": { "torso": 2 },
     "cost": { "food": 40, "planks": 60, "iron": 10 }, "trainTime": 40, "trainedAt": "siege_workshop", "requires": "smelting",
+    "start": false },
+  { "id": "battering_ram", "name": "Battering ram", "role": "siege", "speed": 2, "hp": 300, "model": "battering_ram",
+    "description": "An iron-headed log swung under a hide-covered roof on wheels, crewed by four. Arrows hardly hurt it. It goes only at buildings, never at soldiers, and strikes at the foot of a wall so the column above comes down; a gate breaks twice as fast. Riders and heavy infantry make short work of it: keep soldiers with it.",
+    "damage": 15, "attackTime": 3, "range": 1.5, "sight": 6, "ram": true, "gates": 200, "cover": 75, "machine": true, "attack": "crush",
+    "armor": { "head": 5, "torso": 5, "arms": 5, "legs": 5 },
+    "cost": { "food": 30, "wood": 40, "planks": 40, "iron": 10 }, "trainTime": 30, "trainedAt": "siege_workshop", "requires": "smelting",
     "start": false },
   { "id": "healer", "name": "Healer", "role": "caster", "speed": 4, "hp": 45, "model": "healer",
     "description": "Tends the most hurt ally nearby and stems its bleeding; a poor fighter, best kept behind the line.",

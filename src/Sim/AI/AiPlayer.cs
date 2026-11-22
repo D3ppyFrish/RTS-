@@ -992,12 +992,12 @@ public sealed partial class AiPlayer
             if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2) continue;
             int total = 0;
             foreach (string id in b.Def.Trains)
-                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d)) total += RoleWeight(d.Role);
+                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && !d.Ram) total += RoleWeight(d.Role);
             if (total == 0) continue;
             int roll = _rng.Range(0, total);
             foreach (string id in b.Def.Trains)
             {
-                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d)) continue;
+                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d) || d.Ram) continue;
                 roll -= RoleWeight(d.Role);
                 if (roll >= 0) continue;
                 if (Affordable(sim, d.Cost)) issue(new TrainCommand(Player, b.Id, d.Id));

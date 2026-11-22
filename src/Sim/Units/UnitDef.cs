@@ -75,6 +75,22 @@ public sealed class UnitDef
     /// </summary>
     public bool Machine { get; init; }
     /// <summary>
+    /// A ram (<c>"ram"</c> in the data), such as the battering ram: it attacks buildings only, never units, even when
+    /// ordered to, and its blows land at the foot of a wall, knocking out a column's bottom block as a sapper's do, so
+    /// the rest of the column falls (see <see cref="CombatSystem"/>).
+    /// </summary>
+    public bool Ram { get; init; }
+    /// <summary>
+    /// What its blows on a gate deal, in percent of a blow on any other building (<c>"gates"</c> in the data; 100 for
+    /// no difference): a ram swung at the timbers of a gate breaks it far sooner than solid wall.
+    /// </summary>
+    public int Gates { get; init; } = 100;
+    /// <summary>
+    /// How much less, in percent, arrows and other ranged piercing shots hurt it (<c>"cover"</c> in the data; 0 for
+    /// none): the battering ram's roof of hides. Blows, blasts and stones land as usual.
+    /// </summary>
+    public int Cover { get; init; }
+    /// <summary>
     /// Extra damage it takes from attacks by each role, in percent (indexed by <see cref="UnitRole"/>), or
     /// null if it has no weakness beyond the role table's.
     /// </summary>

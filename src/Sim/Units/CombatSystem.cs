@@ -384,6 +384,12 @@ public sealed partial class CombatSystem
             }
             b = null;
         }
+        // A ram goes only at buildings, and only when sent at one (or at the wall in its way, see Breach).
+        if (def.Ram)
+        {
+            u.Target[i] = 0;
+            return false;
+        }
         // Holding its ground, it only fights what it can reach from where it stands.
         bool hold = order == CombatOrder.Auto && Holding(i);
         if (u.Target[i] != 0)
@@ -874,12 +880,12 @@ public sealed partial class CombatSystem
         if (b != null)
         {
             Fought(i);
-            int damage = Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * StructureMultiplier(def, b.Def)).RoundToInt());
+            int damage = BuildingDamage(def, b.Def, AttackOf(i, def));
             int undermine = UndermineOf(i); // a sapper near a hero that works the breach
             if (undermine > 0) damage = damage * (100 + undermine) / 100;
             AddShot(i, def, Clamp(u.X[i], b.X, b.MaxX + 1), b.Y + 1, Clamp(u.Z[i], b.Z, b.MaxZ + 1));
             _sim.Evolution.Damaged(i, damage);
-            HitBuilding(b, damage, i, def.Role == UnitRole.Sapper, def.Blast);
+            HitBuilding(b, damage, i, def.Role == UnitRole.Sapper || def.Ram, def.Blast);
             return true;
         }
         if (_pending[t] >= u.Hp[t])
@@ -957,7 +963,7 @@ public sealed partial class CombatSystem
 
     /// <summary>
     /// The damage of unit i's hit on unit t before where it lands and armour: its attack times the role
-    /// table's multiplier and t's weakness to i's role.
+    /// table's multiplier and t's weakness to i's role, less t's cover against a ranged piercing shot.
     /// </summary>
     public int Damage(int i, UnitDef def, int t)
     {
@@ -965,6 +971,8 @@ public sealed partial class CombatSystem
         Fix64 m = Rules.Multiplier(def.Role, target.Role);
         int weakness = target.WeaknessTo(def.Role);
         if (weakness > 0) m = m * (100 + weakness) / 100;
+        // Under a roof (the ram's hides), arrows and bolts mostly glance off.
+        if (target.Cover > 0 && def.IsRanged && def.Attack == AttackKind.Pierce) m = m * (100 - target.Cover) / 100;
         return Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * m).RoundToInt());
     }
 
@@ -1590,7 +1598,7 @@ public sealed partial class CombatSystem
         if (t < 0 || !Hostile(c.PlayerId, U.Owner[t])) return;
         foreach (int i in _sim.OwnedUnits(c))
         {
-            if (!Def(i).CanAttack) continue;
+            if (!Def(i).CanAttack || Def(i).Ram) continue; // a ram never goes at units
             StartAttack(i);
             U.Target[i] = c.Target;
         }

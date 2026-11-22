@@ -239,6 +239,23 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   - **A machine** (`machine`): it never breaks and runs however low its morale falls, and it does not bleed.
   Siege is weak against cavalry and heavy infantry (`data/roles.json`). Computer players from Easy up build them (see
   Computer players). All numbers are first guesses for playtesting.
+- **Battering rams** (`RamTests`; the design doc's siege role, "break walls", and the siege concept art's covered ram
+  at the gate): the siege workshop also builds the **battering ram** (40 planks, 40 wood, 10 iron and 30 food, 30
+  seconds, needs Smelting like the workshop, every faction), an iron-headed log slung under a roof of hides on wheels.
+  It is slow (2 blocks a second) and tough (300 hit points, armour 5 all over), and under its roof arrows and other
+  ranged piercing shots deal three quarters less (`cover`: 75, `CombatSystem.Damage`), so three archers shooting for
+  20 seconds leave it with most of its strength, where they badly hurt a catapult. Blows, stones and spells land as
+  usual. It is a machine like the catapult (it never breaks and runs, and does not bleed), and two more
+  rules, both in the data, make it a ram:
+  - **Buildings only** (`ram`; `CombatSystem.FindTarget`, `Apply(AttackCommand)`): it never attacks a unit, on its
+    own or when ordered to (an order to attack one is ignored), and an attack-move walks it past enemies. Right-click
+    an enemy building to send it, and a wall in its way is broken first (see Breaching below).
+  - **At the foot of the wall**: every 3 seconds it strikes for 15 crushing damage, full damage on thick walls and
+    gates as a siege engine, and its blow knocks out a column's bottom block as a sapper's does, so the whole column
+    comes down at once. Its blows on a **gate** deal twice that (`gates`: 200, `CombatSystem.BuildingDamage`), so one
+    ram breaks a stone gate far sooner than the wall beside it, and many times faster than four spearmen.
+  Riders and heavy infantry (siege is weak against both) make short work of it, so it needs soldiers with it.
+  Computer players do not build rams yet. All numbers are first guesses for playtesting.
 - **Terrain**: ranged units (range over 2) need a clear line to their target (leaves do not block it), and
   two or more levels above it they reach and see 25% further. Height also changes where hits land (see
   armour below): arrows from the high ground and blows from above find more heads, blows struck uphill

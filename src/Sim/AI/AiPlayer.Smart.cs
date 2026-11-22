@@ -1115,6 +1115,7 @@ public sealed partial class AiPlayer
     /// </summary>
     private long Weight(Simulation sim, UnitDef def, int[] seen, int[] mine)
     {
+        if (def.Ram) return 0; // computer players do not build rams yet: their siege is the catapult
         long w = Weight(sim, def.Role, seen, mine);
         if (!Hard || w == 0 || def.Role is UnitRole.Sapper or UnitRole.Siege) return w;
         var line = CheapSoldier(sim);

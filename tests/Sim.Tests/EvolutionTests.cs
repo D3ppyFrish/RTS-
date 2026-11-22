@@ -114,6 +114,7 @@ public class EvolutionTests
         foreach (var b in db.BaseUnits.Where(b => b.Id != "healer" && !b.Machine)) Assert.True(b.Forms.Count >= 2, $"{b.Id} has {b.Forms.Count} forms");
         Assert.Empty(db.Unit("healer").Forms);
         Assert.Empty(db.Unit("catapult").Forms);
+        Assert.Empty(db.Unit("battering_ram").Forms);
         foreach (var f in db.Units.Where(u => u.IsForm))
         {
             var from = f.EvolvesFrom!;

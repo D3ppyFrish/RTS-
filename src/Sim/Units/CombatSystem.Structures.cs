@@ -60,6 +60,18 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>
+    /// What one blow of <paramref name="attack"/> by a unit of this type deals to this building: the attack times
+    /// <see cref="StructureMultiplier"/>, and on a gate times the type's <see cref="UnitDef.Gates"/> (a ram's blows
+    /// break a gate's timbers sooner). At least 1.
+    /// </summary>
+    public int BuildingDamage(UnitDef def, BuildingDef b, int attack)
+    {
+        var damage = Fix64.FromInt(attack) * StructureMultiplier(def, b);
+        if (b.Kind == BuildingKind.Gate) damage = damage * def.Gates / 100;
+        return Math.Max(1, damage.RoundToInt());
+    }
+
+    /// <summary>
     /// The building takes a hit from unit i. Enough damage knocks out a block from the column nearest the
     /// unit: the top one, or with <paramref name="undermine"/> the bottom one, so the rest of the column falls.
     /// A <paramref name="blast"/> on a thick wall, gate or tower knocks out the block under the top one, and what

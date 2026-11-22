@@ -76,7 +76,9 @@ public class SiegeTests
         // A plain barracks does not build siege engines.
         Assert.DoesNotContain("catapult", content.Building("barracks").Trains);
         // Nobody else has dead ground or lobs, so nothing else changes.
-        Assert.All(content.Units.Where(u => u.Id != "catapult"), u => Assert.True(u.MinRange == Fix64.Zero && !u.Lobs && !u.Machine, u.Id));
+        Assert.All(content.Units.Where(u => u.Id != "catapult"), u => Assert.True(u.MinRange == Fix64.Zero && !u.Lobs, u.Id));
+        // The only other machine is the battering ram (see RamTests).
+        Assert.Equal(new[] { "catapult", "battering_ram" }, content.Units.Where(u => u.Machine).Select(u => u.Id));
     }
 
     [Fact]
