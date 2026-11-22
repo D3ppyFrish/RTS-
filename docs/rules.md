@@ -736,7 +736,7 @@ areas, and Orcs who beat a wolf keep it.
   that pierce) that pay 200 food; Orcs who beat a boar can ride it, and the spearman becomes a rider (the
   Orcs' own rider sits on a war boar). A stone giant stands alone: 450 hit points, slow, heavy armour and
   crushing blows, and pays 200 stone and 60 iron; Orcs can recruit it. A bog horror (140 hit points,
-  slashing claws) heals 2% of its hit points a second even in a fight and follows a fresh blood trail
+  slashing claws) lurks in the swamp's pools (below), heals 2% of its hit points a second even in a fight and follows a fresh blood trail
   well past its leash; a pair pays 120 food. A giant crab (160 hit points, slow, crushing claws) is
   shelled hard all over (head 3, body 5, legs 2); a pair pays 150 food. Each leaves a den with its own
   prizes (see "Cleared dens"). In the data, `biome` and `count` in a `lair` spread it, and `atStarts` keeps
@@ -763,6 +763,16 @@ areas, and Orcs who beat a wolf keep it.
   water lie in the floors, with pools of lava in the lower level. Every fourth chamber (none within 100 blocks of a
   start) is a nest of cave crawlers, one nest a chamber; a hill cavern's own lairs stay in the cavern, not down its
   tunnel to the deep caves (`DeepCaveTests`).
+- **Bog horrors lurk in the water** (`LurkTests`; `lurk` and `ambush` in a lair in `data/units.json`): the design doc's
+  ambush from water. A bog horror lair finds the shallow pools by its den (water one block deep, within its guard
+  radius of 9 columns and 4 levels of the den, nearest first, at least two columns apart) and each horror of the pair
+  waits in its own pool, sunk to its eyes (`MonsterSystem.Submerged`: wild, nothing to fight, its feet in water). With
+  nothing to do it walks back to its pool rather than to the den. Lying there it is hidden: with fog of war on,
+  players see it only within 3 columns of one of their units (`VisionSystem.SpotSubmerged`, `Close`), however clear
+  the view, and nobody's units go after it on their own from further off. It comes up at whoever comes within its
+  guard or its sight, and **its first blow out of the water does twice the damage** (`"ambush": 100`, percent more;
+  `MonsterSystem.Spring` from `CombatSystem.Wound`); after that it strikes as usual, and once back in its pool it
+  lies in wait again. A lair with no water near its den waits on the bank as before. All numbers are first guesses.
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.

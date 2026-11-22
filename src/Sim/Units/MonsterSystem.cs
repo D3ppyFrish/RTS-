@@ -64,6 +64,13 @@ public sealed class Lair
     public IReadOnlyList<int> Trackers => TrackerIds;
     // The player whose unit last killed or beat one of the pack, or -1.
     internal int LastBeatenBy = -1;
+    /// <summary>
+    /// For a lair that lurks (see <see cref="LairDef.Lurk"/>): the shallow-water columns by the den its pack waits in,
+    /// nearest the den first, one for each monster of the pack (the k-th of <see cref="Pack"/> waits in the k-th, round
+    /// again if there are fewer); empty if there is no water near enough, and then the pack waits on the bank.
+    /// </summary>
+    public IReadOnlyList<(int X, int Y, int Z)> Pools => PoolSpots;
+    internal readonly List<(int X, int Y, int Z)> PoolSpots = new();
 }
 
 /// <summary>
@@ -126,6 +133,8 @@ public sealed class MonsterSystem
     private readonly List<Lair> _lairs = new();
     private readonly List<Lair> _herds = new();
     private readonly List<int> _home = new();
+    // Lurking monsters (ids, ascending) that came up out of the water at someone and have not struck their first blow.
+    private readonly List<int> _ambush = new();
     private int _nextId = 1;
 
     public MonsterSystem(Simulation sim)
@@ -194,7 +203,11 @@ public sealed class MonsterSystem
             foreach (int id in lair.PackIds) Mix(id);
             Mix(lair.TrackerIds.Count);
             foreach (int id in lair.TrackerIds) Mix(id);
+            Mix(lair.PoolSpots.Count);
+            foreach (var (px, py, pz) in lair.PoolSpots) { Mix(px); Mix(py); Mix(pz); }
         }
+        Mix(_ambush.Count);
+        foreach (int id in _ambush) Mix(id);
         Mix(_herds.Count);
         foreach (var herd in _herds)
         {
@@ -495,6 +508,15 @@ public sealed class MonsterSystem
         int y = Ground(x, z);
         if (y < 0) return null;
         var lair = new Lair(_nextId++, monster, x, y, z);
+        if (def.Lurk)
+        {
+            FindPools(lair, def.Guard, def.Pack);
+            foreach (var (px, py, pz) in lair.PoolSpots)
+            {
+                int id = _sim.SpawnUnit(Simulation.WildPlayer, monster.Id, px, pz, py);
+                if (id > 0) lair.PackIds.Add(id);
+            }
+        }
         foreach (var (ox, oz) in PackSpots)
         {
             if (lair.PackIds.Count == def.Pack) break;
@@ -509,6 +531,65 @@ public sealed class MonsterSystem
         (monster.IsGame ? _herds : _lairs).Add(lair);
         return lair;
     }
+
+    /// <summary>
+    /// A lurking lair's pools (see <see cref="Lair.Pools"/>): up to <paramref name="most"/> columns within
+    /// <paramref name="radius"/> of the den where a unit stands with its feet in shallow water, no more than
+    /// <see cref="GuardHeight"/> levels off the den's, nearest the den first (ties by row, then column), each at least
+    /// two columns from the others so the pack spreads round the water.
+    /// </summary>
+    private void FindPools(Lair lair, int radius, int most)
+    {
+        var found = new List<(int D, int X, int Y, int Z)>();
+        for (int z = lair.Z - radius; z <= lair.Z + radius; z++)
+        for (int x = lair.X - radius; x <= lair.X + radius; x++)
+        {
+            int dx = x - lair.X, dz = z - lair.Z, d = dx * dx + dz * dz;
+            if (d > radius * radius || !World.InBounds(x, 0, z)) continue;
+            int y = Walk.GroundLevel(World, x, z);
+            if (y < 0 || Math.Abs(y - lair.Y) > GuardHeight || World.Get(x, y, z) != BlockType.Water) continue;
+            found.Add((d, x, y, z));
+        }
+        found.Sort((a, b) => a.D != b.D ? a.D.CompareTo(b.D) : a.Z != b.Z ? a.Z.CompareTo(b.Z) : a.X.CompareTo(b.X));
+        foreach (var (_, x, y, z) in found)
+        {
+            if (lair.PoolSpots.Count == most) break;
+            bool apart = true;
+            foreach (var (px, _, pz) in lair.PoolSpots)
+                if (Math.Abs(px - x) < 2 && Math.Abs(pz - z) < 2) apart = false;
+            if (apart) lair.PoolSpots.Add((x, y, z));
+        }
+    }
+
+    /// <summary>
+    /// True if unit i is a lurking monster lying in the water (see <see cref="LairDef.Lurk"/>): wild, with nothing to
+    /// fight, its feet in water. Players with fog of war on see it only from close by (see
+    /// <see cref="VisionSystem.SpotSubmerged"/>), and the game draws it sunk to its eyes.
+    /// </summary>
+    public bool Submerged(int i)
+    {
+        var u = U;
+        if ((uint)i >= (uint)u.Count || !IsWild(i) || u.Target[i] != 0 || u.Subdued[i]) return false;
+        if (Def(i).Lair is not { Lurk: true }) return false;
+        return World.Get(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) == BlockType.Water;
+    }
+
+    /// <summary>
+    /// Unit i strikes a blow: if it is a lurking monster that came up out of the water at its target and has not
+    /// struck yet, the extra percent of damage its first blow does (<see cref="LairDef.Ambush"/>), and it has
+    /// sprung its ambush; otherwise 0.
+    /// </summary>
+    internal int Spring(int i)
+    {
+        if (_ambush.Count == 0) return 0;
+        int k = _ambush.BinarySearch(U.Id[i]);
+        if (k < 0) return 0;
+        _ambush.RemoveAt(k);
+        return Def(i).Lair?.Ambush ?? 0;
+    }
+
+    /// <summary>True if unit i came up out of the water at someone and has not struck its first blow yet.</summary>
+    public bool Ambushing(int i) => _ambush.Count > 0 && _ambush.BinarySearch(U.Id[i]) >= 0;
 
     /// <summary>
     /// True if a den can go at column (x, z): ground that is not under water, well inside the map and away from
@@ -554,6 +635,8 @@ public sealed class MonsterSystem
         if (_herds.Count > 0) StepHerds();
         if (_lairs.Count == 0) return;
         long tick = _sim.Tick;
+        // An ambusher that died, was beaten, or came out of the water with nobody to fight springs no ambush.
+        if (_ambush.Count > 0) _ambush.RemoveAll(id => U.IndexOf(id) is var i && (i < 0 || !IsWild(i) || (U.Target[i] == 0 && !Submerged(i))));
         foreach (var lair in _lairs)
         {
             if (lair.Cleared) continue;
@@ -563,6 +646,7 @@ public sealed class MonsterSystem
             if (lair.PackIds.Count == 0) Clear(lair);
             else
             {
+                if (lair.Monster.Lair!.Ambush > 0) LieInWait(lair);
                 if (lair.NextBirth > 0 && tick >= lair.NextBirth) Grow(lair);
                 if ((tick + lair.Id) % GuardInterval == 0) Guard(lair);
             }
@@ -664,12 +748,13 @@ public sealed class MonsterSystem
         int intruder = -2; // not looked for yet
         bool fighting = false;
         _home.Clear();
-        foreach (int id in lair.PackIds)
+        for (int k = 0; k < lair.PackIds.Count; k++)
         {
+            int id = lair.PackIds[k];
             int i = u.IndexOf(id);
             Fix64 d2 = Distance2(i, lair);
             bool goingHome = u.Order[i] == UnitOrder.Move && !u.FightsOnTheWay(i)
-                && u.OrderX[i] == lair.HomeX && u.OrderZ[i] == lair.HomeZ;
+                && ((u.OrderX[i] == lair.HomeX && u.OrderZ[i] == lair.HomeZ) || HeadedForPool(lair, k, i));
             if (u.Target[i] != 0) fighting = true;
             Fix64 reach = lair.TrackerIds.Contains(id) ? trackLeash : leash;
             if (d2 > reach * reach)
@@ -686,6 +771,16 @@ public sealed class MonsterSystem
             {
                 Attack(i, quarry);
                 lair.TrackerIds.Add(id);
+            }
+            else if (lair.PoolSpots.Count > 0)
+            {
+                // A lurker goes back to its own pool and lies in the water there.
+                var (px, py, pz) = lair.PoolSpots[k % lair.PoolSpots.Count];
+                bool there = u.X[i].FloorToInt() == px && u.Z[i].FloorToInt() == pz;
+                bool headed = u.Order[i] == UnitOrder.Move && u.OrderX[i] == px && u.OrderZ[i] == pz;
+                // Not a plain move order: that would stop at the water's edge.
+                if (!there && !headed) _sim.SendUnit(i, px, pz, py);
+                continue;
             }
             else if (!goingHome && d2 > home * home) _home.Add(id);
         }
@@ -776,6 +871,28 @@ public sealed class MonsterSystem
             }
         }
         return best;
+    }
+
+    /// <summary>True if unit i, the k-th of a lurking lair's pack, is walking back to its pool.</summary>
+    private bool HeadedForPool(Lair lair, int k, int i)
+    {
+        if (lair.PoolSpots.Count == 0) return false;
+        var (px, _, pz) = lair.PoolSpots[k % lair.PoolSpots.Count];
+        return U.OrderX[i] == px && U.OrderZ[i] == pz;
+    }
+
+    /// <summary>
+    /// Each of a lurking lair's pack lying in the water now lies in wait: whatever it goes after first, whether the
+    /// lair sent it or it saw someone itself, its first blow coming up out of the water is an ambush.
+    /// </summary>
+    private void LieInWait(Lair lair)
+    {
+        foreach (int id in lair.PackIds)
+        {
+            if (!Submerged(U.IndexOf(id))) continue;
+            int k = _ambush.BinarySearch(id);
+            if (k < 0) _ambush.Insert(~k, id);
+        }
     }
 
     /// <summary>Monster i goes after unit t until one of them dies (or the leash pulls it home).</summary>

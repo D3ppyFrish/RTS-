@@ -361,7 +361,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -393,6 +393,11 @@ public static class ContentLoader
             bool atStarts = !dusk && (e.TryGetProperty("atStarts", out _) ? o.Bool("atStarts") : biome == null && cavern == CavernSpot.None);
             if (dusk && (biome != null || cavern != CavernSpot.None || o.Bool("atStarts") || e.TryGetProperty("prizes", out _)))
                 o.Error("a lair with \"duskTree\" guards the dusk tree only: no \"biome\", \"cavern\", \"atStarts\" or \"prizes\"");
+            bool lurk = o.Bool("lurk");
+            int ambush = o.Int("ambush", 0, 1000, 0);
+            if (ambush > 0 && !lurk) o.Error("\"ambush\" needs \"lurk\": it is the first blow struck coming up out of the water");
+            if (lurk && (dusk || cavern != CavernSpot.None)) o.Error("a lair that lurks (\"lurk\") waits in the shallow water by its den: not one with \"duskTree\" or \"cavern\"");
+            if (lurk && roam > 0) o.Error("a lair that lurks (\"lurk\") waits in the water by its den, so it does not \"roam\"");
             var def = new LairDef
             {
                 Pack = pack,
@@ -407,6 +412,8 @@ public static class ContentLoader
                 Roam = biome != null ? roam : 0,
                 GrowTicks = dusk ? 0 : grow * Simulation.TicksPerSecond,
                 GrowTo = grow > 0 && !dusk ? growTo : pack,
+                Lurk = lurk,
+                Ambush = lurk ? ambush : 0,
             };
             if (!dusk) Prizes(o, def);
             return def;
@@ -1491,6 +1498,8 @@ public static class ContentLoader
                     h.Add(lair.AtStarts ? 1 : 0);
                     h.Add((int)lair.Cavern);
                     h.Add(lair.Roam);
+                    h.Add(lair.Lurk ? 1 : 0);
+                    h.Add(lair.Ambush);
                     h.Add(lair.Prizes.Count);
                     foreach (var p in lair.Prizes)
                     {

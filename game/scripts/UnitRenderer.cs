@@ -27,6 +27,10 @@ public partial class UnitRenderer : Node3D
     /// which is drawn sunk between its battlements (see <see cref="StructureDetail.DeckSink"/>), its feet are
     /// on the deck. 0 anywhere else.
     /// </summary>
+    /// <summary>How far (blocks) a lurking monster lying in the water sinks below where it stands: to its shoulders, feet already in the water.</summary>
+    private const float SubmergedSink = 0.7f;
+    private float[] _sinkById = new float[256];
+
     public static float DeckOffset(Simulation sim, int i) =>
         sim.Economy.WallUnder(i) is { Def.Walkway: true } ? -StructureDetail.DeckSink / (float)StructureDetail.Size : 0f;
 
@@ -286,6 +290,11 @@ void fragment() {
 
             int id = u.Id[i];
             if (id >= _yawById.Length) Array.Resize(ref _yawById, Math.Max(id + 1, _yawById.Length * 2));
+            // A lurking monster lying in the water sinks to its eyes, and rises as it comes out at someone.
+            if (id >= _sinkById.Length) Array.Resize(ref _sinkById, Math.Max(id + 1, _sinkById.Length * 2));
+            float sinkTo = _sim.Monsters.Submerged(i) ? SubmergedSink : 0f;
+            _sinkById[id] = Mathf.MoveToward(_sinkById[id], sinkTo, delta * 3f);
+            y -= _sinkById[id];
             float dx = cx - px, dz = cz - pz;
             if (dx * dx + dz * dz > 1e-5f)
             {

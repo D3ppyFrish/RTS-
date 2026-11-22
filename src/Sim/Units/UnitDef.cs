@@ -302,6 +302,17 @@ public sealed class LairDef
     /// <summary>The most monsters a growing pack (see <see cref="GrowTicks"/>) grows to.</summary>
     public int GrowTo { get; init; }
     /// <summary>
+    /// The pack waits in the shallow water by its den (the swamp's bog horrors), one monster to a pool column, and a
+    /// monster lying there with nothing to fight is unseen by other players until one of their units comes within
+    /// <see cref="Rts.Sim.VisionSystem.SpotSubmerged"/> columns (see <see cref="MonsterSystem.Submerged"/>).
+    /// </summary>
+    public bool Lurk { get; init; }
+    /// <summary>
+    /// How many percent harder the first blow is that a lurking monster strikes coming up out of the water (see
+    /// <see cref="Lurk"/>); 0 for none.
+    /// </summary>
+    public int Ambush { get; init; }
+    /// <summary>
     /// What each faction gets for beating this monster: what it makes of the den a cleared lair leaves (see
     /// <see cref="MonsterSystem"/>), in data order. Two factions can share a prize; one not listed gets none.
     /// </summary>
