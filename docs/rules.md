@@ -255,7 +255,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
     comes down at once. Its blows on a **gate** deal twice that (`gates`: 200, `CombatSystem.BuildingDamage`), so one
     ram breaks a stone gate far sooner than the wall beside it, and many times faster than four spearmen.
   Riders and heavy infantry (siege is weak against both) make short work of it, so it needs soldiers with it.
-  Computer players do not build rams yet. All numbers are first guesses for playtesting.
+  Computer players from Easy up build rams once they know of an enemy wall or gate (see Computer players). All
+  numbers are first guesses for playtesting.
 - **Terrain**: ranged units (range over 2) need a clear line to their target (leaves do not block it), and
   two or more levels above it they reach and see 25% further. Height also changes where hits land (see
   armour below): arrows from the high ground and blows from above find more heads, blows struck uphill
@@ -1570,8 +1571,12 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   (they set its pace on a march). Once a wave is within 28 columns of its target, each catapult shoots the nearest
   enemy tower within 4 columns past its range, else the nearest wall or gate, else the target itself; a catapult with
   an enemy soldier in its dead ground backs off 8 columns; and up to 4 of the wave's other soldiers go for the
-  enemy soldiers that come within 9 columns of a catapult, so they screen it. The classic level never builds them. All
-  numbers are first guesses.
+  enemy soldiers that come within 9 columns of a catapult, so they screen it. Once it knows of an enemy wall or gate
+  still standing, the workshop also trains battering rams, up to 2 (with those queued; the 2 catapults are counted
+  without them). In a wave within 28 columns of its target, each ram goes for the nearest known enemy gate within 32
+  columns, else the nearest wall, else the target itself; it never backs off, and the same screen of up to 4 soldiers
+  goes for enemy soldiers within 9 columns of a ram (riders and heavy infantry make short work of one). The classic
+  level never builds them. All numbers are first guesses.
 - **Carts** (Easy, Normal and Hard; `AI/AiPlayer.Carts.cs`, tests in `AiCartTests`): once it has a finished sawmill
   and at least 2 storage buildings besides its town hall (storehouses by its work, a second town hall), it trains
   carts at the town hall, one at a time while it has room and the goods, up to 2 (the two a building takes on supply
