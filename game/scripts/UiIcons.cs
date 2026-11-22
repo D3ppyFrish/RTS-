@@ -295,6 +295,12 @@ public static class UiIcons
             "....kkkk....", "..kkiiiikk..", ".kiiliiiiik.", ".kiikkkkiik.", "kiikIkkIkiik", "kiikkIIkkiik",
             "kkkkkkkkkkkk", "kooooOooooOk", "kOOOOOOOOOOk", "kkkkkkkkkkkk", ".kBk....kBk.", ".kkk....kkk.",
         },
+        // Siege workshop: a catapult's arm with a stone in its bucket, over its wheeled frame.
+        ["catapult"] = new[]
+        {
+            "kk..........", "kSk.........", ".kbk........", "..kbk.......", "...kbk...k..", "....kbk.kbk.",
+            ".....kbkbk..", "..kkkkkbkkk.", "..kbbbbbbbk.", ".kBkkkkkkBk.", "kBiBk..kBiBk", ".kBk....kBk.",
+        },
         ["smelter"] = new[]
         {
             "....kk......", "....kSk.....", "..kkkSSkkk..", ".kssssssssk.", ".kslssslssk.", ".ksskkkkssk.",

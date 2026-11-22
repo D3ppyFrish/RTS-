@@ -613,7 +613,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -640,12 +640,15 @@ public static class ContentLoader
                 Range = range,
                 Sight = o.Decimal("sight", Fix64.One, Fix64.FromInt(64), Fix64.Max(Fix64.FromInt(8), range), required: false),
                 Splash = o.Decimal("splash", Fix64.Zero, Fix64.FromInt(8), Fix64.Zero, required: false),
+                MinRange = o.Decimal("minRange", Fix64.Zero, Fix64.FromInt(16), Fix64.Zero, required: false),
+                Lobs = o.Bool("lobs"),
+                Machine = o.Bool("machine"),
                 WeakTo = o.RolePercents("weakTo", 1, 1000),
                 Attack = o.Enum("attack", AttackKind.Slash, required: false),
                 Body = body,
                 Armour = Armour(o, body),
                 Shield = o.Int("shield", 0, 90, 0),
-                Bleeds = !o.Has("bleeds") || o.Bool("bleeds"),
+                Bleeds = o.Has("bleeds") ? o.Bool("bleeds") : !o.Bool("machine"),
                 TracksBlood = o.Bool("tracksBlood"),
                 Blast = o.Bool("blast"),
                 EarthWall = o.Bool("earthWall"),
@@ -675,6 +678,10 @@ public static class ContentLoader
                 FromDen = o.Bool("fromDen"),
                 InStart = !o.Has("start") || o.Bool("start"),
             };
+            if (def.MinRange > Fix64.Zero && def.MinRange >= def.Range)
+                o.Error("\"minRange\" must be less than \"range\"");
+            if ((def.MinRange > Fix64.Zero || def.Lobs) && !def.IsRanged)
+                o.Error("only a ranged unit can have \"minRange\" or \"lobs\"");
             if (def.Heal == 0 && (o.Has("healTime") || o.Has("healRange")))
                 o.Error("has \"healTime\" or \"healRange\" but no \"heal\"");
             if (def.Rally == Fix64.Zero && (o.Has("steady") || o.Has("inspire") || o.Has("volley") || o.Has("spur") || o.Has("undermine") || o.Has("quicken") || o.Has("hasten")))

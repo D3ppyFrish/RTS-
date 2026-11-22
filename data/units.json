@@ -63,6 +63,10 @@
 // ride (optional) says which unit can climb on a beaten monster (rider) and what it becomes (becomes); a
 // recruited monster fights for its new owner as it is. tracksBlood (optional)
 // makes a wild monster follow a fresh blood trail it finds to the bleeding unit, well past its leash.
+// Siege engines: minRange (optional, blocks) is how near an enemy unit can be and still be hit (a catapult's dead
+// ground: anything closer is safe from it; buildings are hit at any distance), lobs (optional) sends its shots up in
+// a high arc, so it needs no clear line and hits what stands behind walls and hills, and machine (optional) marks a
+// machine that never breaks and runs and does not bleed.
 // City-states (see citystates.json): a unit with the trader role is a caravan, which trades with a
 // city-state's town; caravans are trained but no player starts with one. A unit with hiredFrom is a
 // mercenary: not trained, but hired for its cost at that city-state's town by the city-state's ally.
@@ -91,6 +95,12 @@
     "damage": 10, "attackTime": 2, "range": 8, "sight": 9, "splash": 1.5,
     "attack": "crush", "earthWall": true, "iceBridge": true, "chasm": true, "growForest": true,
     "cost": { "food": 50, "stone": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" },
+  { "id": "catapult", "name": "Catapult", "role": "siege", "speed": 2, "hp": 160, "model": "catapult",
+    "description": "A wooden throwing arm on wheels, crewed by two. Lobs stones over walls from far off and topples thick walls, but cannot hit anything closer than 5 blocks: keep it behind your line.",
+    "damage": 30, "attackTime": 5, "range": 15, "minRange": 5, "sight": 12, "splash": 1.5,
+    "blast": true, "lobs": true, "machine": true, "attack": "crush", "armor": { "torso": 2 },
+    "cost": { "food": 40, "planks": 60, "iron": 10 }, "trainTime": 40, "trainedAt": "siege_workshop", "requires": "smelting",
+    "start": false },
   { "id": "healer", "name": "Healer", "role": "caster", "speed": 4, "hp": 45, "model": "healer",
     "description": "Tends the most hurt ally nearby and stems its bleeding; a poor fighter, best kept behind the line.",
     "damage": 3, "attackTime": 1.5, "range": 1.25, "sight": 8,

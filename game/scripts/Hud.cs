@@ -518,6 +518,11 @@ public partial class Hud : CanvasLayer
                                 $"{WorkshopUse(def.Makes)} The worker stops fetching {takes} once you have {def.Keep} {makes} in storage. " +
                                 $"Automatic workers keep it while you have {takes}.";
             }
+            if (def.Kind == BuildingKind.Barracks && def.Trains.Length > 0 &&
+                def.Trains.All(t => _sim.Content.TryGetUnit(t, out var u) && u.Role == UnitRole.Siege))
+                b.TooltipText = "Builds siege engines: " + string.Join(", ", def.Trains.Select(t => _sim.Content.Unit(t).Name.ToLowerInvariant())) +
+                                ". A catapult is built of planks and iron, lobs stones over walls from far off and topples thick " +
+                                "walls, but cannot hit anything close beside it: keep soldiers between it and the enemy's riders.";
             if (def.IsTower)
                 b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +

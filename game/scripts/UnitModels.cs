@@ -742,6 +742,23 @@ public static class UnitModels
             .Box(1, 18, -1, 5, 21, 3, DuskLeaf)                                          // a violet bloom on top
             .Box(2, 19, -1, 4, 20, 3, DuskVein).Box(1, 19, 0, 5, 20, 2, DuskVein).Box(3, 22, 1, 3, 23, 1, DuskVein), // round a cyan light
 
+        // Siege: a wooden catapult on four wheels, its throwing arm drawn back with a stone in the bucket, its sides
+        // in its owner's colour.
+        "catapult" => new Builder()
+            .Box(-4, 2, -6, -3, 3, 6, Wood).Box(2, 2, -6, 3, 3, 6, Wood)                 // side beams
+            .Box(-2, 2, -6, 1, 3, -5, Wood).Box(-2, 2, 5, 1, 3, 6, Wood)                 // cross beams
+            .Box(-5, 0, -5, -5, 3, -3, Dark).Box(4, 0, -5, 4, 3, -3, Dark)               // hind wheels
+            .Box(-5, 0, 3, -5, 3, 5, Dark).Box(4, 0, 3, 4, 3, 5, Dark)                   // front wheels
+            .Box(-5, 1, -4, -5, 2, -4, Iron).Box(4, 1, -4, 4, 2, -4, Iron)               // hubs
+            .Box(-5, 1, 4, -5, 2, 4, Iron).Box(4, 1, 4, 4, 2, 4, Iron)
+            .Box(-3, 4, 1, -3, 10, 2, Wood).Box(2, 4, 1, 2, 10, 2, Wood)                 // uprights
+            .Box(-3, 11, 1, 2, 11, 2, Wood)                                              // the bar the arm strikes
+            .Box(-1, 4, -1, 0, 4, 1, Iron)                                               // the twisted rope it pivots on
+            .Box(-1, 5, -8, 0, 5, -1, Wood)                                              // the arm, drawn back
+            .Box(-2, 5, -10, 1, 6, -8, Leather).Box(-1, 7, -10, 0, 7, -9, Rock)          // the bucket and its stone
+            .Box(-4, 4, -5, -4, 5, 4, Team).Box(3, 4, -5, 3, 5, 4, Team)                 // sides in its owner's colour
+            .Box(-2, 4, 4, 1, 5, 5, TeamDark),                                           // and a front board
+
         // Trade with the city-states: a pack mule with saddlebags in its owner's colour (what it carries goes on
         // its back), and the goblins' mercenaries.
         "caravan" => new Builder()

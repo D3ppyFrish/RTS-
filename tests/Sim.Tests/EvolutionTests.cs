@@ -110,8 +110,10 @@ public class EvolutionTests
         var db = ContentDb.Default;
         Assert.Equal(new[] { "knight", "pathfinder", "battle_priest", "siege_engineer" }, db.Unit("spearman").Forms.Select(f => f.Id));
         // The healer (issue #42) has no forms yet: it is a later addition, and its forms are a follow-up.
-        foreach (var b in db.BaseUnits.Where(b => b.Id != "healer")) Assert.True(b.Forms.Count >= 2, $"{b.Id} has {b.Forms.Count} forms");
+        // Machines (the catapult) are built, not raised, so they have no forms either.
+        foreach (var b in db.BaseUnits.Where(b => b.Id != "healer" && !b.Machine)) Assert.True(b.Forms.Count >= 2, $"{b.Id} has {b.Forms.Count} forms");
         Assert.Empty(db.Unit("healer").Forms);
+        Assert.Empty(db.Unit("catapult").Forms);
         foreach (var f in db.Units.Where(u => u.IsForm))
         {
             var from = f.EvolvesFrom!;

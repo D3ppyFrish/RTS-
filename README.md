@@ -151,7 +151,8 @@ replay made with different data says so instead of drifting apart.
   against and how much less damage the others deal to buildings, and how fast units out of the fight
   heal (see [Combat](docs/rules.md#combat)).
 - **Buildings and units** name the techs they need; the barracks trains spearmen at once, and archers,
-  riders, sappers, mages and healers after their techs. `units.json` also holds the forms units evolve into and the
+  riders, sappers, mages and healers after their techs; the siege workshop trains catapults after Smelting (`minRange`,
+  `lobs` and `machine`, see [Combat](docs/rules.md#combat)). `units.json` also holds the forms units evolve into and the
   monsters, with each monster's `prizes` per faction for clearing its lair (`relics.json` has the relics units
   take up as prizes, see [Monsters](docs/rules.md#monsters-and-taming)), and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)), whether it
   tames monsters, and how a computer player plays it (`aiStyle`: `waves` or `balanced`, see
@@ -221,7 +222,7 @@ town hall and lays a road; `scripts/ui-shrine-screenshots.sh` starts with `--goo
 magic, puts up a shrine beside the town hall and has a worker keep it, so the mana in the top bar rises as it
 channels the crystal; `scripts/ui-sawmill-screenshots.sh` puts up a sawmill beside the town hall and has a worker
 work it, so planks show in the top bar; `scripts/ui-mason-screenshots.sh` researches Better tools and Masonry, puts up a
-mason's yard beside the town hall and has a worker work it, so the cut stone in the top bar rises; `scripts/ui-combat-screenshots.sh` starts with `--battle=16` at the map
+mason's yard beside the town hall and has a worker work it, so the cut stone in the top bar rises; `scripts/ui-siege-screenshots.sh` (test mode) puts up a siege workshop, trains a catapult there and sends catapults at an Orc barracks until it falls; `scripts/ui-combat-screenshots.sh` starts with `--battle=16` at the map
 centre, sends a sapper to tunnel under the enemy house and attack-moves the rest of the army through
 the enemy; `scripts/ui-automation-screenshots.sh` makes the starting workers automatic and the soldiers
 hold their ground, puts the town hall on repeat, then makes every worker automatic and waits for them
