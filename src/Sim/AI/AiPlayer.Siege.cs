@@ -10,7 +10,9 @@ namespace Rts.Sim.AI;
 // like any barracks (two at a time, see Weight). Its waves: once a wave is within SiegeReach of its target, each
 // catapult in it shoots the nearest tower in its reach, else the nearest wall or gate, else the target itself; one
 // with an enemy soldier in its dead ground backs off; and a few of the wave's soldiers go for any enemy soldier
-// that comes at a catapult, so the catapults have a screen in front of them.
+// that comes at a catapult, so the catapults have a screen in front of them. Battering rams: the workshop trains up
+// to RamsWanted once it knows of an enemy wall or gate; in a wave a ram goes for the nearest gate within RamLook,
+// else the nearest wall, else the target itself, and the same screen of soldiers keeps riders and spearmen off it.
 public sealed partial class AiPlayer
 {
     /// <summary>Workers it has before it puts up a smelter, a sawmill and a siege workshop.</summary>
@@ -26,6 +28,10 @@ public sealed partial class AiPlayer
     public const int ScreenRadius = 9, ScreenSoldiers = 4;
     /// <summary>A catapult with an enemy soldier in its dead ground backs off this many columns from it.</summary>
     public const int BackOff = 8;
+    /// <summary>Rams it keeps (with those queued) while it knows of an enemy wall or gate.</summary>
+    public const int RamsWanted = 2;
+    /// <summary>A ram in a wave goes for a gate or wall this close (columns): it walks up to them.</summary>
+    public const int RamLook = SiegeReach + 4;
 
     /// <summary>The wave's catapults handled this look, and its soldiers screening them: the rest of the wave's orders leave them be.</summary>
     private readonly List<int> _engines = new(), _shield = new();
@@ -121,22 +127,33 @@ public sealed partial class AiPlayer
             int i = u.IndexOf(id);
             var def = sim.Content.Units[u.Def[i]];
             int ex = u.X[i].FloorToInt(), ez = u.Z[i].FloorToInt();
-            int close = NearestEnemy(sim, ex, ez, def.MinRange.FloorToInt() + 2, soldiersOnly: true, out _);
-            if (close >= 0)
+            int goal;
+            if (def.Ram)
             {
-                // In its dead ground: it cannot hit it, so it backs off while the screen deals with it.
-                threats.Add(close);
-                if (u.Order[i] != UnitOrder.Move)
-                {
-                    int nx = u.X[close].FloorToInt(), nz = u.Z[close].FloorToInt();
-                    var (bx, bz) = Toward(ex, ez, 2 * ex - nx, 2 * ez - nz, BackOff, sim.World);
-                    issue(new MoveCommand(Player, new[] { id }, bx, bz));
-                }
-                continue;
+                // A ram has no dead ground to back out of: it goes on at the gate, and the screen keeps foes off it.
+                int foeNear = NearestEnemy(sim, ex, ez, ScreenRadius, soldiersOnly: true, out _);
+                if (foeNear >= 0 && !threats.Contains(foeNear)) threats.Add(foeNear);
+                goal = Breach(sim, ex, ez, RamLook);
             }
-            int near = NearestEnemy(sim, ex, ez, ScreenRadius, soldiersOnly: true, out _);
-            if (near >= 0 && !threats.Contains(near)) threats.Add(near);
-            int goal = Rampart(sim, ex, ez, def.Range.FloorToInt() + SiegeLook);
+            else
+            {
+                int close = NearestEnemy(sim, ex, ez, def.MinRange.FloorToInt() + 2, soldiersOnly: true, out _);
+                if (close >= 0)
+                {
+                    // In its dead ground: it cannot hit it, so it backs off while the screen deals with it.
+                    threats.Add(close);
+                    if (u.Order[i] != UnitOrder.Move)
+                    {
+                        int nx = u.X[close].FloorToInt(), nz = u.Z[close].FloorToInt();
+                        var (bx, bz) = Toward(ex, ez, 2 * ex - nx, 2 * ez - nz, BackOff, sim.World);
+                        issue(new MoveCommand(Player, new[] { id }, bx, bz));
+                    }
+                    continue;
+                }
+                int near = NearestEnemy(sim, ex, ez, ScreenRadius, soldiersOnly: true, out _);
+                if (near >= 0 && !threats.Contains(near)) threats.Add(near);
+                goal = Rampart(sim, ex, ez, def.Range.FloorToInt() + SiegeLook);
+            }
             if (goal == 0 && sim.Buildings.Get(foe.Id) is { } t && Rival(t.Owner)) goal = t.Id;
             if (goal == 0 || (u.Combat[i] == CombatOrder.Attack && u.TargetBuilding[i] == goal)) continue;
             if (!shots.TryGetValue(goal, out var list)) shots[goal] = list = new List<int>();
@@ -166,6 +183,52 @@ public sealed partial class AiPlayer
             (best, bestTower, bestD) = (k.Id, tower, d);
         }
         return best;
+    }
+
+    /// <summary>
+    /// The known enemy gate nearest (x, z) within the reach, else the nearest wall; 0 if none. Gates first: a ram
+    /// breaks them twice as fast, and a gate down opens the way as well as a gap.
+    /// </summary>
+    private int Breach(Simulation sim, int x, int z, int reach)
+    {
+        int best = 0;
+        bool bestGate = false;
+        long bestD = (long)reach * reach + 1;
+        foreach (var k in _known.Values)
+        {
+            if (k.Kind is not (BuildingKind.Wall or BuildingKind.Gate) || !Rival(k.Owner)) continue;
+            if (sim.Buildings.Get(k.Id) is not { } b || b.Owner != k.Owner || b.Planned) continue;
+            long d = Dist2(k.X, k.Z, x, z);
+            if (d > (long)reach * reach) continue;
+            bool gate = k.Kind == BuildingKind.Gate;
+            if (best != 0 && (gate != bestGate ? !gate : d >= bestD)) continue;
+            (best, bestGate, bestD) = (k.Id, gate, d);
+        }
+        return best;
+    }
+
+    /// <summary>True if it knows of an enemy wall or gate standing: its siege workshop then trains rams.</summary>
+    public bool KnowsWalls(Simulation sim)
+    {
+        foreach (var k in _known.Values)
+            if (k.Kind is BuildingKind.Wall or BuildingKind.Gate && Rival(k.Owner) && sim.Buildings.Get(k.Id) is { } b && b.Owner == k.Owner && !b.Planned)
+                return true;
+        return false;
+    }
+
+    /// <summary>Its rams, with those queued at its siege workshops.</summary>
+    private int Rams(Simulation sim)
+    {
+        int n = 0;
+        var u = sim.Units;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == Player && sim.Content.Units[u.Def[i]].Ram) n++;
+        foreach (var b in sim.Buildings.All)
+        {
+            if (b.Owner != Player || b.Def.Kind != BuildingKind.Barracks) continue;
+            foreach (int q in b.Queue) if (sim.Content.Units[q].Ram) n++;
+        }
+        return n;
     }
 
     /// <summary>

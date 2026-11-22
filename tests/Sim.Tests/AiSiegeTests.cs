@@ -177,4 +177,87 @@ public class AiSiegeTests
         Assert.All(sent, id => Assert.DoesNotContain(id, catapults));
         Assert.Contains(log, c => c is MoveCommand m && m.Units.Contains(catapults[0]));
     }
+    /// <summary>
+    /// Player 0, a computer player with Smelting and a finished siege workshop, kept in plenty, against player 1, who
+    /// gives no orders, with a stone gate (and wall either side) in front of its town hall if walled.
+    /// </summary>
+    private static (Simulation Sim, AiPlayer Ai, Building? Gate) WalledFoe(AiLevel level, bool walled)
+    {
+        var sim = WithStarts(128, (24, 64), (100, 64));
+        sim.Economy.Grant(0, sim.Content.Tech("smelting"));
+        Assert.NotNull(sim.Economy.PlaceFinished(0, sim.Content.Building("siege_workshop"), 14, 44));
+        var hall = sim.Economy.TownHall(1)!;
+        Building? gate = null;
+        if (walled)
+        {
+            gate = sim.Economy.PlaceFinished(1, sim.Content.Building("stone_gate"), hall.X - 10, hall.Z);
+            Assert.NotNull(gate);
+            for (int dz = 1; dz <= 4; dz++)
+            {
+                sim.Economy.PlaceFinished(1, sim.Content.Building("stone_wall"), hall.X - 10, gate!.Z - dz);
+                sim.Economy.PlaceFinished(1, sim.Content.Building("stone_wall"), hall.X - 10, gate.Z + gate.Def.SizeZ - 1 + dz);
+            }
+        }
+        return (sim, new AiPlayer(0, 1, level), gate);
+    }
+
+    private static bool HasRam(Simulation sim) =>
+        Enumerable.Range(0, sim.Units.Count).Any(i => sim.Units.Owner[i] == 0 && sim.Content.Units[sim.Units.Def[i]].Ram)
+        || sim.Buildings.All.Any(b => b.Owner == 0 && b.Queue.Any(q => sim.Content.Units[q].Ram));
+
+    [Theory]
+    [InlineData(AiLevel.Easy)]
+    [InlineData(AiLevel.Normal)]
+    [InlineData(AiLevel.Hard)]
+    public void ASmartComputerTrainsRamsOnlyOnceItKnowsOfAnEnemyWallOrGate(AiLevel level)
+    {
+        var ram = Rts.Sim.Content.ContentDb.Default.Unit("battering_ram");
+        foreach (bool walled in new[] { false, true })
+        {
+            var (sim, ai, gate) = WalledFoe(level, walled);
+            Assert.Equal(0, ai.TrainWeight(sim, ram));
+            if (gate == null) continue;
+            // It sees the gate: a spearman of its stands by it.
+            int look = sim.SpawnUnit(0, "spearman", gate.X - 4, gate.Z);
+            Assert.True(look > 0);
+            Play(sim, new[] { ai }, () => ai.KnowsWalls(sim), 10 * Tps);
+            Assert.True(ai.KnowsWalls(sim), "it to see the gate");
+            Assert.True(ai.TrainWeight(sim, ram) > 0);
+        }
+    }
+
+    [Fact]
+    public void WithoutWallsTheSiegeWorkshopTrainsNoRams()
+    {
+        var (sim, ai, _) = WalledFoe(AiLevel.Normal, walled: false);
+        var hall = sim.Economy.TownHall(0)!;
+        var players = new[] { ai };
+        for (int t = 0; t < 90; t++)
+        {
+            Stock(hall);
+            Play(sim, players, () => false, Tps);
+        }
+        Assert.True(HasCatapult(sim) || sim.Buildings.All.Any(b => b.Owner == 0 && b.Queue.Count > 0), "the workshop to train");
+        Assert.False(HasRam(sim));
+    }
+
+    [Fact]
+    public void RamsInAWaveGoForTheGateWithSoldiersScreeningThem()
+    {
+        var (sim, ai, gate) = WalledFoe(AiLevel.Easy, walled: true);
+        var u = sim.Units;
+        for (int k = 0; k < 8; k++) sim.SpawnUnit(0, "spearman", 18 + k, 72);
+        var rams = new[] { sim.SpawnUnit(0, "battering_ram", 20, 76), sim.SpawnUnit(0, "battering_ram", 24, 76) };
+        Assert.All(rams, id => Assert.True(id > 0));
+        var players = new[] { ai };
+        Assert.True(Play(sim, players, () => ai.Waves > 0, AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps), "a wave to set out");
+        Assert.All(rams, id => Assert.Contains(id, ai.Wave));
+        bool atGate = false;
+        Assert.True(Play(sim, players, () =>
+        {
+            atGate |= rams.Any(id => u.IndexOf(id) is var i && i >= 0 && u.TargetBuilding[i] == gate!.Id);
+            return sim.Buildings.Get(gate!.Id) == null;
+        }, 5 * 60 * Tps), "the gate to fall");
+        Assert.True(atGate, "the rams to be sent at the gate");
+    }
 }
