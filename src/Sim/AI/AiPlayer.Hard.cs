@@ -488,7 +488,7 @@ public sealed partial class AiPlayer
             if (u.Job[i] != UnitJob.Dig && u.CarryAmount[i] == 0) _scratch.Add(id);
         }
         if (_scratch.Count == 0) return;
-        if (_quarry is var (x1, z1, x2, z2, floor) && DugOut(sim.World, x1, z1, x2, z2, floor)) _quarry = null;
+        if (_quarry is var (x1, z1, x2, z2, floor) && (DugOut(sim.World, x1, z1, x2, z2, floor) || KeepsOff(sim, x1, z1, x2, z2))) _quarry = null;
         if (_quarry == null) MarkQuarry(sim, hall, settle: true);
         if (_quarry is var (nx1, nz1, nx2, nz2, nfloor))
             issue(new DigAreaCommand(Player, _scratch.ToArray(), nx1, nz1, nx2, nz2, nfloor));
@@ -587,6 +587,8 @@ public sealed partial class AiPlayer
         }
         if (high - low > rough) return null;
         int floor = high + 1 - depth;
+        // Not near the heart, where digging wakes the dark power sooner, nor on the corrupted ground.
+        if (NearHeart(sim, x1, z1, x2, z2, floor) || KeepsOff(sim, x1, z1, x2, z2)) return null;
         return floor >= 2 ? floor : null;
     }
 

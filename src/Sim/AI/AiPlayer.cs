@@ -233,6 +233,7 @@ public sealed partial class AiPlayer
             else Army(sim, hall, issue);
         }
         if (Smart) Dams(sim, hall, issue);
+        if (Smart && (tick + Player * 3) % ArmyTicks == 0) LeaveScar(sim, issue);
     }
 
     // --- Truces ------------------------------------------------------------------------------------
@@ -530,7 +531,7 @@ public sealed partial class AiPlayer
                     if (Smart && vision.At(Player, cx, cz) == Sight.Unseen) continue; // only trees it has seen
                     if (!TrunkBase(w, cx, cz, out int ty)) continue;
                     if (enemy is { } e && Dist2(cx, cz, e.X, e.Z) <= d) continue;
-                    if (NearLair(sim, cx, cz) || NearBadForest(cx, cz)) continue;
+                    if (NearLair(sim, cx, cz) || NearBadForest(cx, cz) || KeepsOff(sim, cx, cz)) continue;
                     var (baseY, topY) = Harvest.Span(w, cx, ty, cz);
                     if (!Harvest.WorkSpot(w, cx, baseY, topY, cz, hx, hall.Y, hz, out int sx, out int sy, out int sz)) continue;
                     if (World.HazardSystem.IsHazard(w, sx, sy, sz)) continue; // not into the bog, the quicksand or the lava's heat
@@ -664,10 +665,12 @@ public sealed partial class AiPlayer
 
     /// <summary>
     /// True if a building with its corner at (x, z) keeps its builders off hazard ground: no bog, quicksand,
-    /// sinkhole or lava heat under it or in the ring round it (see <see cref="World.HazardSystem.HazardNear"/>).
+    /// sinkhole or lava heat under it or in the ring round it (see <see cref="World.HazardSystem.HazardNear"/>), and
+    /// (the smart levels) none of it on or near the corrupted ground (see <see cref="KeepsOff(Simulation, int, int)"/>).
     /// </summary>
-    private static bool SafeGround(Simulation sim, BuildingDef def, int x, int z) =>
-        !World.HazardSystem.HazardNear(sim.World, x, z, def.SizeX, def.SizeZ);
+    private bool SafeGround(Simulation sim, BuildingDef def, int x, int z) =>
+        !World.HazardSystem.HazardNear(sim.World, x, z, def.SizeX, def.SizeZ)
+        && !KeepsOff(sim, x - 1, z - 1, x + def.SizeX, z + def.SizeZ);
 
     /// <summary>Lays out a site for the building near the point (on safe ground), for the automatic workers to build.</summary>
     private void PlaceNear(Simulation sim, BuildingDef def, (int X, int Z) at, int radius, Action<Command> issue)

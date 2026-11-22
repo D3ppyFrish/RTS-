@@ -56,6 +56,7 @@ public sealed partial class AiPlayer
         if (lair.Monster.Lair is not { DuskTree: false, Cavern: CavernSpot.None }) return false;
         foreach (var s in _shunned)
             if (s.Lair == lair.Id && sim.Tick < s.Until) return false;
+        if (KeepsOff(sim, lair.X, lair.Z)) return false; // on the corrupted ground
         return !Smart || LairKnown(sim, lair);
     }
 
