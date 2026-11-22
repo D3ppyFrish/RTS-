@@ -126,7 +126,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   storage, then sets out from the lodge again. Hunters leave the last two of a herd alone, so a herd worked by lodges
   only always grows back; soldiers sent at it can still kill it off, and a herd killed to the last is gone for good.
   With no deer in reach, hunters wait at the lodge. A herd gives roughly 25 food a minute for as long as it lasts, more
-  while it is full. Automatic workers hunt there when food is the good needed most. All numbers are first guesses.
+  while it is full. Automatic workers hunt there when food is the good needed most. Computer players (Easy and up) build a lodge
+  by a herd too (see "Hunting deer" under computer players). All numbers are first guesses.
 - **Population**: the town hall houses 25 (every town hall, including one built later) and each house 5; the town hall trains workers for 30 food
   and the barracks trains soldiers (`TrainCommand`) while there is room. A building that trains units can have a
   rally point (`RallyCommand`, snapped to ground a unit can stand on): each unit it trains walks there
@@ -1396,6 +1397,14 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   party is worth less than what is left of the pack it breaks off and comes home, and that lair is left
   alone for 10 minutes; it also comes home after 4 minutes. After a hunt the next may set out a minute
   later. Its hurt go home to heal.
+- **Hunting deer** (Easy, Normal and Hard; `AI/AiPlayer.Lodge.cs`, tests in `AiHuntingTests`): from 3 minutes on,
+  with at least 8 workers and less than 300 food in hand, it lays out one hunter's lodge within 12 columns of the den
+  of the nearest herd of deer it has seen (the den's ground or one of the herd) within 100 columns of its town hall,
+  that has more than the two deer hunters leave, is nearer its own town hall than any enemy's and is not by a monster
+  lair it knows of (Hard: only while no enemies are at its buildings). Once the lodge stands it sends two workers to
+  hunt there (idle ones first, then wood cutters, then other gatherers not on food), and lets them go back to other
+  work when the lodge has no deer to spare in reach, sending them again once 4 are in reach. When the lodge is 24 columns or more from its nearest storage
+  it puts a storehouse by it. The classic level never hunts. All numbers are first guesses.
 - **Ruin parties** (Easy, Normal and Hard; `AI/AiPlayer.Ruins.cs`, tests in `AiRuinTests`): from 6 minutes
   on (after the early rushes; a pair out looking sooner found lairs that drew Hard's hunting party away just
   as Classic's first attack came), never while it sees enemy soldiers within 64 columns of its town hall (Hard:

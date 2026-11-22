@@ -423,6 +423,7 @@ public sealed partial class AiPlayer
             && Affordable(sim, barracksDef.Cost))
             PlaceNear(sim, barracksDef, Middle(hall), Automation.AutomationSystem.PlanRadius, issue);
 
+        if (Smart) Hunting(sim, hall, issue);
         if (Smart) SmartEconomy(sim, hall, issue);
     }
 

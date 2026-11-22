@@ -50,8 +50,9 @@ public static class UnitModels
     private static readonly Color Bone = new(0.92f, 0.88f, 0.74f);
     private static readonly Color Hide = new(0.36f, 0.27f, 0.2f);
     private static readonly Color Boar = new(0.3f, 0.22f, 0.17f);
-    private static readonly Color DeerCoat = new(0.55f, 0.32f, 0.18f);
-    private static readonly Color DeerBelly = new(0.86f, 0.78f, 0.64f);
+    private static readonly Color DeerCoat = new(0.62f, 0.42f, 0.29f);
+    private static readonly Color DeerMane = new(0.45f, 0.32f, 0.23f);
+    private static readonly Color DeerBelly = new(0.9f, 0.82f, 0.66f);
     private static readonly Color Antler = new(0.78f, 0.7f, 0.55f);
     private static readonly Color BogMud = new(0.27f, 0.25f, 0.2f);
     private static readonly Color BogSlime = new(0.38f, 0.3f, 0.42f);
@@ -523,22 +524,25 @@ public static class UnitModels
 
         // Monsters, and what taming them gives.
         "wolf" => new Builder().Wolf(Fur, PaleFur),
-        // A red deer: long thin legs, a russet coat with a pale belly and rump, a raised neck and a stag's antlers.
+        // A red deer: a long, slim russet body on tall thin legs, a darker maned neck reaching forward, a small head
+        // with ears out to the sides, the pale rump patch and short tail, and a stag's wide branching antlers.
         "deer" => new Builder()
-            .Box(-2, 6, -5, 1, 10, 4, DeerCoat)                                          // body
-            .Box(-2, 6, -4, 1, 6, 3, DeerBelly).Box(-1, 8, -6, 0, 10, -6, DeerBelly)     // belly and rump
-            .Box(-2, 0, -5, -2, 5, -4, DeerCoat).Box(1, 0, -5, 1, 5, -4, DeerCoat)       // hind legs
-            .Box(-2, 0, 3, -2, 5, 3, DeerCoat).Box(1, 0, 3, 1, 5, 3, DeerCoat)           // forelegs
-            .Box(-2, 0, -5, -2, 0, -4, Dark).Box(1, 0, -5, 1, 0, -4, Dark)               // hooves
+            .Box(-2, 7, -6, 1, 10, 4, DeerCoat)                                          // body
+            .Box(-2, 7, -5, 1, 7, 3, DeerBelly)                                          // belly
+            .Box(-1, 8, -7, 0, 10, -7, DeerBelly).Box(-1, 10, -8, 0, 10, -8, DeerCoat)   // rump patch and tail
+            .Box(-2, 1, -5, -2, 6, -5, DeerCoat).Box(1, 1, -5, 1, 6, -5, DeerCoat)       // hind legs
+            .Box(-2, 1, 3, -2, 6, 3, DeerCoat).Box(1, 1, 3, 1, 6, 3, DeerCoat)           // forelegs
+            .Box(-2, 0, -5, -2, 0, -5, Dark).Box(1, 0, -5, 1, 0, -5, Dark)               // hooves
             .Box(-2, 0, 3, -2, 0, 3, Dark).Box(1, 0, 3, 1, 0, 3, Dark)
-            .Box(-1, 10, 3, 0, 13, 5, DeerCoat)                                          // neck
-            .Box(-1, 13, 4, 0, 15, 7, DeerCoat).Box(-1, 13, 8, 0, 14, 8, DeerBelly)      // head and muzzle
-            .Box(-1, 14, 8, 0, 14, 8, Dark)                                              // nose
-            .Box(-2, 15, 5, -2, 15, 5, Dark).Box(1, 15, 5, 1, 15, 5, Dark)               // eyes
-            .Box(-2, 16, 4, -2, 16, 4, DeerCoat).Box(1, 16, 4, 1, 16, 4, DeerCoat)       // ears
-            .Box(-1, 16, 5, -1, 19, 5, Antler).Box(0, 16, 5, 0, 19, 5, Antler)           // antlers
-            .Box(-3, 18, 5, -2, 18, 5, Antler).Box(1, 18, 5, 2, 18, 5, Antler)
-            .Box(-3, 20, 4, -2, 20, 6, Antler).Box(1, 20, 4, 2, 20, 6, Antler),
+            .Box(-1, 10, 4, 0, 12, 5, DeerMane).Box(-1, 12, 5, 0, 13, 6, DeerMane)        // neck, reaching forward
+            .Box(-1, 13, 6, 0, 14, 8, DeerCoat).Box(-1, 13, 9, 0, 13, 9, Dark)           // head, nose
+            .Box(-2, 14, 7, -2, 14, 7, Dark).Box(1, 14, 7, 1, 14, 7, Dark)               // eyes
+            .Box(-3, 15, 6, -2, 15, 6, DeerCoat).Box(1, 15, 6, 2, 15, 6, DeerCoat)       // ears, out to the sides
+            .Box(-1, 15, 6, -1, 16, 6, Antler).Box(0, 15, 6, 0, 16, 6, Antler)           // antlers: beams
+            .Box(-3, 17, 6, -2, 17, 6, Antler).Box(1, 17, 6, 2, 17, 6, Antler)
+            .Box(-4, 18, 5, -4, 21, 5, Antler).Box(3, 18, 5, 3, 21, 5, Antler)
+            .Box(-4, 19, 6, -4, 19, 7, Antler).Box(3, 19, 6, 3, 19, 7, Antler)           // brow tines
+            .Box(-5, 22, 4, -3, 22, 5, Antler).Box(2, 22, 4, 4, 22, 5, Antler),          // crowns
         // A wild boar: the orcs' war boar, with a collar in its owner's colour once it is someone's.
         "boar" => new Builder().WarBoar().Box(-2, 6, 4, 1, 7, 4, Team),
         // A stone giant: a hunched hulk of rock half again as tall as a house's door, moss on its shoulders,
