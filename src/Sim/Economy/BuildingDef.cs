@@ -79,6 +79,12 @@ public enum BuildingKind : byte
     /// while its player has <see cref="BuildingDef.Keep"/> of what it makes in storage.
     /// </summary>
     Workshop,
+    /// <summary>
+    /// A listening post: a small hut whose watchman listens at the ground for digging and footsteps under it, so its
+    /// owner sees units underground (in tunnels and caves) within <see cref="BuildingDef.Hearing"/> columns of it,
+    /// which nobody on the surface sees otherwise (see <see cref="VisionSystem"/>).
+    /// </summary>
+    ListeningPost,
 }
 
 /// <summary>One block of a building, relative to its footprint corner and base level.</summary>
@@ -149,6 +155,11 @@ public sealed class BuildingDef
     /// many columns of it, each round of work an aimed shot, and carry home what they shoot; 0 for every other building.
     /// </summary>
     public int Hunts { get; init; }
+    /// <summary>
+    /// How far (columns beyond its footprint) a listening post hears units underground, so its owner sees them under
+    /// fog of war (see <see cref="BuildingKind.ListeningPost"/>, <see cref="VisionSystem"/>); 0 for other buildings.
+    /// </summary>
+    public int Hearing { get; init; }
     /// <summary>A shrine: mana each crystal it channels gives its owner; 0 for every other building.</summary>
     public int Mana { get; init; }
     /// <summary>A shrine: ticks it takes to channel one crystal (before its <see cref="Speed"/>); 0 for every other building.</summary>

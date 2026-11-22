@@ -83,7 +83,7 @@ public partial class PlayerControl : Node
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
         (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "hunting_lodge"), (Key.None, "sawmill"), (Key.None, "mason_yard"), (Key.None, "siege_workshop"), (Key.None, "shrine"),
-        (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
+        (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.None, "listening_post"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
     /// <summary>The building the wall tool lays, a column at a time.</summary>

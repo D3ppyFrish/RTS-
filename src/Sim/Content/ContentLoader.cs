@@ -464,7 +464,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -523,7 +523,12 @@ public static class ContentLoader
                 Takes = o.Enum("takes", Good.Wood, required: kind == BuildingKind.Workshop),
                 Makes = o.Enum("makes", Good.Planks, required: kind == BuildingKind.Workshop),
                 Keep = o.Int("keep", 1, 10000, kind == BuildingKind.Workshop ? 50 : 0),
+                Hearing = o.Int("hearing", 1, 64, 0),
             };
+            if (kind == BuildingKind.ListeningPost && def.Hearing == 0)
+                o.Error("a listening post needs \"hearing\" (how many columns round it it hears units underground)");
+            if (kind != BuildingKind.ListeningPost && def.Hearing > 0)
+                o.Error("only a listening post has \"hearing\"");
             if (kind == BuildingKind.Workshop && def.MakeTicks == 0)
                 o.Error("a workshop needs \"makeTime\" (the seconds it takes to work one good into one)");
             if (kind == BuildingKind.Workshop && def.Takes == def.Makes)

@@ -506,6 +506,10 @@ public partial class Hud : CanvasLayer
                                 "seconds and shoots it, then carries its meat to storage. Hunters leave the last " +
                                 $"{EconomySystem.HerdKeep} of a herd to breed, so it grows back; build it near the deer on the grassland. " +
                                 "Automatic workers hunt when food is needed.";
+            if (def.Kind == BuildingKind.ListeningPost)
+                b.TooltipText = $"A watchman listens at the ground: you see enemy units underground (sappers tunnelling, troops in " +
+                                $"caves) within {def.Hearing} columns of it. Otherwise nobody on the surface sees units under the ground " +
+                                $"unless one of theirs stands within {VisionSystem.HearClose} columns of them. Build one by your walls.";
             if (def.Kind == BuildingKind.Shrine)
                 b.TooltipText = $"Right click it with a worker: they bring it crystal from storage, and it channels each crystal " +
                                 $"into {def.Mana} mana in {def.ChannelTicks / Simulation.TicksPerSecond} seconds. Spells cost mana. " +
