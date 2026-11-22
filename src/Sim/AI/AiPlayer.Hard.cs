@@ -169,7 +169,7 @@ public sealed partial class AiPlayer
                     }
                     c.FarmSlots += b.Def.WorkerSlots;
                     break;
-                case BuildingKind.Barracks:
+                case BuildingKind.Barracks when !SiegeWorks(sim, b.Def):
                     if (site) c.BarracksSites++;
                     else
                     {
@@ -313,6 +313,7 @@ public sealed partial class AiPlayer
         if (calm) HardWall(sim, hall, c, issue);
         if (calm) HardExpand(sim, hall, c, issue);
         if (calm) Hunting(sim, hall, issue);
+        if (calm) SiegeEconomy(sim, hall, c.Workers, issue);
         if (!armyFirst) SmartTrain(sim, issue, anyAffordable: false);
         if (sim.Tick >= _assignAt)
         {

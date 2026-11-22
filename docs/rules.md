@@ -73,7 +73,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   that is spent below it. Automatic workers keep a workshop while there is something for it in storage and what it
   makes is short. Nobody starts with planks or cut stone; test mode's goods cheat and `--goods` give them like any good.
   - A **sawmill** (4 by 4, planks on a stone footing under thatch, 40 wood and 10 stone, no tech) saws one wood into one
-    plank every 3 seconds and keeps 50 planks. Planks (`Good.Planks`) are a good like any other: stored, carried,
+    plank every 3 seconds and keeps 100 planks (a siege workshop and a catapult). Planks (`Good.Planks`) are a good like any other: stored, carried,
     captured or burned with a storehouse. **Bridges** are laid with them, 2 planks a deck column (see Bridges under
     Combat), so a town that wants to cross a river needs a sawmill first.
   - A **mason's yard** (4 by 4, stone under a tiled roof, 30 wood and 20 stone, needs Masonry) cuts one stone into one
@@ -81,8 +81,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
     captured and burned like any good. **Stone towers** are built of it (60 cut stone and 20 wood) and so are the
     **great works** (150 of their 300 stone is cut stone), so a town that wants either needs a mason's yard first.
     Stone walls, facings and gates are still laid with plain stone.
-  - Computer players do not lay bridges or build stone towers or great works, so they build no workshops. All numbers
-    are first guesses for playtesting.
+  - Computer players do not lay bridges or build stone towers or great works; from Easy up they build a sawmill for
+    the planks of a siege workshop and its catapults (see Computer players). All numbers are first guesses for playtesting.
 - **Crystal, shrines and mana** (`ManaTests`; the design doc's Resources table: crystal from the deep caverns,
   channelled into mana at a shrine): crystal grows on the cavern walls (`BlockType.Crystal`). Workers dig it like
   ore, 3 seconds a block, and carry it to storage as the good `Crystal` (rubble of it is stone). A **shrine**
@@ -225,8 +225,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   - **Lobbed shots** (`lobs`): its stones go up in a high arc, so it needs no clear line: it hits what stands behind a
     wall or a hill, where arrows cannot reach.
   - **A machine** (`machine`): it never breaks and runs however low its morale falls, and it does not bleed.
-  Siege is weak against cavalry and heavy infantry (`data/roles.json`). Computer players do not build siege workshops
-  yet. All numbers are first guesses for playtesting.
+  Siege is weak against cavalry and heavy infantry (`data/roles.json`). Computer players from Easy up build them (see
+  Computer players). All numbers are first guesses for playtesting.
 - **Terrain**: ranged units (range over 2) need a clear line to their target (leaves do not block it), and
   two or more levels above it they reach and see 25% further. Height also changes where hits land (see
   armour below): arrows from the high ground and blows from above find more heads, blows struck uphill
@@ -1462,6 +1462,16 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   hunt there (idle ones first, then wood cutters, then other gatherers not on food), and lets them go back to other
   work when the lodge has no deer to spare in reach, sending them again once 4 are in reach. When the lodge is 24 columns or more from its nearest storage
   it puts a storehouse by it. The classic level never hunts. All numbers are first guesses.
+- **Siege engines** (Easy, Normal and Hard; `AI/AiPlayer.Siege.cs`, tests in `AiSiegeTests`): once it has Smelting
+  (late in its tech order), a finished barracks and 16 workers, it lays out a smelter, then a sawmill, then a siege
+  workshop near its town hall, one at a time as it can pay for each (Hard: only while no enemies are at its
+  buildings); its automatic workers keep the smelter and the sawmill going. A siege workshop is not counted as one of
+  its barracks. The workshop trains catapults, two at a time, and they go out with the waves like other soldiers
+  (they set its pace on a march). Once a wave is within 28 columns of its target, each catapult shoots the nearest
+  enemy tower within 4 columns past its range, else the nearest wall or gate, else the target itself; a catapult with
+  an enemy soldier in its dead ground backs off 8 columns; and up to 4 of the wave's other soldiers go for the
+  enemy soldiers that come within 9 columns of a catapult, so they screen it. The classic level never builds them. All
+  numbers are first guesses.
 - **Ruin parties** (Easy, Normal and Hard; `AI/AiPlayer.Ruins.cs`, tests in `AiRuinTests`): from 6 minutes
   on (after the early rushes; a pair out looking sooner found lairs that drew Hard's hunting party away just
   as Classic's first attack came), never while it sees enemy soldiers within 64 columns of its town hall (Hard:

@@ -371,7 +371,7 @@ public sealed partial class AiPlayer
         foreach (var b in sim.Buildings.All)
         {
             if (b.Owner != Player) continue;
-            if (b.Def.Kind == BuildingKind.Barracks)
+            if (IsBarracks(sim, b.Def))
             {
                 barracks++;
                 site |= !b.Active;
@@ -423,6 +423,7 @@ public sealed partial class AiPlayer
             && Affordable(sim, barracksDef.Cost))
             PlaceNear(sim, barracksDef, Middle(hall), Automation.AutomationSystem.PlanRadius, issue);
 
+        if (Smart) SiegeEconomy(sim, hall, workers, issue);
         if (Smart) Hunting(sim, hall, issue);
         if (Smart) SmartEconomy(sim, hall, issue);
     }
@@ -831,6 +832,8 @@ public sealed partial class AiPlayer
     {
         var u = sim.Units;
         var (hx, hz) = Middle(hall);
+        _engines.Clear();
+        _shield.Clear();
         if (_waveLair == LairSearch && !FindLair(sim, hall, issue)) return;
         if (_waveLair != 0)
         {
@@ -875,6 +878,8 @@ public sealed partial class AiPlayer
         }
         var (tx, tz) = (foe.AX, foe.AZ);
         int far = (int)IntMath.ISqrt(Dist2(cx, cz, tx, tz));
+        // Its catapults (smart levels) shoot from the last stretch on, with soldiers screening them.
+        if (Smart && far <= SiegeReach) Bombard(sim, foe, issue);
         if (far > SiegeRadius && !MostAt(sim, tx, tz))
         {
             // On the way: units that have stopped (they fought something, or gave up) set out again, every
@@ -900,6 +905,7 @@ public sealed partial class AiPlayer
                 _waveCheck = sim.Tick;
             }
             else if (sim.Tick % (5 * ArmyTicks) < ArmyTicks) again = Unordered(sim, _wave, tx, tz);
+            again?.RemoveAll(id => _engines.Contains(id) || _shield.Contains(id));
             if (again is { Count: > 0 }) issue(new AttackMoveCommand(Player, again.ToArray(), tx, tz));
             return;
         }
@@ -922,7 +928,7 @@ public sealed partial class AiPlayer
         foreach (int id in _wave)
         {
             int i = u.IndexOf(id);
-            if (u.Rout[i] > 0) continue;
+            if (u.Rout[i] > 0 || _engines.Contains(id) || _shield.Contains(id)) continue;
             bool onBuilding = u.Combat[i] == CombatOrder.Attack && u.TargetBuilding[i] == target.Id;
             // Sappers (smart levels) go for the building whatever else is going on: they deal it full damage.
             if (Smart && sim.Content.Units[u.Def[i]].Role == UnitRole.Sapper)

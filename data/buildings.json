@@ -104,7 +104,7 @@
     "cost": { "stone": 60, "wood": 20 }, "buildTime": 30, "workerSlots": 2, "light": 4, "sturdy": 2, "speed": 200 },
   { "id": "sawmill", "name": "Sawmill", "kind": "workshop", "size": [4, 4], "wallHeight": 3,
     "wall": "planks", "footing": "stone_brick", "roof": "thatch",
-    "cost": { "wood": 40, "stone": 10 }, "buildTime": 20, "workerSlots": 1, "takes": "wood", "makes": "planks", "makeTime": 3 },
+    "cost": { "wood": 40, "stone": 10 }, "buildTime": 20, "workerSlots": 1, "takes": "wood", "makes": "planks", "makeTime": 3, "keep": 100 },
   { "id": "mason_yard", "name": "Mason's yard", "kind": "workshop", "size": [4, 4], "wallHeight": 2,
     "wall": "stone_brick", "footing": "stone_brick", "roof": "roof_tile", "icon": "mason",
     "cost": { "wood": 30, "stone": 20 }, "buildTime": 25, "workerSlots": 1, "requires": "masonry",
