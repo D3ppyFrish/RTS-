@@ -19,6 +19,8 @@ public enum UnitRole : byte
     Monster,
     /// <summary>A caravan: trades with city-states (see <see cref="Economy.CityStateSystem"/>) and does not fight.</summary>
     Trader,
+    /// <summary>A cart: hauls goods between storage on supply duty, a big load at a time (see <see cref="UnitDef.Carry"/>), and does not fight.</summary>
+    Hauler,
 }
 
 /// <summary>Static description of a unit type, loaded from <c>data/units.json</c>.</summary>
@@ -229,6 +231,15 @@ public sealed class UnitDef
 
     /// <summary>A caravan, which trades with city-states (role <see cref="UnitRole.Trader"/>).</summary>
     public bool IsTrader => Role == UnitRole.Trader;
+
+    /// <summary>A cart, which hauls goods between storage on supply duty (role <see cref="UnitRole.Hauler"/>).</summary>
+    public bool IsHauler => Role == UnitRole.Hauler;
+
+    /// <summary>
+    /// How many goods one load of a cart is (<c>"carry"</c> in the data; only for role hauler); 0 for every other
+    /// unit, which carries what a worker does (<see cref="Economy.EconomySystem.Capacity"/>).
+    /// </summary>
+    public int Carry { get; init; }
 
     /// <summary>A form units evolve into rather than one that is trained.</summary>
     public bool IsForm => EvolvesFrom != null;

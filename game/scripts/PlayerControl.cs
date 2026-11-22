@@ -847,12 +847,17 @@ public partial class PlayerControl : Node
             return;
         }
         // Workers with something to do there: build the site, work the farm or smelter, unload at storage, or
-        // go on supply duty at storage with supply rules.
+        // go on supply duty at storage with supply rules (carts too).
         var u = _sim.Units;
         var working = new List<int>();
         if (b.Owner == LocalPlayer)
             foreach (int id in OwnWorkers(own))
                 if (b.WantsBuilders || b.Def.WorkerSlots > 0 || (b.Def.Storage && (u.CarryAmount[u.IndexOf(id)] > 0 || b.HasSupply && b.Active)))
+                    working.Add(id);
+        // Carts unload at your storage, or take supply duty at storage with supply rules.
+        if (b.Owner == LocalPlayer && b.Def.Storage && b.Active)
+            foreach (int id in OwnWithRole(own, UnitRole.Hauler))
+                if (u.CarryAmount[u.IndexOf(id)] > 0 || b.HasSupply)
                     working.Add(id);
         if (working.Count > 0) _sim.Schedule(_sim.Tick, new WorkCommand(LocalPlayer, working.ToArray(), b.Id));
         own.RemoveAll(working.Contains);
@@ -2094,9 +2099,16 @@ public partial class PlayerControl : Node
         int bearer = dusk.StaffBearer != 0 ? u.IndexOf(dusk.StaffBearer) : -1;
         string staff = bearer < 0 ? "none" : u.Owner[bearer] == LocalPlayer ? "own" : "other";
         string staffAt = bearer < 0 ? "none" : $"{u.X[bearer].FloorToInt()},{u.Y[bearer]},{u.Z[bearer].FloorToInt()}";
-        int onSupply = 0;
+        int onSupply = 0, carts = 0, cartsOnSupply = 0, cartLoad = 0;
         for (int i = 0; i < u.Count; i++)
-            if (u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Supply) onSupply++;
+        {
+            if (u.Owner[i] != LocalPlayer) continue;
+            if (u.Job[i] == UnitJob.Supply) onSupply++;
+            if (!_sim.Content.Units[u.Def[i]].IsHauler) continue;
+            carts++;
+            if (u.Job[i] == UnitJob.Supply) cartsOnSupply++;
+            cartLoad = Math.Max(cartLoad, u.CarryAmount[i]);
+        }
         // The selected building's supply rules and what it holds of those goods, as good:held/kept.
         var supply = new List<string>();
         if (sel != null)
@@ -2111,7 +2123,7 @@ public partial class PlayerControl : Node
                $"working={working} buildings={buildings} sites={sites} building={building} queue={sel?.Queue.Count ?? 0} rally={(sel is { HasRally: true } ? $"{sel.RallyX},{sel.RallyZ}" : "none")} " +
                $"ghost={(Ghost.Visible ? Ghost.Result.ToString() : "none")} road={_roadPreview.Count} " +
                $"plans={plans} plans_ready={ready} plan_mode={(PlanMode ? 1 : 0)} " +
-               $"supply={(supply.Count > 0 ? string.Join(',', supply) : "none")} on_supply={onSupply} " +
+               $"supply={(supply.Count > 0 ? string.Join(',', supply) : "none")} on_supply={onSupply} carts={carts} carts_on_supply={cartsOnSupply} cart_load={cartLoad} " +
                $"food={stock[(int)Good.Food]} food_rate={_sim.Economy.FoodPerMinute(LocalPlayer)} wood={stock[(int)Good.Wood]} stone={stock[(int)Good.Stone]} iron={stock[(int)Good.Iron]} " +
                $"techtree={(TechTreeOpen ? 1 : 0)} priorities_menu={(PrioritiesOpen ? 1 : 0)} " +
                $"default_priorities={WorkPriorities.ToLog(_sim.Automation.DefaultPriorities(LocalPlayer))} " +

@@ -613,7 +613,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -643,6 +643,7 @@ public static class ContentLoader
                 MinRange = o.Decimal("minRange", Fix64.Zero, Fix64.FromInt(16), Fix64.Zero, required: false),
                 Lobs = o.Bool("lobs"),
                 Machine = o.Bool("machine"),
+                Carry = o.Int("carry", 1, 100, 0),
                 WeakTo = o.RolePercents("weakTo", 1, 1000),
                 Attack = o.Enum("attack", AttackKind.Slash, required: false),
                 Body = body,
@@ -715,6 +716,10 @@ public static class ContentLoader
                 o.Error("is a mercenary, so it needs a \"cost\" to hire it for");
             if (def.Role == UnitRole.Trader && (def.Damage > 0 || evolvesFrom != null || def.Lair != null || hiredFrom != null))
                 o.Error("is a caravan (role trader): it cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"");
+            if (def.Role == UnitRole.Hauler && (def.Carry == 0 || def.Damage > 0 || evolvesFrom != null || def.Lair != null || hiredFrom != null))
+                o.Error("is a cart (role hauler): it needs a \"carry\" and cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"");
+            if (def.Role != UnitRole.Hauler && def.Carry > 0)
+                o.Error("only a cart (role hauler) has a \"carry\"");
             var ride = Ride(o);
             _resolve.Add(() =>
             {
@@ -1306,7 +1311,7 @@ public static class ContentLoader
                 foreach (var f in _db.Units)
                     if (f.EvolvesFrom == u && !f.FromDen) forms.Add(f);
                 u.Forms = forms.ToArray();
-                if (u.TrainedAt != null && !u.IsTrader) bases.Add(u);
+                if (u.TrainedAt != null && !u.IsTrader && !u.IsHauler) bases.Add(u);
                 if (u.Lair is { DuskTree: false, AtStarts: true }) monsters.Add(u);
                 if (u.Lair is { DuskTree: false, Count: > 0, Cavern: CavernSpot.None } && !u.IsGame) wild.Add(u);
                 if (u.IsGame && u.Lair is { Count: > 0 }) game.Add(u);
@@ -1461,6 +1466,7 @@ public static class ContentLoader
                 h.Add(u.EvolvesFrom?.Index ?? -1);
                 h.Add(u.FromDen ? 1 : 0);
                 h.Add(u.InStart ? 1 : 0);
+                if (u.Carry > 0) h.Add(u.Carry);
                 if (u.IsGame) h.Add(u.Game);
                 if (u.Awakening > 0 || u.Bounty.Length > 0)
                 {

@@ -759,6 +759,7 @@ public sealed partial class EconomySystem
         if (b.TrainTicks < def.TrainTicks || !AccessSpot(b, out int x, out int z, out int y)) return;
         int id = U.Spawn(owner, def.Index, Fix64.FromInt(x) + Fix64.Half, y, Fix64.FromInt(z) + Fix64.Half, MaxHp(owner, def));
         if (def.Role == UnitRole.Worker) U.Auto[U.IndexOf(id)] = Player(owner).AutoWorkers;
+        else if (def.IsHauler) U.Auto[U.IndexOf(id)] = true; // a cart looks for supply work on its own
         if (b.HasRally)
         {
             int i = U.IndexOf(id);
@@ -1038,6 +1039,22 @@ public sealed partial class EconomySystem
         var b = Buildings.Get(c.Building);
         if (b == null || b.Owner != c.PlayerId) return;
         if (b.Planned && !StartPlan(b)) return;
+        // Carts only haul: they unload at storage, or take supply duty at storage with supply rules.
+        foreach (int i in OwnedUnits(c))
+        {
+            if (!_sim.Content.Units[U.Def[i]].IsHauler || !b.Def.Storage || !b.Active) continue;
+            if (U.CarryAmount[i] > 0)
+            {
+                StartJob(i, UnitJob.Deliver, 0);
+                U.JobStore[i] = b.Id;
+                SetPhase(i, JobPhase.ToStore);
+            }
+            else if (b.HasSupply && !(U.Job[i] == UnitJob.Supply && U.JobTarget[i] == b.Id))
+            {
+                StartJob(i, UnitJob.Supply, b.Id);
+                DecideSupply(i, b);
+            }
+        }
         foreach (int i in Workers(c))
         {
             if (b.WantsBuilders)

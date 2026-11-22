@@ -225,6 +225,16 @@ public sealed partial class EconomySystem
     /// <summary>Most goods one of the player's workers carries.</summary>
     public int Capacity(int player) => CarryCapacity + (Find(player)?.CarryBonus ?? 0);
 
+    /// <summary>
+    /// Most goods unit i carries on a supply run: a cart's load (<see cref="Units.UnitDef.Carry"/>, which techs do
+    /// not change), otherwise what one of its player's workers carries.
+    /// </summary>
+    public int LoadOf(int i)
+    {
+        int carry = _sim.Content.Units[U.Def[i]].Carry;
+        return carry > 0 ? carry : Capacity(U.Owner[i]);
+    }
+
     /// <summary>Ticks of work for one of the player's workers to take one block of this kind.</summary>
     public int WorkTicks(int player, BlockType kind) =>
         Math.Max(1, Harvest.WorkTicks(kind) * 100 / (100 + (Find(player)?.GatherPercent ?? 0)));

@@ -13,7 +13,7 @@ namespace Rts.Sim.Tests;
 public class ContentTests
 {
     /// <summary>The game's own data files by name, to change for a test.</summary>
-    private static Dictionary<string, string> Files()
+    internal static Dictionary<string, string> Files()
     {
         var files = new Dictionary<string, string>();
         foreach (var f in ContentLoader.Files) files[f] = ContentLoader.EmbeddedText(f) ?? throw new InvalidOperationException($"{f} is not built in");
@@ -52,7 +52,7 @@ public class ContentTests
         foreach (var f in db.Factions) Assert.InRange(db.Techs.Count(t => t.Faction == f), 2, 4);
 
         // What the loader works out.
-        Assert.Equal(new[] { "worker", "caravan" }, db.Building("town_hall").Trains);
+        Assert.Equal(new[] { "worker", "caravan", "cart" }, db.Building("town_hall").Trains);
         Assert.Equal(new[] { "spearman", "archer", "rider", "sapper", "mage", "healer" }, db.Building("barracks").Trains);
         Assert.True(db.RoadsNeedTech);
         Assert.Equal(2, db.Tech("smelting").Depth);
@@ -97,10 +97,12 @@ public class ContentTests
         foreach (var r in Enum.GetValues<UnitRole>())
         {
             // Every role that fights is strong against workers and caravans; those two are strong against nothing.
-            bool fights = r is not (UnitRole.Worker or UnitRole.Trader);
+            bool fights = r is not (UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler);
             Assert.Equal(fights, c.StrongAgainst(r, UnitRole.Worker));
             Assert.Equal(fights, c.StrongAgainst(r, UnitRole.Trader));
+            Assert.Equal(fights, c.StrongAgainst(r, UnitRole.Hauler));
             Assert.False(c.StrongAgainst(UnitRole.Trader, r));
+            Assert.False(c.StrongAgainst(UnitRole.Hauler, r));
         }
         Assert.True(c.StrongAgainstStructures(UnitRole.Sapper));
         Assert.True(c.StrongAgainstStructures(UnitRole.Siege));

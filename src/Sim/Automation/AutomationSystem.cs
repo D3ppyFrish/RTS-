@@ -211,6 +211,12 @@ public sealed partial class AutomationSystem
 
     private bool IsWorker(int i) => _sim.Content.Units[U.Def[i]].Role == UnitRole.Worker;
 
+    /// <summary>True for a cart (role <see cref="UnitRole.Hauler"/>), whose only work is supply duty.</summary>
+    private bool IsCart(int i) => _sim.Content.Units[U.Def[i]].IsHauler;
+
+    /// <summary>A cart's priority list: supply duty and nothing else.</summary>
+    private static readonly ulong CartPriorities = WorkPriorities.Pack(WorkKind.Supply);
+
     /// <summary>True if the worker has no job, order or fight, and is not running away.</summary>
     private bool Idle(int i) =>
         U.Job[i] == UnitJob.None && U.Order[i] == UnitOrder.Idle && U.Combat[i] == CombatOrder.Auto && U.Rout[i] == 0;
@@ -222,7 +228,7 @@ public sealed partial class AutomationSystem
     {
         foreach (int i in _sim.OwnedUnits(c))
         {
-            if (!IsWorker(i)) continue;
+            if (!IsWorker(i) && !IsCart(i)) continue;
             U.Auto[i] = c.On;
             if (c.On) LetGo(i);
         }
@@ -305,7 +311,7 @@ public sealed partial class AutomationSystem
         }
         foreach (int i in _sim.OwnedUnits(c))
         {
-            if (!IsWorker(i)) continue;
+            if (!IsWorker(i) && !IsCart(i)) continue;
             U.Held[i] = held;
             _assigned.Remove(U.Id[i]);
             // Moved out of where it was stuck, maybe: it no longer waits longer and longer.
@@ -362,7 +368,7 @@ public sealed partial class AutomationSystem
         bool mayGather = !_retry.TryGetValue(id, out long at) || tick >= at;
         bool looked = false;
         Span<long> need = stackalloc long[Gatherable.Length];
-        foreach (var kind in WorkPriorities.Unpack(PrioritiesOf(i)))
+        foreach (var kind in WorkPriorities.Unpack(IsCart(i) ? CartPriorities : PrioritiesOf(i)))
         {
             int rank = kind switch { WorkKind.Build => 0, WorkKind.Farm => 1, WorkKind.Smelt => 2, WorkKind.Supply => 3, _ => -1 };
             if (rank >= 0)
@@ -833,6 +839,12 @@ public sealed partial class AutomationSystem
         {
             var s = _stats[u.Owner[i]];
             s.Population++;
+            if (IsCart(i))
+            {
+                // A cart on supply duty counts against the building's supply workers like a worker does.
+                if (u.Job[i] == UnitJob.Supply) _working[u.JobTarget[i]] = _working.GetValueOrDefault(u.JobTarget[i]) + 1;
+                continue;
+            }
             if (!IsWorker(i)) continue;
             s.Workers++;
             if (u.Job[i] == UnitJob.Gather && Harvest.Yields(u.JobBlock[i], out var good)) s.Gatherers[(int)good]++;
