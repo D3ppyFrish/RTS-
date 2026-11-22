@@ -9,7 +9,7 @@ namespace Rts.Game;
 /// When the camera is far out, a small badge floats over every unit you can see showing what kind of
 /// unit it is: a pick for workers, a spear for line infantry, a shield for heavy infantry, a bow for
 /// ranged units, a horse for cavalry, a shovel for sappers, a star for casters, a bomb for siege, a paw
-/// for monsters and a purse for caravans. The badge is in its owner's colour with a dark rim, or a gold
+/// for monsters, a purse for caravans and a wheel for carts. The badge is in its owner's colour with a dark rim, or a gold
 /// rim for the forms units evolve into (see <see cref="EvolutionSystem"/>). Badges keep the same size on
 /// screen, face the camera, and fade in as the camera pulls back past <see cref="ShowFrom"/>.
 /// </summary>
@@ -76,6 +76,11 @@ public partial class UnitIcons : Node3D
         {
             "....XXXX....", ".....XX.....", "....XXXX....", "...XXXXXX...", "..XXXXXXXX..", ".XXXX..XXXX.",
             ".XXX.XXXXXX.", ".XXXX..XXXX.", ".XXXXXX.XXX.", ".XXXX..XXXX.", "..XXXXXXXX..", "............",
+        },
+        new[] // hauler: a cart's spoked wheel
+        {
+            "...XXXXXX...", "..XX.XX.XX..", ".XXX.XX.XXX.", "XX.XXXXXX.XX", "X...XXXX...X", "XXXXX..XXXXX",
+            "XXXXX..XXXXX", "X...XXXX...X", "XX.XXXXXX.XX", ".XXX.XX.XXX.", "..XX.XX.XX..", "...XXXXXX...",
         },
     };
 

@@ -292,6 +292,13 @@
     "speed": 3.5, "hp": 80, "model": "caravan",
     "armor": { "torso": 1 },
     "cost": { "food": 20, "wood": 40 }, "trainTime": 20, "trainedAt": "town_hall" },
+  // A cart hauls goods between storage on supply duty, four workers' loads at a time (the design doc's logistics rule:
+  // "carts carry four times more"). Its planks come from a sawmill. It does not fight, gather or build.
+  { "id": "cart", "name": "Cart", "role": "hauler",
+    "description": "An ox and a plank cart. Right-click a storehouse or town hall that has Keep stocked rules and it hauls what is short there from your other storage, 20 goods a load: four workers' worth. It does nothing else, and finds supply work on its own.",
+    "speed": 3, "hp": 90, "model": "cart", "carry": 20,
+    "armor": { "torso": 1 },
+    "cost": { "food": 20, "wood": 20, "planks": 15 }, "trainTime": 15, "trainedAt": "town_hall" },
 
   // Goblin mercenaries, hired at the goblins' town by their ally, paid in gold (the goblins' tribute is gold).
   { "id": "goblin_cutthroat", "name": "Goblin cutthroat", "role": "line_infantry", "hiredFrom": "goblins",

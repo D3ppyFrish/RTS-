@@ -771,6 +771,22 @@ public static class UnitModels
             .Box(-1, 5, -6, 0, 6, -6, Dark)                                              // tail
             .Box(-2, 8, -3, 1, 8, 1, Leather)                                            // pack saddle
             .Box(-4, 4, -3, -3, 7, 1, TeamDark).Box(2, 4, -3, 3, 7, 1, TeamDark),        // saddlebags
+        // A cart for hauling between storage: an ox pulling a plank cart on two big wheels, its load under a cloth in
+        // its owner's colour.
+        "cart" => new Builder()
+            .Box(-2, 4, 3, 1, 7, 10, Mule)                                               // the ox's body
+            .Box(-2, 0, 3, -1, 3, 4, Mule).Box(0, 0, 3, 1, 3, 4, Mule)                   // hind legs
+            .Box(-2, 0, 9, -1, 3, 10, Mule).Box(0, 0, 9, 1, 3, 10, Mule)                 // forelegs
+            .Box(-1, 5, 11, 0, 7, 13, Mule).Box(-1, 5, 14, 0, 5, 14, Dark)               // head and muzzle
+            .Box(-3, 8, 11, -2, 8, 11, Bone).Box(1, 8, 11, 2, 8, 11, Bone)               // horns
+            .Box(-2, 8, 8, 1, 8, 9, Wood)                                                // the yoke
+            .Box(-1, 5, -1, -1, 5, 2, Wood).Box(0, 5, -1, 0, 5, 2, Wood)                 // the shafts
+            .Box(-4, 4, -9, 3, 4, -1, Wood)                                              // the cart's bed
+            .Box(-4, 5, -9, -4, 6, -1, Wood).Box(3, 5, -9, 3, 6, -1, Wood)               // its sides
+            .Box(-4, 5, -9, 3, 6, -9, Wood)                                              // and tailboard
+            .Box(-3, 5, -8, 2, 7, -2, Leather).Box(-3, 8, -7, 2, 8, -3, Team)            // the load under a cloth
+            .Box(-5, 0, -7, -5, 4, -3, Dark).Box(4, 0, -7, 4, 4, -3, Dark)               // the wheels
+            .Box(-5, 1, -8, -5, 3, -2, Dark).Box(4, 1, -8, 4, 3, -2, Dark),
         "goblin_cutthroat" => new Builder().Goblin()
             .Box(-2, 11, -2, 1, 11, 1, Dark)                                             // bandana
             .Box(3, 3, 1, 3, 4, 1, Dark).Box(3, 5, 1, 3, 8, 1, Steel)                    // long knife

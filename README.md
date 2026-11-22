@@ -25,6 +25,7 @@ scripts/ui-economy-screenshots.sh   # scripted economy: gather, research, build,
 scripts/ui-combat-screenshots.sh    # scripted battle: attack-move, tunnel under a house
 scripts/ui-automation-screenshots.sh  # scripted automation: automatic workers, repeat, a house put up on its own
 scripts/ui-supply-screenshots.sh      # scripted supply rules: a storehouse told to keep stone and wood is stocked from the town hall
+scripts/ui-cart-screenshots.sh        # scripted carts: a cart trained at the town hall stocks a storehouse with stone, 20 a load
 scripts/ui-governor-screenshots.sh    # scripted town governor: a Defence governor runs the town, putting up a barracks and four watchtowers
 scripts/ui-evolution-screenshots.sh   # scripted evolution: evolve buttons, auto-evolve, a knight's panel
 scripts/ui-monsters-screenshots.sh    # scripted wolf lairs: Orcs beat a pack, ride one wolf and recruit one; Settlers get the reward
@@ -86,7 +87,7 @@ types (worker, spearman, archer, rider, sapper, mage, healer, and the Settlers' 
 [Evolution](docs/rules.md#evolution)) come from `data/units.json` (see [Game data](#game-data)).
 Godot draws them with one MultiMesh per model; the placeholder models are built from voxels an eighth
 of a terrain block across, tinted in the owner's colour. Each player starts with a town hall at their
-start area and four of every unit type that is trained in front of it (except caravans), a wolf lair
+start area and four of every unit type that is trained in front of it (except caravans and carts), a wolf lair
 lies on the way to the map centre (see [Monsters and taming](docs/rules.md#monsters-and-taming)) and each city-state has a town (see
 [City-states](docs/rules.md#city-states)); `--goods=N` gives every town hall N more of every good (and its player N more mana), and `--houses=N` puts N houses
 behind yours, since the start has more people than room; `--raid=N` sends N enemy sappers at the one of

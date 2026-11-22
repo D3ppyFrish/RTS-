@@ -45,7 +45,7 @@ Controls:
 | WASD / arrows, Q/E, R/F | pan, rotate, tilt the camera |
 | Middle mouse drag (Shift to pan), wheel | orbit, zoom |
 | Left click, left drag | select a unit or building, box-select your units (Shift adds, double-click picks that type on screen) |
-| Right click | depends on what is under the cursor: units attack an enemy unit or building (an enemy storehouse they capture instead); workers gather a tree (or a felled tree's rubble), berry bush, stone or ore, build a site or start a plan, or work a farm, smelter, quarry or mine, go on supply duty at a storehouse or town hall of yours that has supply rules, or clean up blood on the ground (the stains within 8 columns, nearest first); caravans trade with a city-state's town; on an old ruin nobody has searched yet, the selected units walk in and search it (see [Old ruins](rules.md#old-ruins-and-what-they-hold)); otherwise move there |
+| Right click | depends on what is under the cursor: units attack an enemy unit or building (an enemy storehouse they capture instead); workers gather a tree (or a felled tree's rubble), berry bush, stone or ore, build a site or start a plan, or work a farm, smelter, quarry or mine, go on supply duty at a storehouse or town hall of yours that has supply rules (carts too, and they do nothing else), or clean up blood on the ground (the stains within 8 columns, nearest first); caravans trade with a city-state's town; on an old ruin nobody has searched yet, the selected units walk in and search it (see [Old ruins](rules.md#old-ruins-and-what-they-hold)); otherwise move there |
 | Ctrl+right click | attack-move: walk there and fight whatever is met on the way; on an enemy storehouse, burn it |
 | Alt+right click | patrol: the selected soldiers walk there and back again and again, fighting whatever they meet, until given another order (units that cannot fight just walk there); the selection panel says "patrolling" |
 | Alt+right click on one of your units or buildings | guard it: the selected units that can fight keep near it, follow it, and fight enemies that come near it or hit it, until given another order or it is gone; the selection panel says "guarding" |
@@ -82,7 +82,7 @@ Controls:
 | Shift+L | with a mage selected (also the Grow Forest button in the selection panel): drag a line of up to 8 columns and let go, and a ready mage grows full-grown trees along it, one on every other spot, walking into range first. Green squares are where a tree grows; red ones have a building, water, a unit or something in the way. Trunks stop arrows and block the way, and the trees stay (fell them for wood like any tree). With several mages selected, up to 3 ready ones cast together: each extra one adds a row of trees on the gaps of the first and makes it 4 longer |
 | K | open the tech tree: click a tech to research it at your town hall |
 | . | select your next idle worker and look at it (as the Idle workers button does) |
-| F2 | select all your combat units, leaving workers and caravans out (as the Army button does) |
+| F2 | select all your combat units, leaving workers, caravans and carts out (as the Army button does) |
 | Ctrl+1..9, 1..9 | assign a control group, recall it (press twice to centre the camera on it) |
 | Space, - and + | pause (orders still work), slower and faster: 0.5x, 1x, 2x, 4x |
 | F7 | detailed units on or off: near the camera, Settlers workers, spearmen and archers are drawn finer and swing their arms and legs as they walk and fight (a prototype; see the README) |

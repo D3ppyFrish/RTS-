@@ -9,7 +9,8 @@ namespace Rts.Sim.Economy;
 /// from the player's other storage, where there is more of it than that storage's own rule wants. A forward
 /// storehouse kept stocked with stone pays for the walls going up beside it (costs come from the storage
 /// nearest the work), and is worth raiding. Automatic workers with supply on their priority list take the
-/// duty on their own (see <see cref="Automation.AutomationSystem"/>).
+/// duty on their own (see <see cref="Automation.AutomationSystem"/>). Carts (role <see cref="UnitRole.Hauler"/>,
+/// the design's "carts carry four times more") do nothing but this duty, a cart's load at a time.
 /// </summary>
 public sealed partial class EconomySystem
 {
@@ -73,7 +74,7 @@ public sealed partial class EconomySystem
         {
             if (k == except || u.Job[k] != UnitJob.Supply || u.JobTarget[k] != b.Id) continue;
             if (u.CarryAmount[k] > 0) { if (u.Carry[k] == good) n += u.CarryAmount[k]; }
-            else if (u.Phase[k] == JobPhase.Fetch && u.JobX[k] == (int)good) n += Capacity(u.Owner[k]);
+            else if (u.Phase[k] == JobPhase.Fetch && u.JobX[k] == (int)good) n += LoadOf(k);
         }
         return n;
     }
@@ -183,7 +184,7 @@ public sealed partial class EconomySystem
         {
             case Travel.Arrived:
                 // No more than is still missing once the other supply workers' loads are in.
-                int take = Math.Min(Math.Min(Capacity(u.Owner[i]), Spare(s, good)), Short(b, good) - OnTheWay(b, good, i));
+                int take = Math.Min(Math.Min(LoadOf(i), Spare(s, good)), Short(b, good) - OnTheWay(b, good, i));
                 if (take > 0)
                 {
                     s.Stock[(int)good] -= take;

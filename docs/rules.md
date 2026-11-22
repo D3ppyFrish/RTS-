@@ -156,6 +156,18 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   and housing is the only cap on how many a player has (issue #21).
 - **Roads** (`RoadCommand`, after the Roads tech): a line of road up to 64 blocks, 1 stone per block,
   laid at once on open ground. Units on a road move twice as fast, and paths prefer roads when they save time.
+- **Carts** (`CartTests`; role `hauler` and `carry` in `data/units.json`; the design doc's logistics rule, "carts carry
+  four times more"): a town hall trains a **cart**, an ox and a plank cart (20 food, 20 wood and 15 planks, so a sawmill
+  first; 15 seconds; speed 3, a little slower than a worker, twice as fast on roads like anyone). It hauls goods between
+  your storage on supply duty (see Supply rules under Automation), 20 a load where a worker carries 5, and does nothing
+  else: it does not gather, build, work a farm or workshop, or fight. Right-click a storehouse or town hall of yours that
+  has Keep stocked rules with carts selected to put them on duty there; one carrying something unloads there instead.
+  A cart comes out automatic: once a second an idle one looks for storage short under its rules that your other
+  storage can spare for, and takes the duty there (it counts towards the two on duty a building takes), and lets it go
+  once there is nothing left to fetch. It brings no more than is missing, like a worker on duty. It takes a place in
+  your housing, is not a worker (houses, farms and the governor count workers; making all your workers automatic
+  leaves it as it is), and enemies kill it like a caravan. Matches do not start with carts, and computer players do
+  not train them yet. All numbers are first guesses for playtesting.
 - **Raids** (`CaptureCommand`, `BurnCommand`): units at an enemy storehouse capture it with its goods
   in 10 seconds or burn it and its goods in 5, unless one of the owner's units is within 8 blocks (and
   a soldier among them will fight the raiders).
@@ -542,7 +554,8 @@ its commands played back ends the same. An order of the player's always comes fi
   their priority list (it is on the standard list, after smelt) take the duty on their own, at most 2 at a
   time on one building, and go back to other work once there is nothing to fetch. Costs are paid from the
   storage nearest the work, so a forward storehouse kept stocked with stone pays for the walls going up
-  beside it; it is also there for raiders to capture or burn, and a captured one loses its rules.
+  beside it; it is also there for raiders to capture or burn, and a captured one loses its rules. Carts (see Carts
+  under Economy) do this duty and nothing else, 20 goods a load.
 - **Town governor** (`GovernCommand`, the Governor buttons of a selected town hall or Shift+U,
   `AutomationSystem.Governor.cs`): a town hall of yours can be given a governor with a focus, Growth, Army
   or Defence, or none (Off). Every 2 seconds the governor looks over its town, the ground within 24 columns

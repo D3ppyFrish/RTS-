@@ -245,7 +245,7 @@ public static class ScriptedMatch
 
     private static bool IsWorker(Simulation sim, int i) => sim.Content.Units[sim.Units.Def[i]].Role == UnitRole.Worker;
 
-    private static bool IsSoldier(Simulation sim, int i) => sim.Content.Units[sim.Units.Def[i]].Role is not (UnitRole.Worker or UnitRole.Trader);
+    private static bool IsSoldier(Simulation sim, int i) => sim.Content.Units[sim.Units.Def[i]].Role is not (UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler);
 
     /// <summary>How many of a player's soldiers (the highest ids) are kept back for raids.</summary>
     private static int Raiders(int soldiers) => Math.Min(8, soldiers / 2);
@@ -352,7 +352,7 @@ public static class ScriptedMatch
             {
                 if (b.Owner != owner || !b.Active || b.Def.Trains.Length == 0) continue;
                 trainers.Add(b);
-                if (Array.Exists(b.Def.Trains, id => sim.Content.Unit(id).Role is not (UnitRole.Worker or UnitRole.Trader))) barracks.Add(b);
+                if (Array.Exists(b.Def.Trains, id => sim.Content.Unit(id).Role is not (UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler))) barracks.Add(b);
             }
             if (trainers.Count == 0) return;
             if (barracks.Count > 0 && rng.Range(0, 3) > 0) trainers = barracks;
