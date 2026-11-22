@@ -232,6 +232,7 @@ public sealed partial class AiPlayer
             else if (Smart) SmartArmy(sim, hall, issue);
             else Army(sim, hall, issue);
         }
+        if (Smart) Dams(sim, hall, issue);
     }
 
     // --- Truces ------------------------------------------------------------------------------------

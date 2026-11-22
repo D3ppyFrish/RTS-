@@ -489,7 +489,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
     is. Nobody else can open or shut it, and the boards are not dug.
   - **Breaching**: the earth is plain ground. Anyone digs it away (workers and sappers, a dig area across it), and
     once a block beside the water and below its top is gone, the water pours through as from any bank.
-  - Computer players do not build or breach dams yet.
+  - Computer players open their sluices and breach rivals' dams on rival units below (see Dams under Computer
+    players); they do not build dams.
 
 `DamTests` checks dams: workers dam a river two deep from bank to bank, a column at a time from the bed up and a
 stone a block, with timber boards in the middle column, and a spearman who could not cross walks over it; with the
@@ -1533,6 +1534,17 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   further than 34 columns from its town hall), unless one of its posts already hears that spot. One at a time, as it
   can pay for each; Hard lays them out clear of its wall line and quarry pits. The classic level never builds them.
   All numbers are first guesses.
+- **Dams** (Easy, Normal and Hard; `AI/AiPlayer.Dams.cs`, tests in `AiDamTests`): once a second it weighs what the
+  water held back by a dam would do if let through (`Floods`): the water beside the gap (at the level of the highest
+  water next to it) fills the open ground it reaches from the gap below that level, within 24 columns, and it counts
+  who would have the water over their heads there. It opens the sluice of a finished dam of its own when that is a
+  rival unit it sees or hears (sappers in their tunnels, an army in a dug channel) and none of its own, and shuts it
+  again 30 seconds later, so the dam holds once more (the water through stays). A rival's finished dam within 48
+  columns of its town hall, where it sees it, is breached the same way: when digging out one of the two earth columns
+  two or more deep nearest its sluice would flood rival units and none of its own, it sends its 2 workers nearest
+  that column (not Hard's masons) to dig it out down to the bed, one breach at a time, and leaves them to it for at
+  most 90 seconds. It does not build dams: on natural ground there is no dry low ground beside water for one to hold
+  back. The classic level leaves dams be. All numbers are first guesses.
 - **Ruin parties** (Easy, Normal and Hard; `AI/AiPlayer.Ruins.cs`, tests in `AiRuinTests`): from 6 minutes
   on (after the early rushes; a pair out looking sooner found lairs that drew Hard's hunting party away just
   as Classic's first attack came), never while it sees enemy soldiers within 64 columns of its town hall (Hard:
