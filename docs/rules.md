@@ -1493,6 +1493,14 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   home, where raiders reach it last and its workshops are. Its workers leave the supply duty to the carts: Easy and
   Normal take supply off their default work list then (Hard's lists never have it). The classic level never trains
   carts. All numbers are first guesses.
+- **Listening posts** (Easy, Normal and Hard; `AI/AiPlayer.Listening.cs`, tests in `AiListeningTests`): sappers
+  tunnel under walls unseen, so once it has a finished barracks it keeps one listening post 14 columns from its town
+  hall towards the enemy (the nearest enemy town hall it knows of, else the last enemy building it saw; by the hall if
+  it knows of neither). Once it sees an enemy sapper or hears an enemy unit underground it is threatened by diggers
+  for 3 minutes after the last, and keeps up to 3 posts: each new one goes where the diggers were last seen (no
+  further than 34 columns from its town hall), unless one of its posts already hears that spot. One at a time, as it
+  can pay for each; Hard lays them out clear of its wall line and quarry pits. The classic level never builds them.
+  All numbers are first guesses.
 - **Ruin parties** (Easy, Normal and Hard; `AI/AiPlayer.Ruins.cs`, tests in `AiRuinTests`): from 6 minutes
   on (after the early rushes; a pair out looking sooner found lairs that drew Hard's hunting party away just
   as Classic's first attack came), never while it sees enemy soldiers within 64 columns of its town hall (Hard:
@@ -1705,7 +1713,8 @@ player sees a unit underground only where they *hear* it, whether or not the col
 (`VisionSystem.Hears`, `SeesUnit`): within 2 columns of one of their units (`HearClose`: someone standing right
 over the digging), within the sight of one of their own units that is underground too (in the same tunnels or
 caves), or within a finished **listening post**'s hearing. So sappers tunnel under a wall unseen, the town guard
-and computer players do not see them coming, and the way to watch for them is a listening post by the wall.
+and computer players do not see them coming, and the way to watch for them is a listening post by the wall
+(computer players build them: see Listening posts under Computer players).
 The listening post (`listening_post` in `data/buildings.json`, kind `listening_post`) is a small 2 by 2 hut for
 20 wood and 10 stone, with no tech needed; it sees only 3 columns round it but hears units underground 20
 columns beyond its walls (`hearing`). A post still being built hears nothing. What is heard is worked out with

@@ -251,8 +251,9 @@ public sealed partial class AiPlayer
             int owner = u.Owner[i];
             if (!Rival(owner) || u.Subdued[i]) continue;
             var def = sim.Content.Units[u.Def[i]];
-            if (!def.CanAttack || def.Role is UnitRole.Worker or UnitRole.Trader) continue;
             if (!vision.SeesUnit(Player, i)) continue;
+            Listen(sim, i, def);
+            if (!def.CanAttack || def.Role is UnitRole.Worker or UnitRole.Trader) continue;
             _spotted[u.Id[i]] = new Sighting(owner, def.Role, u.X[i].FloorToInt(), u.Z[i].FloorToInt(), tick, Power(def, u.Hp[i]));
         }
         _forget.Clear();

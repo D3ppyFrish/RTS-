@@ -425,6 +425,7 @@ public sealed partial class AiPlayer
 
         if (Smart) SiegeEconomy(sim, hall, workers, issue);
         if (Smart) Carts(sim, hall, issue);
+        if (Smart) ListeningPosts(sim, hall, issue);
         if (Smart) Hunting(sim, hall, issue);
         if (Smart) SmartEconomy(sim, hall, issue);
     }
