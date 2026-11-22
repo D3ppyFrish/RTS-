@@ -46,7 +46,7 @@ public class SawmillTests
         Assert.Equal(BuildingKind.Workshop, def.Kind);
         Assert.Equal((Good.Wood, Good.Planks), (def.Takes, def.Makes));
         Assert.True(def.MakeTicks > 0);
-        Assert.Equal(50, def.Keep);
+        Assert.Equal(100, def.Keep); // a siege workshop (40) and a catapult (60)
         Assert.True(def.WorkerSlots >= 1);
         Assert.Empty(def.Requires); // no tech: an early building
         Assert.Equal(Good.Planks, EconomySystem.Makes(def));

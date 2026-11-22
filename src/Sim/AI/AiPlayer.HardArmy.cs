@@ -148,6 +148,7 @@ public sealed partial class AiPlayer
         var home = Able(sim);
         home.RemoveAll(_wave.Contains);
         home.RemoveAll(_joining.Contains);
+        var engines = HoldEngines(sim, home); // not sent on parties: they wait for a wave
         TotemStep(sim, home, issue);
         home.RemoveAll(_totemParty.Contains);
         Hire(sim, issue);
@@ -158,6 +159,7 @@ public sealed partial class AiPlayer
         HuntStep(sim, hall, home, HomeGuardPercent(sim), issue);
         SiteStep(sim, hall, home, HomeGuardPercent(sim), issue);
         GreatWorkStep(sim, hall, home, HomeGuardPercent(sim), issue);
+        home.AddRange(engines);
 
         // Defence: enemies it sees by any of its buildings are met by everyone at home, and by the wave too
         // when those at home are not enough.
@@ -240,7 +242,9 @@ public sealed partial class AiPlayer
             home.Sort((a, b) =>
             {
                 int ia = u.IndexOf(a), ib = u.IndexOf(b);
-                int c = Dist2(u.X[ia].FloorToInt(), u.Z[ia].FloorToInt(), ex, ez).CompareTo(Dist2(u.X[ib].FloorToInt(), u.Z[ib].FloorToInt(), ex, ez));
+                // Catapults always go with the wave: they are no use at home, and the wave is what screens them.
+                int c = EngineAt(sim, ib).CompareTo(EngineAt(sim, ia));
+                if (c == 0) c = Dist2(u.X[ia].FloorToInt(), u.Z[ia].FloorToInt(), ex, ez).CompareTo(Dist2(u.X[ib].FloorToInt(), u.Z[ib].FloorToInt(), ex, ez));
                 return c != 0 ? c : a.CompareTo(b);
             });
             var wave = home.GetRange(0, ready);
