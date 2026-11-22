@@ -294,7 +294,7 @@ public sealed partial class EconomySystem
                 if (b.Upgrade != null) StepUpgrade(b);
                 if (b.Def.Kind == BuildingKind.Smelter) StepSmelter(b);
                 else if (b.Def.Kind == BuildingKind.Shrine) StepShrine(b);
-                else if (b.Def.Kind == BuildingKind.Sawmill) StepSawmill(b);
+                else if (b.Def.Kind == BuildingKind.Workshop) StepWorkshop(b);
                 if (b.Queue.Count > 0) StepTraining(b);
                 if (b.Def.YieldTicks > 0 && (_sim.Tick + b.Id) % b.Def.YieldTicks == 0) BringYield(b);
             }
@@ -705,17 +705,18 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>
-    /// A sawmill saws the wood its worker brought into planks, one wood into one plank every
-    /// <see cref="BuildingDef.SawTicks"/> (at its <see cref="BuildingDef.Speed"/>); the plank being sawn is counted
-    /// in <see cref="Building.SmeltTicks"/>, and the planks wait in its stock for the worker to carry to storage.
+    /// A workshop works what its worker brought into what it makes (wood into planks at a sawmill, stone into cut
+    /// stone at a mason's yard), one into one every <see cref="BuildingDef.MakeTicks"/> (at its <see cref="BuildingDef.Speed"/>);
+    /// the one being worked is counted in <see cref="Building.SmeltTicks"/>, and what it makes waits in its stock for
+    /// the worker to carry to storage.
     /// </summary>
-    private void StepSawmill(Building b)
+    private void StepWorkshop(Building b)
     {
-        if (b.SmeltTicks > 0 && (b.SmeltTicks = Math.Max(0, b.SmeltTicks - Steps(b))) == 0) b.Stock[(int)Good.Planks]++;
-        if (b.SmeltTicks == 0 && b.Stock[(int)Good.Wood] > 0)
+        if (b.SmeltTicks > 0 && (b.SmeltTicks = Math.Max(0, b.SmeltTicks - Steps(b))) == 0) b.Stock[(int)b.Def.Makes]++;
+        if (b.SmeltTicks == 0 && b.Stock[(int)b.Def.Takes] > 0)
         {
-            b.Stock[(int)Good.Wood]--;
-            b.SmeltTicks = b.Def.SawTicks;
+            b.Stock[(int)b.Def.Takes]--;
+            b.SmeltTicks = b.Def.MakeTicks;
         }
     }
 
@@ -1043,7 +1044,7 @@ public sealed partial class EconomySystem
             {
                 StartJob(i, UnitJob.Build, b.Id);
             }
-            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Sawmill)
+            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop)
             {
                 var job = JobAt(b.Def);
                 if (U.Job[i] == job && U.JobTarget[i] == b.Id) continue;
@@ -1161,7 +1162,7 @@ public sealed partial class EconomySystem
         return result;
     }
 
-    /// <summary>The job of a worker working a building of this kind: farming, hauling for a smelter, shrine or sawmill, or quarrying.</summary>
+    /// <summary>The job of a worker working a building of this kind: farming, hauling for a smelter, shrine or workshop, or quarrying.</summary>
     public static UnitJob JobAt(BuildingDef def) => def.Kind switch
     {
         BuildingKind.Farm => UnitJob.Farm,

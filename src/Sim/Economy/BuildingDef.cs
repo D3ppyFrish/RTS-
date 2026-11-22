@@ -73,10 +73,12 @@ public enum BuildingKind : byte
     /// </summary>
     GreatWork,
     /// <summary>
-    /// A sawmill: its worker brings it wood from storage and carries its planks back, as a smelter's does ore and
-    /// iron. It saws one wood into one plank every <see cref="BuildingDef.SawTicks"/> (at its <see cref="BuildingDef.Speed"/>).
+    /// A workshop (the sawmill, the mason's yard): its worker brings it <see cref="BuildingDef.Takes"/> from storage and
+    /// carries what it <see cref="BuildingDef.Makes"/> back, as a smelter's does ore and iron. It works one good into one
+    /// every <see cref="BuildingDef.MakeTicks"/> (at its <see cref="BuildingDef.Speed"/>), and its worker stops fetching
+    /// while its player has <see cref="BuildingDef.Keep"/> of what it makes in storage.
     /// </summary>
-    Sawmill,
+    Workshop,
 }
 
 /// <summary>One block of a building, relative to its footprint corner and base level.</summary>
@@ -151,8 +153,17 @@ public sealed class BuildingDef
     public int Mana { get; init; }
     /// <summary>A shrine: ticks it takes to channel one crystal (before its <see cref="Speed"/>); 0 for every other building.</summary>
     public int ChannelTicks { get; init; }
-    /// <summary>A sawmill's ticks to saw one wood into a plank (see <see cref="BuildingKind.Sawmill"/>); 0 for anything else.</summary>
-    public int SawTicks { get; init; }
+    /// <summary>A workshop's ticks to work one good into one (see <see cref="BuildingKind.Workshop"/>); 0 for anything else.</summary>
+    public int MakeTicks { get; init; }
+    /// <summary>The good a workshop works (wood at a sawmill, stone at a mason's yard); unused for anything else.</summary>
+    public Good Takes { get; init; }
+    /// <summary>The good a workshop makes (planks, cut stone); unused for anything else.</summary>
+    public Good Makes { get; init; }
+    /// <summary>
+    /// A workshop: what it makes in its player's storage at which its worker stops fetching, so a workshop left running
+    /// does not work up all the town's wood or stone; it goes on once that is spent below this. 0 for anything else.
+    /// </summary>
+    public int Keep { get; init; }
     /// <summary>Unit ids this building trains (the units whose <c>trainedAt</c> names it), in data order.</summary>
     public string[] Trains { get; internal set; } = Array.Empty<string>();
     /// <summary>Techs the player must have before placing it.</summary>

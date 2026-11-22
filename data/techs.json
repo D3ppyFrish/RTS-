@@ -28,7 +28,7 @@
     "cost": { "wood": 50 }, "researchTime": 30 },
   { "id": "basic_magic", "icon": "star", "name": "Basic magic", "description": "The first spells, taught at the barracks.",
     "cost": { "food": 60, "stone": 40 }, "researchTime": 40 },
-  { "id": "masonry", "icon": "bricks", "name": "Masonry", "description": "Stone houses that hold more people.",
+  { "id": "masonry", "icon": "bricks", "name": "Masonry", "description": "Stone houses that hold more people, and a mason's yard to cut stone for towers.",
     "cost": { "stone": 60 }, "researchTime": 30, "requires": [ "tools" ],
     "effects": [ { "type": "housing", "building": "house", "amount": 2 } ] },
   { "id": "crop_rotation", "icon": "sprout", "name": "Crop rotation", "description": "Richer harvests.",

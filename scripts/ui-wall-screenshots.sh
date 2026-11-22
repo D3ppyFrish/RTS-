@@ -164,7 +164,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[10]}" facings)" -eq 24 ] && [ "$(field "${UI[10]}" sites)" -eq 0 ] || fail "the stone wall is not faced on both sides, the gate too: ${UI[10]}"
 [ "$(field "${UI[11]}" tool)" = Build ] && [ "$(field "${UI[11]}" ghost)" = Ok ] || fail "a stone tower does not fit onto the wall: ${UI[11]}"
 [ "$(field "${UI[12]}" towers)" -eq 1 ] && [ "$(field "${UI[12]}" tier2)" -eq 12 ] || fail "no stone tower site on the wall, or the wall under it is gone already: ${UI[12]}"
-[ "$(field "${UI[12]}" stone)" -eq $(($(field "${UI[10]}" stone) - 60)) ] || fail "the stone tower was not paid for (60 stone): ${UI[12]}"
+[ "$(field "${UI[12]}" cut_stone)" -eq $(($(field "${UI[10]}" cut_stone) - 60)) ] && [ "$(field "${UI[12]}" stone)" -eq "$(field "${UI[10]}" stone)" ] || fail "the stone tower was not paid for (60 cut stone, no plain stone): ${UI[12]}"
 [ "$(field "${UI[13]}" towers)" -eq 1 ] && [ "$(field "${UI[13]}" sites)" -eq 0 ] || fail "the stone tower is not finished: ${UI[13]}"
 [ "$(field "${UI[13]}" tier2)" -eq 8 ] && [ "$(field "${UI[13]}" facings)" -eq 16 ] || fail "the stone tower did not take in the wall it stands on (4 columns of it, with their facing): ${UI[13]}"
 [ "$(field "${UI[14]}" ghost)" = Ok ] || fail "a watchtower does not fit on open ground: ${UI[14]}"

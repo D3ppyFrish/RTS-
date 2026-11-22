@@ -39,6 +39,7 @@ public static class UiIcons
         Good.Crystal => "crystal",
         Good.Gold => "gold",
         Good.Planks => "planks",
+        Good.CutStone => "cut_stone",
         _ => "iron",
     });
 
@@ -273,6 +274,16 @@ public static class UiIcons
         {
             "kk........kk", "klk......klk", ".klk....klk.", "..klk..klk..", "...klkklk...", "....kllk....",
             "....kllk....", "...klkklk...", ".kkbk..kbkk.", ".kbbk..kbbk.", "kbk......kbk", "kk........kk",
+        },
+        ["cut_stone"] = new[]
+        {
+            "............", "............", "...kkkkkk...", "...klllssk..", "...ksssSSk..", "kkkkkkkkkkkk",
+            "kllssklllsk.", "ksssSksssSk.", "kkkkkkkkkkkk", "klllsskllssk", "ksssSSksssSk", "kkkkkkkkkkkk",
+        },
+        ["mason"] = new[]
+        {
+            ".kk.....kk..", "kBBk...kiik.", "kBBBk.kiIk..", ".kBBBkiIk...", "..kBBBIk....", "...kbBk.....",
+            "..kbkkBk....", ".kbk..kBk...", "kkkkkkkkkkkk", "klllsskllssk", "ksssSSksssSk", "kkkkkkkkkkkk",
         },
         ["planks"] = new[]
         {

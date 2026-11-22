@@ -325,8 +325,8 @@ public sealed partial class EconomySystem
 
     /// <summary>
     /// A smelter's hauler: brings its iron to storage, and keeps it supplied with ore and coal from storage
-    /// (enough for two ingots), one load at a time. A sawmill's sawyer does the same with wood and planks
-    /// (<see cref="SawmillWood"/> wood at a time). A shrine's keeper keeps it supplied with crystal the same
+    /// (enough for two ingots), one load at a time. A workshop's worker does the same with what it takes and
+    /// makes (wood and planks at a sawmill, stone and cut stone at a mason's yard; <see cref="WorkshopStock"/> at a time). A shrine's keeper keeps it supplied with crystal the same
     /// way (<see cref="ShrineCrystal"/> at a time); a shrine makes no goods to carry back.
     /// </summary>
     private void StepHaul(int i)
@@ -376,28 +376,28 @@ public sealed partial class EconomySystem
     /// <summary>Crystal a shrine's keeper keeps in it: one load.</summary>
     public const int ShrineCrystal = CarryCapacity;
 
-    /// <summary>Wood a sawmill's sawyer keeps in it: two loads.</summary>
-    public const int SawmillWood = 2 * CarryCapacity;
+    /// <summary>What a workshop's worker keeps in it of what it takes: two loads.</summary>
+    public const int WorkshopStock = 2 * CarryCapacity;
 
     /// <summary>
-    /// Planks in its player's storage at which a sawyer stops fetching wood, so a sawmill left running does not
-    /// saw up all the wood a town has; it goes on once planks are spent below this.
+    /// The workshop's worker would fetch more for it: its player has less than its <see cref="BuildingDef.Keep"/> of
+    /// what it makes in storage, so a workshop left running does not work up all of a town's wood or stone.
     /// </summary>
-    public const int SawmillKeep = 50;
+    public bool WorkshopWants(Building b) => b.Def.Kind == BuildingKind.Workshop && Stock(b.Owner, b.Def.Makes) < b.Def.Keep;
 
-    /// <summary>The good goes into the building to be worked: ore and coal into a smelter, crystal into a shrine, wood into a sawmill.</summary>
+    /// <summary>The good goes into the building to be worked: ore and coal into a smelter, crystal into a shrine, what a workshop takes into it.</summary>
     private static bool Feeds(Building b, Good g) => b.Def.Kind switch
     {
         BuildingKind.Shrine => g == Good.Crystal,
-        BuildingKind.Sawmill => g == Good.Wood,
+        BuildingKind.Workshop => g == b.Def.Takes,
         _ => g is Good.IronOre or Good.Coal,
     };
 
-    /// <summary>The good a building of this kind makes for its hauler to carry to storage: iron, planks, or none (a shrine).</summary>
+    /// <summary>The good a building of this kind makes for its hauler to carry to storage: iron, a workshop's good, or none (a shrine).</summary>
     public static Good? Makes(BuildingDef def) => def.Kind switch
     {
         BuildingKind.Smelter => Good.Iron,
-        BuildingKind.Sawmill => Good.Planks,
+        BuildingKind.Workshop => def.Makes,
         _ => null,
     };
 
@@ -423,11 +423,11 @@ public sealed partial class EconomySystem
             need = Good.Crystal;
             if (smelter.Stock[(int)Good.Crystal] < ShrineCrystal) from = NearestStorage(u.Owner[i], ux, uz, Good.Crystal);
         }
-        else if (smelter.Def.Kind == BuildingKind.Sawmill)
+        else if (smelter.Def.Kind == BuildingKind.Workshop)
         {
-            need = Good.Wood;
-            if (smelter.Stock[(int)Good.Wood] < SawmillWood && Stock(u.Owner[i], Good.Planks) < SawmillKeep)
-                from = NearestStorage(u.Owner[i], ux, uz, Good.Wood);
+            need = smelter.Def.Takes;
+            if (smelter.Stock[(int)need] < WorkshopStock && WorkshopWants(smelter))
+                from = NearestStorage(u.Owner[i], ux, uz, need);
         }
         else if (smelter.Stock[(int)Good.IronOre] < 2 * OrePerIngot)
             from = NearestStorage(u.Owner[i], ux, uz, Good.IronOre);

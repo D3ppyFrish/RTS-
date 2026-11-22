@@ -44,8 +44,11 @@
 // Kind shrine: its worker (up to workerSlots) brings it crystal from storage, and it channels each crystal
 // into mana for its owner, channelTime seconds a crystal (at its speed). Spells cost mana. mana (a shrine
 // only, needed) is the mana one crystal gives.
-// Kind sawmill: its worker (up to workerSlots) brings it wood from storage and carries its planks back; it saws one
-// wood into one plank every sawTime seconds (a sawmill only, needed; at its speed). Bridges are laid with planks.
+// Kind workshop (the sawmill, the mason's yard): its worker (up to workerSlots) brings it the good it takes from storage
+// and carries the good it makes back; it works one into one every makeTime seconds (at its speed). takes, makes and
+// makeTime are needed for a workshop only; keep (50 if not given) is how much of what it makes its player may have in
+// storage before the worker stops fetching. Bridges are laid with planks; stone towers and great works are built of
+// cut stone.
 // shore: true means it must stand at the water's edge, with open water in a column right beside its footprint
 // (the fishing hut, a quarry whose rounds give food).
 // Kind great_work is a faction's great work (see "Ascendancy" in docs/rules.md): it stands only in the deep caves,
@@ -96,9 +99,13 @@
   { "id": "foundry", "name": "Foundry", "kind": "smelter", "size": [5, 5], "wallHeight": 4,
     "wall": "stone_brick", "roof": "stone_brick", "chimney": true, "icon": "smelter",
     "cost": { "stone": 60, "wood": 20 }, "buildTime": 30, "workerSlots": 2, "light": 4, "sturdy": 2, "speed": 200 },
-  { "id": "sawmill", "name": "Sawmill", "kind": "sawmill", "size": [4, 4], "wallHeight": 3,
+  { "id": "sawmill", "name": "Sawmill", "kind": "workshop", "size": [4, 4], "wallHeight": 3,
     "wall": "planks", "footing": "stone_brick", "roof": "thatch",
-    "cost": { "wood": 40, "stone": 10 }, "buildTime": 20, "workerSlots": 1, "sawTime": 3 },
+    "cost": { "wood": 40, "stone": 10 }, "buildTime": 20, "workerSlots": 1, "takes": "wood", "makes": "planks", "makeTime": 3 },
+  { "id": "mason_yard", "name": "Mason's yard", "kind": "workshop", "size": [4, 4], "wallHeight": 2,
+    "wall": "stone_brick", "footing": "stone_brick", "roof": "roof_tile", "icon": "mason",
+    "cost": { "wood": 30, "stone": 20 }, "buildTime": 25, "workerSlots": 1, "requires": "masonry",
+    "takes": "stone", "makes": "cut_stone", "makeTime": 4, "keep": 150 },
   { "id": "shrine", "name": "Shrine", "kind": "shrine", "size": [3, 3], "wallHeight": 3,
     "wall": "stone_brick", "roof": "roof_tile",
     "cost": { "stone": 40, "wood": 20 }, "buildTime": 25, "workerSlots": 1, "requires": "basic_magic", "light": 3,
@@ -144,7 +151,7 @@
   { "id": "watchtower", "name": "Watchtower", "kind": "tower", "size": [3, 3], "wallHeight": 7, "wall": "trestle",
     "cost": { "wood": 30 }, "buildTime": 25, "sight": 14, "thick": true, "sturdy": 2, "walkway": true, "aim": 50, "icon": "tower" },
   { "id": "stone_tower", "name": "Stone tower", "kind": "tower", "size": [5, 5], "wallHeight": 9, "wall": "rampart",
-    "cost": { "stone": 60, "wood": 20 }, "buildTime": 60, "sight": 18, "thick": true, "walkway": true, "aim": 75, "icon": "tower",
+    "cost": { "cut_stone": 60, "wood": 20 }, "buildTime": 60, "sight": 18, "thick": true, "walkway": true, "aim": 75, "icon": "tower",
     "requires": "masonry" },
   { "id": "torch", "name": "Torch", "kind": "light", "size": [1, 1], "wallHeight": 2, "wall": "planks",
     "cost": { "wood": 1 }, "buildTime": 2, "sight": 2, "light": 7 },
@@ -161,11 +168,11 @@
     "cost": { "wood": 20 }, "buildTime": 10, "housing": 2, "yield": { "food": 6 }, "yieldTime": 15 },
   { "id": "hall_of_legends", "name": "Hall of Legends", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
     "wall": "stone_brick", "footing": "rampart", "roof": "roof_tile", "icon": "crown", "faction": "settlers",
-    "cost": { "stone": 300, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
     "requires": "settler_legends", "sight": 10, "light": 6 },
   { "id": "beast_throne", "name": "Beast Throne", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
     "wall": "stone_brick", "footing": "rampart", "roof": "thatch", "icon": "crown", "faction": "orcs",
-    "cost": { "stone": 300, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
     "requires": "orc_beast_king", "sight": 10, "light": 6 },
   { "id": "goblin_totem", "name": "Goblin totem", "kind": "totem", "size": [3, 3], "wallHeight": 7,
     "wall": "planks", "footing": "stone_brick", "buildTime": 1, "sight": 8 },
