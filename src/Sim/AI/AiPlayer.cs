@@ -429,6 +429,7 @@ public sealed partial class AiPlayer
         if (Smart) Carts(sim, hall, issue);
         if (Smart) ListeningPosts(sim, hall, issue);
         if (Smart) Hunting(sim, hall, issue);
+        if (Smart) PassMines(sim, hall, issue);
         if (Smart) SmartEconomy(sim, hall, issue);
     }
 
@@ -472,6 +473,7 @@ public sealed partial class AiPlayer
         {
             if (u.Owner[i] != Player || sim.Content.Units[u.Def[i]].Role != UnitRole.Worker) continue;
             workers++;
+            if (_passMiners.Contains(u.Id[i])) continue; // kept digging the pass's seams
             if (u.Job[i] == UnitJob.Gather && u.JobBlock[i] == BlockType.Wood)
             {
                 onWood++;

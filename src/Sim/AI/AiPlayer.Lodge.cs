@@ -178,7 +178,7 @@ public sealed partial class AiPlayer
 
     /// <summary>
     /// Up to n workers to send hunting: idle ones first, then wood cutters, then those gathering anything else but
-    /// food, none carrying a load, none it keeps at its quarry.
+    /// food, none carrying a load, none it keeps at its quarry or in a mountain pass.
     /// </summary>
     private List<int> SpareWorkers(Simulation sim, int n)
     {
@@ -189,7 +189,7 @@ public sealed partial class AiPlayer
         {
             if (u.Owner[i] != Player || sim.Content.Units[u.Def[i]].Role != UnitRole.Worker) continue;
             int id = u.Id[i];
-            if (picked.Contains(id) || _masons.Contains(id) || u.Held[i]) continue;
+            if (picked.Contains(id) || _masons.Contains(id) || _passMiners.Contains(id) || u.Held[i]) continue;
             bool ok = pass switch
             {
                 0 => u.Job[i] == UnitJob.None && u.Order[i] == UnitOrder.Idle,

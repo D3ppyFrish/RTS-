@@ -1533,6 +1533,18 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   hunt there (idle ones first, then wood cutters, then other gatherers not on food), and lets them go back to other
   work when the lodge has no deer to spare in reach, sending them again once 4 are in reach. When the lodge is 24 columns or more from its nearest storage
   it puts a storehouse by it. The classic level never hunts. All numbers are first guesses.
+- **Mining the passes** (Easy, Normal and Hard; `AI/AiPlayer.Passes.cs`, tests in `AiPassTests`): the iron and gold
+  seamed into a mountain pass's walls (see Monsters and taming) are what clearing its stone giant is for. Once no lair
+  it knows of with monsters still about lies within 24 columns of a pass it has seen, within 160 columns of its town
+  hall, nearer its own town hall than any enemy's and off the corrupted ground, it mines that pass while it needs the
+  ore: gold while it holds a town whose mercenaries cost gold and has less than 80, else iron ore while it has a
+  finished smelter and less than 150. With at least 10 workers it keeps 3 miners there (idle ones first, then wood
+  cutters, then other gatherers not on food), sent to the block of the wanted ore (else the other) nearest the pass's
+  middle that can be dug from beside without knocking anything loose or shutting the digger in; they go on through
+  the seam on their own, and the wood cutting and hunting leave them be. It lets them go back to other work when the
+  need is met, a giant (or another pack) is about the pass again, or no seam is left within 18 columns of the pass's
+  middle. When the pass is 24 columns or more from its nearest storage it puts a storehouse in it (Hard: only while
+  no enemies are at its buildings). The classic level never mines a pass. All numbers are first guesses.
 - **Siege engines** (Easy, Normal and Hard; `AI/AiPlayer.Siege.cs`, tests in `AiSiegeTests`): once it has Smelting
   (late in its tech order), a finished barracks and 16 workers, it lays out a smelter, then a sawmill, then a siege
   workshop near its town hall, one at a time as it can pay for each (Hard: only while no enemies are at its

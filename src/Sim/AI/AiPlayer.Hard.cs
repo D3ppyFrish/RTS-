@@ -313,6 +313,7 @@ public sealed partial class AiPlayer
         if (calm) HardWall(sim, hall, c, issue);
         if (calm) HardExpand(sim, hall, c, issue);
         if (calm) Hunting(sim, hall, issue);
+        if (calm) PassMines(sim, hall, issue);
         if (calm) SiegeEconomy(sim, hall, c.Workers, issue);
         if (calm) Carts(sim, hall, issue);
         ListeningPosts(sim, hall, issue);
