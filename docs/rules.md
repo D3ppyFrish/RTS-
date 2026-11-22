@@ -1050,8 +1050,9 @@ in a replay's header); off, it sleeps all match. All numbers are first guesses f
   tooltip says how much digging has woken it sooner, and clicking it looks at the Heartscar. Corrupted ground is drawn
   black-violet with glowing veins that pulse and thicken towards the heart, and a violet light burns over the heart.
   The beasts are black with violet veins and ember eyes. `--awaken=N` starts a match with it at stage N.
-- **Computer players** fight the broods as they fight any attacker; they do not yet keep away from the Heartscar or
-  stop digging near the heart.
+- **Computer players** fight the broods as they fight any attacker. From Easy up they dig nothing near the heart,
+  keep off the corrupted ground once it wakes and walk their units off it (see The Heartscar under the computer
+  players).
 
 ## The shadowed wilds
 
@@ -1545,6 +1546,18 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   that column (not Hard's masons) to dig it out down to the bed, one breach at a time, and leaves them to it for at
   most 90 seconds. It does not build dams: on natural ground there is no dry low ground beside water for one to hold
   back. The classic level leaves dams be. All numbers are first guesses.
+- **The Heartscar** (Easy, Normal and Hard, with the Awakening on; `AI/AiPlayer.Heartscar.cs`, tests in
+  `AiHeartscarTests`): it **digs nothing near the heart**, where every block taken out wakes the dark power sooner (see
+  The dark power): no quarry is marked out, and no rival's dam breached, within 50 columns of the column over the heart
+  (its 48 and 2 to spare) when the dig goes down to 12 levels over the heart or lower; Hard quarries further off
+  instead. Once the dark power wakes, and in the 2 minutes' warning before each stage, it **keeps off the corrupted
+  ground**: the ground the corruption reaches by then (by the next stage, in its warning), its ragged edge and 4
+  columns more. No building is laid out there, no tree felled, no ruin searched, no ancient site garrisoned, no lair
+  or herd hunted and no quarry dug; a ruin party or a garrison there breaks off and comes home, and the ruin or site
+  is left alone a while. Once a second, its **units on corrupted ground** that stand about or work there (not those
+  fighting, routed or only walking through, nor those striking a rival's great work or retaking a site) are walked
+  out of it, straight away from the heart, to 3 columns past the ground it keeps off. The classic level does none of
+  this. All numbers are first guesses.
 - **Ruin parties** (Easy, Normal and Hard; `AI/AiPlayer.Ruins.cs`, tests in `AiRuinTests`): from 6 minutes
   on (after the early rushes; a pair out looking sooner found lairs that drew Hard's hunting party away just
   as Classic's first attack came), never while it sees enemy soldiers within 64 columns of its town hall (Hard:

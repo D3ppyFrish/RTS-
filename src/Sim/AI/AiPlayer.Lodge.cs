@@ -161,7 +161,7 @@ public sealed partial class AiPlayer
             long d = Dist2(hx, hz, herd.X, herd.Z);
             if (d >= bestD) continue;
             if (enemy is { } e && Dist2(herd.X, herd.Z, e.X, e.Z) <= d) continue;
-            if (NearLair(sim, herd.X, herd.Z)) continue;
+            if (NearLair(sim, herd.X, herd.Z) || KeepsOff(sim, herd.X, herd.Z)) continue;
             bool seen = sim.Vision.At(Player, herd.X, herd.Z) != Sight.Unseen;
             foreach (int id in herd.PackIds)
             {

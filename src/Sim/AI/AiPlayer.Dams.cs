@@ -101,6 +101,7 @@ public sealed partial class AiPlayer
                 if (c.Blocks < 2 || Breached(sim.World, c)) continue;
                 long dx = c.X - hx, dz = c.Z - hz;
                 if (dx * dx + dz * dz > (long)BreachReach * BreachReach || !sim.Vision.Sees(Player, c.X, c.Z)) continue;
+                if (NearHeart(sim, c.X, c.Z - 1, c.X + 1, c.Z, c.Bed)) continue; // digging there wakes the dark power sooner
                 tried++;
                 if (!Floods(sim, d, c, out int rivals)) continue;
                 if (!PickBreachers(sim, c.X, c.Z)) return;

@@ -143,7 +143,7 @@ public sealed partial class AiPlayer
         {
             long fromHall = Dist2(hx, hz, gx, gz);
             if (fromHall < near || fromHall > far) continue;
-            if (sim.Vision.At(Player, gx, gz) != Sight.Unseen || _lookedAt.Contains((gx, gz))) continue;
+            if (sim.Vision.At(Player, gx, gz) != Sight.Unseen || _lookedAt.Contains((gx, gz)) || KeepsOff(sim, gx, gz)) continue;
             long off = IntMath.ISqrt(fromHall) - ring;
             long d = Dist2(x, z, gx, gz) + 4 * off * off;
             if (d < bestD) (bestD, best) = (d, (gx, gz));
@@ -233,8 +233,12 @@ public sealed partial class AiPlayer
             || sim.Vision.At(Player, ruin.X - r, ruin.Z + r) != Sight.Unseen || sim.Vision.At(Player, ruin.X + r, ruin.Z + r) != Sight.Unseen;
     }
 
-    /// <summary>True if soldiers worth <paramref name="force"/> outweigh the hostile fighters it sees round the ruin.</summary>
-    private bool SafeAt(Simulation sim, AncientRuin ruin, long force) => force > HostileWorthNear(sim, ruin.X, ruin.Z, RuinDangerRadius);
+    /// <summary>
+    /// True if soldiers worth <paramref name="force"/> outweigh the hostile fighters it sees round the ruin, and it
+    /// does not keep off the ruin's ground (see <see cref="KeepsOff(Simulation, int, int)"/>).
+    /// </summary>
+    private bool SafeAt(Simulation sim, AncientRuin ruin, long force) =>
+        !KeepsOff(sim, ruin.X, ruin.Z) && force > HostileWorthNear(sim, ruin.X, ruin.Z, RuinDangerRadius);
 
     /// <summary>What the fighting units of anyone else (wild monsters too) it sees within the radius of (x, z) are worth.</summary>
     private long HostileWorthNear(Simulation sim, int x, int z, int radius)
