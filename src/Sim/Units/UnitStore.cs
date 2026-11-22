@@ -118,6 +118,11 @@ public enum UnitJob : byte
     /// gold. While it carries a load, <see cref="UnitStore.JobX"/> is the length of its route.
     /// </summary>
     Market,
+    /// <summary>
+    /// Build the dam <see cref="UnitStore.JobTarget"/> (see <see cref="Economy.Dam"/>): fill its next block with
+    /// earth (or the sluice's boards) from a spot beside it, again and again. Workers and sappers.
+    /// </summary>
+    Dam,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

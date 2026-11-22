@@ -179,6 +179,17 @@ public sealed partial class EconomySystem
             EndJob(i);
             return;
         }
+        Heap(i, x, y, z, BlockType.Soil);
+    }
+
+    /// <summary>
+    /// Unit i's step at heaping block (x, y, z) of a ramp or a dam: it walks to a spot beside it (see
+    /// <see cref="RampReach"/>), works <see cref="RampBlockTicks"/> there and puts <paramref name="block"/> in,
+    /// paying <see cref="StonePerRamp"/> from the storage nearest it. With no stone left it stops.
+    /// </summary>
+    private void Heap(int i, int x, int y, int z, BlockType block)
+    {
+        var u = U;
         int ux = u.X[i].FloorToInt(), uz = u.Z[i].FloorToInt();
         bool there = RampReach(ux, u.Y[i], uz, x, y, z);
 
@@ -216,11 +227,11 @@ public sealed partial class EconomySystem
         u.JobTimer[i] = 0;
         if (Take(u.Owner[i], Good.Stone, StonePerRamp, (x, z)) < StonePerRamp)
         {
-            EndJob(i); // no stone left: the ramp waits for an order with stone to spare
+            EndJob(i); // no stone left: the work waits for an order with stone to spare
             return;
         }
         Player(u.Owner[i]).Spent[(int)Good.Stone] += StonePerRamp;
-        World.Set(x, y, z, BlockType.Soil);
+        World.Set(x, y, z, block);
         // Anyone standing where the earth went in is lifted onto it.
         for (int j = 0; j < u.Count; j++)
             if (u.Y[j] == y && u.X[j].FloorToInt() == x && u.Z[j].FloorToInt() == z && Walk.CanStand(World, x, y + 1, z))

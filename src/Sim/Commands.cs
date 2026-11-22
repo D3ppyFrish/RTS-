@@ -277,6 +277,20 @@ public sealed record RampCommand(int PlayerId, int[] Units, int X1, int Z1, int 
 }
 
 /// <summary>
+/// The player's workers and sappers among <paramref name="Units"/> build a dam from bank column (X1, Z1) to bank
+/// column (X2, Z2), across water or a dug channel (see <see cref="Economy.Dam"/>, <see cref="Economy.EconomySystem.PlanDam"/>).
+/// </summary>
+public sealed record DamCommand(int PlayerId, int[] Units, int X1, int Z1, int X2, int Z2) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(DamCommand? other) =>
+        base.Equals(other) && X1 == other!.X1 && Z1 == other.Z1 && X2 == other.X2 && Z2 == other.Z2;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X1, Z1, X2, Z2);
+}
+
+/// <summary>Opens (or shuts) the sluice of the player's finished dam <paramref name="Dam"/> (see <see cref="Economy.Dam"/>).</summary>
+public sealed record SluiceCommand(int PlayerId, int Dam, bool Open) : Command(PlayerId);
+
+/// <summary>
 /// The workers among the units take the nearest needed job on their own whenever they have nothing to do
 /// (<paramref name="On"/>), or wait for orders (off). See <see cref="Automation.AutomationSystem"/>.
 /// </summary>

@@ -265,6 +265,7 @@ public sealed partial class EconomySystem
         }
         MixDigAreas(ref h);
         MixRamps(ref h);
+        MixDams(ref h);
         MixSaplings(ref h);
         return h;
     }
@@ -279,6 +280,7 @@ public sealed partial class EconomySystem
             if (U.Job[i] != UnitJob.None) StepJob(i);
         PruneDigAreas();
         PruneRamps();
+        PruneDams();
         StepSaplings();
 
         var all = Buildings.All;
