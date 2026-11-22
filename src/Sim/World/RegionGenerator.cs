@@ -164,6 +164,8 @@ public static partial class RegionGenerator
         private readonly List<(int X, int Z, int R)> _hills = new(), _swamps = new();
         /// <summary>Rows (z) at the middle of each ford, the shallow stretches where the river can be waded.</summary>
         private readonly int[] _fordZ;
+        /// <summary>Where each cavern's way in comes up to the surface.</summary>
+        private readonly List<(int X, int Z)> _caveMouths = new();
 
         public Builder(ulong seed, VoxelWorld world)
         {
@@ -234,9 +236,12 @@ public static partial class RegionGenerator
             for (int z = 0; z < _sz; z++)
             for (int x = 0; x < _sx; x++)
                 Column(x, z);
+            RaiseRidges();
             PlaceStarts();
             Fill();
+            SeamPasses();
             CarveCaverns();
+            OpenMouths();
             CarveDeeps();
             PlaceLava();
             PlaceBogs();
@@ -473,13 +478,14 @@ public static partial class RegionGenerator
             }
             foreach (var cave in _map.Caverns)
                 if (Math.Abs(cave.X - cx) <= ring + 2 && Math.Abs(cave.Z - cz) <= ring + 2) return false;
+            if (NearPass(cx, cz, PassClear + ring)) return false;
             int low = int.MaxValue;
             for (int dz = -ring; dz <= ring; dz++)
             for (int dx = -ring; dx <= ring; dx++)
             {
                 if (dx * dx + dz * dz > ring * ring) continue;
                 int x = cx + dx, z = cz + dz;
-                if (_map.BiomeAt(x, z) != Biome.Hills || _w.Get(x, _height[Idx(x, z)], z) == BlockType.Lava) return false;
+                if (_map.BiomeAt(x, z) != Biome.Hills || _w.Get(x, _height[Idx(x, z)], z) == BlockType.Lava || RidgeAt(x, z) > 0) return false;
                 if (dx * dx + dz * dz <= r * r) low = Math.Min(low, _height[Idx(x, z)]);
             }
             if (low <= _water + 1 || low < 3) return false;
@@ -544,6 +550,7 @@ public static partial class RegionGenerator
             {
                 int cx = rng.Range(r + 1, _sx - r - 1), cz = rng.Range(r + 1, _sz - r - 1);
                 if (_map.BiomeAt(cx, cz) is not (Biome.Grassland or Biome.Forest or Biome.Hills) || NearStart(cx, cz, keepOff)) continue;
+                if (NearPass(cx, cz, PassClear + r + 1)) continue;
                 bool far = true;
                 foreach (var p in placed)
                     if ((p.X - cx) * (p.X - cx) + (p.Z - cz) * (p.Z - cz) < SinkholeGap * SinkholeGap) far = false;
@@ -639,6 +646,7 @@ public static partial class RegionGenerator
             {
                 int cx = rng.Range(edge, _sx - edge), cz = rng.Range(edge, _sz - edge);
                 if (_map.BiomeAt(cx, cz) != Biome.Hills || NearStart(cx, cz, keepOff)) continue;
+                if (NearPass(cx, cz, PassClear + ScreeReach + 1)) continue;
                 if (_duskX >= 0 && Math.Max(Math.Abs(cx - _duskX), Math.Abs(cz - _duskZ)) <= DuskClearing + 8) continue;
                 bool far = true;
                 foreach (var p in placed)
@@ -835,12 +843,14 @@ public static partial class RegionGenerator
             var (ex, ey, ez) = _map.Caverns[^1];
             int tx = ex, tz = ez, ty = ey;
             int sdx = ex < _sx / 2 ? 1 : -1;
-            for (int s = 0; s < _sy * 3 && ty <= _height[Idx(tx, tz)] + 1; s++)
+            // (Up to the hill a ridge stands on, not over the ridge: see OpenMouths.)
+            for (int s = 0; s < _sy * 3 && ty <= _height[Idx(tx, tz)] - RidgeAt(tx, tz) + 1; s++)
             {
                 Carve(tx, ty, tz, Math.Max(1, Sy(2)), true);
                 tx = Math.Clamp(tx + sdx, 1, _sx - 2);
                 if (s % 2 == 1) ty++;
             }
+            _caveMouths.Add((tx, tz));
 
             // Ore, crystal and a little gold on the cave walls.
             for (int by = minY - 1; by <= maxY + 1; by++)
@@ -881,6 +891,8 @@ public static partial class RegionGenerator
                 int x = (gx * cell + (int)(h % (uint)cell)) * ts, z = (gz * cell + (int)(h / (uint)cell % (uint)cell)) * ts;
                 // Random vegetation stays out of the start areas so both players get the same mirrored layout.
                 if (x >= _sx || z >= _sz || NearStart(x, z, Sx(StartResourceRadius + 4))) continue;
+                // Nor in a mountain pass, which stays open.
+                if (_map.Passes.Count > 0 && NearPass(x, z, Sx(PassHalf) + Sx(RidgeHalf) + 2 * ts) && RidgeAt(x, z) == 0) continue;
                 int chance = _map.BiomeAt(x, z) switch
                 {
                     Biome.Forest => 75,

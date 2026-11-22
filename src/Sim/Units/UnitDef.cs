@@ -308,6 +308,12 @@ public sealed class LairDef
     /// </summary>
     public bool Lurk { get; init; }
     /// <summary>
+    /// The lair stands in a mountain pass (the stone giant, see <see cref="World.RegionMap.Passes"/>): one in each of
+    /// the map's passes rather than <see cref="Count"/> spread over its <see cref="Biome"/>, which it falls back to on a
+    /// map with no pass. <c>pass</c> in the data.
+    /// </summary>
+    public bool Pass { get; init; }
+    /// <summary>
     /// How many percent harder the first blow is that a lurking monster strikes coming up out of the water (see
     /// <see cref="Lurk"/>); 0 for none.
     /// </summary>

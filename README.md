@@ -61,7 +61,7 @@ lie in the floors, and every `DeepNestEvery`th chamber is a crawler nest (`Regio
 `DeepCaveTests`). A lower map has no deep rock and is laid out as before:
 ocean and beaches on the west and east edges, a river running north–south that can be waded at three
 shallow fords (about a quarter, half and three quarters of the way down), grassland and forests,
-a hill range with stone ridges, lodes of gold ore (`PlaceGold`, see Gold in [Economy](docs/rules.md#economy)) and pools of lava, a swamp with patches of poison bog (see
+a hill range with stone ridges and a sheer ridge across it with a pass a stone giant guards (`RaiseRidges`, see Monsters and taming in [the rules](docs/rules.md#monsters-and-taming)), lodes of gold ore (`PlaceGold`, see Gold in [Economy](docs/rules.md#economy)) and pools of lava, a swamp with patches of poison bog (see
 [Natural hazards](docs/rules.md#natural-hazards)), a cavern with ore, crystal and a little gold under the hills, and old
 stone ruins (broken stone brick walls and fallen stone to clear for stone, `RegionGenerator.RuinsPer512` for
 each 512×512 blocks), each holding a find from `data/ruins.json` for the first side to search it. A bigger map gets more features, not just bigger ones (issue #67,

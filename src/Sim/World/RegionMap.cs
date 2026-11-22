@@ -33,7 +33,7 @@ public readonly record struct StartArea(int Player, int X, int Y, int Z);
 /// </summary>
 public sealed class RegionMap
 {
-    public const int FormatVersion = 3;
+    public const int FormatVersion = 4;
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("RTSMAP");
 
     public ulong Seed { get; }
@@ -66,6 +66,13 @@ public sealed class RegionMap
     /// the chamber's open middle.
     /// </summary>
     public List<(int X, int Y, int Z)> Deeps { get; } = new();
+
+    /// <summary>
+    /// The mountain passes, one through the stone ridge across each hill range (see
+    /// <see cref="RegionGenerator.RidgeLift"/>): the middle of each pass's floor, standing on the block at Y. The stone
+    /// giants guard them.
+    /// </summary>
+    public List<(int X, int Y, int Z)> Passes { get; } = new();
 
     private readonly Biome[] _biomes;
 
@@ -103,8 +110,8 @@ public sealed class RegionMap
     /// <summary>
     /// Binary format, little-endian: "RTSMAP", u16 version, u64 seed, i32 sizeX/Y/Z, i32 start count,
     /// then (i32 player, x, y, z) per start, i32 cavern count then (i32 x, y, z) per cavern, the same for ruins
-    /// and for the deep caves' chambers (version 1 had u8 hasCavern (+ i32 x, y, z) and no ruins, version 2 no
-    /// deep caves; both still load), the biome map run-length
+    /// for the deep caves' chambers and for the mountain passes (version 1 had u8 hasCavern (+ i32 x, y, z) and no ruins,
+    /// version 2 no deep caves, version 3 no passes; all still load), the biome map run-length
     /// encoded, then every block in (y, z, x) order run-length encoded. Runs are (u16 length, u8 value).
     /// </summary>
     public void Save(Stream stream)
@@ -116,7 +123,7 @@ public sealed class RegionMap
         w.Write(World.SizeX); w.Write(World.SizeY); w.Write(World.SizeZ);
         w.Write(Starts.Count);
         foreach (var s in Starts) { w.Write(s.Player); w.Write(s.X); w.Write(s.Y); w.Write(s.Z); }
-        foreach (var list in new[] { Caverns, Ruins, Deeps })
+        foreach (var list in new[] { Caverns, Ruins, Deeps, Passes })
         {
             w.Write(list.Count);
             foreach (var c in list) { w.Write(c.X); w.Write(c.Y); w.Write(c.Z); }
@@ -151,7 +158,12 @@ public sealed class RegionMap
             if (r.ReadBoolean()) map.Cavern = (r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
         }
         else
-            foreach (var list in version == 2 ? new[] { map.Caverns, map.Ruins } : new[] { map.Caverns, map.Ruins, map.Deeps })
+            foreach (var list in version switch
+                     {
+                         2 => new[] { map.Caverns, map.Ruins },
+                         3 => new[] { map.Caverns, map.Ruins, map.Deeps },
+                         _ => new[] { map.Caverns, map.Ruins, map.Deeps, map.Passes },
+                     })
             {
                 int n = r.ReadInt32();
                 if (n < 0 || n > 1024) throw new InvalidDataException("Bad feature count");
