@@ -1061,9 +1061,9 @@ hurts the units on or near it.
 ## City-states
 
 `src/Sim/Economy/CityStateSystem.cs`: towns of other races, too small to win, that trade with everyone
-and are won by force. There are five, the goblins, the ogres, the kobolds, the trolls and the centaurs
+and are won by force. There are six, the goblins, the ogres, the kobolds, the trolls, the centaurs and the merfolk
 (`data/citystates.json`); everything below holds for all of them, with the goblins' numbers unless the ogres',
-the kobolds', the trolls' or the centaurs' section says otherwise.
+the kobolds', the trolls', the centaurs' or the merfolk's section says otherwise.
 
 - **The town**: at match start each city-state gets a town about as far from every start area as from
   the others (on a 512 map about 96 blocks from their middle, where the ground allows): a levelled
@@ -1206,6 +1206,27 @@ the kobolds', the trolls' or the centaurs' section says otherwise.
   - `CentaurTests` checks the data, the scouts' sight (the holder seeing the land round the camp and the rival not,
     the sight going over to a new holder, less of it at night), a hired archer shooting from the saddle, and the camp
     placed in a match away from the other towns.
+
+- **The merfolk cove** (`"coast"` and `"fishing"` in `citystates.json`): a sixth city-state, placed last, on the sea
+  shore: at the best site (scored as the other towns' are) whose market is on dry land with the open sea within 28
+  columns of it straight out east, west, south or north, and that is at least the usual distance (144 blocks on the
+  default map) from every other town in the open; with no such site it is placed as any other town (on the default map
+  it lies on the east coast's beach, north of the east start). Its square is paved with sand, its huts are stone brick
+  with thatched roofs, and its totem is the **merfolk conch** (`merfolk_conch`: a stone pillar 6 high on a 3×3 plinth
+  crusted with shells, topped with a great spiralled conch hung with pearls, banded in the holder's colour). It keeps no
+  lair. Five merfolk guard it, three tridents and two harpooners (a fallen one is replaced every 45 seconds). Its holder
+  gets 15 gold a minute as tribute (pearls from the sea), caravans bring iron there (10 a load, as the merfolk cannot
+  smelt under the sea) and get food back (15 per 100 blocks of route), and its holder hires merfolk, at most 4 ready at a
+  time and one more every 45 seconds:
+  - **Merfolk trident**: line infantry (85 hit points, speed 4.5, a long trident, reach 1.75, 8 damage every 1.1
+    seconds, pierce) with a shield of shell that stops 15% of the blows from in front; 50 food and 10 gold.
+  - **Merfolk harpooner**: ranged (55 hit points, speed 4.5) that throws barbed harpoons 8 columns, further than a goblin
+    sling (9 damage every 2 seconds, pierce); 50 food, 10 wood and 15 gold.
+  - **Fish to the nets** (`"fishing": { "bonus": 50 }`): while you hold the cove, every round of work at your fishing huts
+    (buildings that stand at the water's edge) brings in 50% more food: 6 instead of 4. Other works, and other players'
+    huts, are not changed, and whoever takes the cove over takes the bonus too.
+  - `MerfolkTests` checks the data and its checks, the holder's fishing huts catching more (and a rival's or nobody's
+    holding not), other works unchanged, and the cove placed by the sea in a match away from the other towns.
 
 This replaced the earlier influence alliance (gifts, influence from trade and lairs, raiding caravans
 for influence), which is gone. `CityStateTests` has the issue's checks: breaking the totem makes the

@@ -117,4 +117,18 @@ public sealed class CityStateDef
     /// <c>CityStateSystem.InBiome</c>). Not for a deep town or a crossing.
     /// </summary>
     public World.Biome? Biome { get; init; }
+
+    /// <summary>
+    /// True for a town on the sea shore (the merfolk's cove): it is placed at the best site whose market is within
+    /// <c>CityStateSystem.CoastReach</c> columns of the open sea, the usual distance from the other towns, and only with
+    /// no such site anywhere else (see <c>CityStateSystem.OnCoast</c>). Not for a deep town, a crossing or a biome.
+    /// </summary>
+    public bool Coast { get; init; }
+
+    /// <summary>
+    /// Percent more food its holder's fishing huts (buildings that stand at the water's edge, <see cref="Economy.BuildingDef.Shore"/>)
+    /// bring in each round while they hold the town: the merfolk drive the fish into their nets. 0 for none. See
+    /// <c>EconomySystem.StepQuarry</c>.
+    /// </summary>
+    public int FishingBonus { get; init; }
 }

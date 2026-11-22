@@ -779,7 +779,7 @@ public static class ContentLoader
         private void ReadCityState(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof", "ground", "deep", "crossing", "toll", "watch", "biome");
+            o.Keys("id", "name", "description", "totem", "guards", "tribute", "trade", "mercenaries", "heal", "lair", "wall", "roof", "ground", "deep", "crossing", "toll", "watch", "biome", "coast", "fishing");
             if (id == null) return;
             if (_db.TryGetCityState(id, out _))
             {
@@ -802,6 +802,8 @@ public static class ContentLoader
             toll?.Keys("gold", "feud");
             var watch = Part(o, "watch", "{ \"range\": 40 }");
             watch?.Keys("range");
+            var fishing = Part(o, "fishing", "{ \"bonus\": 50 }");
+            fishing?.Keys("bonus");
             var buys = trade?.Enum("buys", Good.Food, required: false) ?? Good.Food;
             var sells = trade?.Enum("sells", Good.Iron, required: false) ?? Good.Iron;
             if (buys == sells) trade!.Error($"buys and sells the same good ({SnakeName(buys)})");
@@ -833,7 +835,10 @@ public static class ContentLoader
                 FeudTicks = (toll?.Int("feud", 0, MaxSeconds, 60) ?? 60) * Tps,
                 WatchRange = watch?.Int("range", 1, 256, 40) ?? 0,
                 Biome = o.Has("biome") ? o.Enum("biome", World.Biome.Grassland, required: true) : null,
+                Coast = o.Bool("coast"),
+                FishingBonus = fishing?.Int("bonus", 0, 1000, 50) ?? 0,
             };
+            if (def.Coast && (def.Deep || def.Crossing || def.Biome != null)) o.Error("a town on the coast (\"coast\") cannot be in the deep caves, at a crossing or keep to a biome");
             if (def.Biome != null && (def.Deep || def.Crossing)) o.Error("a town in the deep caves or at a crossing cannot keep to a biome (\"biome\")");
             if (def.Crossing && def.Deep) o.Error("a town in the deep caves cannot be a crossing (\"deep\" and \"crossing\" are both true)");
             var totemId = totem?.Str("building", true);
@@ -1707,13 +1712,13 @@ public static class ContentLoader
             return fallback;
         }
 
-        /// <summary>What a town square is paved with: grass (the fallback), stone or stone_brick.</summary>
+        /// <summary>What a town square is paved with: grass (the fallback), sand, stone or stone_brick.</summary>
         public BlockType Ground(string key)
         {
             var text = Str(key, false);
             if (text == null) return BlockType.Grass;
-            if (TryEnum<BlockType>(text, out var block) && block is BlockType.Grass or BlockType.Stone or BlockType.StoneBrick) return block;
-            Error($"\"{key}\" is \"{text}\"; it should be grass, stone or stone_brick");
+            if (TryEnum<BlockType>(text, out var block) && block is BlockType.Grass or BlockType.Stone or BlockType.StoneBrick or BlockType.Sand) return block;
+            Error($"\"{key}\" is \"{text}\"; it should be grass, sand, stone or stone_brick");
             return BlockType.Grass;
         }
 

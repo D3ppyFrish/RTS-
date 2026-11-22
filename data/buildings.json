@@ -172,6 +172,8 @@
     "wall": "stone_brick", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
   { "id": "centaur_standard", "name": "Centaur standard", "kind": "totem", "size": [3, 3], "wallHeight": 8,
     "wall": "planks", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
+  { "id": "merfolk_conch", "name": "Merfolk conch", "kind": "totem", "size": [3, 3], "wallHeight": 6,
+    "wall": "stone_brick", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
   { "id": "bridge", "name": "Bridge", "kind": "bridge", "size": [1, 1], "wallHeight": 1, "wall": "planks",
     "cost": { "wood": 3 }, "buildTime": 3, "sight": 2 }
 ]

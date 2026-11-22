@@ -316,7 +316,10 @@ public sealed partial class EconomySystem
         var works = quarry.Def.Works;
         var next = works[u.JobX[i] % works.Length];
         u.JobX[i] = (u.JobX[i] + 1) % works.Length;
-        AddCarry(i, next.Good, next.Amount);
+        int amount = next.Amount;
+        // A fishing hut's catch is bigger while its owner holds the merfolk's cove (CityStateDef.FishingBonus).
+        if (quarry.Def.Shore && next.Good == Good.Food) amount += amount * _sim.Cities.FishingBonusOf(u.Owner[i]) / 100;
+        AddCarry(i, next.Good, amount);
         GoToStorage(i);
     }
 

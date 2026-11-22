@@ -12,6 +12,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it, the
 # stone outcrop at 163..165 x 389..391 (top block 164,22,390) and open ground for a house at 138..141 x 392..395.
+# The camera moves east for the right-click on the outcrop, which otherwise sits under the top bar's town buttons.
 STEPS="
 wait 20
 camera 131,389 45 55 22
@@ -21,9 +22,13 @@ mouse 800,450
 mouse 1080,640
 up 1080,640
 wait 2
+camera 145,389 45 55 22
+wait 5
 clickworld 164,86,390 right
 ticks 40
 print
+camera 131,389 45 55 22
+wait 5
 key k
 wait 3
 clickui tech_roads

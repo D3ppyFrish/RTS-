@@ -302,12 +302,14 @@ public sealed class CityStateSystem
             var sites = Spread(scored, want, cx, cz);
             // A town that keeps to a biome (the centaurs' open grassland) takes the best site in it; with none, the
             // best site anywhere.
-            for (int pass = def.Biome is null ? 1 : 0; pass < 2; pass++)
+            // A town on the coast (the merfolk's cove) likewise takes the best site by the open sea.
+            for (int pass = def.Biome is null && !def.Coast ? 1 : 0; pass < 2; pass++)
             {
                 CityState? town = null;
                 foreach (var (x, z) in sites)
                 {
-                    if (pass == 0 && (!InBiome(x, z, def.Biome!.Value) || NearestTown(x, z) < want)) continue;
+                    if (pass == 0 && (def.Biome is { } biome ? !InBiome(x, z, biome) : !OnCoast(x, z))) continue;
+                    if (pass == 0 && NearestTown(x, z) < want) continue;
                     if (!SiteFits(x, z)) continue;
                     town = Place(def, x, z)!;
                     placed.Add(town);
@@ -415,6 +417,40 @@ public sealed class CityStateSystem
             if (map.BiomeAt(sx, sz) == biome) inside++;
         }
         return inside * 2 >= all;
+    }
+
+    /// <summary>How far (columns) from a coast town's market the open sea may be (<see cref="OnCoast"/>).</summary>
+    public const int CoastReach = 28;
+
+    /// <summary>
+    /// True if the open sea (<see cref="Biome.Ocean"/>) lies within <see cref="CoastReach"/> columns of the market at
+    /// column (x, z), straight out east, west, south or north (every second column looked at), and the market itself is
+    /// on dry land: a site for a town on the shore.
+    /// </summary>
+    public bool OnCoast(int x, int z)
+    {
+        var map = _sim.Map;
+        if (map.BiomeAt(x, z) == Biome.Ocean) return false;
+        foreach (var (dx, dz) in Steps)
+            for (int k = 2; k <= CoastReach; k += 2)
+            {
+                int sx = x + dx * k, sz = z + dz * k;
+                if ((uint)sx >= (uint)World.SizeX || (uint)sz >= (uint)World.SizeZ) break;
+                if (map.BiomeAt(sx, sz) == Biome.Ocean) return true;
+            }
+        return false;
+    }
+
+    /// <summary>
+    /// Percent more food <paramref name="player"/>'s fishing huts bring in: the best <see cref="CityStateDef.FishingBonus"/>
+    /// of the towns they hold (the merfolk's cove), or 0.
+    /// </summary>
+    public int FishingBonusOf(int player)
+    {
+        int best = 0;
+        foreach (var town in _towns)
+            if (town.Holder == player) best = Math.Max(best, town.Def.FishingBonus);
+        return best;
     }
 
     /// <summary>
