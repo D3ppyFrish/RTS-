@@ -211,6 +211,22 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   infantry beats cavalry, ranged beats line infantry and workers, cavalry beats ranged units and casters,
   and every combat role beats sappers and workers. All of a tick's hits land together, so neither side
   strikes first, and units do not waste blows on an enemy that is already dying.
+- **Siege workshops and catapults** (`SiegeTests`; the design doc's siege role, "break walls at range", and its
+  Resources table: planks and iron for siege): a **siege workshop** (kind `barracks` in `data/buildings.json`, 6 by 6,
+  planks under thatch, 40 wood, 40 planks and 20 stone, needs Smelting, every faction) trains the **catapult** (60
+  planks, 10 iron and 40 food, 40 seconds), the first siege engine. It is slow (2 blocks a second), throws a stone every
+  5 seconds out to 15 blocks for 30 crushing damage with a 1.5 block splash, and as a siege engine with a blast (see
+  Thick walls below) it deals full damage to every building, thick stone walls and towers included, from beyond the
+  reach of the archers on them. Three things set it apart, all in the data:
+  - **Dead ground** (`minRange`, 5 blocks; `CombatSystem.TooClose`): it cannot hit an enemy unit nearer than that. It
+    never picks one as a target, drops one that walks in close (even one it was ordered to attack), and shoots past it
+    at enemies further off. Buildings are hit at any distance. Riders that reach a catapult are safe from it, so it
+    needs soldiers between it and the enemy.
+  - **Lobbed shots** (`lobs`): its stones go up in a high arc, so it needs no clear line: it hits what stands behind a
+    wall or a hill, where arrows cannot reach.
+  - **A machine** (`machine`): it never breaks and runs however low its morale falls, and it does not bleed.
+  Siege is weak against cavalry and heavy infantry (`data/roles.json`). Computer players do not build siege workshops
+  yet. All numbers are first guesses for playtesting.
 - **Terrain**: ranged units (range over 2) need a clear line to their target (leaves do not block it), and
   two or more levels above it they reach and see 25% further. Height also changes where hits land (see
   armour below): arrows from the high ground and blows from above find more heads, blows struck uphill

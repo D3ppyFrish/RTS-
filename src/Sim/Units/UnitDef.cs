@@ -58,6 +58,21 @@ public sealed class UnitDef
     /// <summary>Enemies this close (blocks) to its target are hit too; 0 for a single target.</summary>
     public Fix64 Splash { get; init; }
     /// <summary>
+    /// How close (blocks, middle to middle) an enemy unit can be and still be hit (<c>"minRange"</c> in the data):
+    /// a catapult cannot drop a stone on what stands right beside it. 0 for no such limit. Buildings are hit at any distance.
+    /// </summary>
+    public Fix64 MinRange { get; init; }
+    /// <summary>
+    /// Its shots go up in a high arc (<c>"lobs"</c> in the data): it needs no clear line to its target, so it hits
+    /// what stands behind a wall or a hill it can see over (see <see cref="CombatSystem"/>).
+    /// </summary>
+    public bool Lobs { get; init; }
+    /// <summary>
+    /// A machine (<c>"machine"</c> in the data), such as a catapult: it never breaks and runs however its morale falls,
+    /// and has no blood in it (it does not bleed unless the data says so).
+    /// </summary>
+    public bool Machine { get; init; }
+    /// <summary>
     /// Extra damage it takes from attacks by each role, in percent (indexed by <see cref="UnitRole"/>), or
     /// null if it has no weakness beyond the role table's.
     /// </summary>

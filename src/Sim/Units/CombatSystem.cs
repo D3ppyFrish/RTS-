@@ -267,7 +267,7 @@ public sealed partial class CombatSystem
         StepRecovery();
         DrainBlocks();
         for (int i = 0; i < u.Count; i++)
-            if (u.Rout[i] == 0 && u.Morale[i] <= BreakMorale && Def(i).Role != UnitRole.Monster && !Def(i).Hero) StartRout(i);
+            if (u.Rout[i] == 0 && u.Morale[i] <= BreakMorale && Def(i).Role != UnitRole.Monster && !Def(i).Hero && !Def(i).Machine) StartRout(i);
     }
 
     /// <summary>
@@ -389,7 +389,7 @@ public sealed partial class CombatSystem
         if (u.Target[i] != 0)
         {
             t = u.IndexOf(u.Target[i]);
-            if (t >= 0 && Hostile(u.Owner[i], u.Owner[t]) && (!guard || _sim.Cities.Repels(i, t))
+            if (t >= 0 && Hostile(u.Owner[i], u.Owner[t]) && (!guard || _sim.Cities.Repels(i, t)) && !TooClose(i, def, t)
                 && (order == CombatOrder.Attack || (!u.Subdued[t] && (Within(i, t, hold ? Reach(i, def, t) : Sight(i, def, t) * Leash)
                     || order == CombatOrder.Guard && !hold && TownGuard(i) && _sim.Vision.SeesUnit(u.Owner[i], t))))
                 && (order != CombatOrder.Guard || NearCharge(i, t, LeashOf(i))))
@@ -410,7 +410,7 @@ public sealed partial class CombatSystem
         // A guard first goes for whoever hits its charge, and fights only near its charge.
         bool guarding = order == CombatOrder.Guard;
         if (guarding && by >= 0 && !NearCharge(i, by, LeashOf(i))) by = -1;
-        if (by >= 0 && Hostile(u.Owner[i], u.Owner[by]) && !u.Subdued[by] && (!guard || _sim.Cities.Repels(i, by)) && Within(i, by, hold ? Reach(i, def, by) : Sight(i, def, by) * AnswerRange)) t = by;
+        if (by >= 0 && Hostile(u.Owner[i], u.Owner[by]) && !u.Subdued[by] && !TooClose(i, def, by) && (!guard || _sim.Cities.Repels(i, by)) && Within(i, by, hold ? Reach(i, def, by) : Sight(i, def, by) * AnswerRange)) t = by;
         else if (guarding && ChargeAttacker(i) is var at && at >= 0) t = at;
         else if ((_sim.Tick + u.Id[i]) % AcquireInterval == 0)
         {
@@ -447,7 +447,7 @@ public sealed partial class CombatSystem
         Fix64 darkSight = def.Sight * darkPct / 100, litSight = def.Sight * litPct / 100;
         Fix64 widest = def.IsRanged ? litSight * HighGroundBonus : litSight;
         int best = -1;
-        Fix64 bestD = Fix64.MaxValue;
+        Fix64 bestD = Fix64.MaxValue, closest = def.MinRange * def.MinRange;
         Cells(x, z, widest, out int x0, out int z0, out int x1, out int z1);
         for (int cz = z0; cz <= z1; cz++)
         for (int cx = x0; cx <= x1; cx++)
@@ -473,7 +473,7 @@ public sealed partial class CombatSystem
                     Fix64 dx = u.X[j] - x, dz = u.Z[j] - z;
                     if (Fix64.Abs(dx) > s || Fix64.Abs(dz) > s) continue;
                     Fix64 d = dx * dx + dz * dz;
-                    if (d > s * s) continue;
+                    if (d > s * s || d < closest) continue;
                     if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
                     {
                         best = j;
@@ -488,6 +488,18 @@ public sealed partial class CombatSystem
     /// <summary>How far unit i hits target t from: its range, a quarter more for a ranged unit on the high ground.</summary>
     private Fix64 Reach(int i, UnitDef def, int t) =>
         def.IsRanged && U.Y[i] - U.Y[t] >= HighGround ? def.Range * HighGroundBonus : def.Range;
+
+    /// <summary>
+    /// True if unit t stands nearer unit i than i's <see cref="UnitDef.MinRange"/> (a catapult's dead ground), so i
+    /// cannot hit it: it neither picks it nor keeps it as a target, even on an order.
+    /// </summary>
+    public bool TooClose(int i, UnitDef def, int t)
+    {
+        if (def.MinRange <= Fix64.Zero) return false;
+        Fix64 dx = U.X[t] - U.X[i], dz = U.Z[t] - U.Z[i];
+        if (Fix64.Abs(dx) >= def.MinRange || Fix64.Abs(dz) >= def.MinRange) return false;
+        return dx * dx + dz * dz < def.MinRange * def.MinRange;
+    }
 
     /// <summary>
     /// True if the unit holds its ground when it has no order: on the hold stance, on the retreat stance and
@@ -557,8 +569,9 @@ public sealed partial class CombatSystem
         int dy = u.Y[i] - u.Y[t];
         if (!def.IsRanged && Math.Abs(dy) > MeleeHeight) return false;
         Fix64 reach = def.IsRanged && dy >= HighGround ? def.Range * HighGroundBonus : def.Range;
-        if (!Within(i, t, reach)) return false;
-        if (!def.IsRanged) return true;
+        if (!Within(i, t, reach) || TooClose(i, def, t)) return false;
+        // A lobbed shot goes over walls and hills: it needs no clear line.
+        if (!def.IsRanged || def.Lobs) return true;
         // A ranged unit needs a clear line. It looks when it is about to shoot, and every few ticks while it
         // has none (walking closer meanwhile).
         if (u.LosBlocked[i])
@@ -1043,14 +1056,14 @@ public sealed partial class CombatSystem
             Fix64 reach = def.IsRanged && dy >= HighGround ? far : def.Range;
             Fix64 dx = u.X[j] - u.X[i], dz = u.Z[j] - u.Z[i];
             Fix64 d = dx * dx + dz * dz;
-            if (d > reach * reach) continue;
+            if (d > reach * reach || d < def.MinRange * def.MinRange) continue;
             if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
             {
                 best = j;
                 bestD = d;
             }
         }
-        if (best >= 0 && def.IsRanged && !ClearShot(i, best)) return -1;
+        if (best >= 0 && def.IsRanged && !def.Lobs && !ClearShot(i, best)) return -1;
         return best;
     }
 
