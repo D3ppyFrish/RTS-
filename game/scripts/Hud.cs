@@ -528,7 +528,9 @@ public partial class Hud : CanvasLayer
                 def.Trains.All(t => _sim.Content.TryGetUnit(t, out var u) && u.Role == UnitRole.Siege))
                 b.TooltipText = "Builds siege engines: " + string.Join(", ", def.Trains.Select(t => _sim.Content.Unit(t).Name.ToLowerInvariant())) +
                                 ". A catapult is built of planks and iron, lobs stones over walls from far off and topples thick " +
-                                "walls, but cannot hit anything close beside it: keep soldiers between it and the enemy's riders.";
+                                "walls, but cannot hit anything close beside it: keep soldiers between it and the enemy's riders. " +
+                                "A battering ram shrugs off arrows under its roof and goes only at buildings: it strikes at the foot " +
+                                "of a wall so the column comes down, and breaks a gate twice as fast; riders wreck it.";
             if (def.IsTower)
                 b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +

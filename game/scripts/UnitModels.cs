@@ -759,6 +759,24 @@ public static class UnitModels
             .Box(-4, 4, -5, -4, 5, 4, Team).Box(3, 4, -5, 3, 5, 4, Team)                 // sides in its owner's colour
             .Box(-2, 4, 4, 1, 5, 5, TeamDark),                                           // and a front board
 
+        // Siege: a battering ram, an iron-headed log slung on chains under a pitched roof of hides on four wheels, the
+        // ridge and eaves in its owner's colour.
+        "battering_ram" => new Builder()
+            .Box(-4, 2, -7, -4, 3, 6, Wood).Box(3, 2, -7, 3, 3, 6, Wood)                 // side beams
+            .Box(-5, 0, -5, -5, 3, -3, Dark).Box(4, 0, -5, 4, 3, -3, Dark)               // hind wheels
+            .Box(-5, 0, 3, -5, 3, 5, Dark).Box(4, 0, 3, 4, 3, 5, Dark)                   // front wheels
+            .Box(-5, 1, -4, -5, 2, -4, Iron).Box(4, 1, -4, 4, 2, -4, Iron)               // hubs
+            .Box(-5, 1, 4, -5, 2, 4, Iron).Box(4, 1, 4, 4, 2, 4, Iron)
+            .Box(-4, 4, -7, -4, 8, -7, Wood).Box(3, 4, -7, 3, 8, -7, Wood)               // corner posts
+            .Box(-4, 4, 6, -4, 8, 6, Wood).Box(3, 4, 6, 3, 8, 6, Wood)
+            .Box(-5, 9, -8, -4, 9, 7, Hide).Box(-3, 10, -8, -2, 10, 7, Hide)             // the roof of hides
+            .Box(1, 10, -8, 2, 10, 7, Hide).Box(3, 9, -8, 4, 9, 7, Hide)
+            .Box(-1, 11, -8, 0, 11, 7, Team)                                             // its ridge
+            .Box(-5, 8, -8, -5, 8, 7, TeamDark).Box(4, 8, -8, 4, 8, 7, TeamDark)         // and eaves
+            .Box(-1, 7, -4, 0, 10, -4, Iron).Box(-1, 7, 3, 0, 10, 3, Iron)               // the chains
+            .Box(-1, 5, -9, 0, 6, 6, Wood)                                               // the log
+            .Box(-2, 4, 7, 1, 7, 9, Iron),                                               // and its iron head
+
         // Trade with the city-states: a pack mule with saddlebags in its owner's colour (what it carries goes on
         // its back), and the goblins' mercenaries.
         "caravan" => new Builder()
