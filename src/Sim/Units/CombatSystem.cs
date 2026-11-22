@@ -433,6 +433,8 @@ public sealed partial class CombatSystem
     /// picks a neutral city-state's guard on their own (they answer one that hits them), and a guard picks
     /// only soldiers in its town.
     /// </summary>
+    private static readonly Fix64 Spot2 = Fix64.FromInt(VisionSystem.SpotSubmerged * VisionSystem.SpotSubmerged);
+
     private int Nearest(int i, UnitDef def)
     {
         var u = U;
@@ -474,6 +476,8 @@ public sealed partial class CombatSystem
                     if (Fix64.Abs(dx) > s || Fix64.Abs(dz) > s) continue;
                     Fix64 d = dx * dx + dz * dz;
                     if (d > s * s || d < closest) continue;
+                    // A monster lying in the water goes unnoticed until it is close (see MonsterSystem.Submerged).
+                    if (d > Spot2 && _sim.Monsters.Submerged(j)) continue;
                     if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
                     {
                         best = j;
@@ -921,11 +925,14 @@ public sealed partial class CombatSystem
         var u = U;
         var part = Location(i, t);
         int damage = 0;
+        // A lurking monster's first blow coming up out of the water is an ambush (see MonsterSystem.Spring).
+        int ambush = splash ? 0 : _sim.Monsters.Spring(i);
         bool blocked = !splash && Shielded(i, t);
         if (blocked) Blocks++;
         else
         {
             damage = HitDamage(i, def, t, part);
+            if (ambush > 0) damage = damage * (100 + ambush) / 100;
             // Experience for the hit points it takes off, not for blows on a unit already doomed.
             _sim.Evolution.Damaged(i, Math.Min(damage, Math.Max(0, u.Hp[t] - _pending[t])));
             _pending[t] += damage;

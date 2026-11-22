@@ -37,6 +37,11 @@ public sealed class VisionSystem
     public const int UpdateTicks = 4;
     /// <summary>Columns round each of a player's units in which it hears units underground right by it.</summary>
     public const int HearClose = 2;
+    /// <summary>
+    /// Columns round each of a player's units within which it spots a lurking monster lying in the water (see
+    /// <see cref="Units.MonsterSystem.Submerged"/>); further off, the water hides it however near it is in sight.
+    /// </summary>
+    public const int SpotSubmerged = 3;
 
     private readonly Simulation _sim;
     private readonly int _sizeX, _sizeZ;
@@ -46,6 +51,8 @@ public sealed class VisionSystem
     private readonly long[] _seen = new long[Simulation.WildPlayer];
     // Per player, 1 for each column (x + z * SizeX) where they hear units underground now; null until they hear anything.
     private readonly byte[]?[] _heard = new byte[]?[Simulation.WildPlayer];
+    // Per player, 1 for each column within SpotSubmerged of one of their units: where they spot monsters lying in the water.
+    private readonly byte[]?[] _close = new byte[]?[Simulation.WildPlayer];
     // Per unit slot, 1 if the unit was underground at the last look (only players' units, not wild monsters).
     private byte[] _under = Array.Empty<byte>();
     // Half-widths of the rows of a disc, by its squared radius.
@@ -81,7 +88,9 @@ public sealed class VisionSystem
         var u = _sim.Units;
         if (u.Owner[i] == player || !_sim.Fog) return true;
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
-        return Underground(i) ? Hears(player, x, z) : Sees(player, x, z);
+        if (Underground(i)) return Hears(player, x, z);
+        if (_sim.Monsters.Submerged(i)) return Close(player, x, z);
+        return Sees(player, x, z);
     }
 
     /// <summary>True if unit i (a player's, not a wild monster) was underground at the last look, with fog of war on.</summary>
@@ -97,6 +106,17 @@ public sealed class VisionSystem
         if (!_sim.Fog) return true;
         if ((uint)x >= (uint)_sizeX || (uint)z >= (uint)_sizeZ || (uint)player >= (uint)_heard.Length) return false;
         return _heard[player] is { } g && g[x + z * _sizeX] != 0;
+    }
+
+    /// <summary>
+    /// True if column (x, z) is within <see cref="SpotSubmerged"/> columns of one of the player's units now, where
+    /// they spot a monster lying in the water. With fog of war off, everything is seen anyway.
+    /// </summary>
+    public bool Close(int player, int x, int z)
+    {
+        if (!_sim.Fog) return true;
+        if ((uint)x >= (uint)_sizeX || (uint)z >= (uint)_sizeZ || (uint)player >= (uint)_close.Length) return false;
+        return _close[player] is { } g && g[x + z * _sizeX] != 0;
     }
 
     /// <summary>
@@ -145,6 +165,8 @@ public sealed class VisionSystem
             if (g != null) g.AsSpan().Replace((byte)Sight.Visible, (byte)Sight.Seen);
         foreach (var g in _heard)
             if (g != null) Array.Clear(g);
+        foreach (var g in _close)
+            if (g != null) Array.Clear(g);
 
         var u = _sim.Units;
         var defs = _sim.Content.Units;
@@ -165,6 +187,7 @@ public sealed class VisionSystem
             var s = sight * dark / 100;
             Stamp(p, x, z, x, z, (s * s).FloorToInt());
             Hear(p, x, z, x, z, under ? Math.Max((s * s).FloorToInt(), HearClose * HearClose) : HearClose * HearClose);
+            if (!under) Fill(_close[p] ??= new byte[_sizeX * _sizeZ], x, z, x, z, SpotSubmerged * SpotSubmerged);
             int lit = lights ? c.SightPercent(x, z, true) : dark;
             if (lit > dark)
             {
@@ -266,9 +289,12 @@ public sealed class VisionSystem
     /// Lets the player hear units underground in the rectangle of columns (x0, z0)-(x1, z1) and every column within
     /// the square root of <paramref name="r2"/> of it.
     /// </summary>
-    private void Hear(int player, int x0, int z0, int x1, int z1, int r2)
+    private void Hear(int player, int x0, int z0, int x1, int z1, int r2) =>
+        Fill(_heard[player] ??= new byte[_sizeX * _sizeZ], x0, z0, x1, z1, r2);
+
+    /// <summary>Marks the rectangle of columns (x0, z0)-(x1, z1) in grid g, and every column within the square root of r2 of it.</summary>
+    private void Fill(byte[] g, int x0, int z0, int x1, int z1, int r2)
     {
-        var g = _heard[player] ??= new byte[_sizeX * _sizeZ];
         var half = Disc(r2);
         int r = half.Length - 1;
         for (int z = Math.Max(0, z0 - r); z <= Math.Min(_sizeZ - 1, z1 + r); z++)

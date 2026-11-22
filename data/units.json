@@ -53,7 +53,10 @@
 // well away from the starts, the towns and each other; such a monster has no lair at the starts unless
 // atStarts is true. grow (optional, seconds) makes the pack grow the longer it is left: every grow seconds
 // while the lair stands, one more of the monster is born at its den, until the pack is growTo strong
-// (twice pack if left out).
+// (twice pack if left out). lurk (optional) has the pack wait in the shallow water by its den, one monster to
+// a pool column, unseen while it lies there until another player's unit comes within 3 columns (with fog of
+// war on); ambush (optional, percent, needs lurk) is how much harder the first blow is that a monster strikes
+// coming up out of the water.
 // prizes (optional): what each faction gets for beating the monster, by faction id. A cleared lair leaves
 // a den that one player of a faction with a prize can use, once: { "building": id } puts that building (one
 // with "fromDen" in buildings.json) up on the den as a site to build, { "form": id } has the nearest unit
@@ -226,10 +229,10 @@
     "lair": { "pack": 1, "guard": 10, "leash": 14, "reward": { "stone": 200, "iron": 60 }, "biome": "hills", "count": 1,
       "prizes": { "settlers": { "relic": "giant_heart" } } } },
   { "id": "bog_horror", "name": "Bog horror", "role": "monster",
-    "description": "A hunched thing of mud and reeds that lurks in the swamp in pairs, heals in the muck and follows the smell of blood. Whoever clears a pair takes up its bog lantern.",
+    "description": "A hunched thing of mud and reeds that lurks under the swamp's pools in pairs, comes up out of the water at whoever wades too near, heals in the muck and follows the smell of blood. Whoever clears a pair takes up its bog lantern.",
     "speed": 4, "hp": 140, "model": "bog_horror", "damage": 12, "attackTime": 1.25, "range": 1.5, "sight": 9,
     "attack": "slash", "armor": { "torso": 1 }, "regen": 2, "tracksBlood": true,
-    "lair": { "pack": 2, "guard": 9, "leash": 14, "reward": { "food": 120 }, "biome": "swamp", "count": 2,
+    "lair": { "pack": 2, "guard": 9, "leash": 14, "reward": { "food": 120 }, "biome": "swamp", "count": 2, "lurk": true, "ambush": 100,
       "prizes": { "orcs": { "relic": "bog_lantern" }, "settlers": { "relic": "bog_lantern" } } } },
   { "id": "giant_crab", "name": "Giant crab", "role": "monster",
     "description": "A shore crab the size of a cart, in pairs on the beaches: slow, shelled hard all over, with claws that crush. Settlers make shields of its shell; Orcs set crab pots where it lived.",
