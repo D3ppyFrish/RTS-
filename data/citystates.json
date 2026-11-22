@@ -28,6 +28,11 @@
 //   biome (optional): the town keeps to that biome (grassland, forest, hills, swamp...): its market and at least half
 //     the land within 24 columns of it are of that biome, wherever the map has such a site; otherwise it is placed as
 //     any other town. Not for a deep town or a crossing.
+//   coast (optional): true for a town on the sea shore: its market is within 28 columns of the open sea, wherever the map
+//     has such a site the usual distance from the other towns; otherwise it is placed as any other town. Not for a deep
+//     town, a crossing or one that keeps to a biome.
+//   fishing (optional): bonus is how many percent more food its holder's fishing huts bring in each round while they
+//     hold the town (the merfolk's, who drive the fish into their nets). Leave it out for none.
 //   toll (optional): gold is the toll a player pays for each unit of theirs that comes onto the town's toll ground
 //     (its square, its bridge and the guards' reach round them), once while it stays on it, unless they hold the
 //     town. The toll goes to the town's holder. The guards let units that paid through, soldiers too, and fight
@@ -84,5 +89,15 @@
     "trade": { "buys": "wood", "load": 20, "sells": "food", "price": 12, "holderBonus": 50 },
     "mercenaries": { "pool": 4, "refill": 45 },
     "heal": { "range": 6 },
-    "wall": "planks", "roof": "thatch" }
+    "wall": "planks", "roof": "thatch" },
+  { "id": "merfolk", "name": "Merfolk cove", "coast": true,
+    "description": "Merfolk who come up out of the sea to trade at a cove on the shore. Break their conch and they swim for you: they send you pearls, guard their cove against your enemies, drive the fish into your nets so your fishing huts bring in half as much again, and sell you tridents and harpooners.",
+    "totem": { "building": "merfolk_conch", "respawn": 5 },
+    "guards": { "units": ["merfolk_trident", "merfolk_trident", "merfolk_trident", "merfolk_harpooner", "merfolk_harpooner"], "reach": 4, "refill": 45 },
+    "fishing": { "bonus": 50 },
+    "tribute": { "caravan": "caravan", "good": "gold", "amount": 15, "every": 60 },
+    "trade": { "buys": "iron", "load": 10, "sells": "food", "price": 15, "holderBonus": 50 },
+    "mercenaries": { "pool": 4, "refill": 45 },
+    "heal": { "range": 6 },
+    "wall": "stone_brick", "roof": "thatch", "ground": "sand" }
 ]

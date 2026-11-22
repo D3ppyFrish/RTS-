@@ -2312,9 +2312,14 @@ public partial class Hud : CanvasLayer
                 ? $"Its scouts show you the land within {def.WatchRange} blocks of the town"
                 : $"Its scouts show its holder the land within {def.WatchRange} blocks of the town") + "\n"
             : "";
+        string fishing = def.FishingBonus > 0
+            ? (town.Holder == player
+                ? $"Its people drive the fish to your nets: your fishing huts bring in {def.FishingBonus}% more food"
+                : $"Its people drive the fish to its holder's nets: their fishing huts bring in {def.FishingBonus}% more food") + "\n"
+            : "";
         return $"{def.Name}   (city-state)   {HolderText(town, player)}\n" +
                $"{totemText}   {guards}\n" +
-               take + "\n" + watch + tribute +
+               take + "\n" + watch + fishing + tribute +
                $"Caravans bring {def.Load} {Goods.Name(def.Buys).ToLowerInvariant()} and get {def.Price} {Goods.Name(def.Sells).ToLowerInvariant()} " +
                $"per 100 blocks from your storage ({def.HolderBonus}% more for its holder): {trading} of yours trading here\n" +
                $"Mercenaries for its holder: {town.Ready} of {def.Pool} ready{refill}";

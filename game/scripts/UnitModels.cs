@@ -61,6 +61,13 @@ public static class UnitModels
     private static readonly Color CrabShell = new(0.75f, 0.3f, 0.18f);
     private static readonly Color CrabDark = new(0.5f, 0.17f, 0.1f);
     private static readonly Color CrabBelly = new(0.9f, 0.75f, 0.55f);
+    private static readonly Color MerScale = new(0.2f, 0.55f, 0.55f);
+    private static readonly Color MerScaleDark = new(0.12f, 0.36f, 0.4f);
+    private static readonly Color MerSkin = new(0.55f, 0.75f, 0.72f);
+    private static readonly Color MerFin = new(0.35f, 0.72f, 0.8f);
+    private static readonly Color Shell = new(0.93f, 0.8f, 0.72f);
+    private static readonly Color ShellPink = new(0.88f, 0.55f, 0.52f);
+    private static readonly Color Pearl = new(0.95f, 0.95f, 0.9f);
     // The dark power's corrupted beasts: black hide and stone veined with violet, and ember eyes.
     private static readonly Color BlightHide = new(0.12f, 0.09f, 0.14f);
     private static readonly Color BlightStone = new(0.2f, 0.16f, 0.24f);
@@ -239,6 +246,24 @@ public static class UnitModels
             .Box(-2, 18, 0, 1, 18, 3, Hair).Box(-2, 16, 0, 1, 17, 0, Hair)              // hair
             .Box(-1, 12, 0, 0, 16, 0, Hair)                                             // mane down the back
             .Box(-1, 16, 3, -1, 16, 3, Dark).Box(0, 16, 3, 0, 16, 3, Dark);             // eyes
+
+        /// <summary>
+        /// A merfolk facing +Z: a pale sea-green person whose body runs down into a scaled fish tail instead of legs,
+        /// coiled under it to stand on with its fluke curled up behind, a fin crest on the head, and a sash of its
+        /// owner's colour over a scaled front.
+        /// </summary>
+        public Builder Merfolk() =>
+            Box(-2, 0, -3, 1, 1, 2, MerScale)                                            // the tail coiled under it
+            .Box(-2, 2, -1, 1, 4, 1, MerScale).Box(-1, 2, 2, 0, 4, 2, MerScaleDark)      // rising into the body
+            .Box(-1, 1, -4, 0, 2, -5, MerScale).Box(-1, 3, -6, 0, 4, -6, MerScale)       // the tail's end curling up behind
+            .Box(-2, 5, -7, 1, 6, -7, MerFin)                                            // its fluke
+            .Box(-2, 5, -1, 1, 9, 0, MerSkin).Box(-1, 5, 1, 0, 8, 1, MerScale)           // body and scaled front
+            .Box(-2, 6, -1, 1, 7, 0, Team).Box(-2, 5, -1, -1, 9, -1, TeamDark)           // sash
+            .Box(-3, 6, -1, -3, 9, 0, MerSkin).Box(2, 6, -1, 2, 9, 0, MerSkin)           // arms
+            .Box(-2, 10, -2, 1, 13, 1, MerSkin)                                          // head
+            .Box(-1, 13, -2, 0, 15, 0, MerFin).Box(-3, 11, -1, -3, 12, 0, MerFin).Box(2, 11, -1, 2, 12, 0, MerFin) // fin crest and ear fins
+            .Box(-2, 10, -2, 1, 12, -2, MerScaleDark)                                    // dark hair like weed down the back
+            .Box(-1, 11, 1, -1, 11, 1, Dark).Box(0, 11, 1, 0, 11, 1, Dark);              // eyes
 
         /// <summary>The gold belt every form wears.</summary>
         public Builder Rank(int lift = 0) => Box(-2, lift + 5, -1, 1, lift + 5, 0, Gold);
@@ -746,6 +771,16 @@ public static class UnitModels
             .Box(3, 1, 1, 3, 12, 1, Wood).Box(3, 13, 1, 3, 14, 1, Steel)                // long spear
             .Box(-4, 3, -1, -4, 7, 2, Hide).Box(-4, 5, 0, -4, 5, 1, Team),              // hide shield
 
+        "merfolk_trident" => new Builder().Merfolk()
+            .Box(3, 1, 1, 3, 15, 1, Wood).Box(3, 16, 1, 3, 18, 1, Steel)                // the trident's shaft and middle tine
+            .Box(2, 16, 1, 4, 16, 1, Steel).Box(2, 17, 1, 2, 18, 1, Steel).Box(4, 17, 1, 4, 18, 1, Steel) // its side tines
+            .Box(-4, 4, -1, -4, 9, 2, Shell).Box(-4, 6, 0, -4, 7, 1, ShellPink)         // a shield of shell
+            .Box(-2, 13, -2, 1, 13, 1, Shell),                                          // a shell cap
+        "merfolk_harpooner" => new Builder().Merfolk()
+            .Box(3, 8, -3, 3, 8, 8, Wood).Box(3, 8, 9, 3, 8, 10, Steel).Box(3, 7, 9, 3, 7, 9, Steel) // a barbed harpoon held ready
+            .Box(-4, 5, -1, -3, 7, 1, Hair).Box(-4, 8, 0, -4, 8, 0, Hair)               // a coil of line at its side
+            .Box(0, 9, -1, 1, 9, -1, Pearl),                                            // a string of pearls
+
         "centaur_archer" => new Builder().Centaur(Horse)
             .Box(-4, 11, 4, -4, 17, 4, Wood).Box(-4, 10, 3, -4, 10, 3, Wood).Box(-4, 18, 3, -4, 18, 3, Wood) // short horse bow
             .Box(-3, 12, 3, -3, 12, 3, Leather)                                         // its grip
@@ -786,6 +821,20 @@ public static class UnitModels
             .Box(-9, 4, -1, -6, 6, 0, Team).Box(-8, 6, -1, -7, 7, 0, TeamDark)                                    // ears
             .Box(5, 4, -1, 8, 6, 0, Team).Box(6, 6, -1, 7, 7, 0, TeamDark)
             .Box(-4, 8, -1, -3, 10, 0, Bone).Box(2, 8, -1, 3, 10, 0, Bone).Box(-4, 11, -1, -4, 11, 0, Bone).Box(3, 11, -1, 3, 11, 0, Bone),
+
+        // The merfolk's conch, over its pole of stone: bands crusted with shells and a strap of the holder's colour, and
+        // on top a great spiralled conch shell, pale outside and pink in its mouth, hung with pearls.
+        "merfolk_conch_band" => new Builder()
+            .Box(-5, 0, -5, 4, 7, 4, Rock).Box(-5, 0, -5, 4, 0, 4, DarkRock).Box(-5, 7, -5, 4, 7, 4, DarkRock)
+            .Box(-5, 3, -5, 4, 4, 4, Team).Box(-6, 5, 0, -6, 6, 1, Shell).Box(5, 1, -2, 5, 2, -1, ShellPink)
+            .Box(1, 5, 5, 2, 6, 5, Shell),
+        "merfolk_conch_head" => new Builder()
+            .Box(-5, 0, -5, 4, 2, 4, Rock).Box(-5, 2, -5, 4, 2, 4, Team)                                          // the seat
+            .Box(-4, 3, -4, 3, 7, 3, Shell).Box(-3, 8, -3, 2, 10, 2, Shell).Box(-2, 11, -2, 1, 12, 1, Shell)       // the spiralled shell
+            .Box(-1, 13, -1, 0, 15, 0, Shell).Box(0, 16, 0, 0, 16, 0, ShellPink)                                  // its tip
+            .Box(-4, 5, -4, 3, 5, 3, ShellPink).Box(-3, 9, -3, 2, 9, 2, ShellPink)                                // the spiral's ridges
+            .Box(-2, 4, 4, 1, 9, 5, ShellPink).Box(-1, 5, 6, 0, 8, 6, Dark)                                       // its open mouth
+            .Box(-6, 1, -1, -6, 3, -1, Pearl).Box(5, 1, 1, 5, 3, 1, Pearl).Box(-1, 1, 5, -1, 2, 5, Pearl),         // pearls hung from it
 
         // The kobolds' crystal, over its pole of stone: stone bands bound with a strap of the holder's colour, and on
         // top a great violet crystal in a stone cup, with smaller crystals round it.

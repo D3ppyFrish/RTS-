@@ -342,6 +342,19 @@
     "attack": "pierce", "shield": 15,
     "cost": { "food": 30, "crystal": 5 } },
 
+  // Merfolk mercenaries, hired at the merfolk's cove on the shore by its holder: tridents to hold a line, and harpooners
+  // that throw barbed harpoons further than a slinger. Paid in food and gold (pearls from the sea).
+  { "id": "merfolk_trident", "name": "Merfolk trident", "role": "line_infantry", "hiredFrom": "merfolk",
+    "description": "A scaled warrior from the sea with a long trident and a shield of shell: holds a line against riders.",
+    "speed": 4.5, "hp": 85, "model": "merfolk_trident", "damage": 8, "attackTime": 1.1, "range": 1.75, "sight": 9,
+    "attack": "pierce", "armor": { "head": 1, "torso": 1 }, "shield": 15,
+    "cost": { "food": 50, "gold": 10 } },
+  { "id": "merfolk_harpooner", "name": "Merfolk harpooner", "role": "ranged", "hiredFrom": "merfolk",
+    "description": "Hurls barbed harpoons on a line further than any sling, then hauls them back for the next throw.",
+    "speed": 4.5, "hp": 55, "model": "merfolk_harpooner", "damage": 9, "attackTime": 2, "range": 8, "sight": 11,
+    "attack": "pierce", "armor": { "torso": 1 },
+    "cost": { "food": 50, "wood": 10, "gold": 15 } },
+
   // Wild game: herds of deer graze and roam the grassland. They never fight; hunters from a hunter's lodge shoot them
   // for food (see Hunting), and the herds grow back while a few are left.
   { "id": "deer", "name": "Red deer", "role": "monster",
