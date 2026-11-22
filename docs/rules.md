@@ -5,7 +5,7 @@ How each game system works, for players and for anyone changing the rules. Contr
 
 ## Economy
 
-`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal, iron ingots, crystal, gold and planks, every
+`src/Sim/Economy` holds the slice economy: food, wood, stone, iron ore, coal, iron ingots, crystal, gold, planks and cut stone, every
 unit of it carried by a worker or held in a building. Mana, which spells cost, is the one exception: a
 player's own pool, channelled from crystal at a shrine (see Crystal, shrines and mana below). A player's stock is what their storage buildings
 (town hall and storehouses) hold, and costs are taken from the storage nearest the work.
@@ -63,18 +63,26 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
 - **Farms and the smelter** (`WorkCommand`): two farmers each bring 5 food every 15 seconds. The
   smelter's worker keeps it supplied with ore and coal from storage and carries its ingots back
   (2 ore + 1 coal = 1 iron in 10 seconds).
-- **Sawmills and planks** (`SawmillTests`; the design doc's Resources table: wood is processed into planks at a
-  sawmill, and planks build bridges): a **sawmill** (kind `sawmill` in `data/buildings.json`: 4 by 4, planks on a
-  stone footing under thatch, 40 wood and 10 stone, no tech) takes one sawyer (`WorkCommand`), who keeps it supplied
-  with wood from storage, a load at a time (up to 10 wood in it), and carries its planks back to the nearest storage,
-  as a smelter's worker does ore and iron. It saws one wood into one plank every 3 seconds (`StepSawmill`, `sawTime`
-  in the data). Planks (`Good.Planks`) are a good like any other: stored, carried, captured or burned with a
-  storehouse. **Bridges** are laid with them, 2 planks a deck column (see Bridges under Combat), so a town that wants
-  to cross a river needs a sawmill first. The sawyer stops fetching wood while its player has 50 planks or more in
-  storage (`SawmillKeep`), so a sawmill left running does not saw up all the town's wood; it goes on once planks are
-  spent below that. Automatic workers keep a sawmill while there is wood in storage and planks are short. Nobody
-  starts with planks; test mode's goods cheat and `--goods` give them like any good. Computer players do not lay
-  bridges, so they build no sawmills. All numbers are first guesses for playtesting.
+- **Workshops: sawmills and planks, mason's yards and cut stone** (`SawmillTests`, `MasonTests`; the design doc's
+  Resources table: wood is processed into planks at a sawmill, and stone into cut stone at a mason): a workshop (kind
+  `workshop` in `data/buildings.json`, with `takes`, `makes`, `makeTime` and `keep`) takes one worker (`WorkCommand`),
+  who keeps it supplied with the good it takes from storage, a load at a time (up to 10 in it), and carries what it
+  makes back to the nearest storage, as a smelter's worker does ore and iron. It works one into one every `makeTime`
+  seconds (`StepWorkshop`), and its worker stops fetching while its player has `keep` or more of what it makes in
+  storage (`WorkshopWants`), so a workshop left running does not use up all the town's wood or stone; it goes on once
+  that is spent below it. Automatic workers keep a workshop while there is something for it in storage and what it
+  makes is short. Nobody starts with planks or cut stone; test mode's goods cheat and `--goods` give them like any good.
+  - A **sawmill** (4 by 4, planks on a stone footing under thatch, 40 wood and 10 stone, no tech) saws one wood into one
+    plank every 3 seconds and keeps 50 planks. Planks (`Good.Planks`) are a good like any other: stored, carried,
+    captured or burned with a storehouse. **Bridges** are laid with them, 2 planks a deck column (see Bridges under
+    Combat), so a town that wants to cross a river needs a sawmill first.
+  - A **mason's yard** (4 by 4, stone under a tiled roof, 30 wood and 20 stone, needs Masonry) cuts one stone into one
+    cut stone every 4 seconds and keeps 150 (enough for a great work). Cut stone (`Good.CutStone`) is stored, carried,
+    captured and burned like any good. **Stone towers** are built of it (60 cut stone and 20 wood) and so are the
+    **great works** (150 of their 300 stone is cut stone), so a town that wants either needs a mason's yard first.
+    Stone walls, facings and gates are still laid with plain stone.
+  - Computer players do not lay bridges or build stone towers or great works, so they build no workshops. All numbers
+    are first guesses for playtesting.
 - **Crystal, shrines and mana** (`ManaTests`; the design doc's Resources table: crystal from the deep caverns,
   channelled into mana at a shrine): crystal grows on the cavern walls (`BlockType.Crystal`). Workers dig it like
   ore, 3 seconds a block, and carry it to storage as the good `Crystal` (rubble of it is stone). A **shrine**
@@ -362,7 +370,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   lifted with it.
 - **Towers** (`"kind": "tower"`, `TakesPlaceOf`, `Absorb`; `"aim"` in the data): a **watchtower** (3 by 3
   columns, 7 high, a timber frame; 30 wood, 25 seconds of work) and a **stone tower** (5 by 5, 9 high;
-  60 stone and 20 wood, 60 seconds, needs masonry). A tower is solid to its deck, so nothing walks or
+  60 cut stone (from a mason's yard, see Economy) and 20 wood, 60 seconds, needs masonry). A tower is solid to its deck, so nothing walks or
   shoots through it. It is placed like any building, on open ground, where it keeps no distance from walls
   (a wall runs right up to it); or onto the player's own finished walls and facings, any that lie wholly
   under it. Those stand as they are, and hold, while the tower goes up round and over them; when it is done
@@ -919,7 +927,7 @@ entry is the tech, the goods and the trip into the deep caves.
   The Settlers' **Legends' lore** needs Drilled ranks and Craft guilds; the Orcs' **Beast-king's rite** needs Beast
   pens, War drums and Smelting. Both cost 200 food, 150 stone and 30 iron and take 90 seconds.
 - **The great work** (kind `great_work` in `data/buildings.json`): the Settlers' **Hall of Legends** (stone with a
-  tiled roof) and the Orcs' **Beast Throne** (stone with a thatched roof), each 7 by 7, 300 stone, 150 wood, 40 iron,
+  tiled roof) and the Orcs' **Beast Throne** (stone with a thatched roof), each 7 by 7, 150 stone, 150 cut stone (from a mason's yard, see Economy), 150 wood, 40 iron,
   30 crystal and 30 gold, 300 seconds of one worker's building, as sturdy as any stone building. It must stand
   in the deep caves: on ground in the deep rock under the land (`EconomySystem.DeepGround`, below layer 64 on the
   default map; a map with no deep rock has no ground for one). Elsewhere it does not fit (`PlaceResult.NotDeep`; the

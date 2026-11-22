@@ -43,8 +43,10 @@ public class SawmillTests
 
         var sim = Flat();
         var def = sim.Content.Building("sawmill");
-        Assert.Equal(BuildingKind.Sawmill, def.Kind);
-        Assert.True(def.SawTicks > 0);
+        Assert.Equal(BuildingKind.Workshop, def.Kind);
+        Assert.Equal((Good.Wood, Good.Planks), (def.Takes, def.Makes));
+        Assert.True(def.MakeTicks > 0);
+        Assert.Equal(50, def.Keep);
         Assert.True(def.WorkerSlots >= 1);
         Assert.Empty(def.Requires); // no tech: an early building
         Assert.Equal(Good.Planks, EconomySystem.Makes(def));
@@ -85,12 +87,12 @@ public class SawmillTests
         mill.Stock[(int)Good.Wood] = 2;
         sim.Step(); // starts the first plank
         Assert.Equal(1, mill.Stock[(int)Good.Wood]);
-        sim.Run(mill.Def.SawTicks - 1);
+        sim.Run(mill.Def.MakeTicks - 1);
         Assert.Equal(0, mill.Stock[(int)Good.Planks]);
         sim.Step();
         Assert.Equal(1, mill.Stock[(int)Good.Planks]);
         Assert.Equal(0, mill.Stock[(int)Good.Wood]); // the second one is under the saw
-        sim.Run(mill.Def.SawTicks);
+        sim.Run(mill.Def.MakeTicks);
         Assert.Equal(2, mill.Stock[(int)Good.Planks]);
     }
 
@@ -100,7 +102,7 @@ public class SawmillTests
         var sim = Flat();
         var store = Place(sim, P, "storehouse", 10, 10);
         store.Stock[(int)Good.Wood] = 100;
-        store.Stock[(int)Good.Planks] = EconomySystem.SawmillKeep;
+        store.Stock[(int)Good.Planks] = sim.Content.Building("sawmill").Keep;
         var mill = Place(sim, P, "sawmill", 24, 10);
         int w = sim.SpawnUnit(P, "worker", 18, 18);
         sim.Schedule(0, new WorkCommand(P, new[] { w }, mill.Id));
@@ -118,7 +120,7 @@ public class SawmillTests
     {
         var sim = Flat();
         var store = Place(sim, P, "storehouse", 10, 10);
-        store.Stock[(int)Good.Planks] = EconomySystem.SawmillKeep;
+        store.Stock[(int)Good.Planks] = sim.Content.Building("sawmill").Keep;
         store.Stock[(int)Good.Wood] = 40;
         var mill = Place(sim, P, "sawmill", 20, 10);
         TestWorlds.Tree(sim.World, 30, 30, 4);
@@ -161,7 +163,7 @@ public class SawmillTests
     }
 
     [Fact]
-    public void ASawmillNeedsItsSawTimeAndNothingElseHasOne()
+    public void AWorkshopNeedsWhatItTakesMakesAndItsTimeAndNothingElseHasThem()
     {
         static Dictionary<string, string> With(string building)
         {
@@ -170,14 +172,17 @@ public class SawmillTests
             files["buildings.json"] = files["buildings.json"].TrimEnd().TrimEnd(']') + ", " + building + "]";
             return files;
         }
-        var e = Assert.Throws<ContentException>(() => ContentLoader.Load(With(
-            "{ \"id\": \"saw_pit\", \"name\": \"Saw pit\", \"kind\": \"sawmill\", \"size\": [3, 3], \"cost\": { \"wood\": 1 }, \"buildTime\": 5, \"workerSlots\": 1 }")));
-        Assert.Contains("a sawmill needs \"sawTime\"", e.Message);
+        const string Pit = "{ \"id\": \"saw_pit\", \"name\": \"Saw pit\", \"kind\": \"workshop\", \"size\": [3, 3], \"cost\": { \"wood\": 1 }, \"buildTime\": 5";
+        var e = Assert.Throws<ContentException>(() => ContentLoader.Load(With(Pit + ", \"workerSlots\": 1, \"takes\": \"wood\", \"makes\": \"planks\" }")));
+        Assert.Contains("a workshop needs \"makeTime\"", e.Message);
+        e = Assert.Throws<ContentException>(() => ContentLoader.Load(With(Pit + ", \"workerSlots\": 1, \"makes\": \"planks\", \"makeTime\": 3 }")));
+        Assert.Contains("\"takes\"", e.Message);
+        e = Assert.Throws<ContentException>(() => ContentLoader.Load(With(Pit + ", \"workerSlots\": 1, \"takes\": \"wood\", \"makes\": \"wood\", \"makeTime\": 3 }")));
+        Assert.Contains("takes and makes the same good (wood)", e.Message);
         e = Assert.Throws<ContentException>(() => ContentLoader.Load(With(
-            "{ \"id\": \"hut\", \"name\": \"Hut\", \"kind\": \"house\", \"size\": [3, 3], \"cost\": { \"wood\": 1 }, \"buildTime\": 5, \"sawTime\": 5 }")));
-        Assert.Contains("only a sawmill has \"sawTime\"", e.Message);
-        e = Assert.Throws<ContentException>(() => ContentLoader.Load(With(
-            "{ \"id\": \"saw_pit\", \"name\": \"Saw pit\", \"kind\": \"sawmill\", \"size\": [3, 3], \"cost\": { \"wood\": 1 }, \"buildTime\": 5, \"sawTime\": 3 }")));
+            "{ \"id\": \"hut\", \"name\": \"Hut\", \"kind\": \"house\", \"size\": [3, 3], \"cost\": { \"wood\": 1 }, \"buildTime\": 5, \"makeTime\": 5 }")));
+        Assert.Contains("only a workshop has", e.Message);
+        e = Assert.Throws<ContentException>(() => ContentLoader.Load(With(Pit + ", \"takes\": \"wood\", \"makes\": \"planks\", \"makeTime\": 3 }")));
         Assert.Contains("needs \"workerSlots\"", e.Message);
     }
 

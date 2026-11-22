@@ -220,7 +220,8 @@ stone outcrop, researches roads from the tech tree, places and builds a house, q
 town hall and lays a road; `scripts/ui-shrine-screenshots.sh` starts with `--goods=100`, researches Basic
 magic, puts up a shrine beside the town hall and has a worker keep it, so the mana in the top bar rises as it
 channels the crystal; `scripts/ui-sawmill-screenshots.sh` puts up a sawmill beside the town hall and has a worker
-work it, so planks show in the top bar; `scripts/ui-combat-screenshots.sh` starts with `--battle=16` at the map
+work it, so planks show in the top bar; `scripts/ui-mason-screenshots.sh` researches Better tools and Masonry, puts up a
+mason's yard beside the town hall and has a worker work it, so the cut stone in the top bar rises; `scripts/ui-combat-screenshots.sh` starts with `--battle=16` at the map
 centre, sends a sapper to tunnel under the enemy house and attack-moves the rest of the army through
 the enemy; `scripts/ui-automation-screenshots.sh` makes the starting workers automatic and the soldiers
 hold their ground, puts the town hall on repeat, then makes every worker automatic and waits for them

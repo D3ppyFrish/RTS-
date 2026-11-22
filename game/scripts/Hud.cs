@@ -510,11 +510,14 @@ public partial class Hud : CanvasLayer
                 b.TooltipText = $"Right click it with a worker: they bring it crystal from storage, and it channels each crystal " +
                                 $"into {def.Mana} mana in {def.ChannelTicks / Simulation.TicksPerSecond} seconds. Spells cost mana. " +
                                 "Crystal grows on the cavern walls: send workers to dig it. Automatic workers keep it once you have crystal.";
-            if (def.Kind == BuildingKind.Sawmill)
-                b.TooltipText = $"Right click it with a worker: they bring it wood from storage, it saws each wood into a plank in " +
-                                $"{def.SawTicks / Simulation.TicksPerSecond} seconds, and they carry the planks back to storage. Bridges " +
-                                $"are laid with planks. The sawyer stops fetching wood once you have {EconomySystem.SawmillKeep} planks " +
-                                "in storage. Automatic workers keep it while you have wood.";
+            if (def.Kind == BuildingKind.Workshop)
+            {
+                string takes = Goods.Name(def.Takes).ToLowerInvariant(), makes = Goods.Name(def.Makes).ToLowerInvariant();
+                b.TooltipText = $"Right click it with a worker: they bring it {takes} from storage, it {WorkshopVerb(def)} each {takes} into " +
+                                $"{makes} in {def.MakeTicks / Simulation.TicksPerSecond} seconds, and they carry the {makes} back to storage. " +
+                                $"{WorkshopUse(def.Makes)} The worker stops fetching {takes} once you have {def.Keep} {makes} in storage. " +
+                                $"Automatic workers keep it while you have {takes}.";
+            }
             if (def.IsTower)
                 b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +
@@ -1271,7 +1274,7 @@ public partial class Hud : CanvasLayer
         var better = new List<string>();
         int housing = to.Housing - b.Def.Housing;
         if (housing > 0) better.Add($"houses {housing} more");
-        if (to.Speed > b.Def.Speed) better.Add($"{(to.Kind == BuildingKind.Smelter ? "smelts" : to.Kind == BuildingKind.Shrine ? "channels" : to.Kind == BuildingKind.Sawmill ? "saws" : "trains")} at {to.Speed}% of the usual pace");
+        if (to.Speed > b.Def.Speed) better.Add($"{(to.Kind == BuildingKind.Smelter ? "smelts" : to.Kind == BuildingKind.Shrine ? "channels" : to.Kind == BuildingKind.Workshop ? WorkshopVerb(to) : "trains")} at {to.Speed}% of the usual pace");
         if (to.WorkerSlots > b.Def.WorkerSlots) better.Add($"takes {to.WorkerSlots} workers");
         if (to.Sight > b.Def.Sight) better.Add($"sees {to.Sight} columns round it");
         if (b.Def.Raidable && !to.Raidable) better.Add("cannot be captured or burned");
@@ -2130,18 +2133,18 @@ public partial class Hud : CanvasLayer
             if (b.Def.Hunts > 0) parts.Add(_sim.Economy.GameInReach(b) is var game and > 0 ? $"{game} deer within reach" : "no deer within reach");
             if (b.Def.Kind == BuildingKind.Smelter && b.SmeltTicks > 0)
                 parts.Add($"smelting {100 - 100L * b.SmeltTicks / EconomySystem.SmeltTicks}%");
-            if (b.Def.Kind == BuildingKind.Sawmill)
+            if (b.Def.Kind == BuildingKind.Workshop)
                 parts.Add(b.SmeltTicks > 0
-                    ? $"sawing a plank {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.SawTicks)}%"
-                    : _sim.Economy.Stock(b.Owner, Good.Planks) >= EconomySystem.SawmillKeep
-                        ? $"enough planks in storage ({EconomySystem.SawmillKeep})"
-                        : "no wood to saw");
+                    ? $"{WorkshopVerb(b.Def).TrimEnd('s')}ing {Goods.Name(b.Def.Makes).ToLowerInvariant()} {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.MakeTicks)}%"
+                    : !_sim.Economy.WorkshopWants(b)
+                        ? $"enough {Goods.Name(b.Def.Makes).ToLowerInvariant()} in storage ({b.Def.Keep})"
+                        : $"no {Goods.Name(b.Def.Takes).ToLowerInvariant()} to work");
             if (b.Def.Kind == BuildingKind.Shrine)
                 parts.Add(b.SmeltTicks > 0
                     ? $"channelling a crystal {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.ChannelTicks)}% ({b.Def.Mana} mana each)"
                     : $"no crystal to channel ({b.Def.Mana} mana each; dig crystal in the caverns)");
             text.Append(string.Join("    ", parts));
-            if (b.Def.Storage || b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine or BuildingKind.Sawmill)
+            if (b.Def.Storage || b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine or BuildingKind.Workshop)
             {
                 var goods = new List<string>();
                 foreach (var g in Goods.All)
@@ -2206,7 +2209,7 @@ public partial class Hud : CanvasLayer
     {
         var text = new StringBuilder();
         if (b.Def.Speed > 100)
-            text.Append($"\n{(b.Def.Kind == BuildingKind.Smelter ? "Smelts" : b.Def.Kind == BuildingKind.Shrine ? "Channels" : b.Def.Kind == BuildingKind.Sawmill ? "Saws" : "Trains")} at {b.Def.Speed}% of the usual pace");
+            text.Append($"\n{(b.Def.Kind == BuildingKind.Smelter ? "Smelts" : b.Def.Kind == BuildingKind.Shrine ? "Channels" : b.Def.Kind == BuildingKind.Workshop ? Capital(WorkshopVerb(b.Def)) : "Trains")} at {b.Def.Speed}% of the usual pace");
         if (b.Def.UpgradeOf is { } from && from.Raidable && !b.Def.Raidable) text.Append("\nToo stout to be captured or burned");
         if (b.Upgrade is { } to)
         {
@@ -2395,7 +2398,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Haul => _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind switch
         {
             BuildingKind.Shrine => "keeping the shrine",
-            BuildingKind.Sawmill => "sawing planks",
+            BuildingKind.Workshop => _sim.Buildings.Get(u.JobTarget[i]) is { } w ? $"{WorkshopVerb(w.Def).TrimEnd('s')}ing {Goods.Name(w.Def.Makes).ToLowerInvariant()}" : "working",
             _ => "supplying the smelter",
         },
         UnitJob.Supply => u.Phase[i] switch
@@ -2537,6 +2540,23 @@ public partial class Hud : CanvasLayer
     internal static Color AccentColour => UiStyle.Current.AccentFill;
     /// <summary>The colour of the other framed buttons (see <see cref="Frame"/>).</summary>
     internal static Color PlainColour => UiStyle.Current.ButtonFill;
+    /// <summary>What a workshop does to what it takes: saws wood, cuts stone.</summary>
+    private static string WorkshopVerb(BuildingDef def) => def.Makes switch
+    {
+        Good.Planks => "saws",
+        Good.CutStone => "cuts",
+        _ => "works",
+    };
+
+    /// <summary>What a workshop's good is for, as a sentence for its tooltip.</summary>
+    private static string WorkshopUse(Good g) => g switch
+    {
+        Good.Planks => "Bridges are laid with planks.",
+        Good.CutStone => "Stone towers and great works are built of cut stone.",
+        _ => "",
+    };
+
+    private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 }
 
 /// <summary>The rubber-band rectangle while box-selecting.</summary>

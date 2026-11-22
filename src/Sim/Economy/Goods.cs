@@ -22,8 +22,10 @@ public enum Good : byte
     /// mercenaries, and the goblins pay their tribute in it.
     /// </summary>
     Gold,
-    /// <summary>Planks, sawn from wood at a sawmill (see <see cref="BuildingKind.Sawmill"/>); bridges are laid with them.</summary>
+    /// <summary>Planks, sawn from wood at a sawmill (see <see cref="BuildingKind.Workshop"/>); bridges are laid with them.</summary>
     Planks,
+    /// <summary>Cut stone, dressed from stone at a mason's yard (see <see cref="BuildingKind.Workshop"/>); stone towers and great works are built of it.</summary>
+    CutStone,
 }
 
 /// <summary>An amount of one good, as in a cost.</summary>
@@ -31,9 +33,9 @@ public readonly record struct GoodAmount(Good Good, int Amount);
 
 public static class Goods
 {
-    public const int Count = 9;
+    public const int Count = 10;
 
-    public static readonly Good[] All = { Good.Food, Good.Wood, Good.Stone, Good.IronOre, Good.Coal, Good.Iron, Good.Crystal, Good.Gold, Good.Planks };
+    public static readonly Good[] All = { Good.Food, Good.Wood, Good.Stone, Good.IronOre, Good.Coal, Good.Iron, Good.Crystal, Good.Gold, Good.Planks, Good.CutStone };
 
     public static string Name(Good g) => g switch
     {
@@ -46,6 +48,7 @@ public static class Goods
         Good.Crystal => "Crystal",
         Good.Gold => "Gold",
         Good.Planks => "Planks",
+        Good.CutStone => "Cut stone",
         _ => throw new ArgumentOutOfRangeException(nameof(g)),
     };
 

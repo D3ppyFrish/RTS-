@@ -464,7 +464,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "sawTime");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -474,7 +474,7 @@ public static class ContentLoader
             var kind = o.Enum("kind", BuildingKind.House, required: true);
             var (sizeX, sizeZ) = o.Size("size");
             int slots = o.Int("workerSlots", 0, 20, 0);
-            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Sawmill && slots == 0)
+            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop && slots == 0)
                 o.Error($"a {SnakeName(kind)} needs \"workerSlots\" of 1 or more, or nobody can work it");
             int wallHeight = o.Int("wallHeight", 1, 12, 3);
             if (kind is BuildingKind.Wall or BuildingKind.Tower && wallHeight <= Walk.MaxClimb)
@@ -519,12 +519,17 @@ public static class ContentLoader
                 Hunts = o.Int("hunts", 0, 64, 0),
                 Mana = o.Int("mana", 0, 1000, 0),
                 ChannelTicks = o.Int("channelTime", 1, MaxSeconds, 0) * Tps,
-                SawTicks = o.Int("sawTime", 1, MaxSeconds, 0) * Tps,
+                MakeTicks = o.Int("makeTime", 1, MaxSeconds, 0) * Tps,
+                Takes = o.Enum("takes", Good.Wood, required: kind == BuildingKind.Workshop),
+                Makes = o.Enum("makes", Good.Planks, required: kind == BuildingKind.Workshop),
+                Keep = o.Int("keep", 1, 10000, kind == BuildingKind.Workshop ? 50 : 0),
             };
-            if (kind == BuildingKind.Sawmill && def.SawTicks == 0)
-                o.Error("a sawmill needs \"sawTime\" (the seconds it takes to saw one wood into a plank)");
-            if (kind != BuildingKind.Sawmill && def.SawTicks > 0)
-                o.Error("only a sawmill has \"sawTime\"");
+            if (kind == BuildingKind.Workshop && def.MakeTicks == 0)
+                o.Error("a workshop needs \"makeTime\" (the seconds it takes to work one good into one)");
+            if (kind == BuildingKind.Workshop && def.Takes == def.Makes)
+                o.Error($"a workshop takes and makes the same good ({SnakeName(def.Takes)})");
+            if (kind != BuildingKind.Workshop && (def.MakeTicks > 0 || o.Has("takes") || o.Has("makes") || o.Has("keep")))
+                o.Error("only a workshop has \"takes\", \"makes\", \"makeTime\" and \"keep\"");
             if (kind == BuildingKind.Shrine && (def.Mana == 0 || def.ChannelTicks == 0))
                 o.Error("a shrine needs \"mana\" (what one crystal gives) and \"channelTime\" (the seconds it takes)");
             if (kind != BuildingKind.Shrine && (def.Mana > 0 || def.ChannelTicks > 0))
