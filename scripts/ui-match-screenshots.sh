@@ -5,6 +5,8 @@
 # replay back to the same end (same winner, same final state hash). Look around and Results hide and show
 # the panel again, and New match goes back to the start screen. Then, started from the command line, 40
 # units next to the Orcs' town hall bring it down: Victory (no replay, since --units is a test setup).
+# Last, a mirror match: the Orcs picked for both sides on the start screen (Against: Orcs), the match starts
+# with the computer playing the Orcs too, and its replay keeps both factions and plays back the same.
 # Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-match-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -119,4 +121,46 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 grep -q '^Match over at .*Victory, player 0 won' "$LOG" || fail "no victory line"
 [ "$(ls "$REPLAYS" | wc -l)" -eq 1 ] || fail "a test setup's match was saved as a replay"
 [ "$(cat "$OUT"/ui-match.log "$LOG" | grep -c '^Saved screenshot')" -eq 5 ] || fail "missing screenshots"
+
+# A mirror match: the Orcs against the Orcs. You surrender at once, and the replay keeps the factions.
+STEPS="
+wait 10
+clickui start_orcs
+wait 2
+clickui start_vs_orcs
+wait 2
+print
+shot $OUT/ui-start-mirror.png
+clickui start_button
+waitmatch
+wait 10
+print
+shot $OUT/ui-mirror-match.png
+clickui surrender_button
+wait 3
+clickui surrender_yes
+ticks 20
+wait 5
+print
+"
+rm -rf "$REPLAYS"
+LOG="$OUT/ui-match-mirror.log"
+xvfb-run -a -s "-screen 0 1600x900x24" \
+  godot --path game --rendering-driver opengl3 -- --menu --seed=1234 --replays="$REPLAYS" --input="$STEPS" 2>&1 \
+  | grep -E "^(UI|Saved|Screenshot|Input script|Match over|Replay saved|Player)" | tee "$LOG"
+
+! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click (mirror match)"
+mapfile -t UI < <(grep '^UI ' "$LOG")
+[ "${#UI[@]}" -eq 3 ] || fail "expected 3 UI lines in the mirror match, got ${#UI[@]}"
+[ "$(field "${UI[0]}" screen)" = start ] && [ "$(field "${UI[0]}" player)" -eq 1 ] && [ "$(field "${UI[0]}" faction)" = orcs ] \
+  && [ "$(field "${UI[0]}" rival)" = orcs ] || fail "the start screen does not have the Orcs on both sides: ${UI[0]}"
+grep -q '^Player 0 (Orcs) is a computer player' "$LOG" || fail "the computer is not playing the Orcs in the mirror match"
+[ "$(field "${UI[1]}" screen)" = match ] && [ "$(field "${UI[1]}" player)" -eq 1 ] || fail "the mirror match did not start: ${UI[1]}"
+[ "$(field "${UI[2]}" result)" = defeat ] && [ "$(field "${UI[2]}" replay)" = saved ] || fail "the mirror match's replay was not saved: ${UI[2]}"
+REPLAY="$(sed -n 's/^Replay saved to //p' "$LOG")"
+[ -f "$REPLAY" ] && grep -q '^faction 0 orcs$' "$REPLAY" || fail "the mirror match's replay does not keep the Orcs for player 0"
+dotnet run --no-build -c Release --project tools/MatchRunner -- --log="$REPLAY" --runs=2 --hash-every=20 > "$OUT/ui-mirror-replay.log" \
+  || fail "the mirror match's replay did not play back the same twice"
+grep -q '^Result: player 0 won' "$OUT/ui-mirror-replay.log" || fail "the mirror match's replay does not end with the computer's Orcs winning"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 2 ] || fail "missing mirror match screenshots"
 echo "UI match screenshot test OK: $OUT"

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Linq;
 using Rts.Sim.Automation;
 using Rts.Sim.Content;
 using Rts.Sim.Economy;
@@ -81,7 +82,9 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// (see <see cref="Simulation.DayNight"/>), starting at minute M of the day with "daystart M" (optional, 480 if not given), and
 /// "test-mode 1" (optional) in test mode, "dominion 1" (optional) with dominion, the ancient sites' win (see
 /// <see cref="Simulation.Dominion"/>), and "trees N" for trees N times the first size (optional, 1 if not
-/// given, see <see cref="VoxelWorld.TreeScale"/>). A log with a "content" line only replays with the same data
+/// given, see <see cref="VoxelWorld.TreeScale"/>), and "faction P id" (optional, one line a player) has player P play the
+/// faction with that id (see <see cref="Simulation.SetFaction(int, string)"/>; players without one play the factions in data
+/// order). A log with a "content" line only replays with the same data
 /// (see <see cref="ContentDb.Hash"/>).
 /// </summary>
 public sealed class CommandLog
@@ -118,6 +121,11 @@ public sealed class CommandLog
     /// first trees, for logs recorded before trees grew bigger.
     /// </summary>
     public int TreeScale { get; init; } = 1;
+    /// <summary>
+    /// The faction each player plays, by player ("faction P id" in the log): null, or a null entry, for the faction
+    /// in data order (see <see cref="Simulation.FactionOf"/>).
+    /// </summary>
+    public IReadOnlyList<string?>? Factions { get; init; }
     /// <summary>Hash of the game data the match was played with, if recorded.</summary>
     public ulong? ContentHash { get; init; }
     public List<LoggedCommand> Commands { get; } = new();
@@ -129,7 +137,7 @@ public sealed class CommandLog
     /// </summary>
     public static CommandLog UsualStart(ulong seed, int sizeX, int sizeY, int sizeZ, ContentDb? content = null, bool fog = false, bool dayNight = false,
         int dayStart = Conditions.StartMinute, bool testMode = false, int treeScale = Rts.Sim.World.RegionGenerator.DefaultTreeScale,
-        bool dominion = false, bool awakening = false)
+        bool dominion = false, bool awakening = false, IReadOnlyList<string?>? factions = null)
     {
         content ??= ContentDb.Default;
         return new CommandLog
@@ -137,6 +145,7 @@ public sealed class CommandLog
             Seed = seed, SizeX = sizeX, SizeY = sizeY, SizeZ = sizeZ, StartUnits = Simulation.UsualStartUnits(content),
             StartBuildings = true, StartLairs = true, StartCities = true, ContentHash = content.Hash, Fog = fog, DayNight = dayNight, DayStart = dayStart,
             TestMode = testMode, TreeScale = treeScale, Dominion = dominion, Awakening = awakening,
+            Factions = factions is { Count: > 0 } ? factions.ToArray() : null,
         };
     }
 
@@ -152,6 +161,14 @@ public sealed class CommandLog
                 $"This match was played with different game data (content {hash:x16}, this game has {content.Hash:x16})");
         var sim = new Simulation(Seed, SizeX, SizeY, SizeZ, content, TreeScale) { Fog = Fog, DayNight = DayNight, DayStart = DayStart, TestMode = TestMode,
             Dominion = Dominion, Awakening = Awakening };
+        if (Factions != null)
+            for (int p = 0; p < Factions.Count; p++)
+                if (Factions[p] is { } id)
+                {
+                    if (!content.TryGetFaction(id, out var faction))
+                        throw new InvalidOperationException($"This match was played with a faction this game does not have: {id}");
+                    sim.SetFaction(p, faction);
+                }
         if (StartBuildings) sim.PlaceStartingBuildings();
         if (StartUnits > 0) sim.SpawnStartingUnits(StartUnits);
         if (StartLairs) sim.SpawnLairs();
@@ -185,6 +202,9 @@ public sealed class CommandLog
         if (Dominion) w.WriteLine("dominion 1");
         if (Awakening) w.WriteLine("awakening 1");
         if (TreeScale != 1) w.WriteLine(string.Create(ci, $"trees {TreeScale}"));
+        if (Factions != null)
+            for (int p = 0; p < Factions.Count; p++)
+                if (Factions[p] is { } id) w.WriteLine(string.Create(ci, $"faction {p} {id}"));
         foreach (var (tick, cmd) in Commands)
         {
             w.WriteLine(cmd switch
@@ -292,6 +312,7 @@ public sealed class CommandLog
         int startUnits = 0;
         bool startBuildings = false, startLairs = false, startCities = false, fog = false, dayNight = false, testMode = false, dominion = false, awakening = false;
         int treeScale = 1;
+        var factions = new List<string?>();
         int dayStart = Conditions.StartMinute;
         ulong? content = null;
         int? version = null;
@@ -330,6 +351,14 @@ public sealed class CommandLog
                     case "dominion": dominion = Flag(f); break;
                     case "awakening": awakening = Flag(f); break;
                     case "trees": treeScale = Int(f[1]); break;
+                    case "faction":
+                    {
+                        int player = Int(f[1]);
+                        if (player < 0 || player >= Simulation.WildPlayer) throw new FormatException($"faction: no player {player}");
+                        while (factions.Count <= player) factions.Add(null);
+                        factions[player] = Name(f[2]);
+                        break;
+                    }
                     default:
                         long tick = long.Parse(f[0], CultureInfo.InvariantCulture);
                         Command cmd = f[1] switch
@@ -440,6 +469,7 @@ public sealed class CommandLog
             Dominion = dominion,
             Awakening = awakening,
             TreeScale = treeScale,
+            Factions = factions.Count > 0 ? factions.ToArray() : null,
         };
         log.Commands.AddRange(commands);
         return log;

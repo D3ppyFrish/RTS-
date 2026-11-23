@@ -214,6 +214,10 @@ public partial class Main : Node3D
         bool? dayNight = _args.TryGetValue("daynight", out var ds) ? ds is not ("off" or "0" or "false")
             : _args.ContainsKey("time-of-day") ? true : null;
         bool test = _args.ContainsKey("test-mode");
+        // --factions=orcs,orcs: each player's faction, in player order (as the match runner takes it).
+        string?[]? factions = _args.TryGetValue("factions", out var fcs)
+            ? Array.ConvertAll(fcs.Split(','), f => _content.TryGetFaction(f.Trim(), out _) ? f.Trim() : null)
+            : null;
         bool? dominion = _args.TryGetValue("dominion", out var dms) ? dms is not ("off" or "0" or "false") : null;
         bool? awakening = _args.TryGetValue("awakening", out var aws) ? aws is not ("off" or "0" or "false") : _args.ContainsKey("awaken") ? true : null;
         if (_args.TryGetValue("scenario", out var scenarioPath))
@@ -230,9 +234,9 @@ public partial class Main : Node3D
             StartMatch(new MatchSetup(_scenario.Seed, player, _args.ContainsKey("ai"), _scenario.Fog, level, _scenario.DayNight, TestMode: true,
                 Dominion: _scenario.Dominion, Awakening: _scenario.Awakening), fromMenu: false);
         else if (_args.Count == 0 || _args.ContainsKey("menu"))
-            ShowStartScreen(new MatchSetup(seed ?? StartScreen.RandomSeed(), player, Computer: true, Fog: fog ?? true, level, DayNight: dayNight ?? true, test, dominion ?? true, awakening ?? true));
+            ShowStartScreen(new MatchSetup(seed ?? StartScreen.RandomSeed(), player, Computer: true, Fog: fog ?? true, level, DayNight: dayNight ?? true, test, dominion ?? true, awakening ?? true, factions));
         else
-            StartMatch(new MatchSetup(seed ?? 1234UL, player, _args.ContainsKey("ai"), Fog: fog ?? false, level, DayNight: dayNight ?? false, test, dominion ?? false, awakening ?? false), fromMenu: false);
+            StartMatch(new MatchSetup(seed ?? 1234UL, player, _args.ContainsKey("ai"), Fog: fog ?? false, level, DayNight: dayNight ?? false, test, dominion ?? false, awakening ?? false, factions), fromMenu: false);
     }
 
     public override void _Process(double delta)
@@ -325,6 +329,11 @@ public partial class Main : Node3D
         _sim.TestMode = setup.TestMode;
         _sim.Dominion = setup.Dominion;
         _sim.Awakening = setup.Awakening;
+        // Each player's faction, from the start screen or --factions (a scenario's come from its header).
+        if (scenario == null && setup.Factions != null)
+            for (int p = 0; p < setup.Factions.Count; p++)
+                if (setup.Factions[p] is { } factionId && _content.TryGetFaction(factionId, out var faction))
+                    _sim.SetFaction(p, faction);
         if (scenario == null && _args.ContainsKey("time-of-day"))
             _sim.DayStart = (int)(Mathf.PosMod(ArgFloat(_args, "time-of-day", 8f), 24f) * 60f);
         _issue = c => _sim.Schedule(_sim.Tick, c);
@@ -693,7 +702,22 @@ public partial class Main : Node3D
             if (_args.ContainsKey(option)) odd.Add("--" + option);
         _noReplay = odd.Count > 0 ? $"the match was set up with {string.Join(", ", odd)}" : "";
         if (odd.Count == 0) _sim.Recording = CommandLog.UsualStart(setup.Seed, WorldX, WorldY, WorldZ, _content, setup.Fog,
-            setup.DayNight, _sim.DayStart, setup.TestMode, _sim.World.TreeScale, setup.Dominion, setup.Awakening);
+            setup.DayNight, _sim.DayStart, setup.TestMode, _sim.World.TreeScale, setup.Dominion, setup.Awakening, ChosenFactions());
+    }
+
+    /// <summary>Each player's faction as set for the match, for its replay (null when every player has the one in data order).</summary>
+    private string?[]? ChosenFactions()
+    {
+        var ids = new string?[Rts.Sim.Simulation.WildPlayer];
+        bool any = false;
+        for (int p = 0; p < ids.Length; p++)
+        {
+            var f = _sim.FactionOf(p);
+            if (f != _content.Factions[p % _content.Factions.Count]) { ids[p] = f.Id; any = true; }
+        }
+        if (!any) return null;
+        int last = Array.FindLastIndex(ids, id => id != null);
+        return ids[..(last + 1)];
     }
 
     /// <summary>
@@ -708,7 +732,7 @@ public partial class Main : Node3D
             Seed = scenario.Seed, SizeX = scenario.SizeX, SizeY = scenario.SizeY, SizeZ = scenario.SizeZ, StartUnits = scenario.StartUnits,
             StartBuildings = scenario.StartBuildings, StartLairs = scenario.StartLairs, StartCities = scenario.StartCities,
             ContentHash = scenario.ContentHash, Fog = scenario.Fog, DayNight = scenario.DayNight, DayStart = scenario.DayStart, TestMode = true,
-            TreeScale = scenario.TreeScale, Dominion = scenario.Dominion, Awakening = scenario.Awakening,
+            TreeScale = scenario.TreeScale, Dominion = scenario.Dominion, Awakening = scenario.Awakening, Factions = scenario.Factions,
         };
         int next = 0;
         while (_sim.Tick < scenario.Ticks)

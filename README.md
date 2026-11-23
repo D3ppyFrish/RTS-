@@ -98,7 +98,9 @@ those nearest your start (to try out rebuild orders, see [Automation](docs/rules
 around the camera focus (all on one side, so they walk rather than fight), and `--battle=N` sets two
 armies of N soldiers each facing each other at the camera focus, with an enemy house nearby (both sides
 have 500 mana, so the mages can cast).
-`--player=1` plays the Orcs at the east start instead of the Settlers at the west one, `--ai` has
+`--player=1` plays the Orcs at the east start instead of the Settlers at the west one, `--factions=orcs,orcs`
+sets each player's faction in player order (any faction for any player; the match runner takes it with `--ai`
+too), `--ai` has
 the computer play the other players (see [Winning and computer players](docs/rules.md#winning-and-computer-players)), at `--ai-level=easy`, `normal` (the default), `hard` or `classic`, and `--fog` turns fog of war on
 (see [Fog of war](docs/rules.md#fog-of-war)). `--dominion` plays with dominion, winning by holding most of the old
 ruins (see [Ancient sites and dominion](docs/rules.md#ancient-sites-and-dominion)); the match runner takes `--dominion` with `--ai` too. `--awakening` plays with the dark power waking (see

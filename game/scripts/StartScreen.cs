@@ -8,21 +8,24 @@ using Rts.Sim.Content;
 namespace Rts.Game;
 
 /// <summary>
-/// A match as the start screen sets it up: the world seed, the player you play (and so your faction and
-/// start), whether a computer plays the other side and how well (see <see cref="AiLevel"/>), whether there
+/// A match as the start screen sets it up: the world seed, the player you play (and so your start), each
+/// player's faction (<see cref="Factions"/>, by player; null, or a null entry, for the faction in data order), whether a computer plays the other side and how well (see <see cref="AiLevel"/>), whether there
 /// is fog of war (see <see cref="FogOfWar"/>) and whether there are day, night and weather (see
 /// <see cref="Rts.Sim.Conditions"/>), and whether it is a test mode match (see <see cref="TestPanel"/>).
 /// </summary>
 public sealed record MatchSetup(ulong Seed, int Player, bool Computer, bool Fog, AiLevel Level = AiLevel.Normal, bool DayNight = false,
-    bool TestMode = false, bool Dominion = false, bool Awakening = false);
+    bool TestMode = false, bool Dominion = false, bool Awakening = false, IReadOnlyList<string?>? Factions = null);
 
 /// <summary>
-/// The start screen: pick your faction, the world seed, whether a computer player plays the other side and
+/// The start screen: pick your faction and the other side's (any faction for either, so both can play the same
+/// one), the world seed, whether a computer player plays the other side and
 /// whether there is fog of war, then start the match. Generated maps have two start areas, player 0's in the west and player 1's in the
-/// east, and each player has their faction (see <see cref="ContentDb.Factions"/>), so picking a faction
-/// picks the player and the start too. Shown when the game starts without command-line options (or with
+/// east. Picking your faction puts you at that faction's usual start (player 0, the west, for the first faction in
+/// the data, player 1, the east, for the second; see <see cref="Rts.Sim.Simulation.FactionOf"/>), and the other side
+/// keeps the faction picked for it. Shown when the game starts without command-line options (or with
 /// --menu), and again from the end of a match. Its controls are named for scripted input: start_ plus the
-/// faction id (start_settlers, start_orcs), start_seed, start_new_seed, start_computer, start_level, start_fog, start_daynight, start_dominion, start_test,
+/// faction id (start_settlers, start_orcs) for yours, start_vs_ plus the faction id (start_vs_settlers, start_vs_orcs) for the
+/// other side's, start_seed, start_new_seed, start_computer, start_level, start_fog, start_daynight, start_dominion, start_test,
 /// start_button and start_quit.
 /// </summary>
 public partial class StartScreen : CanvasLayer
@@ -37,6 +40,10 @@ public partial class StartScreen : CanvasLayer
     public event Action<MatchSetup>? LookChanged;
 
     private readonly List<Button> _factionButtons = new();
+    private readonly List<Button> _rivalButtons = new();
+    private Label _where = null!;
+    /// <summary>Each start's faction (by player), as picked.</summary>
+    private readonly FactionDef[] _factions = new FactionDef[Starts];
     private Control _panel = null!;
     private LineEdit _seed = null!;
     private CheckButton _computer = null!;
@@ -59,13 +66,21 @@ public partial class StartScreen : CanvasLayer
     private int _player;
     private ContentDb _content = null!;
 
-    private FactionDef FactionOf(int player) => _content.Factions[player % _content.Factions.Count];
+    /// <summary>The faction a player has unless one is picked for them: the factions in data order.</summary>
+    private FactionDef UsualFaction(int player) => _content.Factions[player % _content.Factions.Count];
+
+    private FactionDef FactionOf(int player) => _factions[player];
+
+    private int Rival => 1 - _player;
 
     public void Init(ContentDb content, MatchSetup setup)
     {
         Layer = 10;
         _player = Math.Clamp(setup.Player, 0, Starts - 1);
         _content = content;
+        for (int p = 0; p < Starts; p++)
+            _factions[p] = setup.Factions is { } chosen && p < chosen.Count && chosen[p] is { } id && content.TryGetFaction(id, out var f)
+                ? f : UsualFaction(p);
         UiStyle.UseFor(FactionOf(_player));
 
         var look = UiStyle.Current;
@@ -95,12 +110,25 @@ public partial class StartScreen : CanvasLayer
         var factions = new HBoxContainer();
         factions.AddThemeConstantOverride("separation", 14);
         column.AddChild(factions);
-        for (int p = 0; p < Starts; p++)
+        foreach (var faction in content.Factions)
         {
-            var faction = content.Factions[p % content.Factions.Count];
-            var b = FactionButton(faction, p);
+            var b = FactionButton(faction);
             factions.AddChild(b);
             _factionButtons.Add(b);
+        }
+        _where = Hud.MakeLabel("", 13);
+        _where.ThemeTypeVariation = UiStyle.Dim;
+        column.AddChild(_where);
+
+        column.AddChild(Hud.MakeLabel("Against", 16));
+        var rivals = new HBoxContainer();
+        rivals.AddThemeConstantOverride("separation", 14);
+        column.AddChild(rivals);
+        foreach (var faction in content.Factions)
+        {
+            var b = RivalButton(faction);
+            rivals.AddChild(b);
+            _rivalButtons.Add(b);
         }
         ShowChoice();
 
@@ -264,7 +292,7 @@ public partial class StartScreen : CanvasLayer
 
     /// <summary>The choices as they stand, for scripted tests.</summary>
     public string Describe() =>
-        $"player={_player} seed={(_seed.Text.Length > 0 ? _seed.Text : "random")} computer={(_computer.ButtonPressed ? 1 : 0)} " +
+        $"player={_player} faction={FactionOf(_player).Id} rival={FactionOf(Rival).Id} seed={(_seed.Text.Length > 0 ? _seed.Text : "random")} computer={(_computer.ButtonPressed ? 1 : 0)} " +
         $"level={SelectedLevel.ToString().ToLowerInvariant()} fog={(_fog.ButtonPressed ? 1 : 0)} test={(_test.ButtonPressed ? 1 : 0)} dominion={(_dominion.ButtonPressed ? 1 : 0)} awakening={(_awakening.ButtonPressed ? 1 : 0)}";
 
     private AiLevel SelectedLevel => _level.Selected >= 0 ? Levels[_level.Selected].Level : AiLevel.Normal;
@@ -279,29 +307,43 @@ public partial class StartScreen : CanvasLayer
     {
         ulong seed = ulong.TryParse(_seed.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var s) ? s : RandomSeed();
         return new MatchSetup(seed, _player, _computer.ButtonPressed, _fog.ButtonPressed, SelectedLevel, _dayNight.ButtonPressed, _test.ButtonPressed,
-            _dominion.ButtonPressed, _awakening.ButtonPressed);
+            _dominion.ButtonPressed, _awakening.ButtonPressed, Factions());
     }
 
-    private Button FactionButton(FactionDef faction, int player)
+    /// <summary>Each player's faction as picked, for the match; null when both have their usual ones.</summary>
+    private string?[]? Factions()
     {
-        var team = UnitRenderer.TeamColors[player];
+        bool usual = true;
+        for (int p = 0; p < Starts; p++) usual &= _factions[p] == UsualFaction(p);
+        return usual ? null : Array.ConvertAll(_factions, f => (string?)f.Id);
+    }
+
+    /// <summary>
+    /// A faction to play. Picking it puts you at its usual start, if it has one (the other side moves to the other
+    /// start), and the menus take its look.
+    /// </summary>
+    private Button FactionButton(FactionDef faction)
+    {
         var b = new Button
         {
             Name = "start_" + faction.Id,
             ToggleMode = true,
             FocusMode = Control.FocusModeEnum.None,
-            CustomMinimumSize = new Vector2(300, 124),
-            TooltipText = $"Play the {faction.Name}, player {player}",
+            CustomMinimumSize = new Vector2(300, 108),
+            TooltipText = $"Play the {faction.Name}",
         };
-        b.AddThemeStyleboxOverride("normal", FactionStyle(team, chosen: false, hover: false));
-        b.AddThemeStyleboxOverride("hover", FactionStyle(team, chosen: false, hover: true));
-        b.AddThemeStyleboxOverride("pressed", FactionStyle(team, chosen: true, hover: false));
-        b.AddThemeStyleboxOverride("hover_pressed", FactionStyle(team, chosen: true, hover: true));
         b.Pressed += () =>
         {
-            _player = player;
+            // The other side keeps its faction, unless it is the one you take: then it takes yours (pick it again
+            // under Against for a mirror match).
+            var mine = FactionOf(_player);
+            var rival = FactionOf(Rival);
+            if (rival == faction && mine != faction) rival = mine;
+            if (faction.Index < Starts) _player = faction.Index;
+            _factions[_player] = faction;
+            _factions[Rival] = rival;
             ShowChoice();
-            if (UiStyle.For(FactionOf(player)) != UiStyle.Current) LookChanged?.Invoke(CurrentSetup());
+            if (UiStyle.For(faction) != UiStyle.Current) LookChanged?.Invoke(CurrentSetup());
         };
 
         var inner = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -310,21 +352,58 @@ public partial class StartScreen : CanvasLayer
         b.AddChild(inner);
         var name = Hud.MakeLabel(faction.Name, 24);
         name.ThemeTypeVariation = UiStyle.Heading;
-        name.AddThemeColorOverride("font_color", team.Lightened(0.45f));
         inner.AddChild(name);
         var description = Hud.MakeLabel(faction.Description, 14);
         description.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         inner.AddChild(description);
-        var where = Hud.MakeLabel(player == 0 ? "Starts in the west" : "Starts in the east", 13);
-        where.ThemeTypeVariation = UiStyle.Dim;
-        inner.AddChild(where);
         return b;
     }
 
-    /// <summary>Shows which faction is picked (one at a time).</summary>
+    /// <summary>A faction for the other side to play: the same as yours makes a mirror match.</summary>
+    private Button RivalButton(FactionDef faction)
+    {
+        var b = new Button
+        {
+            Name = "start_vs_" + faction.Id,
+            Text = faction.Name,
+            ToggleMode = true,
+            FocusMode = Control.FocusModeEnum.None,
+            CustomMinimumSize = new Vector2(300, 40),
+            TooltipText = $"The other side plays the {faction.Name}",
+        };
+        b.AddThemeFontSizeOverride("font_size", 18);
+        b.Pressed += () =>
+        {
+            _factions[Rival] = faction;
+            ShowChoice();
+        };
+        return b;
+    }
+
+    /// <summary>Shows which faction each side has (one at a time), in that side's colour, and where you start.</summary>
     private void ShowChoice()
     {
-        for (int p = 0; p < _factionButtons.Count; p++) _factionButtons[p].SetPressedNoSignal(p == _player);
+        Colour(_factionButtons, FactionOf(_player), UnitRenderer.TeamColors[_player]);
+        Colour(_rivalButtons, FactionOf(Rival), UnitRenderer.TeamColors[Rival]);
+        var mine = FactionOf(_player);
+        var theirs = FactionOf(Rival);
+        _where.Text = $"You start in the {(_player == 0 ? "west" : "east")}, the {theirs.Name} in the {(_player == 0 ? "east" : "west")}" +
+                      (mine == theirs ? ": a mirror match" : "");
+    }
+
+    private void Colour(List<Button> buttons, FactionDef picked, Color team)
+    {
+        for (int k = 0; k < buttons.Count; k++)
+        {
+            var b = buttons[k];
+            b.SetPressedNoSignal(_content.Factions[k] == picked);
+            b.AddThemeStyleboxOverride("normal", FactionStyle(team, chosen: false, hover: false));
+            b.AddThemeStyleboxOverride("hover", FactionStyle(team, chosen: false, hover: true));
+            b.AddThemeStyleboxOverride("pressed", FactionStyle(team, chosen: true, hover: false));
+            b.AddThemeStyleboxOverride("hover_pressed", FactionStyle(team, chosen: true, hover: true));
+            if (b.GetChildCount() > 0 && b.GetChild(0) is VBoxContainer inner && inner.GetChild(0) is Label name)
+                name.AddThemeColorOverride("font_color", team.Lightened(0.45f));
+        }
     }
 
     private static StyleBox FactionStyle(Color team, bool chosen, bool hover)

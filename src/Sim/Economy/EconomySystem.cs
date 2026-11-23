@@ -31,9 +31,9 @@ public enum PlaceResult : byte
 /// <summary>Per-player economy state and running totals.</summary>
 public sealed class PlayerEconomy
 {
-    internal PlayerEconomy(ContentDb content, int player)
+    internal PlayerEconomy(ContentDb content, int player, FactionDef faction)
     {
-        Faction = player == Simulation.WildPlayer ? content.Wild : content.Factions[player % content.Factions.Count];
+        Faction = faction;
         Researched = new bool[content.Techs.Count];
         HousingBonus = new int[content.Buildings.Count];
         HpBonus = new int[content.Units.Count];
@@ -43,8 +43,8 @@ public sealed class PlayerEconomy
         Array.Fill(AutoForm, -1);
     }
 
-    /// <summary>The player's faction.</summary>
-    public FactionDef Faction { get; }
+    /// <summary>The player's faction (see <see cref="Simulation.FactionOf"/>).</summary>
+    public FactionDef Faction { get; internal set; }
     /// <summary>Workers it trains take jobs on their own (see <see cref="AutomateAllCommand"/>).</summary>
     public bool AutoWorkers { get; internal set; }
     /// <summary>The priority list its workers follow unless they have one of their own (see <see cref="Automation.WorkPriorities"/>).</summary>
@@ -157,7 +157,7 @@ public sealed partial class EconomySystem
     public PlayerEconomy Player(int player)
     {
         if (player < 0) throw new ArgumentOutOfRangeException(nameof(player));
-        while (_players.Count <= player) _players.Add(new PlayerEconomy(_sim.Content, _players.Count));
+        while (_players.Count <= player) _players.Add(new PlayerEconomy(_sim.Content, _players.Count, _sim.FactionOf(_players.Count)));
         return _players[player];
     }
 
@@ -252,6 +252,7 @@ public sealed partial class EconomySystem
         void Mix(long v) { h = (h ^ (ulong)v) * 1099511628211UL; }
         foreach (var p in _players)
         {
+            Mix(p.Faction.Index);
             Mix(p.AutoWorkers ? 1 : 0);
             Mix(p.Rebuild ? 1 : 0);
             Mix((long)p.DefaultPriorities);
