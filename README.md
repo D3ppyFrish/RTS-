@@ -346,7 +346,7 @@ material; stones, planks, shingles and a shade per voxel are drawn by the shader
   beyond that the usual plain model (the golem, which has none, at 6.25 cm). The finest level casts its
   shadow from the middle one. `--detail-fine=off` stops at the middle level, to measure what the finest
   costs. Faces in nooks are shaded darker (ambient occlusion baked into the mesh).
-- **Showpieces**: `--showcase[=X,Z]` stands a golem, an orc spearman and worker, two wolves, a wolf rider and
+- **Showpieces**: `--showcase[=X,Z]` stands a stone giant, an orc spearman and worker, two wolves, a wolf rider and
   two knights together (player 1's colour); `--golems=N` puts N golems in rows near the camera focus, for the benchmark.
   They are scenery, not units of the rules. `scripts/ui-sculpt-screenshots.sh` shoots the showcase from
   far to close, with detail on and off.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Close-up look check for the sculpted, finely detailed models (game/scripts/Detail/Sculpted.cs): --showcase
-# stands a stone golem with an orc on its back, an orc spearman, an orc worker, two wolves, a wolf rider and
+# stands a stone giant (Sawyer's Meshy AI model), an orc spearman, an orc worker, two wolves, a wolf rider and
 # two knights and a row of troops imported from GLBs (Meshy AI) together, and the shots go from far (plain models) through the middle level to the finest voxels.
 # Saves PNGs to OUT_DIR, and the same shots with detail off (the plain models) as *-plain.png.
 # Usage: scripts/ui-sculpt-screenshots.sh [OUT_DIR]
@@ -22,7 +22,7 @@ wait 5
 shot $OUT/sculpt-group$suffix.png
 camera 106,283 20 15 9
 wait 5
-shot $OUT/sculpt-golem$suffix.png
+shot $OUT/sculpt-giant$suffix.png
 camera 104,284 30 18 6
 wait 5
 shot $OUT/sculpt-spearman$suffix.png
