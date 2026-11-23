@@ -58,11 +58,23 @@ public sealed partial class AiPlayer
 
     private long _seaLook, _dockLook;
     private bool _seaWanted, _shoreTargets;
-    // The ferry under way: where the wave boards, and where it is put ashore. Its ships, and the units that have been aboard.
-    private (int PX, int PZ, int LX, int LZ)? _ferry;
-    private long _ferryStart, _ferryNext;
+    /// <summary>A crossing by sea under way: where its soldiers board, where they are put ashore, its ships, and who has been aboard.</summary>
+    private sealed class Crossing
+    {
+        public int PX, PZ, LX, LZ;
+        public long Start;
+        public readonly List<int> Ships = new(), Rode = new();
+        // For a lift: the soldiers joining the wave that it takes across (the wave's ferry takes the wave).
+        public readonly List<int> Members = new();
+    }
+
+    // The wave's ferry under way, and its looks at going by sea.
+    private Crossing? _ferry;
+    private long _ferryNext;
     private int _ferryChecks;
-    private readonly List<int> _ferryShips = new(), _rode = new();
+    // Hard: the lift under way taking soldiers joining the wave across to it, and when it next looks for one.
+    private Crossing? _lift;
+    private long _liftNext;
     // When each ship began waiting for soldiers to board it (ship id to tick). Looked up only.
     private readonly Dictionary<int, long> _boardSince = new();
     // The bombard ships' escort: the transport ship and the ranged soldiers sent aboard it.
@@ -77,7 +89,11 @@ public sealed partial class AiPlayer
     /// <summary>True while a wave of its own is being ferried across the water.</summary>
     public bool Ferrying => _ferry != null;
     /// <summary>Where the ferry under way puts the wave ashore, or null.</summary>
-    public (int X, int Z)? FerryLanding => _ferry is var (_, _, lx, lz) ? (lx, lz) : null;
+    public (int X, int Z)? FerryLanding => _ferry is { } f ? (f.LX, f.LZ) : null;
+    /// <summary>True while soldiers joining a wave out are being taken across the water to it.</summary>
+    public bool Lifting => _lift != null;
+    /// <summary>Where the lift under way puts the soldiers joining the wave ashore, or null.</summary>
+    public (int X, int Z)? LiftLanding => _lift is { } l ? (l.LX, l.LZ) : null;
     /// <summary>True if its last look found the way to the enemy by land cut off or long, and a way by sea.</summary>
     public bool SeaRoute => _seaWanted;
     /// <summary>The transport ship escorting its bombard ships (unit id), or 0.</summary>
@@ -277,7 +293,15 @@ public sealed partial class AiPlayer
     private bool Ferry(Simulation sim, Action<Command> issue)
     {
         if (_ferry == null && !StartFerry(sim, issue)) return false;
-        StepFerry(sim, issue);
+        if (StepCrossing(sim, _ferry!, _wave, issue, out bool over))
+        {
+            Note(sim, over ? "gives up ferrying its wave" : "has its wave across the water");
+            EndCrossing(_ferry!);
+            _ferry = null;
+            // The wave sets out afresh from where it is.
+            _waveBest = int.MaxValue;
+            _waveCheck = sim.Tick;
+        }
         return _ferry != null;
     }
 
@@ -286,87 +310,151 @@ public sealed partial class AiPlayer
         if (_ferryChecks >= FerryChecks || sim.Tick < _ferryNext || _waveLair != 0) return false;
         var goal = Target(sim, _waveBuilding) is { } foe ? (foe.AX, foe.AZ) : _waveGuess;
         if (goal is not var (gx, gz)) return false;
-        var u = sim.Units;
         var (cx, cz) = Centroid(sim, _wave);
         if (Dist2(cx, cz, gx, gz) < (long)FerryLeast * FerryLeast) return false;
         _ferryNext = sim.Tick + FerryRecheckTicks;
         _ferryChecks++;
-        // The wave's unit nearest its middle, standing on the ground: where it goes from.
+        if (PlanCrossing(sim, _wave, gx, gz) is not { } c) return false;
+        _ferry = c;
+        _stage = null;
+        SetOff(sim, c, _wave, issue);
+        Note(sim, $"ferries its wave of {_wave.Count} on {c.Ships.Count} ships from {c.PX},{c.PZ} to {c.LX},{c.LZ}");
+        return true;
+    }
+
+    /// <summary>
+    /// Hard, a wave out and not being ferried itself: soldiers joining it whose way to it by land is cut off or long
+    /// are lifted across by ship, as a wave is ferried, and put ashore on the shore nearest the wave from which they
+    /// can walk to it; from there they walk on to join it. Soldiers sent to join it while the lift is under way go
+    /// with it if they are on its side of the water.
+    /// </summary>
+    private void Lift(Simulation sim, Action<Command> issue)
+    {
+        var u = sim.Units;
+        if (_lift == null)
+        {
+            if (_joining.Count == 0 || _ferry != null || _waveLair != 0 || sim.Tick < _liftNext) return;
+            _liftNext = sim.Tick + FerryRecheckTicks;
+            var (cx, cz) = Centroid(sim, _wave);
+            // Those joining that are still far from the wave and on the ground: the lift's to take.
+            var far = _joining.FindAll(id => u.IndexOf(id) is var i && i >= 0 && u.Aboard[i] == 0
+                && Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), cx, cz) >= (long)FerryLeast * FerryLeast);
+            if (far.Count == 0 || PlanCrossing(sim, far, cx, cz) is not { } c) return;
+            c.Members.AddRange(far);
+            _lift = c;
+            SetOff(sim, c, far, issue);
+            Note(sim, $"lifts {far.Count} soldiers joining its wave on {c.Ships.Count} ships from {c.PX},{c.PZ} to {c.LX},{c.LZ}");
+            return;
+        }
+        var lift = _lift;
+        lift.Members.RemoveAll(id => !_joining.Contains(id));
+        // Those sent to join since, on the side of the water it boards from, go with it.
+        foreach (int id in _joining)
+        {
+            if (lift.Members.Contains(id) || lift.Rode.Contains(id) || u.IndexOf(id) is not (>= 0 and var i) || u.Aboard[i] != 0) continue;
+            int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
+            if (Dist2(x, z, lift.PX, lift.PZ) < Dist2(x, z, lift.LX, lift.LZ)) lift.Members.Add(id);
+        }
+        if (!StepCrossing(sim, lift, lift.Members, issue, out bool over)) return;
+        Note(sim, over ? "gives up lifting soldiers to its wave" : "has the soldiers joining its wave across the water");
+        EndCrossing(lift);
+        _lift = null;
+    }
+
+    /// <summary>True if the soldier joining the wave is the lift's to order about: waiting for it, or aboard.</summary>
+    private bool Lifted(Simulation sim, int id) =>
+        _lift is { } l && (l.Members.Contains(id) && !l.Rode.Contains(id) || sim.Units.IndexOf(id) is >= 0 and var i && sim.Units.Aboard[i] != 0);
+
+    /// <summary>True if the ship is taking part in a crossing under way (the wave's ferry or a lift).</summary>
+    private bool InCrossing(int ship) => _ferry?.Ships.Contains(ship) == true || _lift?.Ships.Contains(ship) == true;
+
+    /// <summary>
+    /// A crossing for the group to (gx, gz), if the way there by land is cut off or long and its free ships can take
+    /// them: where they board (the shore nearest them that they can walk to) and where they land (the shore nearest
+    /// the goal from which they can walk to it). Null if not.
+    /// </summary>
+    private Crossing? PlanCrossing(Simulation sim, List<int> group, int gx, int gz)
+    {
+        var u = sim.Units;
+        var (cx, cz) = Centroid(sim, group);
+        // The group's unit nearest its middle, standing on the ground: where it goes from.
         int from = -1;
         long best = long.MaxValue;
-        foreach (int id in _wave)
+        foreach (int id in group)
         {
             int i = u.IndexOf(id);
             if (i < 0 || u.Aboard[i] != 0) continue;
             long d = Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), cx, cz);
             if (d < best) (best, from) = (d, i);
         }
-        if (from < 0) return false;
+        if (from < 0) return null;
         int node = sim.Walkable.NearestNode(u.X[from].FloorToInt(), u.Z[from].FloorToInt(), u.Y[from]);
-        if (!ByLandFar(sim, node, gx, gz)) return false;
+        if (!ByLandFar(sim, node, gx, gz)) return null;
         var ships = Own(sim, Transport);
-        ships.RemoveAll(id => id == _escort || Aboard(sim, u.IndexOf(id)) > 0);
+        ships.RemoveAll(id => id == _escort || InCrossing(id) || Aboard(sim, u.IndexOf(id)) > 0);
         if (ships.Count == 0)
         {
             _seaWanted = true; // the next look at the sea decides again
-            return false;
+            return null;
         }
         int s = u.IndexOf(ships[0]);
         Chart(sim);
         SailFrom(sim, u.X[s].FloorToInt(), u.Z[s].FloorToInt());
-        if (!Shore(sim, gx, gz, FerryLook, true, out int lx, out int lz)) return false;
-        if (!Shore(sim, u.X[from].FloorToInt(), u.Z[from].FloorToInt(), PickLook, true, out int px, out int pz, node)) return false;
-        // Ships that cannot get to where the wave boards stay out of it.
+        if (!Shore(sim, gx, gz, FerryLook, true, out int lx, out int lz)) return null;
+        if (!Shore(sim, u.X[from].FloorToInt(), u.Z[from].FloorToInt(), PickLook, true, out int px, out int pz, node)) return null;
+        // Ships that cannot get to where the group boards stay out of it.
         ships.RemoveAll(id => u.IndexOf(id) is var i && !SailsTo(sim, u.X[i].FloorToInt(), u.Z[i].FloorToInt(), px, pz));
-        if (ships.Count == 0) return false;
-        _ferry = (px, pz, lx, lz);
-        _ferryStart = sim.Tick;
-        _ferryShips.Clear();
-        _ferryShips.AddRange(ships);
-        _rode.Clear();
-        _stage = null;
-        issue(new MoveCommand(Player, _ferryShips.ToArray(), px, pz));
-        var walk = new List<int>();
-        foreach (int id in _wave)
-            if (u.IndexOf(id) is var i && i >= 0 && u.Aboard[i] == 0) walk.Add(id);
-        if (walk.Count > 0) issue(new MoveCommand(Player, walk.ToArray(), px, pz));
-        Note(sim, $"ferries its wave of {_wave.Count} on {ships.Count} ships from {px},{pz} to {lx},{lz}");
-        return true;
+        if (ships.Count == 0) return null;
+        var c = new Crossing { PX = px, PZ = pz, LX = lx, LZ = lz, Start = sim.Tick };
+        c.Ships.AddRange(ships);
+        return c;
     }
 
-    /// <summary>One look at the ferry under way: ships to where the wave boards, soldiers aboard, full ships across.</summary>
-    private void StepFerry(Simulation sim, Action<Command> issue)
+    /// <summary>The crossing's ships sail to where the group boards, and the group walks there.</summary>
+    private void SetOff(Simulation sim, Crossing c, List<int> group, Action<Command> issue)
     {
-        if (_ferry is not var (px, pz, lx, lz)) return;
         var u = sim.Units;
-        _ferryShips.RemoveAll(id => !u.Exists(id));
+        issue(new MoveCommand(Player, c.Ships.ToArray(), c.PX, c.PZ));
+        var walk = new List<int>();
+        foreach (int id in group)
+            if (u.IndexOf(id) is var i && i >= 0 && u.Aboard[i] == 0) walk.Add(id);
+        if (walk.Count > 0) issue(new MoveCommand(Player, walk.ToArray(), c.PX, c.PZ));
+    }
+
+    /// <summary>
+    /// One look at a crossing under way: ships to where the group boards, soldiers aboard, full ships across. True
+    /// once it is over: all across, or (<paramref name="over"/>) given up on, its ships lost or too long gone.
+    /// </summary>
+    private bool StepCrossing(Simulation sim, Crossing c, List<int> group, Action<Command> issue, out bool over)
+    {
+        int px = c.PX, pz = c.PZ, lx = c.LX, lz = c.LZ;
+        var u = sim.Units;
+        c.Ships.RemoveAll(id => !u.Exists(id));
         // Who has been aboard: one that has been and is ashore again is across (or went down with the ship).
         var waiting = new List<int>();
         int afloat = 0;
-        foreach (int id in _wave)
+        foreach (int id in group)
         {
             int i = u.IndexOf(id);
             if (i < 0) continue;
             if (u.Aboard[i] != 0)
             {
                 afloat++;
-                if (!_rode.Contains(id)) _rode.Add(id);
+                if (!c.Rode.Contains(id)) c.Rode.Add(id);
             }
-            else if (!_rode.Contains(id)) waiting.Add(id);
+            else if (!c.Rode.Contains(id)) waiting.Add(id);
         }
-        bool over = sim.Tick - _ferryStart > FerryTicks || _ferryShips.Count == 0;
+        over = sim.Tick - c.Start > FerryTicks || c.Ships.Count == 0;
         if ((waiting.Count == 0 && afloat == 0) || over)
         {
-            // Done (or given up on): whoever is still aboard is landed, and the wave goes on from where it is.
-            foreach (int id in _ferryShips)
+            // Done (or given up on): whoever is still aboard is landed, and the group goes on from where it is.
+            foreach (int id in c.Ships)
                 if (u.IndexOf(id) is var s && Aboard(sim, s) > 0 && u.Job[s] != UnitJob.Land) issue(new MoveCommand(Player, new[] { id }, lx, lz));
-            Note(sim, over ? "gives up ferrying its wave" : "has its wave across the water");
-            EndFerry(sim);
-            return;
+            return true;
         }
         var spare = new List<int>(waiting);
         spare.RemoveAll(id => u.IndexOf(id) is var i && u.Job[i] == UnitJob.Board);
-        foreach (int id in _ferryShips)
+        foreach (int id in c.Ships)
         {
             int s = u.IndexOf(id);
             int load = Aboard(sim, s), seats = sim.Content.Units[u.Def[s]].Seats, coming = 0;
@@ -392,13 +480,13 @@ public sealed partial class AiPlayer
                 if (waiting.Count > 0) issue(new MoveCommand(Player, new[] { id }, px, pz));
                 continue;
             }
-            // At the shore where the wave boards: the nearest waiting soldiers come aboard.
+            // At the shore where the group boards: the nearest waiting soldiers come aboard.
             if (spare.Count == 0 || coming > 0) continue;
             spare.Sort((a, b) =>
             {
                 int ia = u.IndexOf(a), ib = u.IndexOf(b);
-                int c = Dist2(u.X[ia].FloorToInt(), u.Z[ia].FloorToInt(), sx, sz).CompareTo(Dist2(u.X[ib].FloorToInt(), u.Z[ib].FloorToInt(), sx, sz));
-                return c != 0 ? c : a.CompareTo(b);
+                int cmp = Dist2(u.X[ia].FloorToInt(), u.Z[ia].FloorToInt(), sx, sz).CompareTo(Dist2(u.X[ib].FloorToInt(), u.Z[ib].FloorToInt(), sx, sz));
+                return cmp != 0 ? cmp : a.CompareTo(b);
             });
             var board = spare.GetRange(0, Math.Min(seats, spare.Count));
             spare.RemoveRange(0, board.Count);
@@ -409,28 +497,23 @@ public sealed partial class AiPlayer
         var walk = Unordered(sim, spare, px, pz);
         walk.RemoveAll(id => u.IndexOf(id) is var i && Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), px, pz) <= (long)Slack * Slack);
         if (walk.Count > 0 && sim.Tick % (5 * ArmyTicks) < ArmyTicks) issue(new MoveCommand(Player, walk.ToArray(), px, pz));
+        return false;
     }
 
-    private void EndFerry(Simulation sim)
+    private void EndCrossing(Crossing c)
     {
-        _ferry = null;
-        _ferryShips.Clear();
-        _rode.Clear();
-        _boardSince.Clear();
-        // The wave sets out afresh from where it is.
-        _waveBest = int.MaxValue;
-        _waveCheck = sim.Tick;
+        foreach (int id in c.Ships) _boardSince.Remove(id);
     }
 
-    /// <summary>A new wave (or none): no ferry, and its looks at the sea begin again.</summary>
+    /// <summary>A new wave (or none): no ferry or lift, and its looks at the sea begin again.</summary>
     private void ResetFerry()
     {
         _ferry = null;
-        _ferryShips.Clear();
-        _rode.Clear();
+        _lift = null;
         _boardSince.Clear();
         _ferryChecks = 0;
         _ferryNext = 0;
+        _liftNext = 0;
         _fleetGoal = 0;
         _fleetLook = 0;
     }
@@ -484,7 +567,7 @@ public sealed partial class AiPlayer
         if (_ferry != null) return;
         foreach (int id in Own(sim, Transport))
         {
-            if (id == _escort) continue;
+            if (id == _escort || InCrossing(id)) continue;
             int s = u.IndexOf(id);
             if (u.Order[s] == UnitOrder.Idle && Aboard(sim, s) > 0) issue(new MoveCommand(Player, new[] { id }, hx, hz));
         }
@@ -552,7 +635,7 @@ public sealed partial class AiPlayer
         if (_escort == 0)
         {
             var ships = Own(sim, Transport);
-            ships.RemoveAll(id => Aboard(sim, u.IndexOf(id)) > 0);
+            ships.RemoveAll(id => InCrossing(id) || Aboard(sim, u.IndexOf(id)) > 0);
             if (ships.Count == 0) return;
             var crew = new List<(long D, int Id)>();
             int s0 = u.IndexOf(ships[0]);

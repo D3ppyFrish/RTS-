@@ -1685,6 +1685,12 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
     after 25 seconds), sails them to the shore nearest the target from which they can walk to it and puts them
     ashore, then comes back for the rest. Once all are across the wave goes on from where it landed. A ferry gives
     up after 5 minutes; ships left with soldiers aboard put them ashore at home.
+  - **Lifting reinforcements** (Hard): soldiers sent after a wave out that is not being ferried itself, still 40
+    columns or more from it and with their way to it by land cut off or more than twice the straight way, are lifted
+    across the same way by its free transport ships (it looks every 30 seconds): they board at the shore nearest
+    them and are put ashore on the shore nearest the wave from which they can walk to it, then walk on and join it.
+    Soldiers sent after the wave while a lift is under way go with it if they are on its side of the water. A lift
+    gives up after 5 minutes, and ends with the wave.
   - **Bombard ships** sail out with a wave: while a wave of its own is out after a building, they shell the known
     enemy tower within 32 columns of it nearest it that they can reach from the water, else the nearest wall or
     gate, else the building itself, so the wave on land screens them. With ranged soldiers at home and a transport
