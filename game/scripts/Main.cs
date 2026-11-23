@@ -907,7 +907,7 @@ public partial class Main : Node3D
             int y = _sim.World.SurfaceHeight(Math.Clamp((int)x, 0, WorldX - 1), Math.Clamp((int)z, 0, WorldZ - 1)) + 1;
             _unitRenderer.Showpieces.Add((model, new Vector3(x, y, z) * bs, Mathf.DegToRad(yawDegrees), team));
         }
-        Put("golem", 0, 0, 0);
+        Put("stone_giant", 0, 0, 0); // Sawyer's model, as the hills' stone giants are drawn
         Put("orcs/spearman", -2.6f, 4.2f, 15);
         Put("orcs/worker", 2.8f, 3.6f, -20);
         Put("wolf", -5.2f, 2, 35);
