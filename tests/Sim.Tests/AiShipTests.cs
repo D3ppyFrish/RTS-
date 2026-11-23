@@ -91,6 +91,26 @@ public class AiShipTests
     }
 
     [Fact]
+    public void HardLiftsSoldiersJoiningItsWaveAcrossTheWater()
+    {
+        var sim = Strait(fleet: true);
+        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        Assert.True(Play(sim, ai, () => ai.Ferrying, AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps), "a wave to set out by sea");
+        Assert.True(Play(sim, ai, () => !ai.Ferrying, 4 * 60 * Tps), "the wave to be across");
+        Assert.False(ai.Lifting);
+        // Soldiers trained at home since: they follow the wave, and the way to it is across the water.
+        var fresh = new List<int>();
+        for (int k = 0; k < 20; k++) fresh.Add(sim.SpawnUnit(0, "spearman", 36 + k % 10, 70 + k / 10));
+        Assert.All(fresh, id => Assert.True(id > 0));
+        Assert.True(Play(sim, ai, () => ai.Lifting, 2 * 60 * Tps), "the soldiers joining the wave to be lifted across by ship");
+        var (lx, _) = ai.LiftLanding!.Value;
+        Assert.True(lx > SeaX1, "they land on the far shore");
+        int Over() => fresh.Count(id => sim.Units.IndexOf(id) is >= 0 and var i && sim.Units.Aboard[i] == 0 && sim.Units.X[i].FloorToInt() > SeaX1);
+        Assert.True(Play(sim, ai, () => Over() >= AiPlayer.JoinSize, 4 * 60 * Tps), $"those joining the wave to be put ashore across the water: {Over()} across");
+        Assert.True(Play(sim, ai, () => !ai.Lifting, 2 * 60 * Tps), "the lift to be done");
+    }
+
+    [Fact]
     public void AFerriedWaveReplaysTheSameFromItsCommands()
     {
         // What the computer works out about the water changes nothing in the game: its commands alone play it again.

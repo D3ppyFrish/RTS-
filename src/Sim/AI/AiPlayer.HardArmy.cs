@@ -435,7 +435,8 @@ public sealed partial class AiPlayer
 
     /// <summary>
     /// While a wave is out, the soldiers trained since follow it in groups of <see cref="JoinSize"/>: they
-    /// walk to where the wave is, fighting what they meet, and are part of it once they get there.
+    /// walk to where the wave is, fighting what they meet, and are part of it once they get there. With the wave
+    /// across the water, ships lift them over to it first (see <see cref="Lift"/>).
     /// </summary>
     private void Reinforce(Simulation sim, List<int> home, Action<Command> issue)
     {
@@ -445,7 +446,7 @@ public sealed partial class AiPlayer
         for (int k = _joining.Count - 1; k >= 0; k--)
         {
             int i = u.IndexOf(_joining[k]);
-            if (Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), cx, cz) > 16L * 16) continue;
+            if (u.Aboard[i] != 0 || Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), cx, cz) > 16L * 16) continue;
             _wave.Add(_joining[k]);
             _waveSize++;
             _waveWorth += Power(sim.Content.Units[u.Def[i]], u.Hp[i]);
@@ -455,8 +456,11 @@ public sealed partial class AiPlayer
         ready.RemoveAll(_mending.Contains);
         int guard = Math.Max(LeastGuard, ready.Count * HomeGuardPercent(sim) / 100);
         if (ready.Count - guard >= JoinSize) _joining.AddRange(ready.GetRange(0, ready.Count - guard));
+        // Across the water from the wave, they go by ship (see Lift).
+        Lift(sim, issue);
         if (_joining.Count == 0 || sim.Tick % (5 * ArmyTicks) >= ArmyTicks) return;
         var go = Unordered(sim, _joining, cx, cz);
+        go.RemoveAll(id => Lifted(sim, id));
         if (go.Count > 0) issue(new AttackMoveCommand(Player, go.ToArray(), cx, cz));
     }
 
