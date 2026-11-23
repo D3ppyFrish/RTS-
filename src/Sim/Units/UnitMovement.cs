@@ -75,6 +75,8 @@ public sealed class UnitMovement
         for (int i = 0; i < u.Count; i++)
         {
             if (u.Aboard[i] != 0 || units[u.Def[i]].IsBoat) continue;
+            // In a shield wall, lowering one, or thrown back by one: it stands where it is, and is not shoved.
+            if (_sim.Combat.Rooted(i)) continue;
             Fix64 vx = _pushX[i], vz = _pushZ[i];
             // A unit with no order is only ever nudged (by the crowd, or sliding on ice): that never drops it
             // more than a level, so a worker beside a hole is not shoved down into it.

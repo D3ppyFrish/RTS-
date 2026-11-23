@@ -61,6 +61,11 @@ void fragment() {
     private float[] _digBuffer = Array.Empty<float>();
     private MultiMesh _spots = null!;
     private float[] _spotBuffer = Array.Empty<float>();
+    private MultiMesh _shields = null!;
+    private float[] _shieldBuffer = Array.Empty<float>();
+
+    /// <summary>Colour of the shield plate drawn in front of a unit in a shield wall: a steel grey, tinted to its side.</summary>
+    private static readonly Color ShieldSteel = new(0.36f, 0.37f, 0.40f);
     private readonly List<(int X, int Y, int Z, Color C)> _digSquares = new();
 
     public ShaderMaterial Material => _material;
@@ -119,6 +124,14 @@ void fragment() {
             Mesh = Ring(0.22f, SpotRadius, 24),
         };
         AddChild(new MultiMeshInstance3D { Multimesh = _spots, MaterialOverride = _material, CustomAabb = worldBox });
+        _shields = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            UseColors = true,
+            // A tall shield held in front: 0.8 blocks wide, 1 high, a little thick (metres).
+            Mesh = new BoxMesh { Size = new Vector3(0.8f, 1f, 0.12f) * ChunkMesher.BlockSize },
+        };
+        AddChild(new MultiMeshInstance3D { Multimesh = _shields, MaterialOverride = _material, CustomAabb = worldBox });
     }
 
     /// <summary>Updates the building being placed, the selected building's frame and the road preview.</summary>
@@ -183,6 +196,45 @@ void fragment() {
         _road.VisibleInstanceCount = road.Count;
         UpdateDig(control);
         UpdateSpots(control);
+        UpdateShields(control);
+    }
+
+    /// <summary>
+    /// A shield plate in front of every unit in a shield wall that you can see, turned the way the wall faces, so a
+    /// line in the wall reads as one (see Rts.Sim.Units.CombatSystem).
+    /// </summary>
+    private void UpdateShields(PlayerControl control)
+    {
+        float bs = ChunkMesher.BlockSize;
+        var u = _sim.Units;
+        int n = 0;
+        for (int i = 0; i < u.Count; i++)
+        {
+            if (!u.ShieldWall[i] || !control.Fog.Shows(i)) continue;
+            if (_shields.InstanceCount <= n)
+            {
+                int cap = Math.Max(16, 1 << (int)Math.Ceiling(Math.Log2(n + 1)));
+                var old = _shieldBuffer;
+                _shields.InstanceCount = cap;
+                _shieldBuffer = new float[cap * FloatsPerInstance];
+                Array.Copy(old, _shieldBuffer, Math.Min(old.Length, _shieldBuffer.Length));
+            }
+            float fx = u.WallX[i].ToFloat(), fz = u.WallZ[i].ToFloat();
+            float x = u.X[i].ToFloat() + fx * 0.42f, z = u.Z[i].ToFloat() + fz * 0.42f;
+            float y = u.Y[i] + ChunkRenderer.GroundDrop(x, u.Y[i], z) + 0.62f;
+            var team = UnitRenderer.TeamColors[u.Owner[i] & 7];
+            var c = ShieldSteel.Lerp(team, 0.45f);
+            int o = n * FloatsPerInstance;
+            var r = _shieldBuffer;
+            // Local x along the wall's line, local z the way it faces.
+            r[o + 0] = fz; r[o + 1] = 0; r[o + 2] = fx; r[o + 3] = x * bs;
+            r[o + 4] = 0; r[o + 5] = 1; r[o + 6] = 0; r[o + 7] = y * bs;
+            r[o + 8] = -fx; r[o + 9] = 0; r[o + 10] = fz; r[o + 11] = z * bs;
+            r[o + 12] = c.R; r[o + 13] = c.G; r[o + 14] = c.B; r[o + 15] = 1;
+            n++;
+        }
+        if (n > 0) RenderingServer.MultimeshSetBuffer(_shields.GetRid(), _shieldBuffer);
+        _shields.VisibleInstanceCount = n;
     }
 
     /// <summary>A ring on each place in the formation line being dragged out.</summary>

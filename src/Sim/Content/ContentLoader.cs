@@ -1015,7 +1015,7 @@ public static class ContentLoader
                 return;
             }
             var table = new Obj(_errors, file, "table", "the table", doc.RootElement);
-            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "roles");
+            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "roles");
             var combat = _db.Combat;
             combat.Strong = table.Decimal("strong", Fix64.One, Fix64.FromInt(10), Fix64.FromInt(2));
             combat.Structures = table.Decimal("structures", Fix64.Zero, Fix64.One, Fix64.FromRatio(1, 4));
@@ -1035,6 +1035,19 @@ public static class ContentLoader
                 combat.BleedRate = bleeding.Int("rate", 1, 100, 1);
                 combat.BleedKills = !bleeding.Has("kills") || bleeding.Bool("kills");
                 combat.BloodDays = bleeding.Decimal("bloodDays", Fix64.FromRatio(1, 20), Fix64.FromInt(30), Fix64.One, required: false);
+            }
+            if (Part(table, "shieldWall", "{ \"front\": 25, \"charge\": 25, \"repel\": 100, \"stagger\": 2, \"drop\": 1, \"cover\": 1.5 }") is { } wall)
+            {
+                wall.Keys("front", "charge", "repel", "stagger", "drop", "cover");
+                combat.Wall = new ShieldWallRules
+                {
+                    Front = wall.Int("front", 0, 100, 25),
+                    Charge = wall.Int("charge", 0, 100, 25),
+                    Repel = wall.Int("repel", 0, 1000, 100),
+                    StaggerTicks = (wall.Decimal("stagger", Fix64.Zero, Fix64.FromInt(60), Fix64.FromInt(2), required: false) * Tps).RoundToInt(),
+                    DropTicks = (wall.Decimal("drop", Fix64.Zero, Fix64.FromInt(60), Fix64.One, required: false) * Tps).RoundToInt(),
+                    Cover = wall.Decimal("cover", Fix64.Zero, Fix64.FromInt(8), Fix64.FromRatio(3, 2), required: false),
+                };
             }
             if (!doc.RootElement.TryGetProperty("roles", out var list) || list.ValueKind != JsonValueKind.Array)
             {
@@ -1197,6 +1210,19 @@ public static class ContentLoader
                         int amount = type == TechEffectType.UnitHp ? o.Int("amount", 1, 100000, 0, required: true)
                             : o.Int("percent", 1, 1000, 0, required: true);
                         effects.Add(new TechEffect { Type = type, Role = role, Unit = unit, Amount = amount });
+                        break;
+                    }
+                    case TechEffectType.ShieldWall:
+                    {
+                        o.Keys("type", "role", "unit");
+                        UnitRole? role = o.Has("role") ? o.Enum("role", UnitRole.Worker, required: true) : null;
+                        var unitId = o.Str("unit", false);
+                        UnitDef? unit = null;
+                        if (unitId != null && !_db.TryGetUnit(unitId, out unit))
+                            o.Error($"\"unit\" is \"{unitId}\", which is not a unit");
+                        if (role != null && unitId != null) o.Error("give a \"role\" or a \"unit\", not both");
+                        if (role == null && unitId == null) o.Error("needs a \"role\" or a \"unit\": which units can form the wall");
+                        effects.Add(new TechEffect { Type = type, Role = role, Unit = unit });
                         break;
                     }
                     case TechEffectType.Roads:

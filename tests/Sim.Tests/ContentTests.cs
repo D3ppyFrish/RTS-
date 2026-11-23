@@ -78,7 +78,7 @@ public class ContentTests
         var drill = db.Tech("settler_drill");
         Assert.Same(db.Faction("settlers"), drill.Faction);
         var effect = Assert.Single(drill.Effects);
-        Assert.Equal((TechEffectType.UnitHp, 20, UnitRole.LineInfantry), (effect.Type, effect.Amount, effect.Role!.Value));
+        Assert.Equal((TechEffectType.ShieldWall, UnitRole.LineInfantry), (effect.Type, effect.Role!.Value));
         Assert.Equal(ContentDb.Default.Hash, db.Hash);
     }
 
@@ -570,12 +570,12 @@ public class ContentTests
     {
         var files = Files();
         Edit(files, "techs.json", "{ \"type\": \"gather_speed\", \"percent\": 25 }", "{ \"type\": \"gather_speed\", \"amount\": 25 }");
-        Edit(files, "techs.json", "\"role\": \"line_infantry\", \"amount\": 20", "\"role\": \"line_infantry\", \"unit\": \"spearman\", \"amount\": 20");
+        Edit(files, "techs.json", "\"role\": \"cavalry\", \"amount\": 30", "\"role\": \"cavalry\", \"unit\": \"rider\", \"amount\": 30");
         Edit(files, "techs.json", "{ \"type\": \"carry\", \"amount\": 3 }", "{ \"type\": \"carry\", \"amount\": 0 }");
         var e = Fails(files);
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 1: unknown field \"amount\""));
         Assert.Contains("techs.json: tech 'tools', effect 1: needs \"percent\"", e.Errors);
-        Assert.Contains("techs.json: tech 'settler_drill', effect 1: give a \"role\" or a \"unit\", not both", e.Errors);
+        Assert.Contains("techs.json: tech 'orc_beast_pens', effect 1: give a \"role\" or a \"unit\", not both", e.Errors);
         Assert.Contains("techs.json: tech 'carts', effect 1: \"amount\" is 0; it should be from 1 to 100", e.Errors);
         Assert.Equal(4, e.Errors.Count);
     }

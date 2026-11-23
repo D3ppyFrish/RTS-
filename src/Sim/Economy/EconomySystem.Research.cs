@@ -104,6 +104,9 @@ public sealed partial class EconomySystem
     /// <summary>True if wild monsters leave the player's workers alone (a <see cref="TechEffectType.SpareWorkers"/> tech).</summary>
     public bool SparesWorkers(int player) => Find(player)?.SpareWorkers ?? false;
 
+    /// <summary>True if the player's units of this type can take up a shield wall (a <see cref="TechEffectType.ShieldWall"/> tech).</summary>
+    public bool CanShieldWall(int player, UnitDef def) => Find(player)?.ShieldWall[def.Index] ?? false;
+
     /// <summary>The player's first finished town hall, where research happens; null if they have none.</summary>
     public Building? TownHall(int player)
     {
@@ -169,6 +172,7 @@ public sealed partial class EconomySystem
         p.Roads = p.SpareWorkers = false;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
+        Array.Clear(p.ShieldWall);
         var speedPercent = new int[units.Count];
         foreach (var t in Content.Techs)
         {
@@ -186,6 +190,10 @@ public sealed partial class EconomySystem
                     case TechEffectType.UnitHp:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.Amount;
+                        break;
+                    case TechEffectType.ShieldWall:
+                        foreach (var d in units)
+                            if (e.AppliesTo(d)) p.ShieldWall[d.Index] = true;
                         break;
                     case TechEffectType.UnitSpeed:
                         foreach (var d in units)

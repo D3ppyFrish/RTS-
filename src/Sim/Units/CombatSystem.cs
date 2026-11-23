@@ -256,6 +256,7 @@ public sealed partial class CombatSystem
 
         StepBleeding();
         StepBurst();
+        StepWalls();
         BuildGrid();
         Rally();
         if (tick % Tps == 0) RecoverMorale();
@@ -513,10 +514,10 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>
-    /// True if the unit holds its ground when it has no order: on the hold stance, on the retreat stance and
+    /// True if the unit holds its ground when it has no order: in a shield wall, on the hold stance, on the retreat stance and
     /// hurt, or standing on top of a wall or gate (it does not jump down after an enemy).
     /// </summary>
-    public bool Holding(int i) => U.Stance[i] switch
+    public bool Holding(int i) => U.ShieldWall[i] || U.Stance[i] switch
     {
         UnitStance.Hold => true,
         UnitStance.Retreat => Hurt(i) || _sim.Economy.WallUnder(i) != null,
@@ -950,6 +951,11 @@ public sealed partial class CombatSystem
         {
             damage = HitDamage(i, def, t, part);
             if (ambush > 0) damage = damage * (100 + ambush) / 100;
+            // A shield wall takes much less from the front (see CombatSystem.ShieldWall.cs).
+            var (through, repelled) = ThroughWall(i, def, t, damage);
+            if (through < damage) WallHits++;
+            if (repelled) Repel(i, t, damage);
+            damage = through;
             // Experience for the hit points it takes off, not for blows on a unit already doomed.
             _sim.Evolution.Damaged(i, Math.Min(damage, Math.Max(0, u.Hp[t] - _pending[t])));
             _pending[t] += damage;
@@ -1081,12 +1087,13 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>
-    /// The way unit t faces (not a unit vector), or zero: towards its target if it has one, else the way its
+    /// The way unit t faces (not a unit vector), or zero: the way its shield wall faces if it stands in one, else towards its target if it has one, else the way its
     /// formation faces, else towards where it walks; zero if it stands idle with none of these.
     /// </summary>
     public (Fix64 X, Fix64 Z) Facing(int t)
     {
         var u = U;
+        if (u.ShieldWall[t]) return (u.WallX[t], u.WallZ[t]); // a shield wall does not turn
         int target = u.Target[t] != 0 ? u.IndexOf(u.Target[t]) : -1;
         if (target >= 0) return (u.X[target] - u.X[t], u.Z[target] - u.Z[t]);
         if (u.Formation[t] && (u.FaceX[t] != Fix64.Zero || u.FaceZ[t] != Fix64.Zero)) return (u.FaceX[t], u.FaceZ[t]);

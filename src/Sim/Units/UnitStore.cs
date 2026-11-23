@@ -352,6 +352,16 @@ public sealed class UnitStore
     /// </summary>
     public bool[] Burrowed = Array.Empty<bool>();
     public int[] BurstLeft = Array.Empty<int>();
+    /// <summary>
+    /// The unit stands in a shield wall (see <see cref="CombatSystem"/>, <see cref="ShieldWallCommand"/>), facing
+    /// (<see cref="WallX"/>, <see cref="WallZ"/>), a unit vector or near enough, fixed when it raised the wall.
+    /// </summary>
+    public bool[] ShieldWall = Array.Empty<bool>();
+    public Fix64[] WallX = Array.Empty<Fix64>(), WallZ = Array.Empty<Fix64>();
+    /// <summary>
+    /// Ticks left in which the unit cannot walk: it is lowering its shield wall, or a rider thrown back by one.
+    /// </summary>
+    public int[] Stunned = Array.Empty<int>();
 
     public int Wound(int i, BodyPart part) => Wounds[i * Body.Parts + (int)part];
     public bool IsBleeding(int i, BodyPart part) => (Bleeding[i] & (1 << (int)part)) != 0;
@@ -430,6 +440,9 @@ public sealed class UnitStore
         Cutter[i] = 0;
         Burrowed[i] = false;
         BurstLeft[i] = 0;
+        ShieldWall[i] = false;
+        WallX[i] = WallZ[i] = Fix64.Zero;
+        Stunned[i] = 0;
         SlideX[i] = SlideZ[i] = Fix64.Zero;
         return id;
     }
@@ -525,6 +538,7 @@ public sealed class UnitStore
                 Mix(Wounds[i * Body.Parts + p] | ExtraArmour[i * Body.Parts + p] << 8 | BleedLeft[i * Body.Parts + p] << 16);
             Mix(Bleeding[i]); Mix(Grievous[i]); Mix(Cutter[i]);
             Mix(Burrowed[i] ? 1 : 0); Mix(BurstLeft[i]);
+            Mix(ShieldWall[i] ? 1 : 0); Mix(WallX[i].Raw); Mix(WallZ[i].Raw); Mix(Stunned[i]);
         }
         return h;
     }
@@ -556,6 +570,7 @@ public sealed class UnitStore
         Array.Copy(ExtraArmour, from * Body.Parts, ExtraArmour, to * Body.Parts, Body.Parts);
         Bleeding[to] = Bleeding[from]; Grievous[to] = Grievous[from]; Cutter[to] = Cutter[from];
         Burrowed[to] = Burrowed[from]; BurstLeft[to] = BurstLeft[from];
+        ShieldWall[to] = ShieldWall[from]; WallX[to] = WallX[from]; WallZ[to] = WallZ[from]; Stunned[to] = Stunned[from];
         Array.Copy(BleedLeft, from * Body.Parts, BleedLeft, to * Body.Parts, Body.Parts);
     }
 
@@ -592,5 +607,7 @@ public sealed class UnitStore
         Array.Resize(ref Bleeding, capacity); Array.Resize(ref BleedLeft, capacity * Body.Parts);
         Array.Resize(ref Cutter, capacity); Array.Resize(ref Grievous, capacity);
         Array.Resize(ref Burrowed, capacity); Array.Resize(ref BurstLeft, capacity);
+        Array.Resize(ref ShieldWall, capacity); Array.Resize(ref WallX, capacity); Array.Resize(ref WallZ, capacity);
+        Array.Resize(ref Stunned, capacity);
     }
 }

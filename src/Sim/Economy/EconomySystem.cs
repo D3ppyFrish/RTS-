@@ -37,6 +37,7 @@ public sealed class PlayerEconomy
         Researched = new bool[content.Techs.Count];
         HousingBonus = new int[content.Buildings.Count];
         HpBonus = new int[content.Units.Count];
+        ShieldWall = new bool[content.Units.Count];
         SpeedPerTick = new Fix64[content.Units.Count];
         foreach (var d in content.Units) SpeedPerTick[d.Index] = d.SpeedPerTick;
         AutoForm = new int[content.Units.Count];
@@ -80,6 +81,8 @@ public sealed class PlayerEconomy
     // The discoveries made (bit 1 << Discovery), which open discovery techs.
     internal byte Discoveries;
     internal readonly int[] HousingBonus, HpBonus;
+    /// <summary>Which unit types (by index) can take up a shield wall (see <see cref="TechEffectType.ShieldWall"/>).</summary>
+    internal readonly bool[] ShieldWall;
     internal readonly Fix64[] SpeedPerTick;
     // The form (unit index) each unit type (by index) takes on its own once it can, or -1 (see EvolutionSystem).
     internal readonly int[] AutoForm;

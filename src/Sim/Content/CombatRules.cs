@@ -63,6 +63,9 @@ public sealed class CombatRules
     /// <summary>In-game days (see <see cref="Conditions.DayTicks"/>) a full stain of blood takes to fade on a clear day.</summary>
     public Fix64 BloodDays { get; internal set; } = Fix64.One;
 
+    /// <summary>How a shield wall stands up to shots and charges (see <see cref="ShieldWallRules"/>).</summary>
+    public ShieldWallRules Wall { get; internal set; } = new();
+
     public bool StrongAgainst(UnitRole attacker, UnitRole target) => _strong[(int)attacker * RoleCount + (int)target];
 
     public bool StrongAgainstStructures(UnitRole role) => _structures[(int)role];
@@ -81,4 +84,24 @@ public sealed class CombatRules
     internal void SetStrongAgainstStructures(UnitRole role) => _structures[(int)role] = true;
 
     internal void SetJob(UnitRole role, string job) => _jobs[(int)role] = job;
+}
+
+/// <summary>
+/// The numbers of the shield wall (<c>shieldWall</c> in <c>data/roles.json</c>; see <see cref="CombatSystem"/>):
+/// first guesses, for playtesting.
+/// </summary>
+public sealed class ShieldWallRules
+{
+    /// <summary>Percent of its damage a shot from the wall's front (or from a side another wall unit covers) deals.</summary>
+    public int Front { get; internal set; } = 25;
+    /// <summary>Percent of its damage a rider's blow on the wall's front deals.</summary>
+    public int Charge { get; internal set; } = 25;
+    /// <summary>Percent of that blow's full damage the rider takes itself, thrown back onto the spears.</summary>
+    public int Repel { get; internal set; } = 100;
+    /// <summary>Ticks a rider thrown back by the wall stands stopped dead, before it can walk or strike again.</summary>
+    public int StaggerTicks { get; internal set; } = 2 * Simulation.TicksPerSecond;
+    /// <summary>Ticks a unit takes to lower its shield wall before it can walk.</summary>
+    public int DropTicks { get; internal set; } = Simulation.TicksPerSecond;
+    /// <summary>A wall unit this close (blocks) beside another covers that side of it.</summary>
+    public Fix64 Cover { get; internal set; } = Fix64.FromRatio(3, 2);
 }
