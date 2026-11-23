@@ -270,8 +270,14 @@ public sealed class UnitDef
     /// </summary>
     public int Seats { get; init; }
 
-    /// <summary>A boat, which sails on water and carries units (role <see cref="UnitRole.Boat"/>).</summary>
-    public bool IsBoat => Role == UnitRole.Boat;
+    /// <summary>
+    /// A ship of another role (<c>"sails"</c> in the data), such as the siege role's bombard ship: it sails on the water
+    /// as a boat does (see <see cref="BoatSystem"/>) but carries nobody (it has no <see cref="Seats"/>).
+    /// </summary>
+    public bool Sails { get; init; }
+
+    /// <summary>A ship, which sails on water (role <see cref="UnitRole.Boat"/>, which carries units, or <see cref="Sails"/>).</summary>
+    public bool IsBoat => Role == UnitRole.Boat || Sails;
 
     /// <summary>A form units evolve into rather than one that is trained.</summary>
     public bool IsForm => EvolvesFrom != null;

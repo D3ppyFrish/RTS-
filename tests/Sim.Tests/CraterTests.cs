@@ -32,12 +32,13 @@ public class CraterTests
     }
 
     [Fact]
-    public void OnlyTheCatapultLeavesCraters()
+    public void OnlyTheCatapultAndTheBombardShipLeaveCraters()
     {
         var content = Rts.Sim.Content.ContentDb.Default;
         Assert.True(content.Unit("catapult").Crater > 0);
         // The ram strikes close up and leaves none; nobody else does either.
-        Assert.All(content.Units.Where(u => u.Id != "catapult"), u => Assert.Equal(0, u.Crater));
+        Assert.True(content.Unit("bombard_ship").Crater > 0);
+        Assert.All(content.Units.Where(u => u.Id is not ("catapult" or "bombard_ship")), u => Assert.Equal(0, u.Crater));
     }
 
     [Fact]

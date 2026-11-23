@@ -618,7 +618,7 @@ public partial class PlayerControl : Node
         int target = PickUnit(screen);
         // A click on someone aboard a ship is a click on the ship.
         if (target > 0 && _sim.Units.Aboard[_sim.Units.IndexOf(target)] is int ship and > 0 && _sim.Units.Exists(ship)) target = ship;
-        if (target > 0 && OwnerOf(target) == LocalPlayer && IsBoat(target))
+        if (target > 0 && OwnerOf(target) == LocalPlayer && IsBoat(target) && _sim.Content.Units[_sim.Units.Def[_sim.Units.IndexOf(target)]].Seats > 0)
         {
             // Your own ship: the rest of the selection walks aboard.
             var riders = own.FindAll(id => id != target && !IsBoat(id));

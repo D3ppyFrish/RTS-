@@ -75,6 +75,8 @@
 // never units (not even when ordered to), striking a column's bottom block so the rest falls, as a sapper does;
 // gates (optional, percent, default 100) is what its blows on a gate deal next to any other building. cover
 // (optional, percent) is how much less arrows and other ranged piercing shots hurt it (a roof over it).
+// sails (optional) makes a unit of a role other than boat a ship: it sails on open water as a boat does (built at a
+// dock, launched onto the water beside it) but carries nobody; a ship that fights sails within range of its target.
 // crater (optional, blocks, needs
 // blast and range) is how far round where its shots land they blow a crater in the open ground, throwing the earth
 // out onto the rim.
@@ -324,6 +326,13 @@
     "speed": 5, "hp": 260, "model": "ship", "seats": 10, "sight": 10, "machine": true, "cover": 50,
     "armor": { "head": 3, "torso": 3, "arms": 3, "legs": 3 },
     "cost": { "food": 20, "wood": 60, "planks": 40 }, "trainTime": 30, "trainedAt": "dock", "start": false },
+  { "id": "bombard_ship", "name": "Bombard ship", "role": "siege", "sails": true, "speed": 2.5, "hp": 240, "model": "bombard_ship",
+    "description": "A broad-beamed ship with an iron bombard on its deck, built at a dock. Sails the rivers, lakes and sea and lobs its shells over walls at towns on the shore from the water, blowing craters where its shells land, but cannot hit anything closer than 4 blocks. Slow, and siege hits it twice as hard: catapults on the shore and other bombard ships are its bane. Bridges and ice stop it.",
+    "damage": 35, "attackTime": 6, "range": 16, "minRange": 4, "sight": 13, "splash": 1.5,
+    "blast": true, "crater": 2, "lobs": true, "machine": true, "attack": "crush", "armor": { "head": 2, "torso": 2, "arms": 2, "legs": 2 },
+    "weakTo": { "siege": 100 },
+    "cost": { "food": 40, "wood": 60, "planks": 60, "iron": 20 }, "trainTime": 45, "trainedAt": "dock", "requires": "smelting",
+    "start": false },
 
   // Goblin mercenaries, hired at the goblins' town by their ally, paid in gold (the goblins' tribute is gold).
   { "id": "goblin_cutthroat", "name": "Goblin cutthroat", "role": "line_infantry", "hiredFrom": "goblins",

@@ -701,6 +701,13 @@ public sealed partial class CombatSystem
             return;
         }
         int gx, gz, gy;
+        if (Def(i).IsBoat)
+        {
+            // A ship sails within range of it by water (see BoatSystem.Chase).
+            if (b != null) _sim.Boats.Chase(i, (b.X + b.MaxX) / 2, (b.Z + b.MaxZ) / 2);
+            else _sim.Boats.Chase(i, u.X[t].FloorToInt(), u.Z[t].FloorToInt());
+            return;
+        }
         if (b != null)
         {
             // Beside it, as high up as a blow still reaches it from: the rubble heaped against a tall wall counts.
