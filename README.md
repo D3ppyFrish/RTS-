@@ -138,7 +138,9 @@ duplicate ids, references to ids that do not exist, prerequisite cycles (with th
 and anything that would need another faction's tech. Command logs record a hash of the data, so a
 replay made with different data says so instead of drifting apart.
 
-- **Factions**: Settlers and Orcs (who tame monsters: see [Monsters and taming](docs/rules.md#monsters-and-taming)). Player 0 plays the first
+- **Factions**: Settlers, Orcs (who tame monsters: see [Monsters and taming](docs/rules.md#monsters-and-taming)) and the
+  Deepfolk (an insect hive with its own units and brood chamber in place of everyone's, `"replaces"`; see
+  [The Deepfolk](docs/rules.md#the-deepfolk)). Player 0 plays the first
   faction, player 1 the second, and so on; picking a faction on the start screen picks the player who
   has it.
 - **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 18

@@ -346,6 +346,12 @@ public sealed class UnitStore
     /// <c>i * Body.Parts + (int)part</c>: a piece found or given to this one unit. It keeps it when it evolves.
     /// </summary>
     public byte[] ExtraArmour = Array.Empty<byte>();
+    /// <summary>
+    /// For a unit that bursts out of the ground (<see cref="UnitDef.Burst"/>): whether it was underground at the last
+    /// look (<see cref="CombatSystem.StepBurst"/>), and the ticks its blows still deal more since it came up.
+    /// </summary>
+    public bool[] Burrowed = Array.Empty<bool>();
+    public int[] BurstLeft = Array.Empty<int>();
 
     public int Wound(int i, BodyPart part) => Wounds[i * Body.Parts + (int)part];
     public bool IsBleeding(int i, BodyPart part) => (Bleeding[i] & (1 << (int)part)) != 0;
@@ -422,6 +428,8 @@ public sealed class UnitStore
         Array.Clear(ExtraArmour, i * Body.Parts, Body.Parts);
         StopBleeding(i);
         Cutter[i] = 0;
+        Burrowed[i] = false;
+        BurstLeft[i] = 0;
         SlideX[i] = SlideZ[i] = Fix64.Zero;
         return id;
     }
@@ -516,6 +524,7 @@ public sealed class UnitStore
             for (int p = 0; p < Body.Parts; p++)
                 Mix(Wounds[i * Body.Parts + p] | ExtraArmour[i * Body.Parts + p] << 8 | BleedLeft[i * Body.Parts + p] << 16);
             Mix(Bleeding[i]); Mix(Grievous[i]); Mix(Cutter[i]);
+            Mix(Burrowed[i] ? 1 : 0); Mix(BurstLeft[i]);
         }
         return h;
     }
@@ -546,6 +555,7 @@ public sealed class UnitStore
         Array.Copy(Wounds, from * Body.Parts, Wounds, to * Body.Parts, Body.Parts);
         Array.Copy(ExtraArmour, from * Body.Parts, ExtraArmour, to * Body.Parts, Body.Parts);
         Bleeding[to] = Bleeding[from]; Grievous[to] = Grievous[from]; Cutter[to] = Cutter[from];
+        Burrowed[to] = Burrowed[from]; BurstLeft[to] = BurstLeft[from];
         Array.Copy(BleedLeft, from * Body.Parts, BleedLeft, to * Body.Parts, Body.Parts);
     }
 
@@ -581,5 +591,6 @@ public sealed class UnitStore
         Array.Resize(ref Wounds, capacity * Body.Parts); Array.Resize(ref ExtraArmour, capacity * Body.Parts);
         Array.Resize(ref Bleeding, capacity); Array.Resize(ref BleedLeft, capacity * Body.Parts);
         Array.Resize(ref Cutter, capacity); Array.Resize(ref Grievous, capacity);
+        Array.Resize(ref Burrowed, capacity); Array.Resize(ref BurstLeft, capacity);
     }
 }

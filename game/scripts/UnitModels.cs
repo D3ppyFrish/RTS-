@@ -86,6 +86,11 @@ public static class UnitModels
     private static readonly Color DuskLeaf = new(0.55f, 0.33f, 0.7f);
     private static readonly Color Chitin = new(0.78f, 0.76f, 0.7f);
     private static readonly Color ChitinDark = new(0.5f, 0.48f, 0.44f);
+    private static readonly Color HiveChitin = new(0.27f, 0.22f, 0.2f);
+    private static readonly Color HiveChitinDark = new(0.16f, 0.13f, 0.12f);
+    private static readonly Color HiveEye = new(1f, 0.7f, 0.15f);
+    private static readonly Color HiveAcidSac = new(0.45f, 0.55f, 0.18f);
+    private static readonly Color HiveAcid = new(0.7f, 1f, 0.25f);
     private static readonly Color WyrmHide = new(0.3f, 0.29f, 0.34f);
     private static readonly Color WyrmBelly = new(0.55f, 0.52f, 0.5f);
     private static readonly Color Crystal = new(0.7f, 0.45f, 1f);
@@ -633,6 +638,41 @@ public static class UnitModels
             .Box(-5, 0, 3, -4, 3, 3, ChitinDark).Box(3, 0, 3, 4, 3, 3, ChitinDark)
             .Box(-1, 2, -7, 0, 3, -7, ChitinDark)                                               // tail stub
             .Box(-3, 3, -2, 2, 3, -2, TeamDark),                                                // a band, once it is someone's
+        // The Deepfolk's hive insects: dark chitin with plates in their owner's colour, amber eyes.
+        // A skitterling: a lean, low insect the size of a dog on six legs, with a pair of sickle claws held up in front.
+        "skitterling" => new Builder()
+            .Box(-2, 2, -6, 1, 4, -3, HiveChitin).Box(-2, 2, -2, 1, 4, 1, HiveChitin)           // abdomen and thorax
+            .Box(-2, 5, -5, 1, 5, -4, Team).Box(-1, 5, -1, 0, 5, 0, TeamDark)                    // plates in its owner's colour
+            .Box(-2, 2, 2, 1, 4, 4, HiveChitinDark)                                              // head
+            .Box(-2, 4, 4, -2, 4, 4, HiveEye).Box(1, 4, 4, 1, 4, 4, HiveEye)                    // eyes
+            .Box(-3, 4, 3, -3, 6, 5, HiveChitinDark).Box(2, 4, 3, 2, 6, 5, HiveChitinDark)       // sickle claws, raised
+            .Box(-3, 6, 6, -3, 6, 7, Bone).Box(2, 6, 6, 2, 6, 7, Bone)
+            .Box(-1, 5, 5, -1, 6, 7, HiveChitinDark).Box(0, 5, 5, 0, 6, 7, HiveChitinDark)       // feelers
+            .Box(-4, 0, -4, -3, 2, -4, HiveChitinDark).Box(2, 0, -4, 3, 2, -4, HiveChitinDark)   // six legs
+            .Box(-4, 0, -1, -3, 2, -1, HiveChitinDark).Box(2, 0, -1, 3, 2, -1, HiveChitinDark)
+            .Box(-4, 0, 1, -3, 2, 1, HiveChitinDark).Box(2, 0, 1, 3, 2, 1, HiveChitinDark),
+        // A spitter: a hive insect with a swollen, glowing acid sac for an abdomen, rearing up to spit.
+        "spitter" => new Builder()
+            .Box(-3, 2, -8, 2, 7, -3, HiveAcidSac).Box(-2, 3, -9, 1, 6, -9, HiveAcidSac)         // the swollen sac
+            .Box(-3, 6, -7, 2, 7, -4, Team).Box(-3, 2, -3, 2, 2, -3, TeamDark)                   // plates in its owner's colour
+            .Box(-2, 3, -2, 1, 6, 1, HiveChitin)                                                 // thorax, rearing
+            .Box(-2, 6, 1, 1, 9, 3, HiveChitinDark)                                              // head, held high
+            .Box(-2, 8, 3, -2, 8, 3, HiveEye).Box(1, 8, 3, 1, 8, 3, HiveEye)                    // eyes
+            .Box(-1, 6, 4, 0, 7, 5, HiveAcid)                                                    // the spitting mouth
+            .Box(-4, 0, -6, -3, 3, -6, HiveChitinDark).Box(2, 0, -6, 3, 3, -6, HiveChitinDark)   // six legs
+            .Box(-4, 0, -2, -3, 3, -2, HiveChitinDark).Box(2, 0, -2, 3, 3, -2, HiveChitinDark)
+            .Box(-4, 0, 1, -3, 4, 1, HiveChitinDark).Box(2, 0, 1, 3, 4, 1, HiveChitinDark),
+        // A burrower: a broad, heavy digging insect, low and armoured, with two great shovel claws and a horned head.
+        "burrower" => new Builder()
+            .Box(-4, 2, -6, 3, 5, -1, HiveChitin).Box(-3, 2, 0, 2, 5, 2, HiveChitin)            // broad body
+            .Box(-4, 6, -5, 3, 6, -2, Team).Box(-3, 6, 0, 2, 6, 1, TeamDark)                    // armour plates in its owner's colour
+            .Box(-3, 1, 3, 2, 4, 5, HiveChitinDark)                                              // head, low
+            .Box(-1, 5, 4, 0, 7, 5, Bone)                                                        // horn
+            .Box(-3, 3, 6, -3, 3, 6, HiveEye).Box(2, 3, 6, 2, 3, 6, HiveEye)                    // eyes
+            .Box(-6, 0, 3, -4, 2, 6, HiveChitinDark).Box(3, 0, 3, 5, 2, 6, HiveChitinDark)       // shovel claws
+            .Box(-6, 0, 7, -4, 0, 7, Bone).Box(3, 0, 7, 5, 0, 7, Bone)
+            .Box(-5, 0, -5, -4, 2, -5, HiveChitinDark).Box(3, 0, -5, 4, 2, -5, HiveChitinDark)   // hind legs
+            .Box(-5, 0, -2, -4, 2, -2, HiveChitinDark).Box(3, 0, -2, 4, 2, -2, HiveChitinDark),
         // A cave wyrm: a long, blind serpent as big as a house, grey hide with crystals growing out of its back,
         // a wedge of a head with a jaw full of teeth and a crystal set in its skull.
         "cave_wyrm" => new Builder()

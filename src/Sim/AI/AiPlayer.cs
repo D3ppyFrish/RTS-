@@ -729,8 +729,13 @@ public sealed partial class AiPlayer
 
     private BuildingDef? FirstBuilding(Simulation sim, BuildingKind kind)
     {
-        foreach (var d in sim.Content.Buildings)
+        var faction = sim.FactionOf(Player);
+        foreach (var everyone in sim.Content.Buildings)
+        {
+            // Its faction's own in place of everyone's (the Deepfolk's brood chamber for the barracks).
+            var d = faction.Own(everyone);
             if (d.Kind == kind && d.UpgradeOf == null && sim.Economy.Unlocked(Player, d)) return d;
+        }
         return null;
     }
 

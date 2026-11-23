@@ -752,29 +752,40 @@ public sealed partial class EconomySystem
     internal void SpendMana(int player, int mana) => Player(player).Mana -= mana;
 
     /// <summary>
-    /// Trains the first unit in the queue while the owner has room; it steps out at the door. A
-    /// worker comes out automatic if its player has said so; on repeat, the unit is owed to the queue again.
+    /// Trains the first unit in the queue while the owner has room; it steps out at the door. A unit that
+    /// hatches in a batch (<see cref="UnitDef.Batch"/>) waits for room for the whole batch, which steps out
+    /// side by side along the door's wall. A worker comes out automatic if its player has said so; on repeat,
+    /// the unit is owed to the queue again.
     /// </summary>
     private void StepTraining(Building b)
     {
         int owner = b.Owner;
-        if (_population[owner] >= Housing(owner)) return;
         var def = _sim.Content.Units[b.Queue[0]];
+        if (_population[owner] + def.Batch > Housing(owner)) return;
         if (b.TrainTicks < def.TrainTicks) b.TrainTicks = Math.Min(b.TrainTicks + Steps(b), def.TrainTicks);
         if (b.TrainTicks < def.TrainTicks) return;
         int x, z, y;
         if (def.IsBoat ? !_sim.Boats.Launch(b, out x, out z, out y) : !AccessSpot(b, out x, out z, out y)) return;
-        int id = U.Spawn(owner, def.Index, Fix64.FromInt(x) + Fix64.Half, y, Fix64.FromInt(z) + Fix64.Half, MaxHp(owner, def));
-        if (def.Role == UnitRole.Worker) U.Auto[U.IndexOf(id)] = Player(owner).AutoWorkers;
-        else if (def.IsHauler) U.Auto[U.IndexOf(id)] = true; // a cart looks for supply work on its own
-        if (b.HasRally)
+        for (int k = 0; k < def.Batch; k++)
         {
-            int i = U.IndexOf(id);
-            _sim.SendUnit(i, b.RallyX, b.RallyZ, b.RallyY);
-            U.ArriveRadius[i] = RallyArrive;
+            int ux = x, uz = z, uy = y;
+            // The rest of a batch beside the first: one column either way along the wall in turn, where there is room.
+            int along = (k + 1) / 2 * (k % 2 == 1 ? -1 : 1);
+            if (k > 0 && !def.IsBoat && !b.Def.Walkable && !b.Def.IsBridge
+                && !SpotBeside(b, b.X + b.Def.SizeX / 2 + along, b.MaxZ + 1, out ux, out uz, out uy))
+                (ux, uz, uy) = (x, z, y);
+            int id = U.Spawn(owner, def.Index, Fix64.FromInt(ux) + Fix64.Half, uy, Fix64.FromInt(uz) + Fix64.Half, MaxHp(owner, def));
+            if (def.Role == UnitRole.Worker) U.Auto[U.IndexOf(id)] = Player(owner).AutoWorkers;
+            else if (def.IsHauler) U.Auto[U.IndexOf(id)] = true; // a cart looks for supply work on its own
+            if (b.HasRally)
+            {
+                int i = U.IndexOf(id);
+                _sim.SendUnit(i, b.RallyX, b.RallyZ, b.RallyY);
+                U.ArriveRadius[i] = RallyArrive;
+            }
+            _population[owner]++;
+            _sim.Events.UnitTrained(owner, id, def.Index, ux, uy, uz);
         }
-        _population[owner]++;
-        _sim.Events.UnitTrained(owner, id, def.Index, x, y, z);
         b.Queue.RemoveAt(0);
         b.TrainTicks = 0;
         if (b.Repeat) b.Owed.Add(def.Index);
@@ -1139,7 +1150,7 @@ public sealed partial class EconomySystem
         var b = Buildings.Get(c.Building);
         if (b == null || b.Owner != c.PlayerId || !b.Active || b.Queue.Count >= MaxQueue) return;
         if (Array.IndexOf(b.Def.Trains, c.Unit) < 0 || !_sim.Content.TryGetUnit(c.Unit, out var def)) return;
-        if (!Unlocked(c.PlayerId, def)) return;
+        if (!Unlocked(c.PlayerId, def) || Faction(c.PlayerId).Replaces(b.Def)) return;
         if (!TrySpend(c.PlayerId, def.Cost, b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2)) return;
         b.Queue.Add(def.Index);
         b.Owed.Remove(def.Index); // a unit owed to a repeating queue is paid for now

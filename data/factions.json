@@ -18,10 +18,19 @@
 // and sends nearly all of them as one big wave, and builds no walls) or balanced (it walls its town, and
 // when it attacks it keeps a good part of its soldiers at home behind the wall and sends the rest). See
 // "Winning and computer players" in docs/rules.md for what each level makes of it.
+// replaces (optional): units and buildings the faction has its own in place of, as { "barracks": "brood_chamber" }.
+// Its players cannot train or build the one named first, nor train anything in a replaced building (or its upgrade)
+// they capture, and its matches start with the one named second instead; several may be replaced by the same one.
+// A unit is replaced by a unit and a building by a building, of the faction or of everyone. See "The Deepfolk" in
+// docs/rules.md.
 [
   { "id": "settlers", "name": "Settlers", "uiLook": "stone", "description": "Humans who grow their units into new forms through experience.",
     "experience": { "levels": [150, 500], "perDamage": 1, "perKill": 10, "perBuildSecond": 1, "perMinute": 5 },
     "duskTree": "heal", "aiStyle": "balanced" },
   { "id": "orcs", "name": "Orcs", "uiLook": "timber", "description": "Clans who tame and ride the monsters they defeat.", "tamesMonsters": true,
+    "duskTree": "raze", "aiStyle": "waves" },
+  { "id": "deepfolk", "name": "Deepfolk", "uiLook": "crystal", "description": "An insect hive that hatches swarms in batches and burrows under walls unseen.",
+    "replaces": { "barracks": "brood_chamber", "spearman": "skitterling", "archer": "spitter", "rider": "skitterling",
+      "sapper": "burrower", "mage": "spitter" },
     "duskTree": "raze", "aiStyle": "waves" }
 ]

@@ -294,6 +294,12 @@ public static class UiIcons
             "kk........kk", "klk......klk", ".klk....klk.", "..klk..klk..", "...klkklk...", "....kllk....",
             "....kllk....", "...klkklk...", ".kkbk..kbkk.", ".kbbk..kbbk.", "kbk......kbk", "kk........kk",
         },
+        // Brood chamber: an earthen hive mound with a dark hatching hole and amber eggs.
+        ["brood_chamber"] = new[]
+        {
+            "............", ".....kk.....", "....kbbk....", "...kbBbbk...", "..kbbBbbBk..", "..kBbkkbbk..",
+            ".kbbkcckbbk.", ".kbBkcckBbk.", "kbbkyccykbbk", "kBbkyyyykbBk", "kbbBbbbbBbbk", "kkkkkkkkkkkk",
+        },
         ["cut_stone"] = new[]
         {
             "............", "............", "...kkkkkk...", "...klllssk..", "...ksssSSk..", "kkkkkkkkkkkk",

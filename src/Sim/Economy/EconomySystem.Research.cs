@@ -48,13 +48,14 @@ public sealed partial class EconomySystem
     public int ResearchTicks(int player) => Find(player)?.ResearchTicks ?? 0;
 
     /// <summary>True if the player may train this unit: it is not another faction's, and they have the techs it needs.</summary>
-    public bool Unlocked(int player, UnitDef def) => Unlocked(player, def.Requires, def.Faction);
+    public bool Unlocked(int player, UnitDef def) => !Faction(player).Replaces(def) && Unlocked(player, def.Requires, def.Faction);
 
     /// <summary>
     /// True if the player may build this from the build menu: it is not another faction's, a city-state's totem
     /// or built only on a den, and they have the techs it needs.
     /// </summary>
-    public bool Unlocked(int player, BuildingDef def) => def.Kind != BuildingKind.Totem && !def.FromDen && Unlocked(player, def.Requires, def.Faction);
+    public bool Unlocked(int player, BuildingDef def) =>
+        def.Kind != BuildingKind.Totem && !def.FromDen && !Faction(player).Replaces(def) && Unlocked(player, def.Requires, def.Faction);
 
     /// <summary>The first tech the player still needs for something, or null if they need none.</summary>
     public TechDef? MissingTech(int player, IReadOnlyList<TechDef> requires)

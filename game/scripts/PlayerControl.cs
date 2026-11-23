@@ -1084,6 +1084,7 @@ public partial class PlayerControl : Node
     public void StartBuild(string building)
     {
         if (!_sim.Content.TryGetBuilding(building, out var def)) return;
+        def = _sim.FactionOf(LocalPlayer).Own(def); // your faction's own in place of everyone's (B: the Deepfolk's brood chamber)
         SetTool(ToolMode.Build);
         BuildDef = def;
         Changed?.Invoke();
@@ -2185,6 +2186,31 @@ public partial class PlayerControl : Node
     }
 
     /// <summary>One line describing the UI state, for scripted screenshot tests.</summary>
+    /// <summary>For scripted tests: how many of your units of each type that hatches in batches you have, as id:count.</summary>
+    private string Batches()
+    {
+        var u = _sim.Units;
+        var counts = new List<string>();
+        foreach (var def in _sim.Content.Units)
+        {
+            if (def.Batch <= 1 || def.Faction != _sim.FactionOf(LocalPlayer)) continue;
+            int n = 0;
+            for (int i = 0; i < u.Count; i++)
+                if (u.Owner[i] == LocalPlayer && u.Def[i] == def.Index) n++;
+            counts.Add($"{def.Id}:{n}");
+        }
+        return counts.Count > 0 ? string.Join(',', counts) : "none";
+    }
+
+    /// <summary>For scripted tests: how many of your units have just burst out of the ground and strike harder.</summary>
+    private int Bursting()
+    {
+        int n = 0;
+        for (int i = 0; i < _sim.Units.Count; i++)
+            if (_sim.Units.Owner[i] == LocalPlayer && _sim.Combat.Bursting(i)) n++;
+        return n;
+    }
+
     public string Describe()
     {
         var own = OwnSelected();
@@ -2335,6 +2361,7 @@ public partial class PlayerControl : Node
                $"priorities={(first >= 0 && _sim.Content.Units[u.Def[first]].Role == UnitRole.Worker ? WorkPriorities.ToLog(u.Priorities[first]) : "none")} " +
                $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
+               $"faction={_sim.FactionOf(LocalPlayer).Id} batches={Batches()} bursting={Bursting()} " +
                $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +

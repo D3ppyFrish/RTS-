@@ -53,7 +53,7 @@ public class AscendancyTests
     public void EachFactionHasAGreatWorkOpenedByItsFinalTech()
     {
         var sim = WithStarts();
-        foreach (var (faction, building, tech) in new[] { ("settlers", "hall_of_legends", "settler_legends"), ("orcs", "beast_throne", "orc_beast_king") })
+        foreach (var (faction, building, tech) in new[] { ("settlers", "hall_of_legends", "settler_legends"), ("orcs", "beast_throne", "orc_beast_king"), ("deepfolk", "queens_chamber", "deep_queen") })
         {
             var def = sim.Content.Building(building);
             Assert.Equal(BuildingKind.GreatWork, def.Kind);

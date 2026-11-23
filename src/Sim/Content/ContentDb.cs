@@ -41,7 +41,8 @@ public sealed class ContentDb
     public IReadOnlyList<UnitDef> BaseUnits { get; internal set; } = Array.Empty<UnitDef>();
     /// <summary>
     /// The base units matches start with, in data order: <see cref="BaseUnits"/> but those marked
-    /// <c>"start": false</c> (the healer, issue #42), which are only trained.
+    /// <c>"start": false</c> (the healer, issue #42), which are only trained, and those of one faction. Each
+    /// faction's own list, with its own units in place of those it replaces, is <see cref="FactionDef.StartUnits"/>.
     /// </summary>
     public IReadOnlyList<UnitDef> StartUnits { get; internal set; } = Array.Empty<UnitDef>();
     /// <summary>The monsters that keep a lair on the way from every start (<see cref="LairDef.AtStarts"/>), in data order.</summary>

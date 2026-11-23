@@ -275,15 +275,15 @@ public sealed class Simulation
 
     /// <summary>
     /// Match setup: <paramref name="perPlayer"/> units at every start area, cycling through the unit types
-    /// matches start with (see <see cref="ContentDb.StartUnits"/>), in rows of ten just south of the
+    /// matches start with for that player's faction (see <see cref="FactionDef.StartUnits"/>), in rows of ten just south of the
     /// start point (skipping spots with nowhere to stand, like tree trunks). Returns the new ids in spawn order.
     /// </summary>
     public List<int> SpawnStartingUnits(int perPlayer)
     {
         var ids = new List<int>();
-        var defs = Content.StartUnits;
         foreach (var start in Map.Starts)
         {
+            var defs = FactionOf(start.Player).StartUnits;
             int placed = 0;
             for (int k = 0; placed < perPlayer && k < perPlayer * 4; k++)
             {

@@ -23,7 +23,8 @@ public class FactionChoiceTests
         var sim = Flat();
         Assert.Equal("settlers", sim.FactionOf(0).Id);
         Assert.Equal("orcs", sim.FactionOf(1).Id);
-        Assert.Equal("settlers", sim.FactionOf(2).Id);
+        Assert.Equal("deepfolk", sim.FactionOf(2).Id);
+        Assert.Equal("settlers", sim.FactionOf(3).Id);
         Assert.Same(sim.Content.Wild, sim.FactionOf(Simulation.WildPlayer));
         Assert.Same(sim.FactionOf(1), sim.Economy.Player(1).Faction);
         Assert.Same(sim.FactionOf(1), sim.Economy.Faction(1));
