@@ -426,6 +426,7 @@ public sealed partial class AiPlayer
             PlaceNear(sim, barracksDef, Middle(hall), Automation.AutomationSystem.PlanRadius, issue);
 
         if (Smart) SiegeEconomy(sim, hall, workers, issue);
+        if (Smart) Shipyard(sim, hall, workers, issue);
         if (Smart) Carts(sim, hall, issue);
         if (Smart) ListeningPosts(sim, hall, issue);
         if (Smart) Hunting(sim, hall, issue);
@@ -987,6 +988,7 @@ public sealed partial class AiPlayer
         _waveBest = int.MaxValue;
         _siegeDefenders = int.MaxValue;
         ResetLadders();
+        ResetFerry();
     }
 
     /// <summary>Keeps each barracks training: a unit picked by <see cref="RoleWeight"/> from what it can train, when affordable.</summary>
@@ -995,7 +997,7 @@ public sealed partial class AiPlayer
         Keep(sim);
         foreach (var b in sim.Buildings.All)
         {
-            if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2) continue;
+            if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2 || Docks(sim, b.Def)) continue;
             int total = 0;
             foreach (string id in b.Def.Trains)
                 if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && !d.Ram) total += RoleWeight(d.Role);
@@ -1036,7 +1038,7 @@ public sealed partial class AiPlayer
 
     // --- What it sees ------------------------------------------------------------------------------
 
-    /// <summary>Its soldiers (units that fight and are not workers, caravans, beaten monsters or a city-state's guards), by id in index order.</summary>
+    /// <summary>Its soldiers (units that fight and are not workers, caravans, ships, beaten monsters or a city-state's guards), by id in index order.</summary>
     private List<int> Soldiers(Simulation sim) => Soldiers(sim, Player);
 
     /// <summary>A player's soldiers, by id in index order.</summary>
@@ -1048,7 +1050,7 @@ public sealed partial class AiPlayer
         {
             if (u.Owner[i] != player || u.Subdued[i] || u.Town[i] != 0) continue;
             var def = sim.Content.Units[u.Def[i]];
-            if (def.CanAttack && def.Role is not (UnitRole.Worker or UnitRole.Trader)) list.Add(u.Id[i]);
+            if (def.CanAttack && !def.IsBoat && def.Role is not (UnitRole.Worker or UnitRole.Trader)) list.Add(u.Id[i]);
         }
         return list;
     }

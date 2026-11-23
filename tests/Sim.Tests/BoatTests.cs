@@ -70,6 +70,17 @@ public class BoatTests
     }
 
     [Fact]
+    public void UnitsBoardAShipLyingTwoColumnsOffTheBank()
+    {
+        // Two columns out, the ground beside it is just out of a step's reach: a unit on that ground still gets aboard.
+        var sim = River();
+        int ship = sim.SpawnUnit(0, "ship", RiverX0 + 1, 10);
+        var troops = Enumerable.Range(0, 3).Select(k => sim.SpawnUnit(0, "spearman", 22, 8 + k)).ToArray();
+        sim.Schedule(0, new BoardCommand(0, troops, ship));
+        RunUntil(sim, () => troops.All(t => Aboard(sim, t, ship)), 20 * Tps, "the spearmen to board");
+    }
+
+    [Fact]
     public void UnitsBoardAShipRideItAcrossAndArePutAshoreOnTheFarBank()
     {
         var sim = River();

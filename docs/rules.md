@@ -220,7 +220,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   ashore there; with nobody aboard it just goes there. Nothing happens if there is no such water by that land, or
   no way to it by water.
 - **Boarding** (`BoardCommand`, a right-click on your ship with units selected): each unit walks to the ground
-  beside the ship nearest it, and steps aboard once it is within 1.7 blocks of it (and 3 levels). Ten fit; the
+  beside the ship nearest it, and steps aboard once it is within 1.7 blocks of it or on that ground (and 3 levels). Ten fit; the
   rest stop. A ship out on the water, with no ground within 2 columns, cannot be boarded, nor can a rival's.
 - **Aboard** (`UnitStore.Aboard`): a unit rides in its seat (two abreast along the deck), goes where the ship goes
   and takes no orders, jobs or automatic work until it is put ashore. It can be shot, and archers aboard shoot
@@ -239,7 +239,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   water it gives up. Being a siege machine it takes double damage from cavalry and heavy infantry if they ever
   reach it, but its real bane is other siege: **siege attacks deal it twice their damage** (`"weakTo": { "siege":
   100 }`), so catapults on the shore and other bombard ships sink it quickly.
-- **Computer players** do not build docks or ships yet. All numbers are first guesses.
+- **Computer players** (Easy and up) build docks, ferry waves across the water and send bombard ships out with them: see Ships under Computer players. All numbers are first guesses.
 
 ## Combat
 
@@ -1669,6 +1669,30 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   so an enemy up there cannot throw it down unopposed, and the rest go on at the target. Those not up within 45
   seconds go back to the wave. A ladder thrown down or lost is raised again after 20 seconds, up to 3 a wave. The
   classic level never raises them. All numbers are first guesses.
+- **Ships** (Easy, Normal and Hard; `AI/AiPlayer.Ships.cs`, tests in `AiShipTests`): with a finished barracks and 14
+  workers it lays out a dock on the shore within 48 columns of its town hall, where the water by the dock opens onto
+  at least 300 columns a ship can sail (not a pond); with no sawmill yet it lays that out first, for the planks
+  (Hard: only while no enemies are at its buildings). A dock is not counted as one of its barracks, and ships are
+  not soldiers: barracks training and waves leave them out. Every 30 seconds it looks at the sea. While its way by
+  land to the enemy (the town hall it knows, or where it guesses one stands) is cut off or more than twice the
+  straight way (and that is at least 40 columns), and a ship from its dock could put soldiers ashore within 40
+  columns of the enemy where they can walk on to it, its docks keep 2 transport ships; while it knows of an enemy
+  wall, gate or tower a bombard ship from its dock could shell from the water, they keep 2 bombard ships (with
+  Smelting). It works out the ways by land and water itself, so its looks change nothing in the game.
+  - **Ferrying**: a wave out whose way by land is like that (it looks when it sets out, and twice more 30 seconds
+    apart) is ferried by its free transport ships: they put in at the shore nearest the wave (within 40 columns),
+    the wave walks there and boards, nearest first, and each ship, full or once nobody else is coming aboard (or
+    after 25 seconds), sails them to the shore nearest the target from which they can walk to it and puts them
+    ashore, then comes back for the rest. Once all are across the wave goes on from where it landed. A ferry gives
+    up after 5 minutes; ships left with soldiers aboard put them ashore at home.
+  - **Bombard ships** sail out with a wave: while a wave of its own is out after a building, they shell the known
+    enemy tower within 32 columns of it nearest it that they can reach from the water, else the nearest wall or
+    gate, else the building itself, so the wave on land screens them. With ranged soldiers at home and a transport
+    ship free, it sends up to 6 of them aboard (the ship puts in at the dock first) to sail with the bombard ships
+    as their escort, keeping by the lead one and shooting from the deck. A bombard ship below 35% of its hit points
+    sails home, and all of them do once the wave is over; the escort lands its archers at home.
+
+  The classic level never builds docks or ships. All numbers are first guesses.
 - **Carts** (Easy, Normal and Hard; `AI/AiPlayer.Carts.cs`, tests in `AiCartTests`): once it has a finished sawmill
   and at least 2 storage buildings besides its town hall (storehouses by its work, a second town hall), it trains
   carts at the town hall, one at a time while it has room and the goods, up to 2 (the two a building takes on supply
