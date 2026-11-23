@@ -113,7 +113,7 @@ public class ShadowedWildsTests
         Assert.True(BlockInfo.CanFall(BlockType.Gloom));
         Assert.True(BlockInfo.IsLeaves(BlockType.GloomLeaves));
         Assert.False(BlockInfo.IsLeaves(BlockType.Gloom));
-        Assert.Equal(BlockType.GloomLeaves, BlockInfo.Last); // saved maps may hold both
+        Assert.True(BlockInfo.Last >= BlockType.GloomLeaves); // saved maps may hold both
     }
 
     // --- The gloom ----------------------------------------------------------------------------------

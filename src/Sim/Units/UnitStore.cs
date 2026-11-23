@@ -123,6 +123,11 @@ public enum UnitJob : byte
     /// earth (or the sluice's boards) from a spot beside it, again and again. Workers and sappers.
     /// </summary>
     Dam,
+    /// <summary>
+    /// Raise the siege ladder <see cref="UnitStore.JobTarget"/> (see <see cref="Economy.Ladder"/>): put in its next rung
+    /// from its foot, again and again until it is up. Workers and sappers.
+    /// </summary>
+    Ladder,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

@@ -39,8 +39,28 @@ public class StructureDetailTests
     public void OnlyBuildingBlocksGetDetail()
     {
         var structures = Enum.GetValues<BlockType>().Where(StructureDetail.IsStructure).ToArray();
-        Assert.Equal(new[] { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Door, BlockType.Gate, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle, BlockType.Floor },
+        Assert.Equal(new[] { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Door, BlockType.Gate, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle, BlockType.Floor, BlockType.Ladder },
             structures);
+    }
+
+    [Fact]
+    public void ALadderIsRailsAndRungsAgainstItsFace()
+    {
+        // A rung at (3, 3, 3) leaning on stone at x = 4: rails and rungs stand a voxel off the +x side, the rest is open.
+        var w = new VoxelWorld(8, 8, 8);
+        w.Set(4, 3, 3, BlockType.Stone);
+        w.Set(3, 3, 3, BlockType.Ladder);
+        var shape = Shape(w, 3, 3, 3);
+        int s = StructureDetail.Size;
+        for (int y = 0; y < s; y++)
+        {
+            Assert.NotEqual(StructurePalette.Empty, At(shape, s - 2, y, 1)); // a rail, all the way up
+            Assert.NotEqual(StructurePalette.Empty, At(shape, s - 2, y, 6));
+            Assert.Equal(StructurePalette.Empty, At(shape, s - 1, y, 1)); // a voxel off the face
+            Assert.Equal(StructurePalette.Empty, At(shape, 0, y, 3)); // the far side is open
+        }
+        Assert.NotEqual(StructurePalette.Empty, At(shape, s - 2, 1, 3)); // a rung
+        Assert.Equal(StructurePalette.Empty, At(shape, s - 2, 2, 3)); // between rungs
     }
 
     [Fact]

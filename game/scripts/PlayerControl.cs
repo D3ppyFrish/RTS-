@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Dam, EarthWall, IceBridge, Chasm, GrowForest, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -260,7 +260,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Test:
@@ -278,7 +278,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -384,6 +384,7 @@ public partial class PlayerControl : Node
             case Key.Delete or Key.Backspace: CancelSelectedPlan(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
+            case Key.K when key.ShiftPressed: ToggleLadder(); break;
             case Key.K: ToggleTechTree(); break;
             case Key.Period: SelectNextIdleWorker(); break;
             case Key.F2: SelectArmy(); break;
@@ -1049,7 +1050,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1759,6 +1760,9 @@ public partial class PlayerControl : Node
     /// <summary>The Ramp button and key (Shift+X): starts (or stops) drawing ramps for the selected workers and sappers to heap up.</summary>
     public void ToggleRamp() => SetTool(Tool == ToolMode.Ramp ? ToolMode.Select : ToolMode.Ramp);
 
+    /// <summary>The Ladder button and key (Shift+K): starts (or stops) placing siege ladders for the selected workers and sappers to raise.</summary>
+    public void ToggleLadder() => SetTool(Tool == ToolMode.Ladder ? ToolMode.Select : ToolMode.Ladder);
+
     /// <summary>The Dam button and key (Shift+O): starts (or stops) drawing dams for the selected workers and sappers to build.</summary>
     public void ToggleDam() => SetTool(Tool == ToolMode.Dam ? ToolMode.Select : ToolMode.Dam);
 
@@ -1828,6 +1832,8 @@ public partial class PlayerControl : Node
                 _sim.Schedule(_sim.Tick, new GrowForestCommand(LocalPlayer, OwnCasters(Spell.GrowForest).ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.Ramp)
                 _sim.Schedule(_sim.Tick, new RampCommand(LocalPlayer, OwnDiggers().ToArray(), _wallX, _wallZ, x2, z2));
+            else if (Tool == ToolMode.Ladder)
+                _sim.Schedule(_sim.Tick, new LadderCommand(LocalPlayer, OwnDiggers().ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.Dam)
                 _sim.Schedule(_sim.Tick, new DamCommand(LocalPlayer, OwnDiggers().ToArray(), _wallX, _wallZ, x2, z2));
             else _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
@@ -1858,6 +1864,11 @@ public partial class PlayerControl : Node
         if (Tool == ToolMode.Dam)
         {
             UpdateDamPreview();
+            return;
+        }
+        if (Tool == ToolMode.Ladder)
+        {
+            UpdateLadderPreview();
             return;
         }
         if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)
@@ -1929,6 +1940,43 @@ public partial class PlayerControl : Node
             _wallPreview.Add((span.X, span.Top, span.Z, ok));
         }
     }
+    /// <summary>The top the ladder being dragged reaches, or -1 while it cannot go up there (see <see cref="EconomySystem.PlanLadder"/>).</summary>
+    public int LadderTop { get; private set; } = -1;
+    /// <summary>Rungs (each <see cref="EconomySystem.WoodPerRung"/> wood) the ladder being dragged takes.</summary>
+    public int LadderRungs { get; private set; }
+
+    /// <summary>
+    /// The ladder being dragged: its foot, and the top of what it leans on, each with whether it goes up as planned
+    /// (somewhere to lean 2 to 10 levels up, room in the foot column, and wood enough).
+    /// </summary>
+    private void UpdateLadderPreview()
+    {
+        LadderTop = -1;
+        LadderRungs = 0;
+        if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
+        LadderTop = _sim.Economy.PlanLadder(_wallX, _wallZ, x2, z2, out int foot);
+        var (fx, fz) = EconomySystem.LadderFace(_wallX, _wallZ, x2, z2);
+        bool ok = LadderTop >= 0;
+        if (ok) LadderRungs = LadderTop - foot;
+        ok &= LadderRungs * EconomySystem.WoodPerRung <= _sim.Economy.Stock(LocalPlayer, Good.Wood);
+        if (foot >= 1) _wallPreview.Add((_wallX, foot, _wallZ, ok));
+        int top = Walk.GroundLevel(World, fx, fz);
+        if ((fx != _wallX || fz != _wallZ) && top >= 1) _wallPreview.Add((fx, top, fz, ok));
+    }
+
+    /// <summary>Your ladders being raised, and those up.</summary>
+    private (int Raising, int Up) OwnLadders()
+    {
+        int raising = 0, up = 0;
+        foreach (var l in _sim.Economy.Ladders)
+            if (l.Owner == LocalPlayer)
+            {
+                if (l.Done) up++;
+                else raising++;
+            }
+        return (raising, up);
+    }
+
     private readonly List<DamSpan> _damPlan = new();
 
     /// <summary>The top the dam being dragged runs at, or -1 while it cannot go in (see <see cref="EconomySystem.PlanDam"/>).</summary>
@@ -2251,6 +2299,7 @@ public partial class PlayerControl : Node
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"ramps={OwnRamps()} ramp_top={RampTop} ramp_blocks={RampBlocks} ramp_builders={RampBuilders()} " +
+               $"ladders={OwnLadders().Raising} ladders_up={OwnLadders().Up} ladder_top={LadderTop} ladder_rungs={LadderRungs} drag_from={_wallX},{_wallZ} " +
                $"dams={OwnDams().Building} dams_done={OwnDams().Done} dam_top={DamTop} dam_blocks={DamBlocks} dam_builders={DamBuilders()} " +
                $"near_dam={NearDam()?.Id ?? 0} sluice_open={(NearDam()?.Open == true ? 1 : 0)} sluice_water={SluiceWater()} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
