@@ -1,6 +1,5 @@
-// Factions. Players are given them in this order (player 0, who starts in the west, the first; player 1,
-// in the east, the second; and so on) unless the start screen (or --factions) picks another for them: any
-// faction can be picked for any player, so two players can play the same one.
+// Factions. Players get them in this order (player 0, in the west, the first; player 1, in the east, the second;
+// and so on) unless the start screen or --factions picks one for them: any faction for any player, the same too.
 // experience (optional): the faction's units earn experience and evolve into the forms in units.json
 // that evolve from them. levels lists the experience each level needs, in order; at each level a unit
 // can take its next form. Units earn perDamage for each hit point of damage they deal to enemy units
