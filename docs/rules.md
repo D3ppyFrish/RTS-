@@ -1019,6 +1019,13 @@ have no magic and their units are weak one on one; they win by surprise and numb
   every 4 ticks; going back underground loses what is left of it. So the wave that pours out of a tunnel into a
   town hits hardest in its first moments.
 
+- **Their buildings are mounds** (`"mound": true` in `data/buildings.json`, `BuildingDef.Mound`): the brood chamber
+  and the Queen's Chamber are heaps of **hive earth** (`BlockType.Hive`, soil packed hard with resin) like ant hills,
+  not walls and a roof: round at the foot, straight-sided for their wall height, then narrowing to a rounded top,
+  with a round tunnel mouth for a door and tunnel holes in their sides. Hollow like any building; hive earth is as
+  tough as planks and breaks into plain rubble. The town hall, houses and the other buildings everyone has look
+  the same for the Deepfolk as for anyone.
+
 - **Techs** (`data/techs.json`): Hardened chitin (+10 hit points for their line infantry, +8 for their ranged
   units), Brood warrens (each brood chamber houses 6 more; needs farming), and their final tech, The Queen's brood,
   which opens their great work, the **Queen's Chamber** (see [Ascendancy and great works](#ascendancy-and-great-works)).

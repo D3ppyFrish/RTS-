@@ -55,7 +55,7 @@ public static class ContentLoader
     };
 
     /// <summary>Building materials a building's walls, footing and roof may use.</summary>
-    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle };
+    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle, BlockType.Hive };
 
     /// <summary>Loads the game's own data, built into the core.</summary>
     public static ContentDb LoadEmbedded() => Load(EmbeddedText);
@@ -528,7 +528,7 @@ public static class ContentLoader
         private void ReadBuilding(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
+            o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
                 "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing");
             if (id == null) return;
@@ -562,6 +562,7 @@ public static class ContentLoader
                 Footing = o.Material("footing", BlockType.Air),
                 Roof = o.Material("roof", BlockType.Thatch),
                 Chimney = o.Bool("chimney"),
+                Mound = o.Bool("mound"),
                 Cost = o.Cost("cost"),
                 BuildTicks = o.Int("buildTime", 1, MaxSeconds, 20, required: true) * Tps,
                 Housing = o.Int("housing", 0, 1000, 0),
@@ -1489,6 +1490,7 @@ public static class ContentLoader
                 h.Add((int)b.Footing);
                 h.Add((int)b.Roof);
                 h.Add(b.Chimney ? 1 : 0);
+                h.Add(b.Mound ? 1 : 0);
                 h.Add(b.Cost);
                 h.Add(b.BuildTicks);
                 h.Add(b.Housing);

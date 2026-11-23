@@ -330,6 +330,10 @@ public static class ChunkMesher
         StructurePalette.GloomB => new Color(0.22f, 0.3f, 0.37f),
         StructurePalette.GloomDark => new Color(0.1f, 0.14f, 0.19f),
         StructurePalette.GloomGlow => new Color(0.45f, 0.75f, 0.85f),
+        StructurePalette.HiveA => new Color(0.63f, 0.46f, 0.3f),
+        StructurePalette.HiveB => new Color(0.54f, 0.39f, 0.25f),
+        StructurePalette.HiveDark => new Color(0.09f, 0.06f, 0.05f),
+        StructurePalette.HiveResin => new Color(0.8f, 0.52f, 0.16f),
         _ => new Color(1, 0, 1),
     };
 
@@ -381,6 +385,7 @@ public static class ChunkMesher
         BlockType.Rampart => new Color(0.78f, 0.77f, 0.73f),
         BlockType.Trestle => new Color(0.5f, 0.35f, 0.2f),
         BlockType.Ladder => new Color(0.55f, 0.38f, 0.2f),
+        BlockType.Hive => new Color(0.6f, 0.44f, 0.28f),
         BlockType.Lava => new Color(1f, 0.3f, 0f),
         BlockType.Ice => new Color(0.74f, 0.88f, 0.96f),
         BlockType.Floor => new Color(0.55f, 0.4f, 0.24f),

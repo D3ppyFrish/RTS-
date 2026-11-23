@@ -7,6 +7,7 @@ using Rts.Sim.Economy;
 using Rts.Sim.Units;
 using Rts.Sim.World;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Rts.Sim.Tests;
 
@@ -18,6 +19,9 @@ namespace Rts.Sim.Tests;
 /// </summary>
 public class DeepfolkTests
 {
+    private readonly ITestOutputHelper _out;
+    public DeepfolkTests(ITestOutputHelper output) => _out = output;
+
     private const int Ground = 10; // grass at 10, units on the surface stand at 11
     private const int Tunnel = 4;  // a tunnel's floor: units in it stand at 4, under rock from 6 to 10
     private const int Tps = Simulation.TicksPerSecond;
@@ -273,5 +277,51 @@ public class DeepfolkTests
             return sim.StateHash();
         }
         Assert.Equal(Play(), Play());
+    }
+
+    [Theory]
+    [InlineData("brood_chamber")]
+    [InlineData("queens_chamber")]
+    public void TheirBuildingsAreMoundsOfHiveEarthLikeAntHills(string id)
+    {
+        var def = ContentLoader.LoadEmbedded().Building(id);
+        Assert.True(def.Mound);
+        var blocks = def.Blocks;
+        for (int y = 0; y <= blocks.Max(b => b.Y); y++)
+        {
+            _out.WriteLine($"level {y}");
+            for (int z = 0; z < def.SizeZ; z++)
+                _out.WriteLine(string.Concat(Enumerable.Range(0, def.SizeX).Select(x =>
+                    blocks.FirstOrDefault(b => b.X == x && b.Y == y && b.Z == z).Block switch
+                    {
+                        BlockType.Hive => '#', BlockType.Door => 'D', BlockType.Floor => '_', _ => '.',
+                    })));
+        }
+        // Hive earth all through, no planks, thatch or tiles; a door in the middle of the front, a floor inside.
+        Assert.All(blocks, b => Assert.Contains(b.Block, new[] { BlockType.Hive, BlockType.Door, BlockType.Floor }));
+        Assert.Contains(blocks, b => b.Block == BlockType.Door && b.X == def.SizeX / 2 && b.Z == def.SizeZ - 1 && b.Y == 0);
+        Assert.Contains(blocks, b => b.Block == BlockType.Floor);
+        // Round at the foot: the footprint's corners are left open.
+        Assert.DoesNotContain(blocks, b => b.Y == 0 && b.X == 0 && b.Z == 0);
+        Assert.DoesNotContain(blocks, b => b.Y == 0 && b.X == def.SizeX - 1 && b.Z == def.SizeZ - 1);
+        // Straight sides to the top of its walls, then narrowing level by level to a rounded top.
+        int Width(int y) => blocks.Where(b => b.Y == y && b.Z == def.SizeZ / 2).Select(b => b.X).DefaultIfEmpty(-1).Max()
+            - blocks.Where(b => b.Y == y && b.Z == def.SizeZ / 2).Select(b => b.X).DefaultIfEmpty(0).Min() + 1;
+        int top = blocks.Max(b => b.Y);
+        Assert.True(top > def.WallHeight, "it rises over its walls");
+        Assert.Equal(Width(0), Width(def.WallHeight - 1));
+        for (int y = def.WallHeight; y <= top; y++) Assert.True(Width(y) <= Width(y - 1), $"level {y} is no wider than the one under it");
+        Assert.True(Width(top) < Width(0) / 2 + 1, "it comes to a narrow top");
+        // Hollow: nothing inside the shell but the room, so it comes apart like a building.
+        Assert.True(def.Toughness > 0);
+    }
+
+    [Fact]
+    public void AMoundBreaksIntoEarthRubbleAndIsAsToughAsPlanks()
+    {
+        Assert.Equal(BlockType.Rubble, BlockInfo.RubbleOf(BlockType.Hive));
+        Assert.Equal(BlockInfo.Toughness(BlockType.Planks), BlockInfo.Toughness(BlockType.Hive));
+        Assert.True(BlockInfo.IsBuilt(BlockType.Hive));
+        Assert.True(Rts.Sim.Meshing.StructureDetail.IsStructure(BlockType.Hive));
     }
 }
