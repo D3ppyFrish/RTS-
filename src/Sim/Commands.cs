@@ -374,6 +374,30 @@ public sealed record StanceCommand(int PlayerId, int[] Units, Units.UnitStance S
 }
 
 /// <summary>
+/// The units fell the tree standing in column (<paramref name="X"/>, <paramref name="Z"/>), or the nearest one within
+/// two columns of it, so that it falls the way (<paramref name="DirX"/>, <paramref name="DirZ"/>) (the larger of the two
+/// picks the side): units whose player has the tech for it (see <see cref="Content.TechEffectType.Felling"/>). The tree
+/// comes down on whatever is there, and a trunk that lands across a narrow gap or stream lies there as a log bridge.
+/// </summary>
+public sealed record FellCommand(int PlayerId, int[] Units, int X, int Z, int DirX, int DirZ) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(FellCommand? other) =>
+        base.Equals(other) && X == other!.X && Z == other.Z && DirX == other.DirX && DirZ == other.DirZ;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X, Z, DirX, DirZ);
+}
+
+/// <summary>
+/// The units sound the ground at column (<paramref name="X"/>, <paramref name="Z"/>): units whose player has the tech
+/// for it (see <see cref="Content.TechEffectType.Prospecting"/>). After a while there, every ore, coal, gold and crystal
+/// block round the spot, at any depth, shows to their player through the ground.
+/// </summary>
+public sealed record ProspectCommand(int PlayerId, int[] Units, int X, int Z) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(ProspectCommand? other) => base.Equals(other) && X == other!.X && Z == other.Z;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X, Z);
+}
+
+/// <summary>
 /// The units take up a shield wall (<paramref name="Raise"/>) or lower it: line infantry whose player has the tech for
 /// it (see <see cref="Content.TechEffectType.ShieldWall"/>). In the wall a unit stands still facing one way; shots from
 /// the front do much less and riders charging its front are thrown back (see <see cref="Units.CombatSystem"/>). Any

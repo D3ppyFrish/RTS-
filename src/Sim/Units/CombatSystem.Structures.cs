@@ -78,16 +78,30 @@ public sealed partial class CombatSystem
     /// stands on it and beside it topples away from the blast (see <see cref="Topple"/>).
     /// A site with nothing standing yet is wrecked by any hit.
     /// </summary>
-    private void HitBuilding(Building b, int damage, int i, bool undermine, bool blast = false)
+    private void HitBuilding(Building b, int damage, int i, bool undermine, bool blast = false) =>
+        HitBuildingFrom(b, damage, U.X[i], U.Z[i], U.Owner[i], undermine, blast);
+
+    /// <summary>
+    /// A tree felled the way a player chose (see <see cref="World.PhysicsSystem.FellTreeAimed"/>) comes down on the
+    /// building at column (x, z): it takes <paramref name="damage"/> as from a blow there, by player <paramref name="by"/>.
+    /// </summary>
+    internal void HitByTree(Building b, int damage, int x, int z, int by)
+    {
+        if (damage <= 0 || b.State == BuildingState.Planned) return;
+        HitBuildingFrom(b, damage, Fix64.FromInt(x) + Fix64.Half, Fix64.FromInt(z) + Fix64.Half, by, undermine: false);
+    }
+
+    /// <summary><see cref="HitBuilding"/>, the blow coming from point (x, z) and player <paramref name="by"/>.</summary>
+    private void HitBuildingFrom(Building b, int damage, Fix64 x, Fix64 z, int by, bool undermine, bool blast = false)
     {
         bool topple = blast && !undermine && b.Def.Thick;
         if (_sim.Sandbox.Invulnerable(b.Owner)) return;
         b.Damage += damage;
-        _sim.Events.BuildingAttacked(b, U.Owner[i]);
-        if (b.Def.Kind == BuildingKind.Totem) _sim.Cities.TotemHit(b, U.Owner[i]);
+        _sim.Events.BuildingAttacked(b, by);
+        if (b.Def.Kind == BuildingKind.Totem) _sim.Cities.TotemHit(b, by);
         while (b.Damage >= BlockInfo.MinToughness)
         {
-            int k = Pick(b, U.X[i], U.Z[i], undermine, topple);
+            int k = Pick(b, x, z, undermine, topple);
             if (k < 0)
             {
                 Collapse(b);
@@ -96,7 +110,7 @@ public sealed partial class CombatSystem
             int tough = b.Shape.BlockToughness(k);
             if (b.Damage < tough) return;
             b.Damage -= tough;
-            int ax = U.X[i].FloorToInt(), az = U.Z[i].FloorToInt();
+            int ax = x.FloorToInt(), az = z.FloorToInt();
             KnockOut(b, k, ax, az);
             if (!topple) continue;
             Topple(b, k, ax, az);

@@ -41,6 +41,8 @@ public sealed partial class EconomySystem
             case UnitJob.Ramp: StepRamp(i); break;
             case UnitJob.Dam: StepDam(i); break;
             case UnitJob.Ladder: StepLadder(i); break;
+            case UnitJob.Fell: StepFell(i); break;
+            case UnitJob.Prospect: StepProspect(i); break;
         }
     }
 

@@ -38,6 +38,8 @@ public sealed class PlayerEconomy
         HousingBonus = new int[content.Buildings.Count];
         HpBonus = new int[content.Units.Count];
         ShieldWall = new bool[content.Units.Count];
+        FellTicks = new int[content.Units.Count];
+        ProspectTicks = new int[content.Units.Count];
         SpeedPerTick = new Fix64[content.Units.Count];
         foreach (var d in content.Units) SpeedPerTick[d.Index] = d.SpeedPerTick;
         AutoForm = new int[content.Units.Count];
@@ -83,6 +85,17 @@ public sealed class PlayerEconomy
     internal readonly int[] HousingBonus, HpBonus;
     /// <summary>Which unit types (by index) can take up a shield wall (see <see cref="TechEffectType.ShieldWall"/>).</summary>
     internal readonly bool[] ShieldWall;
+    /// <summary>
+    /// Ticks of work for each unit type (by index) to fell a tree the way it chooses, or to sound the ground; 0 if it
+    /// cannot (see <see cref="TechEffectType.Felling"/>, <see cref="TechEffectType.Prospecting"/>).
+    /// </summary>
+    internal readonly int[] FellTicks, ProspectTicks;
+    /// <summary>Damage an aimed tree does to each unit it comes down on, and how far (columns) sounding the ground shows ore.</summary>
+    internal int FellCrush, ProspectRadius;
+    /// <summary>Times the player has sounded the ground.</summary>
+    internal int Soundings;
+    /// <summary>The ore, coal, gold and crystal blocks the player's prospectors have found (keys x, y, z: see <see cref="EconomySystem.OreKey"/>).</summary>
+    internal readonly SortedSet<long> Prospected = new();
     internal readonly Fix64[] SpeedPerTick;
     // The form (unit index) each unit type (by index) takes on its own once it can, or -1 (see EvolutionSystem).
     internal readonly int[] AutoForm;
@@ -271,6 +284,7 @@ public sealed partial class EconomySystem
         MixRamps(ref h);
         MixDams(ref h);
         MixLadders(ref h);
+        MixTools(ref h);
         MixSaplings(ref h);
         return h;
     }

@@ -218,6 +218,8 @@ public partial class Alerts : VBoxContainer
                 ? ($"You ended the trade deal with the {Faction(e.Subject)}", Hud.PlainColour)
                 : ($"The trade deal with the {Faction(e.Subject)} is over", AttackColour),
             GameEventKind.BroodRising => ($"A brood of {e.Def} corrupted beasts rises from the Heartscar and comes for you", AttackColour),
+            GameEventKind.Prospected => (e.Def > 0 ? $"Your prospector sounded the ground: {e.Def} blocks of ore, coal, gold and crystal show through it"
+                : "Your prospector sounded the ground: no new ore there", GoodColour),
             _ => (null, Hud.PlainColour),
         };
     }

@@ -108,10 +108,21 @@ public sealed class FallingTree
     public int Logs { get; }
     /// <summary>The blocks it stood as, trunk and crown, where they were (for drawing it as it falls).</summary>
     public IReadOnlyList<SectionBlock> Blocks { get; }
+    /// <summary>
+    /// Felled the way a player chose (see <see cref="FellCommand"/>): it falls straight that way, crushing what it
+    /// lands on (<see cref="Crush"/>), and lies across a narrow gap as a log bridge.
+    /// </summary>
+    public bool Aimed { get; }
+    /// <summary>For an aimed tree: the damage it does to each unit and building it comes down on.</summary>
+    public int Crush { get; }
+    /// <summary>For an aimed tree: the player whose unit felled it.</summary>
+    public int By { get; }
 
-    internal FallingTree(int id, long started, int x, int baseY, int z, int dirX, int dirZ, int logs, List<SectionBlock> blocks)
+    internal FallingTree(int id, long started, int x, int baseY, int z, int dirX, int dirZ, int logs, List<SectionBlock> blocks,
+        bool aimed = false, int crush = 0, int by = -1)
     {
         Id = id; Started = started; X = x; BaseY = baseY; Z = z; DirX = dirX; DirZ = dirZ; Logs = logs; Blocks = blocks;
+        Aimed = aimed; Crush = crush; By = by;
     }
 }
 
@@ -331,6 +342,84 @@ public sealed class PhysicsSystem
         return logs;
     }
 
+    /// <summary>
+    /// Fells the tree whose trunk spans levels [baseY, topY] of column (x, z) the way (dirX, dirZ) (one of the four
+    /// sides) a player chose (see <see cref="FellCommand"/>): it falls straight that way, and when it lands every unit
+    /// under it takes <paramref name="crush"/> damage, so does every building it comes down on, and a trunk that lands
+    /// across a gap or stream of up to <see cref="Harvest.MaxLogSpan"/> columns lies there as a log bridge. Returns its
+    /// trunk blocks.
+    /// </summary>
+    public int FellTreeAimed(int x, int baseY, int topY, int z, int dirX, int dirZ, int crush, int by)
+    {
+        var taken = new List<SectionBlock>();
+        int logs = Harvest.FellTree(_w, x, baseY, topY, z, taken);
+        if (logs == 0) return 0;
+        _trees.Add(new FallingTree(_nextTree++, _sim.Tick, x, baseY, z, dirX, dirZ, logs, taken, aimed: true, crush: crush, by: by));
+        return logs;
+    }
+
+    /// <summary>Most columns past its stump an aimed tree comes down on: its trunk and the crown at its end.</summary>
+    public static int FallReach(FallingTree t, int scale) => Math.Max(1, t.Logs / Math.Max(1, scale * scale)) + 2 * Math.Max(1, scale);
+
+    /// <summary>
+    /// The columns an aimed tree comes down on, from its stump out: <see cref="FallReach"/> along the way it falls,
+    /// as wide as its trunk, and a column more to each side for the crown over the last three.
+    /// </summary>
+    public List<(int X, int Z)> FallColumns(FallingTree t)
+    {
+        var cols = new List<(int X, int Z)>();
+        var (x0, z0, s) = Trees.Footprint(_w, t.X, t.Z);
+        if (s == 1) (x0, z0) = (t.X, t.Z);
+        int reach = FallReach(t, s);
+        // The trunk's square, then stepping out from its far edge.
+        int sideX = t.DirZ != 0 ? 1 : 0, sideZ = t.DirX != 0 ? 1 : 0;
+        int startX = t.DirX > 0 ? x0 + s - 1 : t.DirX < 0 ? x0 : x0;
+        int startZ = t.DirZ > 0 ? z0 + s - 1 : t.DirZ < 0 ? z0 : z0;
+        for (int k = 1; k <= reach; k++)
+        {
+            int cx = startX + t.DirX * k, cz = startZ + t.DirZ * k;
+            int wide = k > reach - 3 ? 1 : 0;
+            for (int w = -wide; w < s + wide; w++)
+            {
+                int x = cx + sideX * w, z = cz + sideZ * w;
+                if (_w.InBounds(x, 0, z)) cols.Add((x, z));
+            }
+        }
+        return cols;
+    }
+
+    /// <summary>An aimed tree lands: each unit near the ground in the columns it comes down on is crushed, and each building there hit once.</summary>
+    private void CrushUnder(FallingTree t)
+    {
+        AimedLanded++;
+        if (t.Crush <= 0) return;
+        var cols = FallColumns(t);
+        var u = _sim.Units;
+        for (int i = 0; i < u.Count; i++)
+        {
+            if (u.Hp[i] <= 0 || u.Aboard[i] != 0 || Math.Abs(u.Y[i] - t.BaseY) > FallHeight) continue;
+            int ux = u.X[i].FloorToInt(), uz = u.Z[i].FloorToInt();
+            if (!cols.Contains((ux, uz))) continue;
+            _sim.Combat.Crush(i, t.Crush);
+            TreeCrushed++;
+        }
+        var hit = new List<int>();
+        foreach (var (x, z) in cols)
+        {
+            var b = _sim.Buildings.AtColumn(x, z);
+            if (b == null || hit.Contains(b.Id) || b.Y > t.BaseY + FallHeight) continue;
+            hit.Add(b.Id);
+            _sim.Combat.HitByTree(b, t.Crush, x, z, t.By);
+        }
+    }
+
+    /// <summary>Aimed trees landed so far, and units they came down on (for the screenshot checks; not part of the state).</summary>
+    public int AimedLanded { get; private set; }
+    public int TreeCrushed { get; private set; }
+
+    /// <summary>Levels above or below its stump a unit or building can stand and still be under a falling tree.</summary>
+    public const int FallHeight = 3;
+
     /// <summary>True if a felled tree is falling from the stump at (x, baseY, z).</summary>
     public bool TreeFallingFrom(int x, int baseY, int z)
     {
@@ -343,8 +432,10 @@ public sealed class PhysicsSystem
     private void LandTree(FallingTree t)
     {
         _laid.Clear();
+        if (t.Aimed) CrushUnder(t);
         var (x0, z0, s) = Trees.Footprint(_w, t.X, t.Z);
-        if (s == 1) Harvest.LayFelled(_w, t.X, t.BaseY, t.Z, t.Logs, t.DirX, t.DirZ, _laid);
+        if (s == 1 && t.Aimed) Harvest.LayAimed(_w, t.X, t.BaseY, t.Z, t.Logs, t.DirX, t.DirZ, _laid);
+        else if (s == 1) Harvest.LayFelled(_w, t.X, t.BaseY, t.Z, t.Logs, t.DirX, t.DirZ, _laid);
         else
         {
             // A bigger tree's trunk (see VoxelWorld.TreeScale) lies down as a log from each of its columns, a log
@@ -354,7 +445,11 @@ public sealed class PhysicsSystem
             int each = logs / (s * s), rest = logs % (s * s);
             for (int k = 0; k < s; k++)
             for (int i = 0; i < s; i++)
-                Harvest.LayFelled(_w, x0 + i, t.BaseY, z0 + k, each + (rest-- > 0 ? 1 : 0), t.DirX, t.DirZ, _laid);
+            {
+                int logsHere = each + (rest-- > 0 ? 1 : 0);
+                if (t.Aimed) Harvest.LayAimed(_w, x0 + i, t.BaseY, z0 + k, logsHere, t.DirX, t.DirZ, _laid);
+                else Harvest.LayFelled(_w, x0 + i, t.BaseY, z0 + k, logsHere, t.DirX, t.DirZ, _laid);
+            }
         }
         if (_laid.Count == 0) return;
         long sx = 0, sy = 0, sz = 0;
@@ -1016,6 +1111,7 @@ public sealed class PhysicsSystem
         foreach (var t in _trees)
         {
             Mix(t.Id); Mix(t.Started); Mix(Key(t.X, t.BaseY, t.Z)); Mix(t.DirX * 3 + t.DirZ); Mix(t.Logs);
+            if (t.Aimed) { Mix(t.Crush); Mix(t.By); }
         }
         return h;
 

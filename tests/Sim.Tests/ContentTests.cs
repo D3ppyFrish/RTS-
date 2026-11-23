@@ -385,7 +385,7 @@ public class ContentTests
     [InlineData("units.json", "\"trainedAt\": \"town_hall\"", "\"trainedAt\": \"townhall\"", "unit 'worker': \"trainedAt\" is \"townhall\", which is not a building")]
     [InlineData("buildings.json", "\"requires\": \"farming\"", "\"requires\": \"farmin\"", "building 'farm': \"requires\" names \"farmin\", which is not a tech")]
     [InlineData("techs.json", "\"requires\": [ \"tools\" ]", "\"requires\": [ \"tool\" ]", "tech 'masonry': \"requires\" names \"tool\", which is not a tech")]
-    [InlineData("techs.json", "\"faction\": \"orcs\"", "\"faction\": \"orks\"", "tech 'orc_war_drums': \"faction\" is \"orks\", which is not a faction")]
+    [InlineData("techs.json", "\"name\": \"War drums\", \"faction\": \"orcs\"", "\"name\": \"War drums\", \"faction\": \"orks\"", "tech 'orc_war_drums': \"faction\" is \"orks\", which is not a faction")]
     [InlineData("techs.json", "\"building\": \"house\"", "\"building\": \"hut\"", "tech 'masonry', effect 1: \"building\" is \"hut\", which is not a building")]
     [InlineData("techs.json", "\"role\": \"cavalry\"", "\"role\": \"horse\"", "tech 'orc_beast_pens', effect 1: \"role\" is \"horse\", which is not one of: worker, line_infantry")]
     [InlineData("techs.json", "\"type\": \"carry\"", "\"type\": \"carrying\"", "tech 'carts', effect 1: \"type\" is \"carrying\", which is not an effect")]
@@ -523,7 +523,10 @@ public class ContentTests
         // And the Orcs' final tech and great work.
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'orc_beast_king': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'beast_throne': \"faction\" is \"orcs\", which is not a faction"));
-        Assert.Equal(18, e.Errors.Count);
+        // Better tools gives Orc workers felling and prospecting.
+        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 2: \"faction\" is \"orcs\", which is not a faction"));
+        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 6: \"faction\" is \"orcs\", which is not a faction"));
+        Assert.Equal(20, e.Errors.Count);
     }
 
     [Fact]
@@ -569,12 +572,12 @@ public class ContentTests
     public void EffectsAreChecked()
     {
         var files = Files();
-        Edit(files, "techs.json", "{ \"type\": \"gather_speed\", \"percent\": 25 }", "{ \"type\": \"gather_speed\", \"amount\": 25 }");
+        Edit(files, "techs.json", "{ \"type\": \"gather_speed\", \"percent\": 15 }", "{ \"type\": \"gather_speed\", \"amount\": 15 }");
         Edit(files, "techs.json", "\"role\": \"cavalry\", \"amount\": 30", "\"role\": \"cavalry\", \"unit\": \"rider\", \"amount\": 30");
         Edit(files, "techs.json", "{ \"type\": \"carry\", \"amount\": 3 }", "{ \"type\": \"carry\", \"amount\": 0 }");
         var e = Fails(files);
-        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 1: unknown field \"amount\""));
-        Assert.Contains("techs.json: tech 'tools', effect 1: needs \"percent\"", e.Errors);
+        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'settler_guilds', effect 1: unknown field \"amount\""));
+        Assert.Contains("techs.json: tech 'settler_guilds', effect 1: needs \"percent\"", e.Errors);
         Assert.Contains("techs.json: tech 'orc_beast_pens', effect 1: give a \"role\" or a \"unit\", not both", e.Errors);
         Assert.Contains("techs.json: tech 'carts', effect 1: \"amount\" is 0; it should be from 1 to 100", e.Errors);
         Assert.Equal(4, e.Errors.Count);

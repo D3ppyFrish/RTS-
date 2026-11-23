@@ -226,6 +226,7 @@ public sealed partial class AiPlayer
         long tick = sim.Tick;
         // Players look on different ticks, so that two of them do not both work on the same tick.
         if ((tick + Player * 7) % EconomyTicks == 0) Economy(sim, hall, issue);
+        if (Smart && (tick + Player * 7) % EconomyTicks == 0) Prospect(sim, issue);
         if ((tick + Player * 3) % ArmyTicks == 0)
         {
             if (Hard) HardArmy(sim, hall, issue);

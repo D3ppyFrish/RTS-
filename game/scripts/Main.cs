@@ -159,6 +159,7 @@ public partial class Main : Node3D
     private CorruptionRenderer _corruptionRenderer = null!;
     private IceRenderer _iceRenderer = null!;
     private ItemRenderer _itemRenderer = null!;
+    private OreRenderer _oreRenderer = null!;
     private UnitIcons _unitIcons = null!;
     private FallingRenderer _fallingRenderer = null!;
     private PlayerControl _control = null!;
@@ -427,6 +428,9 @@ public partial class Main : Node3D
         _itemRenderer = new ItemRenderer();
         _match.AddChild(_itemRenderer);
         _itemRenderer.Init(_sim, _fog);
+        _oreRenderer = new OreRenderer();
+        _match.AddChild(_oreRenderer);
+        _oreRenderer.Init(_sim);
         _unitIcons = new UnitIcons();
         _match.AddChild(_unitIcons);
         _unitIcons.Init(_sim, _rig, _fog);
@@ -520,6 +524,7 @@ public partial class Main : Node3D
         _corruptionRenderer.UpdateFrame();
         _iceRenderer.UpdateFrame();
         _itemRenderer.UpdateFrame((float)delta);
+        _oreRenderer.UpdateFrame((float)delta);
         _unitIcons.UpdateFrame(alpha);
         _fallingRenderer.UpdateFrame(alpha, (float)delta, (float)_clock.Scale(1.0));
         _hud.Refresh(delta);
@@ -883,6 +888,7 @@ public partial class Main : Node3D
         _corruptionRenderer.Material.SetShaderParameter("slice_y", y);
         _iceRenderer.Material.SetShaderParameter("slice_y", y);
         _itemRenderer.SetSlice(y);
+        _oreRenderer.SetSlice(y);
         _unitIcons.Material.SetShaderParameter("slice_y", y);
     }
 

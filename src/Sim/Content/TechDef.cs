@@ -180,6 +180,18 @@ public enum TechEffectType : byte
     /// and charges from the front do much less. The numbers are in the role table (<see cref="CombatRules.Wall"/>).
     /// </summary>
     ShieldWall,
+    /// <summary>
+    /// Matching units can fell a tree the way they choose (see <see cref="FellCommand"/>), taking
+    /// <see cref="TechEffect.Ticks"/> of work: it comes down on whatever is there, units taking
+    /// <see cref="TechEffect.Amount"/> damage, and a trunk that lands across a narrow gap lies there as a log bridge.
+    /// </summary>
+    Felling,
+    /// <summary>
+    /// Matching units can sound the ground (see <see cref="ProspectCommand"/>), taking <see cref="TechEffect.Ticks"/>
+    /// of work: every ore, coal, gold and crystal block within <see cref="TechEffect.Amount"/> columns, at any depth,
+    /// then shows to their player through the ground.
+    /// </summary>
+    Prospecting,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>
@@ -223,6 +235,10 @@ public sealed class TechEffect
     public UnitDef? Unit { get; init; }
     /// <summary>For a reveal effect: what it shows.</summary>
     public MapFeature Reveal { get; init; }
+    /// <summary>For unit effects: only for players of this faction (null: every faction).</summary>
+    public FactionDef? Faction { get; internal set; }
+    /// <summary>For felling and prospecting: the ticks of work it takes.</summary>
+    public int Ticks { get; init; }
 
     /// <summary>True if a unit effect applies to units of this type.</summary>
     public bool AppliesTo(UnitDef def) => Unit != null ? Unit == def : Role == null || Role == def.Role;

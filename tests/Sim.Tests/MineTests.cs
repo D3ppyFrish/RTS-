@@ -82,7 +82,7 @@ public class MineTests
         var def = sim.Content.Building("quarry");
         int before = sim.Economy.QuarryTicks(0, def);
         Assert.Equal(def.WorkTicks, before);
-        sim.Economy.Grant(0, sim.Content.Tech("tools"));
+        sim.Economy.Grant(0, sim.Content.Tech("settler_guilds"));
         Assert.True(sim.Economy.QuarryTicks(0, def) < before);
     }
 
@@ -142,7 +142,7 @@ public class MineTests
     }
 
     [Theory]
-    [InlineData("\"works\": { \"stone\": 5 }, \"workTime\": 12", "\"workTime\": 12",
+    [InlineData("\"works\": { \"stone\": 5 }, \"workTime\": 10", "\"workTime\": 10",
         "building 'quarry': a quarry needs \"works\"")]
     [InlineData("\"workerSlots\": 3, \"works\"", "\"workerSlots\": 0, \"works\"",
         "building 'quarry': a quarry needs \"workerSlots\" of 1 or more")]

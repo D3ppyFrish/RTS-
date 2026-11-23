@@ -1225,6 +1225,31 @@ public static class ContentLoader
                         effects.Add(new TechEffect { Type = type, Role = role, Unit = unit });
                         break;
                     }
+                    case TechEffectType.Felling:
+                    case TechEffectType.Prospecting:
+                    {
+                        // { "type": "felling", "unit": "militia", "time": 4, "crush": 60 }; "faction" (optional) limits it
+                        // to that faction's players; prospecting has "radius" in place of "crush".
+                        string amountKey = type == TechEffectType.Felling ? "crush" : "radius";
+                        o.Keys("type", "role", "unit", "faction", "time", amountKey);
+                        UnitRole? role = o.Has("role") ? o.Enum("role", UnitRole.Worker, required: true) : null;
+                        var unitId = o.Str("unit", false);
+                        UnitDef? unit = null;
+                        if (unitId != null && !_db.TryGetUnit(unitId, out unit))
+                            o.Error($"\"unit\" is \"{unitId}\", which is not a unit");
+                        if (role != null && unitId != null) o.Error("give a \"role\" or a \"unit\", not both");
+                        if (role == null && unitId == null) o.Error("needs a \"role\" or a \"unit\": which units can do it");
+                        var factionId = o.Str("faction", false);
+                        int ticks = (o.Decimal("time", Fix64.FromRatio(1, 10), Fix64.FromInt(MaxSeconds), Fix64.FromInt(8)) * Tps).RoundToInt();
+                        int amount = type == TechEffectType.Felling ? o.Int("crush", 0, 100000, 0, required: true)
+                            : o.Int("radius", 1, 64, 0, required: true);
+                        effects.Add(new TechEffect
+                        {
+                            Type = type, Role = role, Unit = unit, Ticks = Math.Max(1, ticks), Amount = amount,
+                            Faction = factionId != null ? Faction(o, factionId) : null,
+                        });
+                        break;
+                    }
                     case TechEffectType.Roads:
                     case TechEffectType.SpareWorkers:
                         o.Keys("type");

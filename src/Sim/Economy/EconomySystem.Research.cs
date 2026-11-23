@@ -173,6 +173,9 @@ public sealed partial class EconomySystem
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
+        Array.Clear(p.FellTicks);
+        Array.Clear(p.ProspectTicks);
+        p.FellCrush = p.ProspectRadius = 0;
         var speedPercent = new int[units.Count];
         foreach (var t in Content.Techs)
         {
@@ -195,6 +198,17 @@ public sealed partial class EconomySystem
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.ShieldWall[d.Index] = true;
                         break;
+                    case TechEffectType.Felling:
+                    case TechEffectType.Prospecting:
+                    {
+                        if (e.Faction != null && e.Faction != p.Faction) break;
+                        var ticks = e.Type == TechEffectType.Felling ? p.FellTicks : p.ProspectTicks;
+                        foreach (var d in units)
+                            if (e.AppliesTo(d) && (ticks[d.Index] == 0 || e.Ticks < ticks[d.Index])) ticks[d.Index] = e.Ticks;
+                        if (e.Type == TechEffectType.Felling) p.FellCrush = Math.Max(p.FellCrush, e.Amount);
+                        else p.ProspectRadius = Math.Max(p.ProspectRadius, e.Amount);
+                        break;
+                    }
                     case TechEffectType.UnitSpeed:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) speedPercent[d.Index] += e.Amount;

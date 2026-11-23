@@ -526,6 +526,8 @@ public sealed class Simulation
             case SupplyCommand sp: Economy.Apply(sp); break;
             case StanceCommand st: Combat.Apply(st); break;
             case ShieldWallCommand sw: Combat.Apply(sw); break;
+            case FellCommand fl: Economy.Apply(fl); break;
+            case ProspectCommand pr: Economy.Apply(pr); break;
             case AutomateCommand a: Automation.Apply(a); break;
             case AutomateAllCommand a: Automation.Apply(a); break;
             case RebuildCommand rb: Automation.Apply(rb); break;

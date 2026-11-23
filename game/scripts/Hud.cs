@@ -111,7 +111,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _fellButton = null!, _prospectButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -704,6 +704,26 @@ public partial class Hud : CanvasLayer
         _shieldWallButton.Visible = false;
         column.AddChild(_shieldWallButton);
 
+        _fellButton = MakeToolButton("Fell tree  [Ctrl+X]");
+        _fellButton.Name = "fell_tree";
+        _fellButton.Icon = UiIcons.Get("pick");
+        _fellButton.TooltipText = "Press on a tree, then drag the way it should fall, for the selected militia to fell it that way. " +
+                                  "It comes down hard on whatever is there: units take heavy damage and buildings are hit. " +
+                                  "A trunk that lands across a gap or a stream of one or two blocks lies there as a log bridge until it is cleared, " +
+                                  "and its wood lies where it fell.";
+        _fellButton.Toggled += _ => _control.ToggleFell();
+        _fellButton.Visible = false;
+        column.AddChild(_fellButton);
+
+        _prospectButton = MakeToolButton("Sound for ore  [Ctrl+Z]");
+        _prospectButton.Name = "prospect";
+        _prospectButton.Icon = UiIcons.Get("iron_ore");
+        _prospectButton.TooltipText = "Click a spot for the selected foremen to sound the ground there. After a few seconds every " +
+                                      "block of iron ore, coal, gold and crystal round the spot, however deep, shows through the ground.";
+        _prospectButton.Toggled += _ => _control.ToggleProspect();
+        _prospectButton.Visible = false;
+        column.AddChild(_prospectButton);
+
         _tameRow = new HBoxContainer { Visible = false };
         _tameRow.AddThemeConstantOverride("separation", 4);
         _tameLabel = MakeLabel("", 13);
@@ -1267,6 +1287,10 @@ public partial class Hud : CanvasLayer
         var walls = _control.OwnShieldWallers();
         _shieldWallButton.Visible = walls.Count > 0;
         _shieldWallButton.SetPressedNoSignal(walls.Count > 0 && walls.TrueForAll(id => _sim.Units.ShieldWall[_sim.Units.IndexOf(id)]));
+        _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
+        _fellButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Fell);
+        _prospectButton.Visible = _control.OwnProspectors().Count > 0 || _control.Tool == PlayerControl.ToolMode.Prospect;
+        _prospectButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Prospect);
         RefreshEvolveRows();
         RefreshTaming();
         RefreshDen();
@@ -2081,6 +2105,16 @@ public partial class Hud : CanvasLayer
                        (_control.OwnDiggers().Count == 0 ? "   (select workers or sappers first)" : "") +
                        "\nShift: draw another   Right click or Esc to stop";
             }
+            case PlayerControl.ToolMode.Fell:
+                return (!_control.WallStarted ? "Fell tree: press on a tree, then drag the way it should fall, for the selected militia to fell it"
+                           : _control.FellTree.X < 0 ? "Fell tree: there is no tree there"
+                           : $"Fell tree: let go to bring it down that way ({_sim.Economy.FellCrush(PlayerControl.LocalPlayer)} damage to each unit under it)") +
+                       (_control.OwnFellers().Count == 0 ? "   (select militia first)" : "") +
+                       "\nShift: fell another   Right click or Esc to stop";
+            case PlayerControl.ToolMode.Prospect:
+                return $"Sound for ore: click where the selected foremen sound the ground (ore shows within {_sim.Economy.ProspectRadius(PlayerControl.LocalPlayer)} blocks, at any depth)" +
+                       (_control.OwnProspectors().Count == 0 ? "   (select foremen first)" : "") +
+                       "\nShift: sound another spot   Right click or Esc to stop";
             case PlayerControl.ToolMode.Ladder:
             {
                 int wood = _control.LadderRungs * EconomySystem.WoodPerRung;
@@ -2110,7 +2144,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Shift+L: grow forest";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
         }
     }
 
