@@ -136,7 +136,7 @@ public partial class CombatRenderer : Node3D
         foreach (var b in _sim.Buildings.All)
         {
             if (b.MaxHealth <= 0 || b.Health >= b.MaxHealth || !_fog.Shows(b)) continue;
-            var top = new Vector3(b.X + b.Def.SizeX / 2f, b.Y + b.Def.Height + 1.5f, b.Z + b.Def.SizeZ / 2f) * bs;
+            var top = new Vector3(b.X + b.Def.SizeX / 2f, b.Y + b.Shape.Height + 1.5f, b.Z + b.Def.SizeZ / 2f) * bs;
             Bar(top, Math.Max(2f, b.Def.SizeX * 0.8f) * bs, 0.22f * bs, (float)b.Health / b.MaxHealth, right, up, back);
         }
 

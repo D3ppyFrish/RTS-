@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Rts.Sim.AI;
 using Rts.Sim.Content;
@@ -234,13 +235,18 @@ public class DeepfolkTests
     [Fact]
     public void AComputerPlayerPlaysTheDeepfolkWithTheirOwnUnits()
     {
-        int hive = 0, everyones = 0;
+        // Hive units it ever had, by id: the ones it started with and every one hatched since (some may die in a raid).
+        var hive = new SortedSet<int>();
+        int everyones = 0;
         bool brood = false, replaced = false;
+        int skitter = -1, spitter = -1;
         var result = AiMatch.Play(3, 256, 64, 256, 4 * 60 * Tps, levels: new[] { AiLevel.Normal }, fog: true,
             factions: new[] { "deepfolk", "settlers" }, watch: (sim, _) =>
             {
                 if (sim.Tick % Tps != 0) return;
-                hive = Math.Max(hive, Count(sim, 0, "skitterling") + Count(sim, 0, "spitter"));
+                if (skitter < 0) (skitter, spitter) = (sim.Content.Unit("skitterling").Index, sim.Content.Unit("spitter").Index);
+                for (int i = 0; i < sim.Units.Count; i++)
+                    if (sim.Units.Owner[i] == 0 && (sim.Units.Def[i] == skitter || sim.Units.Def[i] == spitter)) hive.Add(sim.Units.Id[i]);
                 everyones += Count(sim, 0, "spearman") + Count(sim, 0, "archer") + Count(sim, 0, "sapper");
                 brood |= sim.Buildings.All.Any(b => b.Owner == 0 && b.Def.Id == "brood_chamber");
                 replaced |= sim.Buildings.All.Any(b => b.Owner == 0 && sim.FactionOf(0).Replaces(b.Def));
@@ -248,7 +254,7 @@ public class DeepfolkTests
         Assert.True(brood, "it built a brood chamber");
         Assert.False(replaced, "it built a barracks");
         Assert.Equal(0, everyones);
-        Assert.True(hive > 16, $"it hatched more hive units than it started with ({hive})");
+        Assert.True(hive.Count > 16, $"it hatched hive units beyond the 16 it started with ({hive.Count} in all)");
         var samples = MatchReplay.Run(CommandLog.Parse(result.Log.ToString()), 1200, out var replayed);
         var again = MatchReplay.Run(CommandLog.Parse(result.Log.ToString()), 1200, out _);
         Assert.Equal(samples.Select(h => h.Hash), again.Select(h => h.Hash));
@@ -323,5 +329,90 @@ public class DeepfolkTests
         Assert.Equal(BlockInfo.Toughness(BlockType.Planks), BlockInfo.Toughness(BlockType.Hive));
         Assert.True(BlockInfo.IsBuilt(BlockType.Hive));
         Assert.True(Rts.Sim.Meshing.StructureDetail.IsStructure(BlockType.Hive));
+    }
+
+    /// <summary>Hollow buildings everyone has: the Deepfolk put up each of them as a mound of hive earth.</summary>
+    public static IEnumerable<object[]> HollowBuildings() =>
+        ContentLoader.LoadEmbedded().Buildings
+            .Where(d => !d.Mound && !d.IsRampart && d.Kind is not (BuildingKind.Farm or BuildingKind.Totem or BuildingKind.Light or BuildingKind.Bridge))
+            .Select(d => new object[] { d.Id });
+
+    [Theory]
+    [MemberData(nameof(HollowBuildings))]
+    public void EveryHollowBuildingOfTheirsIsAMound(string id)
+    {
+        var def = ContentLoader.LoadEmbedded().Building(id);
+        var mound = def.Shaped(BuildingLook.Mound);
+        Assert.NotSame(def, mound);
+        Assert.Same(mound, def.Shaped(BuildingLook.Mound));
+        Assert.Same(def, def.Shaped(BuildingLook.Standard));
+        Assert.Same(mound, mound.Shaped(BuildingLook.Mound));
+        Assert.False(mound.IsBase);
+        // The same building in all but its blocks.
+        Assert.Equal((def.Index, def.Id, def.Kind, def.SizeX, def.SizeZ, def.Housing), (mound.Index, mound.Id, mound.Kind, mound.SizeX, mound.SizeZ, mound.Housing));
+        var blocks = mound.Blocks;
+        Assert.All(blocks, b => Assert.Contains(b.Block, new[] { BlockType.Hive, BlockType.Door, BlockType.Floor }));
+        Assert.Contains(blocks, b => b.Block == BlockType.Door && b.X == def.SizeX / 2 && b.Z == def.SizeZ - 1 && b.Y == 0);
+        if (def.SizeX >= 3 && def.SizeZ >= 3) Assert.DoesNotContain(blocks, b => b.Y == 0 && b.X == 0 && b.Z == 0); // round at the foot
+        // As tall as the house with its roof (a small one may come out a little taller), and as hard to bring down.
+        Assert.InRange(mound.Height, def.Height, def.Height + 2);
+        Assert.InRange(mound.Toughness, def.Toughness * 95 / 100, def.Toughness * 103 / 100);
+    }
+
+    [Theory]
+    [InlineData("barrier")]
+    [InlineData("stone_wall")]
+    [InlineData("stone_gate")]
+    [InlineData("watchtower")]
+    public void TheirWallsGatesAndTowersAreHiveEarth(string id)
+    {
+        var def = ContentLoader.LoadEmbedded().Building(id);
+        var hive = def.Shaped(BuildingLook.Mound);
+        Assert.Equal(def.Blocks.Count, hive.Blocks.Count);
+        for (int k = 0; k < def.Blocks.Count; k++)
+        {
+            var (a, b) = (def.Blocks[k], hive.Blocks[k]);
+            Assert.Equal((a.X, a.Y, a.Z), (b.X, b.Y, b.Z));
+            Assert.Equal(a.Block == BlockType.Gate ? BlockType.Gate : BlockType.Hive, b.Block);
+        }
+        Assert.Equal(def.Height, hive.Height);
+        Assert.InRange(hive.Toughness, def.Toughness * 97 / 100, def.Toughness * 103 / 100);
+    }
+
+    [Fact]
+    public void FieldsBridgesLightsAndTheirOwnMoundsKeepTheirShape()
+    {
+        var db = ContentLoader.LoadEmbedded();
+        foreach (var id in new[] { "farm", "brood_chamber", "queens_chamber" })
+            Assert.Same(db.Building(id), db.Building(id).Shaped(BuildingLook.Mound));
+        foreach (var d in db.Buildings.Where(d => d.Kind is BuildingKind.Light or BuildingKind.Bridge or BuildingKind.Totem))
+            Assert.Same(d, d.Shaped(BuildingLook.Mound));
+    }
+
+    [Fact]
+    public void ABuildingTakesItsOwnersShape()
+    {
+        var w = TestWorlds.Flat(64, 24, 64, Ground);
+        var sim = TestWorlds.Sim(w);
+        sim.SetFaction(0, "deepfolk");
+        sim.SetFaction(1, "settlers");
+        var def = sim.Content.Building("town_hall");
+        var hive = sim.Economy.PlaceFinished(0, def, 4, 4)!;
+        var town = sim.Economy.PlaceFinished(1, def, 30, 4)!;
+        Assert.Equal(BuildingLook.Mound, hive.Look);
+        Assert.Equal(BuildingLook.Standard, town.Look);
+        Assert.Same(def, hive.Def);
+        Assert.Same(def.Shaped(BuildingLook.Mound), hive.Shape);
+        Assert.Same(def, town.Shape);
+        // The world has the shape's blocks: hive earth for the Deepfolk, planks and a roof for the Settlers.
+        foreach (var t in hive.Shape.Blocks) Assert.Equal(t.Block, w.Get(hive.X + t.X, hive.Y + t.Y, hive.Z + t.Z));
+        foreach (var t in town.Shape.Blocks) Assert.Equal(t.Block, w.Get(town.X + t.X, town.Y + t.Y, town.Z + t.Z));
+        Assert.Contains(hive.Shape.Blocks, t => t.Block == BlockType.Hive);
+        Assert.DoesNotContain(town.Shape.Blocks, t => t.Block == BlockType.Hive);
+        Assert.Equal(hive.Shape.Toughness, hive.Built);
+        // Plans show the owner's shape too.
+        sim.Schedule(0, new PlanCommand(0, "house", 4, 30));
+        sim.Run(1);
+        Assert.Contains(sim.Buildings.All, b => b.Planned && b.Owner == 0 && b.Look == BuildingLook.Mound);
     }
 }

@@ -138,9 +138,9 @@ public sealed partial class EconomySystem
     private bool RoomFor(Building b, BuildingDef to)
     {
         if (Grows(b.Def, to)) return RoomToGrow(b, to);
-        int top = b.Y + Math.Max(b.Def.Height, 1);
-        if (b.Y + to.Height + Walk.Clearance >= World.SizeY) return false;
-        foreach (var t in to.Blocks)
+        int top = b.Y + Math.Max(b.Shape.Height, 1);
+        if (b.Y + to.Shaped(b.Look).Height + Walk.Clearance >= World.SizeY) return false;
+        foreach (var t in to.Shaped(b.Look).Blocks)
         {
             int y = b.Y + t.Y;
             if (y < top) continue;
@@ -172,7 +172,7 @@ public sealed partial class EconomySystem
         var (x0, z0) = b.CornerOf(to);
         int x1 = x0 + to.SizeX - 1, z1 = z0 + to.SizeZ - 1, baseY = b.Y;
         if (x0 < 1 || z0 < 1 || x1 > w.SizeX - 2 || z1 > w.SizeZ - 2) return false;
-        int clear = Math.Max(to.Height, Walk.Clearance);
+        int clear = Math.Max(to.Shaped(b.Look).Height, Walk.Clearance);
         if (baseY < 2 || baseY + clear >= w.SizeY) return false;
         foreach (var o in Buildings.All)
         {
@@ -181,7 +181,7 @@ public sealed partial class EconomySystem
             if (x0 <= ox1 + 1 && x1 >= ox0 - 1 && z0 <= oz1 + 1 && z1 >= oz0 - 1) return false;
         }
         if (_sim.Cities.Crowds(x0, z0, x1, z1)) return false;
-        int top = b.Y + Math.Max(b.Def.Height, 1);
+        int top = b.Y + Math.Max(b.Shape.Height, 1);
         for (int cz = z0; cz <= z1; cz++)
         for (int cx = x0; cx <= x1; cx++)
         {
@@ -215,7 +215,7 @@ public sealed partial class EconomySystem
         for (int i = 0; i < u.Count; i++)
         {
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
-            if (x < x0 || x > x1 || z < z0 || z > z1 || u.Y[i] < b.Y - 1 || u.Y[i] > b.Y + to.Height) continue;
+            if (x < x0 || x > x1 || z < z0 || z > z1 || u.Y[i] < b.Y - 1 || u.Y[i] > b.Y + to.Shaped(b.Look).Height) continue;
             any = true;
             if (u.Order[i] != UnitOrder.Idle) continue;
             if (u.Job[i] == UnitJob.Build && u.JobTarget[i] == b.Id) EndJob(i);
@@ -309,26 +309,26 @@ public sealed partial class EconomySystem
                 b.UpgradeWait++;
                 return;
             }
-            var old = b.Def.Blocks;
+            var old = b.Shape.Blocks;
             for (int k = 0; k < b.Placed && k < old.Count; k++)
             {
                 var t = old[k];
                 int x = b.X + t.X, y = b.Y + t.Y, z = b.Z + t.Z;
                 if (t.Y >= 0 && World.Get(x, y, z) == t.Block) World.Set(x, y, z, BlockType.Air);
             }
-            Level(b.Owner, to, x0, z0, b.Y);
+            Level(b.Owner, to.Shaped(b.Look), x0, z0, b.Y);
             b.X = x0;
             b.Z = z0;
         }
         b.UpgradeWait = 0;
-        foreach (var t in to.Blocks) World.Set(b.X + t.X, b.Y + t.Y, b.Z + t.Z, t.Block);
+        foreach (var t in to.Shaped(b.Look).Blocks) World.Set(b.X + t.X, b.Y + t.Y, b.Z + t.Z, t.Block);
         if (Grows(b.Def, to))
         {
             b.Def = to;
             _sim.Combat.Rebuilt(b);
         }
         b.Def = to;
-        b.Placed = to.Blocks.Count;
+        b.Placed = to.Shaped(b.Look).Blocks.Count;
         b.Work = to.BuildTicks;
         b.Lost = b.Damage = 0;
         b.Gone = null;
@@ -470,8 +470,8 @@ public sealed partial class EconomySystem
     public bool PostFree(Building b, int x, int z)
     {
         if (!b.Def.Walkway || !b.Active || !b.Covers(x, z)) return false;
-        int top = b.Y + b.Def.Height;
-        if (World.Get(x, top - 1, z) != b.Def.Blocks[^1].Block || !Walk.CanStand(World, x, top, z) || Occupied(x, top, z)) return false;
+        int top = b.Y + b.Shape.Height;
+        if (World.Get(x, top - 1, z) != b.Shape.Blocks[^1].Block || !Walk.CanStand(World, x, top, z) || Occupied(x, top, z)) return false;
         return !BlockInfo.IsSolid(World.Get(x - 1, top - 1, z)) || !BlockInfo.IsSolid(World.Get(x + 1, top - 1, z))
             || !BlockInfo.IsSolid(World.Get(x, top - 1, z - 1)) || !BlockInfo.IsSolid(World.Get(x, top - 1, z + 1));
     }
@@ -619,11 +619,11 @@ public sealed partial class EconomySystem
             SetPhase(i, JobPhase.ToWork);
             return;
         }
-        if (++u.JobTimer[i] < ClimbTicks * b.Def.Height) return;
+        if (++u.JobTimer[i] < ClimbTicks * b.Shape.Height) return;
         // Up: it stands in the middle of the column, on top.
         u.X[i] = Fix64.FromInt(px) + Fix64.Half;
         u.Z[i] = Fix64.FromInt(pz) + Fix64.Half;
-        u.Y[i] = b.Y + b.Def.Height;
+        u.Y[i] = b.Y + b.Shape.Height;
         EndJob(i);
     }
 }

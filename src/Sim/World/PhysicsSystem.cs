@@ -447,7 +447,7 @@ public sealed class PhysicsSystem
     /// </summary>
     public void Crumble(Building b)
     {
-        var blocks = b.Def.Blocks;
+        var blocks = b.Shape.Blocks;
         var chunks = new SortedDictionary<int, List<(int X, int Y, int Z)>>();
         for (int k = 0; k < b.Placed; k++)
         {

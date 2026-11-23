@@ -124,7 +124,7 @@ public sealed partial class CombatSystem
         if (b == null || b.Def.Walkable || !BlockInfo.IsBuilt(World.Get(nx, roof + 1, nz))) return;
         int h = 0;
         // All of the building's blocks that fall with the column: up through its room to the roof (see Fall).
-        int top = b.Y + b.Def.Height;
+        int top = b.Y + b.Shape.Height;
         for (int y = roof + 1; y < World.SizeY; y++)
         {
             var t = World.Get(nx, y, nz);

@@ -18,6 +18,11 @@
 // and sends nearly all of them as one big wave, and builds no walls) or balanced (it walls its town, and
 // when it attacks it keeps a good part of its soldiers at home behind the wall and sends the rest). See
 // "Winning and computer players" in docs/rules.md for what each level makes of it.
+// look (optional): the shape its players' buildings take: standard (houses with walls and a roof, and walls
+// and towers of their own materials) or mound (the Deepfolk: every hollow building is a mound of hive earth like
+// an ant hill, as tall as the usual one and as hard to bring down, and walls, gates and towers are ramparts of
+// hive earth). A building keeps the shape it was put up with when it is captured. Fields, bridges, lights and
+// totems look the same for everyone. See "The Deepfolk" in docs/rules.md.
 // replaces (optional): units and buildings the faction has its own in place of, as { "barracks": "brood_chamber" }.
 // Its players cannot train or build the one named first, nor train anything in a replaced building (or its upgrade)
 // they capture, and its matches start with the one named second instead; several may be replaced by the same one.
@@ -29,7 +34,7 @@
     "duskTree": "heal", "aiStyle": "balanced" },
   { "id": "orcs", "name": "Orcs", "uiLook": "timber", "description": "Clans who tame and ride the monsters they defeat.", "tamesMonsters": true,
     "duskTree": "raze", "aiStyle": "waves" },
-  { "id": "deepfolk", "name": "Deepfolk", "uiLook": "crystal", "description": "An insect hive that hatches swarms in batches and burrows under walls unseen.",
+  { "id": "deepfolk", "name": "Deepfolk", "uiLook": "crystal", "description": "An insect hive that hatches swarms in batches and burrows under walls unseen.", "look": "mound",
     "replaces": { "barracks": "brood_chamber", "spearman": "skitterling", "archer": "spitter", "rider": "skitterling",
       "sapper": "burrower", "mage": "spitter" },
     "duskTree": "raze", "aiStyle": "waves" }
