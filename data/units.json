@@ -314,6 +314,14 @@
     "armor": { "torso": 1 },
     "cost": { "food": 20, "wood": 20, "planks": 15 }, "trainTime": 15, "trainedAt": "town_hall" },
 
+  // A ship sails open water and carries units across it (role boat, "seats" in the data; the harbor concept art). It is
+  // built at a dock on the shore, never sets foot on land, and does not fight; those it carries go down with it.
+  { "id": "ship", "name": "Ship", "role": "boat",
+    "description": "A two-masted ship of planks and sailcloth, built at a dock. Right-click it with units selected and they walk aboard, 10 at most. Right-click water to sail; right-click land to sail to the nearest shore there and put them ashore. Archers aboard shoot from the deck. Bridges and ice stop it, and whoever is aboard goes down with it.",
+    "speed": 5, "hp": 260, "model": "ship", "seats": 10, "sight": 10, "machine": true, "cover": 50,
+    "armor": { "head": 3, "torso": 3, "arms": 3, "legs": 3 },
+    "cost": { "food": 20, "wood": 60, "planks": 40 }, "trainTime": 30, "trainedAt": "dock", "start": false },
+
   // Goblin mercenaries, hired at the goblins' town by their ally, paid in gold (the goblins' tribute is gold).
   { "id": "goblin_cutthroat", "name": "Goblin cutthroat", "role": "line_infantry", "hiredFrom": "goblins",
     "description": "A quick goblin blade for hire.",

@@ -619,3 +619,19 @@ public sealed record SandboxUnitsCommand(int PlayerId, int[] Units, SandboxActio
 
 /// <summary>Test mode: every unit and building (but a city-state's totem) within <paramref name="Radius"/> columns of (X, Z) is removed.</summary>
 public sealed record SandboxClearCommand(int PlayerId, int X, int Z, int Radius) : Command(PlayerId);
+
+/// <summary>
+/// The units walk aboard the player's boat <see cref="Boat"/> (see <see cref="Units.BoatSystem"/>): each walks to the
+/// shore beside it and steps aboard while it has a seat free. Boats and units that cannot reach it ignore it.
+/// </summary>
+public sealed record BoardCommand(int PlayerId, int[] Units, int Boat) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(BoardCommand? other) => base.Equals(other) && Boat == other!.Boat;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Boat);
+}
+
+/// <summary>
+/// The boats among the units put whoever is aboard ashore: each sails to the nearest water by land it can be put
+/// ashore on, within <see cref="Units.BoatSystem.UnloadReach"/> columns, and lands them there (see <see cref="Units.BoatSystem"/>).
+/// </summary>
+public sealed record UnloadCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);

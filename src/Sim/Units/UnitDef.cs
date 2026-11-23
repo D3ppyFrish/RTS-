@@ -21,6 +21,8 @@ public enum UnitRole : byte
     Trader,
     /// <summary>A cart: hauls goods between storage on supply duty, a big load at a time (see <see cref="UnitDef.Carry"/>), and does not fight.</summary>
     Hauler,
+    /// <summary>A boat: sails on water and carries units across it (see <see cref="UnitDef.Seats"/> and <see cref="BoatSystem"/>), and does not fight.</summary>
+    Boat,
 }
 
 /// <summary>Static description of a unit type, loaded from <c>data/units.json</c>.</summary>
@@ -256,6 +258,15 @@ public sealed class UnitDef
     /// unit, which carries what a worker does (<see cref="Economy.EconomySystem.Capacity"/>).
     /// </summary>
     public int Carry { get; init; }
+
+    /// <summary>
+    /// For a boat (role <see cref="UnitRole.Boat"/>, <c>"seats"</c> in the data): how many units it carries. It sails
+    /// only on open water and never sets foot on land (see <see cref="BoatSystem"/>); 0 for every other unit.
+    /// </summary>
+    public int Seats { get; init; }
+
+    /// <summary>A boat, which sails on water and carries units (role <see cref="UnitRole.Boat"/>).</summary>
+    public bool IsBoat => Role == UnitRole.Boat;
 
     /// <summary>A form units evolve into rather than one that is trained.</summary>
     public bool IsForm => EvolvesFrom != null;

@@ -63,8 +63,8 @@ public class RamTests
         // Tougher than a catapult, and slow.
         Assert.True(ram.MaxHp > content.Unit("catapult").MaxHp);
         Assert.True(ram.Speed < content.Unit("spearman").Speed);
-        // Nothing else is a ram or deals more to gates, so nothing else changes.
-        Assert.All(content.Units.Where(u => u.Id != "battering_ram"), u => Assert.True(!u.Ram && u.Gates == 100 && u.Cover == 0, u.Id));
+        // Nothing else is a ram or deals more to gates, so nothing else changes; only a ship's hull is cover as well.
+        Assert.All(content.Units.Where(u => u.Id != "battering_ram"), u => Assert.True(!u.Ram && u.Gates == 100 && u.Cover == (u.IsBoat ? u.Cover : 0), u.Id));
     }
 
     [Fact]

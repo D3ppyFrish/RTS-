@@ -61,7 +61,10 @@ public sealed class UnitMovement
         }
 
         // 1. Gravity and being buried: keep every unit on valid ground.
-        for (int i = 0; i < u.Count; i++) Settle(w, u, i);
+        // Boats and those aboard them are moved by the boat system, never here.
+        var units = _sim.Content.Units;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Aboard[i] == 0 && !units[u.Def[i]].IsBoat) Settle(w, u, i);
 
         // 2. Separation forces from current positions (computed for all units before anyone moves).
         _grid.Build(u);
@@ -71,6 +74,7 @@ public sealed class UnitMovement
         _cachedFieldId = -1;
         for (int i = 0; i < u.Count; i++)
         {
+            if (u.Aboard[i] != 0 || units[u.Def[i]].IsBoat) continue;
             Fix64 vx = _pushX[i], vz = _pushZ[i];
             // A unit with no order is only ever nudged (by the crowd, or sliding on ice): that never drops it
             // more than a level, so a worker beside a hole is not shoved down into it.

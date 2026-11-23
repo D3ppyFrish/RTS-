@@ -35,7 +35,7 @@ public sealed class ContentDb
 
     public IReadOnlyList<UnitDef> Units => _units;
     /// <summary>
-    /// The unit types that are trained at a building, except caravans, in data order.
+    /// The unit types that are trained at a building, except caravans, carts and ships, in data order.
     /// Not forms units evolve into, monsters, mercenaries, or other units that only come about in play.
     /// </summary>
     public IReadOnlyList<UnitDef> BaseUnits { get; internal set; } = Array.Empty<UnitDef>();

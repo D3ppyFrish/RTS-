@@ -199,6 +199,36 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
 - **Crowds**: units push each other apart, but a unit with no order is never pushed off a drop of more
   than a level, so a crowd does not shove an idle worker into the hole beside it.
 
+## Ships and docks
+
+`src/Sim/Units/BoatSystem.cs` (`BoatTests`; role `boat` and `seats` in `data/units.json`, the `dock` in
+`data/buildings.json`; the harbor concept art). Every faction can build them.
+
+- **The dock** (60 wood, 20 planks, no tech; 5 by 4): stands at the water's edge like a fishing hut (open water
+  beside it, at most 4 blocks below), and builds **ships** (60 wood, 40 planks, 20 food, 30 seconds): 260 hit
+  points, speed 5, 10 seats. A ship is launched onto the water column within 2 of the dock nearest its middle,
+  and is a machine like the catapult (it never breaks and runs and does not bleed); its hull turns half of every
+  arrow (`"cover": 50`). It does not fight. A ship trained with a rally point set on land sails to the shore
+  there.
+- **Sailing**: a ship floats on any column whose top block is water, on top of it, and goes from one to the next
+  only at the same water level, never cutting a corner past land. So it sails the river and the sea, but a
+  bridge (or a troll bridge), ice, a dam, a sandbar or land in the way stops it. It never goes onto land.
+  `UnitMovement` leaves ships alone; they take the shortest way by water (straight steps 10, diagonal 14). Ships
+  do not bump into each other.
+- **Orders**: a right-click on water (any move order) sails there. A right-click on land sails to the nearest
+  water within 8 columns of the click that has ground to put ashore on within 2 columns, and puts whoever is aboard
+  ashore there; with nobody aboard it just goes there. Nothing happens if there is no such water by that land, or
+  no way to it by water.
+- **Boarding** (`BoardCommand`, a right-click on your ship with units selected): each unit walks to the ground
+  beside the ship nearest it, and steps aboard once it is within 1.7 blocks of it (and 3 levels). Ten fit; the
+  rest stop. A ship out on the water, with no ground within 2 columns, cannot be boarded, nor can a rival's.
+- **Aboard** (`UnitStore.Aboard`): a unit rides in its seat (two abreast along the deck), goes where the ship goes
+  and takes no orders, jobs or automatic work until it is put ashore. It can be shot, and archers aboard shoot
+  back from the deck. **Whoever is aboard a ship that is sunk goes down with it.**
+- **Putting ashore** (`UnloadCommand`, the Put ashore button, or a right-click on land): everyone aboard steps off
+  onto the ground within 2 columns of the ship, nearest first, a few to a column, and stands there.
+- **Computer players** do not build docks or ships yet. All numbers are first guesses.
+
 ## Combat
 
 `src/Sim/Units/CombatSystem*.cs` runs the fighting each tick, after the economy.

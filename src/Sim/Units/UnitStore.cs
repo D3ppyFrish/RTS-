@@ -128,6 +128,16 @@ public enum UnitJob : byte
     /// from its foot, again and again until it is up. Workers and sappers.
     /// </summary>
     Ladder,
+    /// <summary>
+    /// Walk aboard the boat <see cref="UnitStore.JobTarget"/> (see <see cref="BoatSystem"/>): to the shore spot
+    /// (<see cref="UnitStore.JobX"/>, JobZ) beside it, then step aboard. JobY is the boat's column when that spot was chosen.
+    /// </summary>
+    Board,
+    /// <summary>
+    /// A boat sails to the water by column (<see cref="UnitStore.JobX"/>, JobZ) nearest to it and puts whoever is aboard
+    /// ashore there (see <see cref="BoatSystem"/>).
+    /// </summary>
+    Land,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>
@@ -298,6 +308,11 @@ public sealed class UnitStore
     public bool[] Subdued = Array.Empty<bool>();
     /// <summary>The relic the unit bears (its index in <see cref="Content.ContentDb.Relics"/> plus one), or 0 for none.</summary>
     public short[] Relic = Array.Empty<short>();
+    /// <summary>
+    /// The boat the unit rides in (its id, see <see cref="BoatSystem"/>), or 0 on foot. A unit aboard goes where the boat
+    /// goes and takes no orders until it is put ashore.
+    /// </summary>
+    public int[] Aboard = Array.Empty<int>();
 
     // City-states (see Economy.CityStateSystem).
     /// <summary>
@@ -401,6 +416,7 @@ public sealed class UnitStore
         Xp[i] = 0;
         Subdued[i] = false;
         Relic[i] = 0;
+        Aboard[i] = 0;
         Town[i] = 0;
         Array.Clear(Wounds, i * Body.Parts, Body.Parts);
         Array.Clear(ExtraArmour, i * Body.Parts, Body.Parts);
@@ -496,7 +512,7 @@ public sealed class UnitStore
             Mix(Cooldown[i]); Mix(Morale[i]); Mix(Rout[i]); Mix(ChaseRetry[i]); Mix(CombatWait[i]); Mix(HitBy[i]); Mix(BreachFor[i]);
             Mix(LosBlocked[i] ? 1 : 0); Mix((int)Stance[i]); Mix(LastFight[i]); Mix(Mending[i].Raw);
             Mix(Auto[i] ? 1 : 0); Mix(Held[i] ? 1 : 0); Mix((long)Priorities[i]);
-            Mix(Xp[i]); Mix(Subdued[i] ? 1 : 0); Mix(Town[i]); Mix(Relic[i]);
+            Mix(Xp[i]); Mix(Subdued[i] ? 1 : 0); Mix(Town[i]); Mix(Relic[i]); Mix(Aboard[i]);
             for (int p = 0; p < Body.Parts; p++)
                 Mix(Wounds[i * Body.Parts + p] | ExtraArmour[i * Body.Parts + p] << 8 | BleedLeft[i * Body.Parts + p] << 16);
             Mix(Bleeding[i]); Mix(Grievous[i]); Mix(Cutter[i]);
@@ -526,7 +542,7 @@ public sealed class UnitStore
         ChaseRetry[to] = ChaseRetry[from]; CombatWait[to] = CombatWait[from]; HitBy[to] = HitBy[from]; BreachFor[to] = BreachFor[from];
         LosBlocked[to] = LosBlocked[from]; Stance[to] = Stance[from]; LastFight[to] = LastFight[from]; Mending[to] = Mending[from];
         Auto[to] = Auto[from]; Held[to] = Held[from]; Priorities[to] = Priorities[from];
-        Xp[to] = Xp[from]; Subdued[to] = Subdued[from]; Town[to] = Town[from]; Relic[to] = Relic[from];
+        Xp[to] = Xp[from]; Subdued[to] = Subdued[from]; Town[to] = Town[from]; Relic[to] = Relic[from]; Aboard[to] = Aboard[from];
         Array.Copy(Wounds, from * Body.Parts, Wounds, to * Body.Parts, Body.Parts);
         Array.Copy(ExtraArmour, from * Body.Parts, ExtraArmour, to * Body.Parts, Body.Parts);
         Bleeding[to] = Bleeding[from]; Grievous[to] = Grievous[from]; Cutter[to] = Cutter[from];
@@ -561,6 +577,7 @@ public sealed class UnitStore
         Array.Resize(ref Auto, capacity); Array.Resize(ref Held, capacity); Array.Resize(ref Priorities, capacity);
         Array.Resize(ref Xp, capacity); Array.Resize(ref Subdued, capacity); Array.Resize(ref Town, capacity);
         Array.Resize(ref Relic, capacity);
+        Array.Resize(ref Aboard, capacity);
         Array.Resize(ref Wounds, capacity * Body.Parts); Array.Resize(ref ExtraArmour, capacity * Body.Parts);
         Array.Resize(ref Bleeding, capacity); Array.Resize(ref BleedLeft, capacity * Body.Parts);
         Array.Resize(ref Cutter, capacity); Array.Resize(ref Grievous, capacity);

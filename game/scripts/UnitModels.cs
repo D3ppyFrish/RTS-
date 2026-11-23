@@ -89,6 +89,10 @@ public static class UnitModels
     private static readonly Color WyrmHide = new(0.3f, 0.29f, 0.34f);
     private static readonly Color WyrmBelly = new(0.55f, 0.52f, 0.5f);
     private static readonly Color Crystal = new(0.7f, 0.45f, 1f);
+    private static readonly Color Hull = new(0.42f, 0.27f, 0.14f);
+    private static readonly Color HullDark = new(0.3f, 0.19f, 0.1f);
+    private static readonly Color Deck = new(0.62f, 0.47f, 0.28f);
+    private static readonly Color Sailcloth = new(0.88f, 0.86f, 0.78f);
     private static readonly Color Team = new(1f, 0f, 0f, 0f);      // full-strength team colour
     private static readonly Color TeamDark = new(0.7f, 0f, 0f, 0f); // shaded team colour
 
@@ -776,6 +780,29 @@ public static class UnitModels
             .Box(-1, 7, -4, 0, 10, -4, Iron).Box(-1, 7, 3, 0, 10, 3, Iron)               // the chains
             .Box(-1, 5, -9, 0, 6, 6, Wood)                                               // the log
             .Box(-2, 4, 7, 1, 7, 9, Iron),                                               // and its iron head
+
+        // A ship (the harbor concept art's): a planked hull sitting low in the water with a pointed bow (+Z) and a square
+        // stern, a deck those aboard stand on, and two masts with square sails banded in its owner's colour, high
+        // enough to clear the heads of those on deck; a pennant at each masthead.
+        "ship" => new Builder()
+            .Box(-5, -5, -10, 4, -1, 10, Hull)                                           // the hull, under the deck
+            .Box(-4, -6, -10, 3, -6, 9, HullDark)                                        // the keel side, mostly under water
+            .Box(-4, -5, 11, 3, -1, 12, Hull).Box(-3, -4, 13, 2, -1, 14, Hull)           // the bow narrowing
+            .Box(-2, -3, 15, 1, 0, 16, Hull).Box(-1, -1, 17, 0, 1, 18, HullDark)         // to a point and a short bowsprit
+            .Box(-1, 1, 19, 0, 1, 21, Wood)
+            .Box(-5, -5, -12, 4, 1, -11, HullDark)                                       // the stern, a little raised
+            .Box(-4, -1, -10, 3, -1, 12, Deck).Box(-3, -1, 13, 2, -1, 14, Deck)          // the deck
+            .Box(-5, 0, -10, -5, 1, 12, Team).Box(4, 0, -10, 4, 1, 12, Team)             // gunwales in its owner's colour
+            .Box(-4, 0, 13, -4, 0, 14, TeamDark).Box(3, 0, 13, 3, 0, 14, TeamDark)
+            .Box(-1, 0, -12, 0, 6, -12, Wood).Box(-1, 5, -14, 0, 5, -12, Wood)           // the rudder post and tiller
+            .Box(-1, 0, -13, 0, 0, -13, Wood)
+            .Box(0, 0, 6, 0, 34, 6, Wood).Box(0, 0, -6, 0, 30, -6, Wood)                 // fore and main masts (between the rows of seats)
+            .Box(-7, 30, 6, 7, 30, 6, Wood).Box(-7, 18, 6, 7, 18, 6, Wood)               // yards
+            .Box(-6, 19, 7, 6, 29, 7, Sailcloth).Box(-6, 23, 7, 6, 24, 7, Team)          // the foresail, banded
+            .Box(-7, 26, -6, 7, 26, -6, Wood).Box(-7, 16, -6, 7, 16, -6, Wood)
+            .Box(-6, 17, -5, 6, 25, -5, Sailcloth).Box(-6, 20, -5, 6, 21, -5, Team)      // the mainsail, banded
+            .Box(0, 35, 6, 0, 35, 9, Team).Box(0, 31, -6, 0, 31, -3, Team)               // pennants
+            .Box(-5, -3, 8, -5, -2, 9, Dark).Box(4, -3, 8, 4, -2, 9, Dark),              // hawse holes
 
         // Trade with the city-states: a pack mule with saddlebags in its owner's colour (what it carries goes on
         // its back), and the goblins' mercenaries.

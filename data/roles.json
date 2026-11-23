@@ -1,5 +1,5 @@
 // Combat roles, from the design doc's role table. Every role is listed once: worker, line_infantry,
-// heavy_infantry, ranged, cavalry, sapper, caster, siege, monster, trader, hauler. A unit's attacks deal "strong" times
+// heavy_infantry, ranged, cavalry, sapper, caster, siege, monster, trader, hauler, boat. A unit's attacks deal "strong" times
 // their damage to the roles its role is strongAgainst, and to the roles that list its role in
 // weakAgainst (the same relation, written from the other side). Against buildings, a role with
 // "structures" in strongAgainst deals full damage and every other role deals "structures" times its
@@ -47,6 +47,9 @@
       "weakAgainst": ["line_infantry", "heavy_infantry", "ranged", "cavalry", "sapper", "caster", "siege", "monster"] },
     { "role": "hauler", "job": "Haul goods between storage",
       "strongAgainst": [],
-      "weakAgainst": ["line_infantry", "heavy_infantry", "ranged", "cavalry", "sapper", "caster", "siege", "monster"] }
+      "weakAgainst": ["line_infantry", "heavy_infantry", "ranged", "cavalry", "sapper", "caster", "siege", "monster"] },
+    { "role": "boat", "job": "Carry units across water",
+      "strongAgainst": [],
+      "weakAgainst": ["ranged", "siege"] }
   ]
 }

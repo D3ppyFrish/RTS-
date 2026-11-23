@@ -82,7 +82,7 @@ public partial class PlayerControl : Node
     public static readonly (Key Key, string Building)[] BuildKeys =
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
-        (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "hunting_lodge"), (Key.None, "sawmill"), (Key.None, "mason_yard"), (Key.None, "siege_workshop"), (Key.None, "shrine"),
+        (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "hunting_lodge"), (Key.None, "sawmill"), (Key.None, "mason_yard"), (Key.None, "siege_workshop"), (Key.None, "dock"), (Key.None, "shrine"),
         (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.None, "listening_post"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
@@ -518,11 +518,13 @@ public partial class PlayerControl : Node
         int bestId = 0;
         for (int i = 0; i < u.Count; i++)
         {
-            if (!_slice.Shows(u.Y[i]) || !Fog.Shows(i)) continue;
+            // Those aboard a ship are picked as the ship.
+            if (u.Aboard[i] != 0 || !_slice.Shows(u.Y[i]) || !Fog.Shows(i)) continue;
             var p = Centre(i);
             if (cam.IsPositionBehind(p)) continue;
             float depth = cam.GlobalPosition.DistanceTo(p);
-            float radius = Mathf.Max(8f, 0.5f * pixelsPerMetre / depth);
+            float size = _sim.Content.Units[u.Def[i]].IsBoat ? 1.5f : 0.5f;
+            float radius = Mathf.Max(8f, size * pixelsPerMetre / depth);
             float d2 = cam.UnprojectPosition(p).DistanceSquaredTo(screen);
             if (d2 <= radius * radius && d2 < best)
             {
@@ -541,7 +543,8 @@ public partial class PlayerControl : Node
         for (int i = 0; i < u.Count; i++)
         {
             // A city-state's guards and tribute caravans go about their own business: they are not boxed.
-            if (u.Owner[i] != LocalPlayer || u.Town[i] != 0 || !_slice.Shows(u.Y[i])) continue;
+            // Nor are those aboard a ship: the ship is.
+            if (u.Owner[i] != LocalPlayer || u.Town[i] != 0 || u.Aboard[i] != 0 || !_slice.Shows(u.Y[i])) continue;
             var p = Centre(i);
             if (cam.IsPositionBehind(p)) continue;
             if (rect.HasPoint(cam.UnprojectPosition(p))) result.Add(u.Id[i]);
@@ -613,6 +616,21 @@ public partial class PlayerControl : Node
         }
         float bs = ChunkMesher.BlockSize;
         int target = PickUnit(screen);
+        // A click on someone aboard a ship is a click on the ship.
+        if (target > 0 && _sim.Units.Aboard[_sim.Units.IndexOf(target)] is int ship and > 0 && _sim.Units.Exists(ship)) target = ship;
+        if (target > 0 && OwnerOf(target) == LocalPlayer && IsBoat(target))
+        {
+            // Your own ship: the rest of the selection walks aboard.
+            var riders = own.FindAll(id => id != target && !IsBoat(id));
+            if (riders.Count > 0)
+            {
+                var u = _sim.Units;
+                int t = u.IndexOf(target);
+                _sim.Schedule(_sim.Tick, new BoardCommand(LocalPlayer, riders.ToArray(), target));
+                _rings.ShowMarker(new Vector3(u.X[t].ToFloat(), u.Y[t], u.Z[t].ToFloat()) * bs, SelectionRenderer.Work);
+                return;
+            }
+        }
         if (target > 0 && OwnerOf(target) != LocalPlayer)
         {
             var u = _sim.Units;
@@ -2066,6 +2084,32 @@ public partial class PlayerControl : Node
         return n;
     }
 
+    private bool IsBoat(int id) => _sim.Units.IndexOf(id) is int i and >= 0 && _sim.Content.Units[_sim.Units.Def[i]].IsBoat;
+
+    /// <summary>Your selected ships, how many units are aboard them and how many seats they have in all.</summary>
+    public (int Ships, int Aboard, int Seats) SelectedShips()
+    {
+        int ships = 0, aboard = 0, seats = 0;
+        foreach (int id in OwnSelected())
+        {
+            if (!IsBoat(id)) continue;
+            int i = _sim.Units.IndexOf(id);
+            ships++;
+            aboard += _sim.Boats.Load(i);
+            seats += _sim.Content.Units[_sim.Units.Def[i]].Seats;
+        }
+        return (ships, aboard, seats);
+    }
+
+    /// <summary>Your selected ships put whoever is aboard ashore on the nearest land (see <see cref="UnloadCommand"/>).</summary>
+    public void Unload()
+    {
+        var ships = OwnSelected().FindAll(IsBoat);
+        if (ships.Count == 0) return;
+        _sim.Schedule(_sim.Tick, new UnloadCommand(LocalPlayer, ships.ToArray()));
+        Changed?.Invoke();
+    }
+
     /// <summary>Opens the sluice of the dam near your selected units, or shuts it if it is open (see <see cref="NearDam"/>).</summary>
     public void ToggleSluice()
     {
@@ -2332,6 +2376,10 @@ public partial class PlayerControl : Node
                $"catapults={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].Id == "catapult")} " +
                $"rams={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].Id == "battering_ram")} " +
                $"siege_workshops={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Active && b.Def.Id == "siege_workshop")} " +
+               $"ships={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].IsBoat)} " +
+               $"aboard={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Aboard[i] != 0)} " +
+               $"ship_at={Enumerable.Range(0, u.Count).Where(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].IsBoat).Select(i => $"{u.X[i].FloorToInt()},{u.Z[i].FloorToInt()}").FirstOrDefault() ?? "none"} " +
+               $"docks={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Active && b.Def.Id == "dock")} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} heroes={heroes} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +
                $"beaten={beaten} monsters={monsters} riders={riders} wild={wild} lairs={lairs} " +
