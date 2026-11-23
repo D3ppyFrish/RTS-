@@ -111,7 +111,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -695,6 +695,15 @@ public partial class Hud : CanvasLayer
         _defendTownButton.Visible = false;
         column.AddChild(_defendTownButton);
 
+        _shieldWallButton = MakeToolButton("Shield wall  [Ctrl+V]");
+        _shieldWallButton.Name = "shield_wall";
+        _shieldWallButton.TooltipText = "The selected line infantry lock shields facing the way they face now: they cannot move, but arrows " +
+                                        "and charging riders from the front do little. The sides are open unless the wall is a line, and the back always is. " +
+                                        "Any move or attack order lowers it, and they need a second before they can walk.";
+        _shieldWallButton.Toggled += on => _control.SetShieldWall(on);
+        _shieldWallButton.Visible = false;
+        column.AddChild(_shieldWallButton);
+
         _tameRow = new HBoxContainer { Visible = false };
         _tameRow.AddThemeConstantOverride("separation", 4);
         _tameLabel = MakeLabel("", 13);
@@ -1255,6 +1264,9 @@ public partial class Hud : CanvasLayer
         _digButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Dig);
         _workerPrioritiesButton.Visible = _control.OwnWorkers().Count > 0;
         _defendTownButton.Visible = _control.TownToDefend() != null;
+        var walls = _control.OwnShieldWallers();
+        _shieldWallButton.Visible = walls.Count > 0;
+        _shieldWallButton.SetPressedNoSignal(walls.Count > 0 && walls.TrueForAll(id => _sim.Units.ShieldWall[_sim.Units.IndexOf(id)]));
         RefreshEvolveRows();
         RefreshTaming();
         RefreshDen();
@@ -2098,7 +2110,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Shift+L: grow forest";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Shift+L: grow forest";
         }
     }
 
@@ -2129,6 +2141,7 @@ public partial class Hud : CanvasLayer
             string morale = def.CanAttack && u.Rout[i] == 0 ? $"    morale {u.Morale[i]}" : "";
             string rule = def.Role == UnitRole.Worker
                 ? (u.Auto[i] ? (u.Held[i] ? "    automatic, waiting for orders" : "    automatic") : "")
+                : u.ShieldWall[i] ? "    in a shield wall"
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
             string heals = !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) is { } camp
@@ -2152,7 +2165,7 @@ public partial class Hud : CanvasLayer
                    DescribeExperience(u, i);
         }
         var counts = new int[defs.Count];
-        int moving = 0, working = 0, fighting = 0, routing = 0, automatic = 0, ready = 0, beaten = 0, healing = 0, patrolling = 0, guarding = 0;
+        int moving = 0, working = 0, fighting = 0, routing = 0, automatic = 0, ready = 0, beaten = 0, healing = 0, patrolling = 0, guarding = 0, walled = 0;
         var stances = new int[3];
         foreach (int id in sel)
         {
@@ -2165,6 +2178,7 @@ public partial class Hud : CanvasLayer
             if (_sim.Combat.Healing(i, out _)) healing++;
             if (u.Combat[i] == CombatOrder.Patrol) patrolling++;
             if (u.Combat[i] == CombatOrder.Guard) guarding++;
+            if (u.ShieldWall[i]) walled++;
             if (u.Subdued[i]) beaten++;
             else if (u.Rout[i] > 0) routing++;
             else if (u.Job[i] != UnitJob.None) working++;
@@ -2176,6 +2190,7 @@ public partial class Hud : CanvasLayer
         if (fighting > 0) parts.Add($"{fighting} fighting");
         if (patrolling > 0) parts.Add($"{patrolling} patrolling");
         if (guarding > 0) parts.Add($"{guarding} guarding");
+        if (walled > 0) parts.Add($"{walled} in a shield wall");
         if (routing > 0) parts.Add($"{routing} running away");
         if (healing > 0) parts.Add($"{healing} healing");
         if (automatic > 0) parts.Add($"{automatic} automatic");

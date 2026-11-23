@@ -12,6 +12,7 @@
 //   reveal        { what }                once researched, every ruin, lair or town (what: ruins, lairs or
 //                                         towns) on the map shows through the fog as seen ground
 //   spare_workers                         wild monsters leave the player's workers alone
+//   shield_wall   { role or unit }        those units can take up a shield wall (numbers: shieldWall in roles.json)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
 // ruin (their units searched an old ruin), lair (their unit got the last of a monster lair's pack) or town
 // (they broke a city-state's totem and took the town).
@@ -46,9 +47,9 @@
   { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades.",
     "cost": { "wood": 80, "stone": 40 }, "researchTime": 40, "requires": [ "tools" ],
     "effects": [ { "type": "gather_speed", "percent": 15 } ] },
-  { "id": "settler_drill", "icon": "shield", "name": "Drilled ranks", "faction": "settlers", "description": "Armoured spear lines.",
+  { "id": "settler_drill", "icon": "shield", "name": "Drilled ranks", "faction": "settlers", "description": "Line infantry can lock shields into a wall: it cannot move, but arrows and charges from the front do little. Weak from the sides unless the wall is a line.",
     "cost": { "food": 50, "iron": 5 }, "researchTime": 40, "requires": [ "smelting" ],
-    "effects": [ { "type": "unit_hp", "role": "line_infantry", "amount": 20 } ] },
+    "effects": [ { "type": "shield_wall", "role": "line_infantry" } ] },
   { "id": "orc_war_drums", "icon": "drum", "name": "War drums", "faction": "orcs", "description": "The whole clan marches faster.",
     "cost": { "food": 60, "wood": 40 }, "researchTime": 40,
     "effects": [ { "type": "unit_speed", "percent": 15 } ] },

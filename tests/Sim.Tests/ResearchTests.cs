@@ -227,19 +227,19 @@ public class ResearchTests
         var sim = Flat();
         Hall(sim, 0, 4, 4);
         var barracks = sim.Economy.PlaceFinished(0, sim.Content.Building("barracks"), 20, 4)!;
-        int spear = sim.SpawnUnit(0, "spearman", 30, 30);
+        int rider = sim.SpawnUnit(0, "rider", 30, 30);
         int worker = sim.SpawnUnit(0, "worker", 31, 30);
-        int enemy = sim.SpawnUnit(1, "spearman", 40, 40);
-        Grant(sim, 0, "tools", "masonry", "smelting", "settler_drill"); // line infantry +20
+        int enemy = sim.SpawnUnit(1, "rider", 40, 40);
+        Grant(sim, 0, "horse_breeding", "orc_beast_pens"); // cavalry +30
         var u = sim.Units;
-        Assert.Equal(100, u.Hp[u.IndexOf(spear)]);
+        Assert.Equal(150, u.Hp[u.IndexOf(rider)]);
         Assert.Equal(40, u.Hp[u.IndexOf(worker)]);
-        Assert.Equal(80, u.Hp[u.IndexOf(enemy)]);
-        Assert.Equal(100, sim.Economy.MaxHp(0, sim.Content.Unit("spearman")));
-        Assert.Equal(100, u.Hp[u.IndexOf(sim.SpawnUnit(0, "spearman", 32, 30))]);
-        sim.Schedule(0, new TrainCommand(0, barracks.Id, "spearman"));
-        RunUntil(sim, () => u.Count == 5, 400, "the trained spearman");
-        Assert.Equal(100, u.Hp[4]);
+        Assert.Equal(120, u.Hp[u.IndexOf(enemy)]);
+        Assert.Equal(150, sim.Economy.MaxHp(0, sim.Content.Unit("rider")));
+        Assert.Equal(150, u.Hp[u.IndexOf(sim.SpawnUnit(0, "rider", 32, 30))]);
+        sim.Schedule(0, new TrainCommand(0, barracks.Id, "rider"));
+        RunUntil(sim, () => u.Count == 5, 600, "the trained rider");
+        Assert.Equal(150, u.Hp[4]);
     }
 
     [Fact]

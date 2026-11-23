@@ -234,6 +234,7 @@ public sealed partial class AiPlayer
         }
         if (Smart) Dams(sim, hall, issue);
         if (Smart && (tick + Player * 3) % ArmyTicks == 0) LeaveScar(sim, issue);
+        if (Skilled && (tick + Player * 3) % WallCheckTicks == 0) LowerIdleWalls(sim, issue);
     }
 
     // --- Truces ------------------------------------------------------------------------------------
@@ -1084,7 +1085,8 @@ public sealed partial class AiPlayer
         foreach (int id in ids)
         {
             int i = u.IndexOf(id);
-            if (i < 0 || u.Rout[i] > 0 || u.Target[i] != 0 || u.TargetBuilding[i] != 0) continue;
+            // A unit in a shield wall is holding a line under fire (see AiPlayer.ShieldWall.cs): orders would lower it.
+            if (i < 0 || u.Rout[i] > 0 || u.Target[i] != 0 || u.TargetBuilding[i] != 0 || u.ShieldWall[i]) continue;
             list.Add(id);
         }
         return list;

@@ -175,6 +175,11 @@ public enum TechEffectType : byte
     Reveal,
     /// <summary>Wild monsters leave the player's workers alone: they do not go after them, though they still answer one that hits them.</summary>
     SpareWorkers,
+    /// <summary>
+    /// Matching units can take up a shield wall (see <see cref="ShieldWallCommand"/>): they stand still and shots
+    /// and charges from the front do much less. The numbers are in the role table (<see cref="CombatRules.Wall"/>).
+    /// </summary>
+    ShieldWall,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

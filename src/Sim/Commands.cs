@@ -374,6 +374,18 @@ public sealed record StanceCommand(int PlayerId, int[] Units, Units.UnitStance S
 }
 
 /// <summary>
+/// The units take up a shield wall (<paramref name="Raise"/>) or lower it: line infantry whose player has the tech for
+/// it (see <see cref="Content.TechEffectType.ShieldWall"/>). In the wall a unit stands still facing one way; shots from
+/// the front do much less and riders charging its front are thrown back (see <see cref="Units.CombatSystem"/>). Any
+/// order to go somewhere or fight drops it, and the unit needs a moment before it can walk.
+/// </summary>
+public sealed record ShieldWallCommand(int PlayerId, int[] Units, bool Raise) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(ShieldWallCommand? other) => base.Equals(other) && Raise == other!.Raise;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Raise);
+}
+
+/// <summary>
 /// The units that can take the form (a unit type id that evolves from theirs) do, now. See
 /// <see cref="Units.EvolutionSystem"/>.
 /// </summary>

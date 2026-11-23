@@ -265,6 +265,17 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   infantry beats cavalry, ranged beats line infantry and workers, cavalry beats ranged units and casters,
   and every combat role beats sappers and workers. All of a tick's hits land together, so neither side
   strikes first, and units do not waste blows on an enemy that is already dying.
+- **Shield wall** (`ShieldWallCommand`, Ctrl+V or the Shield wall button; `CombatSystem.ShieldWall.cs`, `ShieldWallTests`;
+  issue #145): the Settlers' **Drilled ranks** (a `shield_wall` effect in `data/techs.json`) lets their line infantry
+  lock shields. A unit in the wall faces one way, fixed when it raises it (the way it faced: its target, its
+  formation or where it was walking; else the nearest enemy it sees), cannot walk and is not shoved, and fights only
+  what comes within its reach. Shots from the front half deal a quarter of their damage; from the sides or the back
+  they deal it all, but a side another unit of the same wall stands beside (within 1.5 blocks) counts as front, so a
+  line is far stronger than a lone unit. Spells and siege engines are not stopped. A rider striking the wall's front
+  deals a quarter of its blow, takes its whole blow back itself and stands stopped dead for 2 seconds; a rider
+  striking the back hits as hard as ever. Any order to go somewhere or fight lowers the wall, and the unit takes a
+  second to lower it before it walks; a unit that routs or boards a ship drops it at once. The numbers are
+  `shieldWall` in `data/roles.json`, first guesses for playtesting.
 - **Siege workshops and catapults** (`SiegeTests`; the design doc's siege role, "break walls at range", and its
   Resources table: planks and iron for siege): a **siege workshop** (kind `barracks` in `data/buildings.json`, 6 by 6,
   planks under thatch, 40 wood, 40 planks and 20 stone, needs Smelting, every faction) trains the **catapult** (60
@@ -1639,7 +1650,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   second at 8 minutes, sends idle workers to trees, and after 6 minutes keeps more wood in hand.
 - **Normal** is Easy, plus: in a fight its archers and mages shoot the enemy in reach they are strong
   against, else the one with the fewest hit points, and riders and spearmen switch onto enemies they
-  are strong against; up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
+  are strong against; its line infantry raise a shield wall when an enemy archer it can see has them in range and no
+  enemy foot soldier is within 6 columns (charging riders do not count), and lower it once neither holds; up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
   second town hall where its workers gather far from storage; and after 9 minutes, with the wood, a
   wall of barriers round the town hall 4 columns out with two gates three wide, for a faction it plays
   balanced (the Settlers; see the styles below). Once a minute after that it looks whether it can pay

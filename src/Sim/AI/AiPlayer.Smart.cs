@@ -998,12 +998,14 @@ public sealed partial class AiPlayer
             if (Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), cx, cz) > r2 || !sim.Vision.SeesUnit(Player, i)) continue;
             enemies.Add(i);
         }
+        var walled = new List<int>();
+        ShieldWalls(sim, ids, enemies, walled, issue);
         if (enemies.Count == 0) return;
         var orders = new SortedDictionary<int, List<int>>();
         foreach (int id in ids)
         {
             int i = u.IndexOf(id);
-            if (i < 0 || u.Rout[i] > 0) continue;
+            if (i < 0 || u.Rout[i] > 0 || walled.Contains(id)) continue; // a shield wall stays put
             var def = sim.Content.Units[u.Def[i]];
             if (def.Role is UnitRole.Sapper or UnitRole.Siege) continue;
             int ux = u.X[i].FloorToInt(), uz = u.Z[i].FloorToInt();

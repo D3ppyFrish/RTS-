@@ -382,6 +382,7 @@ public partial class PlayerControl : Node
                 break;
             case Key.Tab: TogglePlanMode(); break;
             case Key.Delete or Key.Backspace: CancelSelectedPlan(); break;
+            case Key.V when key.CtrlPressed: ToggleShieldWall(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
             case Key.K when key.ShiftPressed: ToggleLadder(); break;
@@ -1234,6 +1235,35 @@ public partial class PlayerControl : Node
         if (soldiers.Count == 0) return;
         var next = (UnitStance)(((int)_sim.Units.Stance[_sim.Units.IndexOf(soldiers[0])] + 1) % 3);
         _sim.Schedule(_sim.Tick, new StanceCommand(LocalPlayer, soldiers.ToArray(), next));
+        Changed?.Invoke();
+    }
+
+    /// <summary>The selected units of yours that can take up a shield wall (see <see cref="CombatSystem"/>), or stand in one.</summary>
+    public List<int> OwnShieldWallers()
+    {
+        var list = new List<int>();
+        foreach (int id in OwnSoldiers())
+        {
+            int i = _sim.Units.IndexOf(id);
+            if (_sim.Units.ShieldWall[i] || _sim.Combat.CanShieldWall(i)) list.Add(id);
+        }
+        return list;
+    }
+
+    /// <summary>The selected line infantry raise their shield wall, or lower it if they all stand in one already.</summary>
+    public void ToggleShieldWall()
+    {
+        var units = OwnShieldWallers();
+        if (units.Count == 0) return;
+        SetShieldWall(!units.TrueForAll(id => _sim.Units.ShieldWall[_sim.Units.IndexOf(id)]));
+    }
+
+    /// <summary>The selected line infantry raise (or lower) their shield wall.</summary>
+    public void SetShieldWall(bool raise)
+    {
+        var units = OwnShieldWallers();
+        if (units.Count == 0) return;
+        _sim.Schedule(_sim.Tick, new ShieldWallCommand(LocalPlayer, units.ToArray(), raise));
         Changed?.Invoke();
     }
 
@@ -2260,6 +2290,9 @@ public partial class PlayerControl : Node
             if (u.Auto[u.IndexOf(id)]) auto++;
         var soldiers = OwnSoldiers();
         string stance = soldiers.Count > 0 ? u.Stance[u.IndexOf(soldiers[0])].ToString() : "none";
+        int walled = 0;
+        foreach (int id in own)
+            if (u.ShieldWall[u.IndexOf(id)]) walled++;
         var evolution = _sim.Evolution;
         int canEvolve = 0, evolved = 0, heroes = 0, denForms = 0, relics = 0;
         foreach (int id in own)
@@ -2377,7 +2410,7 @@ public partial class PlayerControl : Node
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
                $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
-               $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} " +
+               $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} shield_wall={walled} " +
                $"rebuild={(_sim.Economy.Rebuilds(LocalPlayer) ? 1 : 0)} ruins={OwnRuins()} " +
                $"governor={(sel?.Governor ?? GovernorFocus.None).ToString().ToLowerInvariant()} town_guard={(sel != null ? _sim.Combat.TownGuardCount(sel) : 0)} " +
                $"houses={OwnKind(BuildingKind.House)} quarries={OwnKind(BuildingKind.Quarry)} " +

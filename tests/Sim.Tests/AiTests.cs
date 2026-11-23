@@ -17,7 +17,7 @@ public class AiTests
     private const int Ground = 3; // flat test worlds: grass at 3, units stand at 4
 
     /// <summary>A flat world with a start area (and so a town hall with the starting goods) for each column given.</summary>
-    private static Simulation WithStarts(int size, params (int X, int Z)[] starts)
+    internal static Simulation WithStarts(int size, params (int X, int Z)[] starts)
     {
         var sim = TestWorlds.Sim(TestWorlds.Flat(size, 16, size, Ground));
         for (int p = 0; p < starts.Length; p++) sim.Map.Starts.Add(new StartArea(p, starts[p].X, Ground + 1, starts[p].Z));
@@ -207,7 +207,7 @@ public class AiTests
     // --- The smart levels (issue #47) ------------------------------------------------------------------
 
     /// <summary>Steps the match like <see cref="Play"/>, keeping every command the computer players give.</summary>
-    private static bool PlayLogged(Simulation sim, IReadOnlyList<AiPlayer> players, List<Command> log, Func<bool> done, int maxTicks)
+    internal static bool PlayLogged(Simulation sim, IReadOnlyList<AiPlayer> players, List<Command> log, Func<bool> done, int maxTicks)
     {
         for (int t = 0; t < maxTicks; t++)
         {

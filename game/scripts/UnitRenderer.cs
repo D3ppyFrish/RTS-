@@ -296,7 +296,12 @@ void fragment() {
             _sinkById[id] = Mathf.MoveToward(_sinkById[id], sinkTo, delta * 3f);
             y -= _sinkById[id];
             float dx = cx - px, dz = cz - pz;
-            if (dx * dx + dz * dz > 1e-5f)
+            if (u.ShieldWall[i])
+            {
+                // In a shield wall: it turns to face the way the wall faces, whoever it strikes at.
+                _yawById[id] = Mathf.LerpAngle(_yawById[id], Mathf.Atan2(u.WallX[i].ToFloat(), u.WallZ[i].ToFloat()), turn);
+            }
+            else if (dx * dx + dz * dz > 1e-5f)
             {
                 float target = Mathf.Atan2(dx, dz);
                 _yawById[id] = Mathf.LerpAngle(_yawById[id], target, turn);

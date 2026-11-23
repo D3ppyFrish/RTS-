@@ -15,12 +15,20 @@
 // points a second for each bleeding wound (a point more for every 20 it has left to bleed), until it clots.
 // A healer stems it at once, and a unit healing at home has it bound. "kills" says whether bleeding can
 // kill (false: it stops at 1 hit point). Blood on the ground fades in "bloodDays" in-game days.
+//
+// shieldWall: units in a shield wall (a tech's shield_wall effect lets them take one up) stand still facing
+// one way. Shots from the front half deal "front" percent of their damage; from the sides or the back, and
+// spells and siege, full damage, except that a side another unit of the same wall stands beside (within
+// "cover" blocks) counts as front. A rider's blow on the front deals "charge" percent, the rider takes
+// "repel" percent of its full blow itself and stands stopped dead for "stagger" seconds. An order to move
+// drops the wall: the unit takes "drop" seconds to lower it before it can walk. First guesses for playtesting.
 {
   "strong": 2,
   "structures": 0.25,
   "thick": 0.4,
   "recovery": { "after": 10, "percent": 0.25, "homePercent": 2, "homeRange": 12 },
   "bleeding": { "share": 40, "rate": 1, "kills": true, "bloodDays": 1 },
+  "shieldWall": { "front": 25, "charge": 25, "repel": 100, "stagger": 2, "drop": 1, "cover": 1.5 },
   "roles": [
     { "role": "worker", "job": "Gather, dig, build, haul",
       "strongAgainst": [],
