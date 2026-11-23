@@ -34,11 +34,10 @@ public sealed partial class EconomySystem
     private ContentDb Content => _sim.Content;
 
     /// <summary>
-    /// The player's faction. Players are given the factions in data order until a start screen lets them
-    /// choose; wild monsters are the wild side (<see cref="ContentDb.Wild"/>).
+    /// The player's faction (see <see cref="Simulation.FactionOf"/>): the one chosen for them, else the factions in
+    /// data order; wild monsters are the wild side (<see cref="ContentDb.Wild"/>).
     /// </summary>
-    public FactionDef Faction(int player) =>
-        player == Simulation.WildPlayer ? Content.Wild : Content.Factions[player % Content.Factions.Count];
+    public FactionDef Faction(int player) => _sim.FactionOf(player);
 
     public bool HasTech(int player, TechDef tech) => Find(player)?.Researched[tech.Index] ?? false;
 

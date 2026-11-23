@@ -18,6 +18,8 @@ using Rts.Sim.Replay;
 //                         them wins or time runs out; the replays must end with the same winner
 //     --levels=A,B        with --ai: each player's level, in player order (classic, easy, normal or hard;
 //                         default classic for all; the last one given goes for the rest)
+//     --factions=A,B      with --ai: each player's faction id, in player order (default: the factions in data
+//                         order, player 0 the first; settlers,settlers or orcs,orcs plays a mirror match)
 //     --fog               with --ai: play with fog of war
 //     --dominion          with --ai: play with dominion (holding most of the ancient sites for 3 minutes wins)
 //     --awakening         with --ai: play with the Awakening (the dark power wakes from 45 minutes and sends broods)
@@ -141,10 +143,17 @@ try
         foreach (var name in Opt("levels", "classic").Split(','))
             levels.Add(Enum.TryParse<AiLevel>(name.Trim(), ignoreCase: true, out var level)
                 ? level : throw new ArgumentException($"--levels: unknown level '{name}' (classic, easy, normal or hard)"));
+        string?[]? factions = opts.TryGetValue("factions", out var fs)
+            ? Array.ConvertAll(fs.Split(','), f => (string?)f.Trim())
+            : null;
+        if (factions != null)
+            foreach (var id in factions)
+                if (!Rts.Sim.Content.ContentDb.Default.TryGetFaction(id!, out _))
+                    throw new ArgumentException($"--factions: unknown faction '{id}'");
         var result = AiMatch.Play(ulong.Parse(Opt("seed", "1234"), ci),
             int.Parse(size[0], ci), int.Parse(size[1], ci), int.Parse(size[2], ci), ticks, levels: levels, fog: opts.ContainsKey("fog"),
             watch: opts.ContainsKey("trace") || opts.ContainsKey("story") ? Trace : null, dominion: opts.ContainsKey("dominion"),
-            awakening: opts.ContainsKey("awakening"));
+            awakening: opts.ContainsKey("awakening"), factions: factions);
         log = result.Log;
         aiWinner = result.Winner;
         aiEnd = result.EndTick;

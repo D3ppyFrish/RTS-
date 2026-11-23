@@ -90,6 +90,7 @@ public sealed class Simulation
     private bool _testMode;
     private bool _dominion;
     private bool _awakening;
+    private readonly List<FactionDef?> _factions = new();
 
     /// <summary>Starts a match on a freshly generated region, with the game's own data unless given other content.</summary>
     public Simulation(ulong seed, int sizeX, int sizeY, int sizeZ, ContentDb? content = null, int treeScale = RegionGenerator.DefaultTreeScale)
@@ -206,6 +207,35 @@ public sealed class Simulation
             _awakening = value;
         }
     }
+
+    /// <summary>
+    /// The faction <paramref name="player"/> plays: the one set with <see cref="SetFaction"/>, else the factions in data
+    /// order (player 0 the first, player 1 the second, and so on round). Wild monsters are the wild side
+    /// (<see cref="ContentDb.Wild"/>).
+    /// </summary>
+    public FactionDef FactionOf(int player)
+    {
+        if (player == WildPlayer) return Content.Wild;
+        if (player >= 0 && player < _factions.Count && _factions[player] is { } chosen) return chosen;
+        return Content.Factions[player % Content.Factions.Count];
+    }
+
+    /// <summary>
+    /// Match setup: <paramref name="player"/> plays <paramref name="faction"/> (any faction, so two players can play
+    /// the same one). Before the first tick.
+    /// </summary>
+    public void SetFaction(int player, FactionDef faction)
+    {
+        if (player < 0 || player >= WildPlayer) throw new ArgumentOutOfRangeException(nameof(player));
+        if (faction.Index < 0 || faction.Index >= Content.Factions.Count || Content.Factions[faction.Index] != faction) throw new ArgumentException($"{faction.Id} is not a faction of this game's data", nameof(faction));
+        if (Tick != 0 && FactionOf(player) != faction) throw new InvalidOperationException("Factions are set before the first tick");
+        while (_factions.Count <= player) _factions.Add(null);
+        _factions[player] = faction;
+        Economy.Player(player).Faction = faction;
+    }
+
+    /// <summary>Match setup: <paramref name="player"/> plays the faction with that id (see <see cref="SetFaction(int, FactionDef)"/>).</summary>
+    public void SetFaction(int player, string factionId) => SetFaction(player, Content.Faction(factionId));
 
     /// <summary>
     /// Test mode: the clock jumps to <paramref name="minute"/> minutes into the day, and the day goes on from

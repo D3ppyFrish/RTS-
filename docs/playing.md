@@ -8,7 +8,8 @@ How to get a build, the controls and what the HUD shows. How each system works i
 Every pull request and every push to `develop` produces a Windows build. Open the run on the
 **Actions** tab, download the `RTS-windows-...` artifact, unzip it and run `RTS.exe`.
 
-It opens on the start screen: pick the Settlers (who start in the west) or the Orcs (in the east), the
+It opens on the start screen: pick your faction, the Settlers (who start in the west) or the Orcs (in the
+east), and under Against the faction of the other side (the same as yours makes a mirror match), the
 world seed, whether the computer plays the other side and how well (Computer level: Easy, Normal, which
 is the default, Hard, or Classic, the first computer player; hover a level to read how it plays. No level
 is given anything you are not, and only Classic sees through the fog of war), and whether there is fog of

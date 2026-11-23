@@ -2006,9 +2006,16 @@ weather follow the rules' clock and weather; see [Controls and HUD](playing.md) 
 ## Start screen, match end and replays
 
 Started without command-line options (or with `--menu`), the game opens on the start screen
-(`game/scripts/StartScreen.cs`). Each player has their faction (see [Game data](../README.md#game-data)) and generated maps have
-two starts, so picking the Settlers or the Orcs picks the player and start too: player 0 in the west or
-player 1 in the east. The world seed comes up at random (New seed draws another), and the computer
+(`game/scripts/StartScreen.cs`). Generated maps have two starts, player 0's in the west and player 1's in the east.
+Under **Play as** you pick your faction, and under **Against** the other side's: any faction for either, so the
+Orcs can play the Orcs (a mirror match). Your faction puts you at its usual start, the Settlers in the west and
+the Orcs in the east (picking the faction the other side has gives it yours; pick it again under Against for a
+mirror match). Every faction rule follows the faction, not the player: whoever plays the Settlers earns experience
+and evolves, whoever plays the Orcs tames monsters, and a computer player plays its faction's way. The choice is
+made before the match (`Simulation.SetFaction`, before the first tick; without one, players have the factions in
+data order: `Simulation.FactionOf`), counts in the state hash and is kept in the replay ("faction P id" lines; see
+`CommandLog`). With options, `--factions=orcs,orcs` sets each player's faction in player order, and the match runner
+takes the same option with `--ai` (`FactionChoiceTests`). The world seed comes up at random (New seed draws another), and the computer
 opponent is on unless switched off, which leaves the other side standing idle. So is fog of war (see
 [Fog of war](#fog-of-war)), and so is winning by holding the ancient sites (see
 [Ancient sites and dominion](#ancient-sites-and-dominion)). Matches from the start screen have no terrain tool. With options, the game starts a match
