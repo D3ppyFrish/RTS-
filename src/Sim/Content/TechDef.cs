@@ -27,6 +27,56 @@ public sealed class FactionDef
     public DuskTreeUse DuskTree { get; init; }
     /// <summary>How a computer player plays it (see <see cref="AI.AiPlayer"/>).</summary>
     public AiStyle AiStyle { get; init; }
+    /// <summary>
+    /// The units it has its own in place of (<c>"replaces"</c> in the data), from the replaced one to its own, in data
+    /// order: its players cannot train the replaced one, and its matches start with its own instead (see
+    /// <see cref="StartUnits"/>).
+    /// </summary>
+    public IReadOnlyList<(Units.UnitDef From, Units.UnitDef To)> UnitReplacements { get; internal set; } = Array.Empty<(Units.UnitDef, Units.UnitDef)>();
+    /// <summary>
+    /// The buildings it has its own in place of, in data order: its players cannot build the replaced one, nor train
+    /// anything in one of them (or an upgrade of one) they capture.
+    /// </summary>
+    public IReadOnlyList<(Economy.BuildingDef From, Economy.BuildingDef To)> BuildingReplacements { get; internal set; } = Array.Empty<(Economy.BuildingDef, Economy.BuildingDef)>();
+
+    /// <summary>
+    /// The units its matches start with, in turn (see <see cref="Simulation.SpawnStartingUnits"/>): everyone's
+    /// (<see cref="ContentDb.StartUnits"/>) with its own in place of those it replaces.
+    /// </summary>
+    public IReadOnlyList<Units.UnitDef> StartUnits { get; internal set; } = Array.Empty<Units.UnitDef>();
+
+    /// <summary>True if the faction has its own unit in place of this one.</summary>
+    public bool Replaces(Units.UnitDef def)
+    {
+        foreach (var r in UnitReplacements)
+            if (r.From == def) return true;
+        return false;
+    }
+
+    /// <summary>True if the faction has its own building in place of this one, or of the building it is an upgrade of.</summary>
+    public bool Replaces(Economy.BuildingDef def)
+    {
+        for (var d = def; d != null; d = d.UpgradeOf)
+            foreach (var r in BuildingReplacements)
+                if (r.From == d) return true;
+        return false;
+    }
+
+    /// <summary>The unit the faction has in place of this one: its own if it replaces it, else the same.</summary>
+    public Units.UnitDef Own(Units.UnitDef def)
+    {
+        foreach (var r in UnitReplacements)
+            if (r.From == def) return r.To;
+        return def;
+    }
+
+    /// <summary>The building the faction has in place of this one: its own if it replaces it, else the same.</summary>
+    public Economy.BuildingDef Own(Economy.BuildingDef def)
+    {
+        foreach (var r in BuildingReplacements)
+            if (r.From == def) return r.To;
+        return def;
+    }
 }
 
 /// <summary>

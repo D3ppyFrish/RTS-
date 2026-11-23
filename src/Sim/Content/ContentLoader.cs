@@ -55,7 +55,7 @@ public static class ContentLoader
     };
 
     /// <summary>Building materials a building's walls, footing and roof may use.</summary>
-    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle };
+    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle, BlockType.Hive };
 
     /// <summary>Loads the game's own data, built into the core.</summary>
     public static ContentDb LoadEmbedded() => Load(EmbeddedText);
@@ -220,7 +220,7 @@ public static class ContentLoader
         private void ReadFaction(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "duskTree", "aiStyle");
+            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "duskTree", "aiStyle", "replaces");
             if (id == null) return;
             if (_db.TryGetFaction(id, out _) || id == _db.Wild.Id)
             {
@@ -239,6 +239,61 @@ public static class ContentLoader
                 AiStyle = o.Enum("aiStyle", AiStyle.Waves, required: false),
             };
             _db.Add(faction);
+            Replacements(o, faction);
+        }
+
+        /// <summary>
+        /// A faction's <c>"replaces": { "barracks": "brood_chamber", "spearman": "skitterling" }</c>: units and buildings
+        /// it has its own in place of, resolved once every file is read. A unit is replaced by a unit and a building by a
+        /// building, of the faction or of everyone, and never by one it replaces itself.
+        /// </summary>
+        private void Replacements(Obj faction, FactionDef def)
+        {
+            if (!faction.E.TryGetProperty("replaces", out var e)) return;
+            var where = new Obj(_errors, faction.File, "replaces", $"{faction.Where}, replaces", e);
+            if (e.ValueKind != JsonValueKind.Object)
+            {
+                where.Error("should be an object: { \"barracks\": \"brood_chamber\", \"spearman\": \"skitterling\" }");
+                return;
+            }
+            var pairs = new List<(string From, string To)>();
+            foreach (var p in e.EnumerateObject())
+            {
+                if (p.Value.ValueKind != JsonValueKind.String) where.Error($"\"{p.Name}\" should name what replaces it, as \"{p.Name}\": \"...\"");
+                else pairs.Add((p.Name, p.Value.GetString()!));
+            }
+            _resolve.Add(() =>
+            {
+                var units = new List<(UnitDef, UnitDef)>();
+                var buildings = new List<(BuildingDef, BuildingDef)>();
+                foreach (var (from, to) in pairs)
+                {
+                    if (_db.TryGetUnit(from, out var fu))
+                    {
+                        if (!_db.TryGetUnit(to, out var tu)) where.Error($"\"{from}\" is a unit but \"{to}\", which replaces it, is not");
+                        else if (tu.Faction != null && tu.Faction != def) where.Error($"\"{to}\" replaces \"{from}\", but only {tu.Faction.Id} have it");
+                        else if (fu.Faction != null) where.Error($"\"{from}\" is {fu.Faction.Id}' own; only a unit of everyone's can be replaced");
+                        else units.Add((fu, tu));
+                    }
+                    else if (_db.TryGetBuilding(from, out var fb))
+                    {
+                        if (!_db.TryGetBuilding(to, out var tb)) where.Error($"\"{from}\" is a building but \"{to}\", which replaces it, is not");
+                        else if (tb.Faction != null && tb.Faction != def) where.Error($"\"{to}\" replaces \"{from}\", but only {tb.Faction.Id} can build it");
+                        else if (fb.Faction != null) where.Error($"\"{from}\" is {fb.Faction.Id}' own; only a building of everyone's can be replaced");
+                        else if (fb.Id == "town_hall") where.Error("the town hall cannot be replaced: every match starts with one");
+                        else buildings.Add((fb, tb));
+                    }
+                    else where.Error($"\"{from}\" is neither a unit nor a building");
+                }
+                foreach (var (_, to) in units)
+                foreach (var (f, _) in units)
+                    if (f == to) where.Error($"\"{to.Id}\" replaces a unit but is replaced itself");
+                foreach (var (_, to) in buildings)
+                foreach (var (f, _) in buildings)
+                    if (f == to) where.Error($"\"{to.Id}\" replaces a building but is replaced itself");
+                def.UnitReplacements = units.ToArray();
+                def.BuildingReplacements = buildings.ToArray();
+            });
         }
 
         /// <summary>
@@ -473,7 +528,7 @@ public static class ContentLoader
         private void ReadBuilding(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "cost", "buildTime",
+            o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
                 "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing");
             if (id == null) return;
@@ -507,6 +562,7 @@ public static class ContentLoader
                 Footing = o.Material("footing", BlockType.Air),
                 Roof = o.Material("roof", BlockType.Thatch),
                 Chimney = o.Bool("chimney"),
+                Mound = o.Bool("mound"),
                 Cost = o.Cost("cost"),
                 BuildTicks = o.Int("buildTime", 1, MaxSeconds, 20, required: true) * Tps,
                 Housing = o.Int("housing", 0, 1000, 0),
@@ -629,7 +685,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "ram", "gates", "cover", "seats", "crater", "sails");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -700,6 +756,8 @@ public static class ContentLoader
                 Game = o.Cost("game"),
                 FromDen = o.Bool("fromDen"),
                 InStart = !o.Has("start") || o.Bool("start"),
+                Batch = o.Int("batch", 1, 20, 1),
+                Burst = o.Int("burst", 0, 500, 0),
             };
             if (def.MinRange > Fix64.Zero && def.MinRange >= def.Range)
                 o.Error("\"minRange\" must be less than \"range\"");
@@ -1351,7 +1409,14 @@ public static class ContentLoader
                 if (u.Lair is { DuskTree: true }) _db.DuskWarden = u;
             }
             _db.BaseUnits = bases.ToArray();
-            _db.StartUnits = bases.FindAll(u => u.InStart).ToArray();
+            _db.StartUnits = bases.FindAll(u => u.InStart && u.Faction == null).ToArray();
+            foreach (var f in _db.Factions)
+            {
+                // Everyone's start units with the faction's own in place of those it replaces (see "replaces").
+                var start = new List<UnitDef>();
+                foreach (var u in _db.StartUnits) start.Add(f.Own(u));
+                f.StartUnits = start.ToArray();
+            }
             _db.LairMonsters = monsters.ToArray();
             _db.WildMonsters = wild.ToArray();
             _db.CavernMonsters = cavern.ToArray();
@@ -1379,6 +1444,8 @@ public static class ContentLoader
                 h.Add(f.TamesMonsters ? 1 : 0);
                 h.Add((int)f.DuskTree);
                 h.Add((int)f.AiStyle);
+                foreach (var (from, to) in f.UnitReplacements) { h.Add(from.Id); h.Add(to.Id); }
+                foreach (var (from, to) in f.BuildingReplacements) { h.Add(from.Id); h.Add(to.Id); }
                 if (f.Experience is not { } x)
                 {
                     h.Add(-1);
@@ -1423,6 +1490,7 @@ public static class ContentLoader
                 h.Add((int)b.Footing);
                 h.Add((int)b.Roof);
                 h.Add(b.Chimney ? 1 : 0);
+                h.Add(b.Mound ? 1 : 0);
                 h.Add(b.Cost);
                 h.Add(b.BuildTicks);
                 h.Add(b.Housing);
@@ -1498,6 +1566,8 @@ public static class ContentLoader
                 h.Add(u.EvolvesFrom?.Index ?? -1);
                 h.Add(u.FromDen ? 1 : 0);
                 h.Add(u.InStart ? 1 : 0);
+                h.Add(u.Batch);
+                h.Add(u.Burst);
                 if (u.Carry > 0) h.Add(u.Carry);
                 if (u.Seats > 0) h.Add(u.Seats + 1000);
                 if (u.IsGame) h.Add(u.Game);

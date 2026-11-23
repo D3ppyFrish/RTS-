@@ -157,12 +157,18 @@ public enum BlockType : byte
     /// its foot climbs it to the top of what it leans on, and one up there climbs down it (see <see cref="Units.Walk"/>).
     /// </summary>
     Ladder,
+    /// <summary>
+    /// Hive earth: soil chewed and packed hard with the Deepfolk's resin (a building block). Their buildings are
+    /// mounds of it, like ant hills (see <see cref="Economy.BuildingDef.Mound"/>), lumpy and pocked with tunnel
+    /// mouths. As tough as planks; it breaks into plain rubble.
+    /// </summary>
+    Hive,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Ladder;
+    public const BlockType Last = BlockType.Hive;
 
     /// <summary>Anything but air, water and a ladder's rungs (which units stand in and see through).</summary>
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Ladder;
@@ -177,7 +183,7 @@ public static class BlockInfo
     public static bool CanStandOn(BlockType t) => IsSolid(t) && t != BlockType.Lava && t != BlockType.Floor;
 
     /// <summary>Blocks that buildings are made of (walls, floors, roofs, doors, gates, stakes, fields and roads).</summary>
-    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle or BlockType.Floor;
+    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle or BlockType.Floor or BlockType.Hive;
 
     /// <summary>
     /// Damage a building's block takes before it is knocked out (see <see cref="Units.CombatSystem"/>); 0 for
@@ -197,6 +203,7 @@ public static class BlockInfo
         BlockType.Rampart => 25,
         BlockType.Trestle => 10,
         BlockType.Floor => 6,
+        BlockType.Hive => 10,
         _ => 0,
     };
 

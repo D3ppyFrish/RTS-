@@ -252,6 +252,15 @@ public sealed class UnitDef
     /// <summary>Whether matches start with some (<c>"start"</c> in the data, default true; see <see cref="Content.ContentDb.StartUnits"/>).</summary>
     public bool InStart { get; init; } = true;
 
+    /// <summary>How many hatch from one training, all for its cost and train time (<c>"batch"</c>, default 1; the Deepfolk's swarms).</summary>
+    public int Batch { get; init; } = 1;
+
+    /// <summary>
+    /// For <see cref="Units.CombatSystem.BurstSeconds"/> after it comes up out of the ground (see
+    /// <see cref="VisionSystem.Covered"/>), its blows deal this many percent more damage (<c>"burst"</c>; 0 for none).
+    /// </summary>
+    public int Burst { get; init; }
+
     /// <summary>A caravan, which trades with city-states (role <see cref="UnitRole.Trader"/>).</summary>
     public bool IsTrader => Role == UnitRole.Trader;
 

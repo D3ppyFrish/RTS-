@@ -255,6 +255,7 @@ public sealed partial class CombatSystem
         _shots.RemoveRange(0, old);
 
         StepBleeding();
+        StepBurst();
         BuildGrid();
         Rally();
         if (tick % Tps == 0) RecoverMorale();
@@ -988,13 +989,45 @@ public sealed partial class CombatSystem
 
     /// <summary>
     /// Unit i's attack: its type's damage and its relic's if it bears one, and for a ranged unit near a hero
-    /// that calls the volleys this tick, that many percent more (see <see cref="Rally"/>).
+    /// that calls the volleys this tick, that many percent more (see <see cref="Rally"/>); and for a unit that has
+    /// just burst out of the ground (see <see cref="StepBurst"/>), its <see cref="UnitDef.Burst"/> percent more.
     /// </summary>
     public int AttackOf(int i, UnitDef def)
     {
         int attack = def.Damage + (_sim.RelicOf(i)?.Damage ?? 0);
-        return _anyRally && i < _volley.Length && _volley[i] > 0 ? attack * (100 + _volley[i]) / 100 : attack;
+        if (_anyRally && i < _volley.Length && _volley[i] > 0) attack = attack * (100 + _volley[i]) / 100;
+        return U.BurstLeft[i] > 0 ? attack * (100 + def.Burst) / 100 : attack;
     }
+
+    /// <summary>How long (seconds) a unit's blows deal more (<see cref="UnitDef.Burst"/>) after it comes up out of the ground.</summary>
+    public const int BurstSeconds = 5;
+    /// <summary>Every how many ticks a unit that bursts out of the ground is looked at to see whether it is underground.</summary>
+    public const int BurstLook = 4;
+
+    /// <summary>
+    /// Units that burst out of the ground (<see cref="UnitDef.Burst"/>, the Deepfolk's): every <see cref="BurstLook"/>
+    /// ticks each is looked at, and one with natural ground over its head (<see cref="VisionSystem.Covered"/>: in a
+    /// tunnel or a cave) is burrowed; one that was burrowed and is not any more has come up, and its blows deal more
+    /// for <see cref="BurstSeconds"/>. Underground, the time left is lost.
+    /// </summary>
+    private void StepBurst()
+    {
+        var u = U;
+        bool look = _sim.Tick % BurstLook == 0;
+        for (int i = 0; i < u.Count; i++)
+        {
+            if (Def(i).Burst == 0) continue;
+            if (u.BurstLeft[i] > 0) u.BurstLeft[i]--;
+            if (!look) continue;
+            bool under = u.Aboard[i] == 0 && VisionSystem.Covered(World, u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
+            if (under) u.BurstLeft[i] = 0;
+            else if (u.Burrowed[i]) u.BurstLeft[i] = BurstSeconds * Tps;
+            u.Burrowed[i] = under;
+        }
+    }
+
+    /// <summary>True if unit i has just burst out of the ground and its blows deal more (see <see cref="StepBurst"/>).</summary>
+    public bool Bursting(int i) => (uint)i < (uint)U.Count && U.BurstLeft[i] > 0;
 
     /// <summary>The damage of unit i's hit on unit t landing on the part, after the part's multiplier and t's armour there.</summary>
     public int HitDamage(int i, UnitDef def, int t, BodyPart part) =>

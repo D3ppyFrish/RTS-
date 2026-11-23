@@ -5,8 +5,10 @@
 // footprint, put up alone or onto the player's own walls, which become part of it). size is [x, z] in blocks
 // (the door is on the +z side); wallHeight is in blocks; wall, footing (the bottom course, if different)
 // and roof are building materials: planks, thatch, roof_tile, stone_brick, palisade (a barrier's stakes),
-// rampart (dressed stone drawn with battlements) or trestle (a watchtower's timber frame under a railed
-// deck); chimney adds a stone chimney.
+// rampart (dressed stone drawn with battlements), trestle (a watchtower's timber frame under a railed
+// deck) or hive (the Deepfolk's packed, resin-hard earth); chimney adds a stone chimney. mound: true makes it
+// a mound like an ant hill instead of walls and a roof: round at the foot, straight sides wallHeight high,
+// then a rounded top, all of its wall material (no roof).
 // Buildings come in tiers. upgrade (optional; not lights, totems or bridges) names the building this one is
 // turned into where it stands, for that building's cost and buildTime: a building named as an upgrade is never
 // laid as it is, only reached by upgrading. An upgrade is of the same kind and at least as tall; a wall, gate
@@ -186,6 +188,10 @@
     "wall": "stone_brick", "footing": "rampart", "roof": "thatch", "icon": "crown", "faction": "orcs",
     "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
     "requires": "orc_beast_king", "sight": 10, "light": 6 },
+  { "id": "queens_chamber", "name": "Queen's Chamber", "kind": "great_work", "size": [7, 7], "wallHeight": 2,
+    "wall": "hive", "mound": true, "icon": "crown", "faction": "deepfolk",
+    "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "requires": "deep_queen", "sight": 10, "light": 6 },
   { "id": "goblin_totem", "name": "Goblin totem", "kind": "totem", "size": [3, 3], "wallHeight": 7,
     "wall": "planks", "footing": "stone_brick", "buildTime": 1, "sight": 8 },
   { "id": "ogre_idol", "name": "Ogre idol", "kind": "totem", "size": [3, 3], "wallHeight": 8,
@@ -199,5 +205,10 @@
   { "id": "merfolk_conch", "name": "Merfolk conch", "kind": "totem", "size": [3, 3], "wallHeight": 6,
     "wall": "stone_brick", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
   { "id": "bridge", "name": "Bridge", "kind": "bridge", "size": [1, 1], "wallHeight": 1, "wall": "planks",
-    "cost": { "planks": 2 }, "buildTime": 3, "sight": 2 }
+    "cost": { "planks": 2 }, "buildTime": 3, "sight": 2 },
+  // The Deepfolk's barracks (see "replaces" in factions.json): a low mound of packed earth and resin where their
+  // swarms hatch in batches (see "batch" in units.json), and where 12 of them nest.
+  { "id": "brood_chamber", "name": "Brood chamber", "kind": "barracks", "size": [6, 5], "wallHeight": 2, "faction": "deepfolk",
+    "wall": "hive", "mound": true,
+    "cost": { "wood": 70, "stone": 10 }, "buildTime": 25, "housing": 12, "light": 2 }
 ]

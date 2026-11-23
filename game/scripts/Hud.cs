@@ -483,7 +483,9 @@ public partial class Hud : CanvasLayer
         column.AddChild(grid);
         foreach (var (key, id) in PlayerControl.BuildKeys)
         {
-            if (!_sim.Content.TryGetBuilding(id, out var def)) continue;
+            if (!_sim.Content.TryGetBuilding(id, out var everyone)) continue;
+            // Your faction's own in place of everyone's (the Deepfolk's brood chamber on the barracks' button and key).
+            var def = _sim.Economy.Faction(PlayerControl.LocalPlayer).Own(everyone);
             var b = MakeToolButton("");
             b.Name = "build_" + def.Id;
             b.Icon = UiIcons.Get(def.Icon.Length > 0 ? def.Icon : def.Id);
@@ -533,6 +535,11 @@ public partial class Hud : CanvasLayer
                                 "walls, but cannot hit anything close beside it: keep soldiers between it and the enemy's riders. " +
                                 "A battering ram shrugs off arrows under its roof and goes only at buildings: it strikes at the foot " +
                                 "of a wall so the column comes down, and breaks a gate twice as fast; riders wreck it.";
+            if (def.Kind == BuildingKind.Barracks && def.Trains.Any(t => _sim.Content.TryGetUnit(t, out var u) && u.Batch > 1))
+                b.TooltipText = "Hatches your swarms: " + string.Join(", ", def.Trains.Select(t => _sim.Content.Unit(t)).Select(u =>
+                                    u.Batch > 1 ? $"{u.Batch} {u.Name.ToLowerInvariant()}s at a time" : $"a {u.Name.ToLowerInvariant()}")) +
+                                $", each batch for one cost, once you have housing for all of it. {def.Housing} of your hive nest in it. " +
+                                "Your units strike harder for a few seconds after they burst up out of a tunnel.";
             if (def.IsTower)
                 b.TooltipText = $"Stands alone, or on your wall: put it over a finished wall and it snaps onto it, and the wall " +
                                 $"stands until the tower is done. It sees {def.Sight} columns around it. Archers and other ranged " +
@@ -1235,8 +1242,13 @@ public partial class Hud : CanvasLayer
         {
             var (button, unit) = _trainButtons[k];
             string? needs = Needs(unit.Requires, unit.Faction);
+            // A unit or building the faction has its own in place of (the Deepfolk's, in a captured barracks).
+            if (needs == null && (econ.Faction(player).Replaces(unit) || econ.Faction(player).Replaces(b!.Def)))
+                needs = $"not for the {econ.Faction(player).Name}";
             string key = k == 0 ? "  [U]" : "";
-            button.Text = needs != null ? $"{unit.Name}: {needs}" : $"Train {unit.Name.ToLowerInvariant()}{key}   {CostText(unit.Cost)}";
+            // A batch hatches several at once for the one cost (the Deepfolk's swarms).
+            string what = unit.Batch > 1 ? $"Hatch {unit.Batch} {unit.Name.ToLowerInvariant()}s" : $"Train {unit.Name.ToLowerInvariant()}";
+            button.Text = needs != null ? $"{unit.Name}: {needs}" : $"{what}{key}   {CostText(unit.Cost)}";
             button.Disabled = needs != null || !econ.CanAfford(player, unit.Cost) || b!.Queue.Count >= EconomySystem.MaxQueue;
         }
         _digButton.Visible = _control.OwnDiggers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Dig;

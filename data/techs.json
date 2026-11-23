@@ -55,6 +55,12 @@
   { "id": "orc_beast_pens", "icon": "paw", "name": "Beast pens", "faction": "orcs", "description": "Tougher mounts.",
     "cost": { "food": 80, "wood": 40 }, "researchTime": 40, "requires": [ "horse_breeding" ],
     "effects": [ { "type": "unit_hp", "role": "cavalry", "amount": 30 } ] },
+  { "id": "deep_chitin", "icon": "shield", "name": "Hardened chitin", "faction": "deepfolk", "description": "Thicker shells for the swarm.",
+    "cost": { "food": 60, "wood": 40 }, "researchTime": 40,
+    "effects": [ { "type": "unit_hp", "role": "line_infantry", "amount": 10 }, { "type": "unit_hp", "role": "ranged", "amount": 8 } ] },
+  { "id": "deep_warrens", "icon": "brood_chamber", "name": "Brood warrens", "faction": "deepfolk", "description": "Deeper nests under every brood chamber.",
+    "cost": { "food": 50, "wood": 50 }, "researchTime": 40, "requires": [ "farming" ],
+    "effects": [ { "type": "housing", "building": "brood_chamber", "amount": 6 } ] },
 
   // Each faction's final tech: it opens the faction's great work, which wins the match by Ascendancy once it has
   // stood finished in the deep caves long enough (see "Ascendancy" in docs/rules.md).
@@ -64,6 +70,9 @@
   { "id": "orc_beast_king", "icon": "crown", "name": "Beast-king's rite", "faction": "orcs",
     "description": "The old rite that crowns a beast-king on a throne raised in the deep caves.",
     "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "orc_beast_pens", "orc_war_drums", "smelting" ] },
+  { "id": "deep_queen", "icon": "crown", "name": "The Queen's brood", "faction": "deepfolk",
+    "description": "The hive raises a queen, to be walled in a great chamber deep under the earth.",
+    "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "deep_chitin", "deep_warrens", "smelting" ] },
 
   // Discovery techs: opened by exploring, not by other techs.
   { "id": "wardens_charts", "icon": "chart", "name": "Wardens' charts", "discovery": "ruin",

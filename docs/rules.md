@@ -989,6 +989,50 @@ large bare tree in the hills about halfway between the starts, and a monster gua
   holding the staff, its panel says "with the Dusk Staff", and the Dusk Bloom button (or the `,` key)
   uses it. The computer players leave the tree alone for now.
 
+## The Deepfolk
+
+The Deepfolk are the third faction, an insect hive (the design doc's "Deepfolk: the hive"): cheap insects hatched
+in batches, burrowers that tunnel under walls unseen, and swarms that burst up out of the ground all at once. They
+have no magic and their units are weak one on one; they win by surprise and numbers (`DeepfolkTests`).
+
+- **Their own units and buildings** (`"replaces"` in `data/factions.json`, `FactionDef.UnitReplacements`,
+  `BuildingReplacements`): the Deepfolk build a **brood chamber** instead of a barracks, and have skitterlings,
+  spitters and burrowers instead of spearmen, archers, riders, sappers and mages. They cannot build a barracks or
+  train what they replace (`EconomySystem.Unlocked`), and a barracks (or great barracks) they capture trains nothing
+  for them. They start with as many units as anyone, their own in place of those they replace
+  (`FactionDef.StartUnits`): 4 workers, 8 skitterlings, 8 spitters and 4 burrowers at the usual start. Workers,
+  the town hall, houses, walls, siege workshops, docks and the rest are everyone's.
+- **Hatching in batches** (`"batch"` in `data/units.json`, `UnitDef.Batch`): one training at a brood chamber hatches
+  a batch, all for one cost and one training time: 4 skitterlings for 80 food, 3 spitters for 60 food and 30 wood,
+  or one burrower. A batch waits until there is housing for all of it, then steps out side by side at the door. A
+  brood chamber (70 wood and 10 stone) houses 12 itself, so the first batches need no houses and the swarm can
+  outgrow a town of the same size.
+- **The units**: the **skitterling** (line infantry, 50 hit points, 6 damage every 0.9 seconds, speed 5) and the
+  **spitter** (ranged, 35 hit points, 5 damage at 8 blocks) are about half a spearman or archer each, a quarter
+  of the price: frail alone, deadly by the dozen. The **burrower** is
+  their sapper: it digs tunnels twice as fast as a sapper (`"work": 200`), and like any unit with natural ground
+  over its head it is unseen underground unless it is heard (see [Fog of war](#fog-of-war)), so a swarm can follow
+  it under a wall. None of them bleed.
+- **Bursting out** (`"burst"` in `data/units.json`, `UnitDef.Burst`, `CombatSystem.StepBurst`): every Deepfolk unit
+  that comes up out of the ground (it had natural ground over its head, in a tunnel or a cave, and now has not)
+  strikes 50% harder, at units and buildings alike, for 5 seconds (`CombatSystem.BurstSeconds`). Each is looked at
+  every 4 ticks; going back underground loses what is left of it. So the wave that pours out of a tunnel into a
+  town hits hardest in its first moments.
+
+- **Their buildings are mounds** (`"mound": true` in `data/buildings.json`, `BuildingDef.Mound`): the brood chamber
+  and the Queen's Chamber are heaps of **hive earth** (`BlockType.Hive`, soil packed hard with resin) like ant hills,
+  not walls and a roof: round at the foot, straight-sided for their wall height, then narrowing to a rounded top,
+  with a round tunnel mouth for a door and tunnel holes in their sides. Hollow like any building; hive earth is as
+  tough as planks and breaks into plain rubble. The town hall, houses and the other buildings everyone has look
+  the same for the Deepfolk as for anyone.
+
+- **Techs** (`data/techs.json`): Hardened chitin (+10 hit points for their line infantry, +8 for their ranged
+  units), Brood warrens (each brood chamber houses 6 more; needs farming), and their final tech, The Queen's brood,
+  which opens their great work, the **Queen's Chamber** (see [Ascendancy and great works](#ascendancy-and-great-works)).
+
+Computer players play the Deepfolk as they play any faction, going by what it can build and train (a brood
+chamber, skitterlings, spitters and burrowers), but do not yet use the hive's tricks: tunnelling a swarm under a wall.
+
 ## Dropped relics and the Dusk Staff
 
 Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the block where it fell
@@ -2009,7 +2053,7 @@ Started without command-line options (or with `--menu`), the game opens on the s
 (`game/scripts/StartScreen.cs`). Generated maps have two starts, player 0's in the west and player 1's in the east.
 Under **Play as** you pick your faction, and under **Against** the other side's: any faction for either, so the
 Orcs can play the Orcs (a mirror match). Your faction puts you at its usual start, the Settlers in the west and
-the Orcs in the east (picking the faction the other side has gives it yours; pick it again under Against for a
+the Orcs in the east (the Deepfolk keep the start you had) (picking the faction the other side has gives it yours; pick it again under Against for a
 mirror match). Every faction rule follows the faction, not the player: whoever plays the Settlers earns experience
 and evolves, whoever plays the Orcs tames monsters, and a computer player plays its faction's way. The choice is
 made before the match (`Simulation.SetFaction`, before the first tick; without one, players have the factions in

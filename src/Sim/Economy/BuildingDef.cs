@@ -115,6 +115,13 @@ public sealed class BuildingDef
     /// <summary>A stone chimney at the back corner, rising above the roof.</summary>
     public bool Chimney { get; init; }
     /// <summary>
+    /// A mound, like an ant hill, instead of a house with walls and a roof: the Deepfolk's buildings. Round at
+    /// the foot (the footprint's corners left open), its sides rise straight for <see cref="WallHeight"/> and then
+    /// narrow, like a heap of earth, to a rounded top, all of <see cref="Wall"/> (the roof material is not used). Hollow like a house,
+    /// with its door in the middle of the front.
+    /// </summary>
+    public bool Mound { get; init; }
+    /// <summary>
     /// How far (columns beyond its footprint) its lantern or fire lights the ground from dusk to dawn, so
     /// that what stands there is seen from the daytime distance and hit as by day (see <see cref="Conditions"/>);
     /// 0 for none.
@@ -369,6 +376,8 @@ public sealed class BuildingDef
             return list.ToArray();
         }
 
+        if (Mound) return MoundTemplate();
+
         // Hollow: a floor, walls round the edge and a roof over a room inside, so it comes apart like a
         // building, not a solid lump. The floor inside is BlockType.Floor, which nobody stands on, so units
         // never end up shut in the room (or step into it through a gap knocked in a wall).
@@ -408,6 +417,51 @@ public sealed class BuildingDef
             for (int y = WallHeight + 1; y < top + 1; y++)
                 list.Add(new TemplateBlock(SizeX - 1, y, 0, BlockType.StoneBrick));
         // Build order: bottom up, then back to front, then left to right.
+        list.Sort((a, b) => a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.Z != b.Z ? a.Z.CompareTo(b.Z) : a.X.CompareTo(b.X));
+        return list.ToArray();
+    }
+
+    /// <summary>
+    /// Whether column (x, z) of the footprint is inside a mound's shape at level y (see <see cref="Mound"/>): an
+    /// ellipse a little bigger than will fit in the footprint, so its corners are cut, as wide up to the top of the
+    /// walls and then narrowing like a dome, to nothing at <paramref name="peak"/> levels over the walls.
+    /// </summary>
+    private bool InMound(int x, int z, int y, int peak)
+    {
+        // In half blocks from the middle; inside if (cx/SizeX)^2 + (cz/SizeZ)^2 <= 13/10 * (1 - up/peak)^2 * (1 + up/peak):
+        // a cone with a little bulge, like a heap of earth.
+        long cx = 2 * x + 1 - SizeX, cz = 2 * z + 1 - SizeZ, sx = SizeX, sz = SizeZ;
+        long up = Math.Max(0, y - (WallHeight - 1)), p = peak;
+        return (cx * cx * sz * sz + cz * cz * sx * sx) * 10 * p * p * p <= 13 * sx * sx * sz * sz * (p - up) * (p - up) * (p + up);
+    }
+
+    private TemplateBlock[] MoundTemplate()
+    {
+        var list = new List<TemplateBlock>();
+        int doorX = SizeX / 2, peak = Math.Max(SizeX, SizeZ) / 2 + 2;
+        int solid = 0;
+        for (int y = 0; y < WallHeight + peak; y++)
+        for (int z = 0; z < SizeZ; z++)
+        for (int x = 0; x < SizeX; x++)
+        {
+            if (!InMound(x, z, y, peak)) continue;
+            var block = y == 0 && Footing != BlockType.Air ? Footing : Wall;
+            bool door = z == SizeZ - 1 && x == doorX && y < 2;
+            if (door) block = BlockType.Door;
+            solid += BlockInfo.Toughness(block);
+            // The shell: blocks with open air (outside the mound) beside them or over them. The rest is the room.
+            bool shell = door || !InMound(x, z, y + 1, peak);
+            for (int d = 0; d < 4 && !shell; d++)
+            {
+                int nx = x + (d == 0 ? 1 : d == 1 ? -1 : 0), nz = z + (d == 2 ? 1 : d == 3 ? -1 : 0);
+                shell = nx < 0 || nz < 0 || nx >= SizeX || nz >= SizeZ || !InMound(nx, nz, y, peak);
+            }
+            if (!shell && y > 0) continue;
+            list.Add(new TemplateBlock(x, y, z, shell ? block : BlockType.Floor));
+        }
+        int hollow = 0;
+        foreach (var t in list) hollow += BlockInfo.Toughness(t.Block);
+        if (hollow > 0 && solid > hollow) (_solid, _hollow) = (solid, hollow);
         list.Sort((a, b) => a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.Z != b.Z ? a.Z.CompareTo(b.Z) : a.X.CompareTo(b.X));
         return list.ToArray();
     }

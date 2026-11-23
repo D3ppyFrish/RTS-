@@ -74,7 +74,7 @@ public class ResearchTests
         Hall(sim, 1, 40, 40);
         Assert.Equal("settlers", sim.Economy.Faction(0).Id);
         Assert.Equal("orcs", sim.Economy.Faction(1).Id);
-        Assert.Equal("settlers", sim.Economy.Faction(2).Id); // until a start screen lets players choose
+        Assert.Equal("deepfolk", sim.Economy.Faction(2).Id); // in data order, without a choice
         var econ = sim.Economy;
         Assert.Equal(ResearchResult.NeedsTechs, econ.CanResearch(0, Tech(sim, "crop_rotation")));
         Assert.Equal(ResearchResult.OtherFaction, econ.CanResearch(0, Tech(sim, "orc_war_drums")));

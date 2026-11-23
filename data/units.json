@@ -3,6 +3,10 @@
 // requires names a tech the player must have researched first; faction (optional) limits the unit to
 // one faction. Roles: worker, line_infantry, heavy_infantry, ranged, cavalry, sapper, caster, siege, monster,
 // trader (see roles.json for what each is strong and weak against). description (optional) is shown in the game.
+// batch (optional, default 1): how many hatch from one training, all for its cost and trainTime, once there is housing
+// for all of them (the Deepfolk's swarms). burst (optional, percent): for a few seconds after the unit comes up out
+// of the ground (from under natural ground over its head; see Fog of war in docs/rules.md) its blows deal that many
+// percent more damage (see CombatSystem.BurstSeconds).
 // Combat: damage is the hit points one hit takes off (a unit without damage cannot attack), attackTime
 // the seconds between hits, range how far it hits (in blocks, from the middle of the unit; more than 2
 // makes it a ranged unit), sight how far it spots enemies to fight on its own, and splash (optional)
@@ -412,5 +416,23 @@
     "description": "A herd of red deer grazing the open grassland. They never fight back. Hunters from a hunter's lodge shoot them for food and leave the last few to breed, so a herd grows back; one killed off to the last is gone for good.",
     "speed": 6, "hp": 30, "model": "deer", "sight": 10, "body": "beast",
     "game": { "food": 25 },
-    "lair": { "pack": 4, "guard": 1, "leash": 20, "biome": "grassland", "count": 3, "roam": 28, "grow": 60, "growTo": 6 } }
+    "lair": { "pack": 4, "guard": 1, "leash": 20, "biome": "grassland", "count": 3, "roam": 28, "grow": 60, "growTo": 6 } },
+
+  // The Deepfolk's hive (see "replaces" in factions.json): cheap insects hatched in batches at a brood chamber, weak one
+  // on one, that win by numbers and by coming up out of the ground all at once (burst).
+  { "id": "skitterling", "name": "Skitterling", "faction": "deepfolk", "role": "line_infantry", "body": "beast", "bleeds": false,
+    "description": "A dog-sized hive insect with sickle claws. Hatches four at a time for little food; weak alone, deadly in a swarm, and it strikes harder for a few seconds after it bursts up out of a tunnel.",
+    "speed": 5, "hp": 50, "model": "skitterling", "damage": 6, "attackTime": 0.9, "range": 1.25, "sight": 7,
+    "attack": "slash", "armor": { "body": 1 }, "batch": 4, "burst": 50,
+    "cost": { "food": 80 }, "trainTime": 20, "trainedAt": "brood_chamber" },
+  { "id": "spitter", "name": "Spitter", "faction": "deepfolk", "role": "ranged", "body": "beast", "bleeds": false,
+    "description": "A bloated hive insect that spits gobs of acid. Hatches three at a time; it shoots shorter than an archer and dies quickly, and it strikes harder for a few seconds after it bursts up out of a tunnel.",
+    "speed": 4, "hp": 35, "model": "spitter", "damage": 5, "attackTime": 1.2, "range": 8, "sight": 9,
+    "attack": "pierce", "batch": 3, "burst": 50,
+    "cost": { "food": 60, "wood": 30 }, "trainTime": 20, "trainedAt": "brood_chamber" },
+  { "id": "burrower", "name": "Burrower", "faction": "deepfolk", "role": "sapper", "body": "beast", "bleeds": false,
+    "description": "A broad digging insect with shovel claws. Tunnels twice as fast as a sapper, unseen underground unless a listening post hears it, so a swarm can follow it under a wall and burst out on the far side.",
+    "speed": 4, "hp": 50, "model": "burrower", "damage": 5, "attackTime": 1.5, "range": 1.25, "sight": 7,
+    "attack": "crush", "armor": { "head": 1, "body": 1 }, "work": 200, "burst": 50,
+    "cost": { "food": 40, "wood": 10 }, "trainTime": 15, "trainedAt": "brood_chamber" }
 ]

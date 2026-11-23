@@ -36,8 +36,10 @@ public static class StructurePalette
     public const byte RampartA = 72, RampartB = 73, RampartC = 74, RampartMortar = 75;
     /// <summary>A gloom pine's needles (the shadowed wilds): blue-blacks, their shadow, and the pale specks that glimmer.</summary>
     public const byte GloomA = 76, GloomB = 77, GloomDark = 78, GloomGlow = 79;
+    // The Deepfolk's hive earth: packed soil in two shades, the dark of a tunnel mouth, and glints of resin.
+    public const byte HiveA = 80, HiveB = 81, HiveDark = 82, HiveResin = 83;
     /// <summary>One more than the highest colour.</summary>
-    public const byte Count = 80;
+    public const byte Count = 84;
 
     /// <summary>Leaf colours: drawn swaying in the wind.</summary>
     public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark || c is >= GloomA and <= GloomDark;
@@ -82,7 +84,7 @@ public static class StructureDetail
     public static bool IsStructure(BlockType t) =>
         t is BlockType.Planks or BlockType.Thatch or BlockType.RoofTile or BlockType.StoneBrick
             or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle
-            or BlockType.Floor or BlockType.Ladder;
+            or BlockType.Floor or BlockType.Ladder or BlockType.Hive;
 
     /// <summary>
     /// Blocks drawn as fine voxels: building blocks, and the rubble collapses leave, drawn as heaps of lumps.
@@ -280,6 +282,7 @@ public static class StructureDetail
             BlockType.Rampart => Rampart(x, y, z),
             BlockType.Trestle => Trestle(x, y, z),
             BlockType.Ladder => Rungs(x, y, z),
+            BlockType.Hive => HiveEarth(x, y, z),
             BlockType.Floor => Floorboards(x, y, z),
             BlockType.TreeRubble => Log(x, y, z),
             BlockType.DuskWood => DuskTrunk(x, y, z),
@@ -398,6 +401,8 @@ public static class StructureDetail
             int gx = _wx * Size + x, gz = _wz * Size + z;
             if (_face < 0) return StructurePalette.DoorA;
             int d = _face, depth = Depth(d, x, y, z);
+            var (ta, tb) = Tangents(d);
+            if (NeighbourOf(ta) == BlockType.Hive || NeighbourOf(tb) == BlockType.Hive) return HiveMouth(x, y, depth, Tangent(d, x, z));
             int gu = Tangent(d, gx, gz), u = gu & (Size - 1);
             bool bottom = _ny != BlockType.Door, top = _py != BlockType.Door;
             if (u == 0 || u == Size - 1) return StructurePalette.Timber;
@@ -410,6 +415,46 @@ public static class StructureDetail
                 return StructurePalette.Empty;
             }
             return ((gu >> 1) & 1) == 0 ? StructurePalette.DoorA : StructurePalette.DoorB;
+        }
+
+        // --- Hive earth (the Deepfolk) --------------------------------------------------------------------
+
+        /// <summary>How high hive earth stands (in voxels) at each depth in from an open side, where its top is open too.</summary>
+        private static readonly int[] DomeHeight = { 3, 5, 6, 7, 7, 8, 8, 8 };
+
+        /// <summary>
+        /// Hive earth (<see cref="BlockType.Hive"/>): packed soil laid in lumpy bands, with specks of resin. Where its
+        /// top and a side are both open (the shoulder of a mound) it is rounded off, so the mound's steps curve; its
+        /// open sides are lumpy, and here and there a tunnel mouth opens in one.
+        /// </summary>
+        private byte HiveEarth(int x, int y, int z)
+        {
+            int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
+            var (d, depth) = Nearest(x, y, z, false);
+            if (d >= 0 && Open(PY) && y >= DomeHeight[depth]) return StructurePalette.Empty;
+            if (d >= 0 && depth == 0 && Hash(gx >> 1, gy >> 1, gz >> 1) % 3 == 0) return StructurePalette.Empty;
+            if (d >= 0 && !Open(PY) && Hash(_wx, _wy, _wz) % 4 == 0)
+            {
+                int u = Tangent(d, x, z) - 4, v = y - 4;
+                int r = u * u + v * v;
+                if (r <= 5 && depth <= 2) return StructurePalette.Empty;
+                if (r <= 5 && depth == 3) return StructurePalette.HiveDark;
+                if (r <= 9 && depth == 0) return StructurePalette.HiveB;
+            }
+            if (Hash(gx, gy, gz) % 29 == 0) return StructurePalette.HiveResin;
+            // Clods of earth two or three voxels across, in two shades, not lined up in courses.
+            int clod = Hash((gx + (gy & 2)) / 3, gy / 3, (gz + (gy & 2)) / 3);
+            return clod % 3 == 0 ? StructurePalette.HiveB : StructurePalette.HiveA;
+        }
+
+        /// <summary>A door in hive earth: a round tunnel mouth into the mound, dark inside.</summary>
+        private byte HiveMouth(int x, int y, int depth, int u)
+        {
+            bool top = _py != BlockType.Door;
+            int cu = 2 * u - (Size - 1), cy = top ? 2 * y + 1 : 0; // an arch over the upper block, in half voxels
+            bool open = u >= 1 && u <= Size - 2 && (!top || 4 * cu * cu + cy * cy <= 14 * 14);
+            if (!open) return ((y + u) & 3) == 0 ? StructurePalette.HiveB : StructurePalette.HiveA;
+            return depth >= Size - 2 ? StructurePalette.HiveDark : StructurePalette.Empty;
         }
 
         private byte Gate(int x, int y, int z)

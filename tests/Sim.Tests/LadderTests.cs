@@ -107,7 +107,7 @@ public class LadderTests
         Assert.Single(sim.Economy.Ladders); // it stays up
 
         // A rung is a block of its own, the last there is, and not solid.
-        Assert.Equal(BlockType.Ladder, BlockInfo.Last);
+        Assert.True(BlockInfo.Last >= BlockType.Ladder, "saved maps may hold ladders");
         Assert.False(BlockInfo.IsSolid(BlockType.Ladder));
         // Nobody stands on a rung: the foot is the only level in its column, and it is no hazard to walk past.
         Assert.Equal(Foot, Walk.GroundLevel(sim.World, 39, Z));
