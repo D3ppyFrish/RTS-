@@ -267,6 +267,14 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   - **Lobbed shots** (`lobs`): its stones go up in a high arc, so it needs no clear line: it hits what stands behind a
     wall or a hill, where arrows cannot reach.
   - **A machine** (`machine`): it never breaks and runs however low its morale falls, and it does not bleed.
+  - **Craters** (`crater`, 2 blocks; `CombatSystem.Crater`, `CraterTests`): where a stone lands, on a unit, beside
+    it on a miss, or at the foot of the building it hits on the catapult's side, it blows a bowl in the open ground
+    reaching 2 blocks round: two blocks deep in the middle, one at the edge. The earth is thrown onto the rim as
+    rubble, a block to a column while it lasts, so a crater is a pit with a rough lip that units walk round or
+    through slowly, and whoever stood there drops into it. Only natural ground open to the sky is dug (grass, soil,
+    sand, mud, stone and rubble): a building's blocks, ground under water, a roof, a tree or bedrock are left
+    alone, and a stone landing underground or on a roof leaves no crater. Stones that keep landing in the same
+    place dig the crater deeper.
   Siege is weak against cavalry and heavy infantry (`data/roles.json`). Computer players from Easy up build them (see
   Computer players). All numbers are first guesses for playtesting.
 - **Battering rams** (`RamTests`; the design doc's siege role, "break walls", and the siege concept art's covered ram

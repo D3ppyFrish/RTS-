@@ -629,7 +629,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "ram", "gates", "cover", "seats");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "ram", "gates", "cover", "seats", "crater");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -662,6 +662,7 @@ public static class ContentLoader
                 Ram = o.Bool("ram"),
                 Gates = o.Int("gates", 10, 1000, 100),
                 Cover = o.Int("cover", 0, 100, 0),
+                Crater = o.Int("crater", 0, 4, 0),
                 Carry = o.Int("carry", 1, 100, 0),
                 Seats = o.Int("seats", 1, 50, 0),
                 WeakTo = o.RolePercents("weakTo", 1, 1000),
@@ -703,6 +704,8 @@ public static class ContentLoader
                 o.Error("\"minRange\" must be less than \"range\"");
             if ((def.MinRange > Fix64.Zero || def.Lobs) && !def.IsRanged)
                 o.Error("only a ranged unit can have \"minRange\" or \"lobs\"");
+            if (def.Crater > 0 && !(def.Blast && def.IsRanged))
+                o.Error("only a ranged unit with \"blast\" can leave a \"crater\"");
             if (def.Ram && (def.IsRanged || !def.CanAttack))
                 o.Error("a ram (\"ram\") strikes close up: it needs \"damage\" and no \"range\" over 2");
             if (def.Heal == 0 && (o.Has("healTime") || o.Has("healRange")))

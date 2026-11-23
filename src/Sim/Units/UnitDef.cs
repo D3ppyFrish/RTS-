@@ -93,6 +93,11 @@ public sealed class UnitDef
     /// </summary>
     public int Cover { get; init; }
     /// <summary>
+    /// How far (blocks) the crater its shots blow in the ground reaches round where they land (<c>"crater"</c> in the
+    /// data; 0 for none): the ground there is thrown out onto the rim (see <see cref="CombatSystem.Crater"/>).
+    /// </summary>
+    public int Crater { get; init; }
+    /// <summary>
     /// Extra damage it takes from attacks by each role, in percent (indexed by <see cref="UnitRole"/>), or
     /// null if it has no weakness beyond the role table's.
     /// </summary>

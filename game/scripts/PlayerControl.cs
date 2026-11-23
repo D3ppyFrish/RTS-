@@ -2375,6 +2375,7 @@ public partial class PlayerControl : Node
                $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"catapults={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].Id == "catapult")} " +
                $"rams={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].Id == "battering_ram")} " +
+               $"craters={_sim.Combat.Craters} " +
                $"siege_workshops={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Active && b.Def.Id == "siege_workshop")} " +
                $"ships={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].IsBoat)} " +
                $"aboard={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Aboard[i] != 0)} " +
