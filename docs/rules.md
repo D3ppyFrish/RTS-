@@ -1607,6 +1607,15 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   columns, else the nearest wall, else the target itself; it never backs off, and the same screen of up to 4 soldiers
   goes for enemy soldiers within 9 columns of a ram (riders and heavy infantry make short work of one). The classic
   level never builds them. All numbers are first guesses.
+- **Siege ladders** (Easy, Normal and Hard; `AI/AiPlayer.Ladders.cs`, tests in `AiLadderTests`): a wave within 28
+  columns of its target that knows of an enemy wall or tower within 32 columns has up to 2 of its sappers raise a
+  ladder against it, at the spot nearest the wave; with no wall known, a wave that has got no nearer its target for
+  15 seconds looks along the straight way there for a cliff 2 to 10 levels high and raises one against that. It
+  skips a face with a tunnel or gap dug in under it (a step there goes in, not up). Once the ladder is up, the sappers
+  and up to 6 of the wave's soldiers nearest its foot climb it: the first soldier onto the top stays there to hold it,
+  so an enemy up there cannot throw it down unopposed, and the rest go on at the target. Those not up within 45
+  seconds go back to the wave. A ladder thrown down or lost is raised again after 20 seconds, up to 3 a wave. The
+  classic level never raises them. All numbers are first guesses.
 - **Carts** (Easy, Normal and Hard; `AI/AiPlayer.Carts.cs`, tests in `AiCartTests`): once it has a finished sawmill
   and at least 2 storage buildings besides its town hall (storehouses by its work, a second town hall), it trains
   carts at the town hall, one at a time while it has room and the goods, up to 2 (the two a building takes on supply

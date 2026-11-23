@@ -887,7 +887,11 @@ public sealed partial class AiPlayer
         var (tx, tz) = (foe.AX, foe.AZ);
         int far = (int)IntMath.ISqrt(Dist2(cx, cz, tx, tz));
         // Its catapults (smart levels) shoot from the last stretch on, with soldiers screening them.
-        if (Smart && far <= SiegeReach) Bombard(sim, foe, issue);
+        if (Smart && far <= SiegeReach)
+        {
+            Bombard(sim, foe, issue);
+            Escalade(sim, foe, cx, cz, far, issue);
+        }
         if (far > SiegeRadius && !MostAt(sim, tx, tz))
         {
             // On the way: units that have stopped (they fought something, or gave up) set out again, every
@@ -913,7 +917,7 @@ public sealed partial class AiPlayer
                 _waveCheck = sim.Tick;
             }
             else if (sim.Tick % (5 * ArmyTicks) < ArmyTicks) again = Unordered(sim, _wave, tx, tz);
-            again?.RemoveAll(id => _engines.Contains(id) || _shield.Contains(id));
+            again?.RemoveAll(id => _engines.Contains(id) || _shield.Contains(id) || _ladderCrew.Contains(id));
             if (again is { Count: > 0 }) issue(new AttackMoveCommand(Player, again.ToArray(), tx, tz));
             return;
         }
@@ -925,6 +929,7 @@ public sealed partial class AiPlayer
         {
             // Gone, though it has not seen that yet: a closer look.
             var look = Unordered(sim, _wave, foe.X, foe.Z);
+            look.RemoveAll(_ladderCrew.Contains);
             if (look.Count > 0) issue(new AttackMoveCommand(Player, look.ToArray(), foe.X, foe.Z));
             return;
         }
@@ -936,7 +941,7 @@ public sealed partial class AiPlayer
         foreach (int id in _wave)
         {
             int i = u.IndexOf(id);
-            if (u.Rout[i] > 0 || _engines.Contains(id) || _shield.Contains(id)) continue;
+            if (u.Rout[i] > 0 || _engines.Contains(id) || _shield.Contains(id) || _ladderCrew.Contains(id)) continue;
             bool onBuilding = u.Combat[i] == CombatOrder.Attack && u.TargetBuilding[i] == target.Id;
             // Sappers (smart levels) go for the building whatever else is going on: they deal it full damage.
             if (Smart && sim.Content.Units[u.Def[i]].Role == UnitRole.Sapper)
@@ -981,6 +986,7 @@ public sealed partial class AiPlayer
         _waveBuilding = _waveLair = _waveSize = 0;
         _waveBest = int.MaxValue;
         _siegeDefenders = int.MaxValue;
+        ResetLadders();
     }
 
     /// <summary>Keeps each barracks training: a unit picked by <see cref="RoleWeight"/> from what it can train, when affordable.</summary>
