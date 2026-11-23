@@ -80,6 +80,7 @@ public partial class Hud : CanvasLayer
     private Button _ladderButton = null!;
     private Button _damButton = null!;
     private Button _sluiceButton = null!;
+    private Button _unloadButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
@@ -730,6 +731,14 @@ public partial class Hud : CanvasLayer
         _sluiceButton.Pressed += () => _control.ToggleSluice();
         column.AddChild(_sluiceButton);
 
+        _unloadButton = MakeToolButton("Put ashore");
+        _unloadButton.Name = "ship_unload";
+        _unloadButton.Icon = UiIcons.Get("ship");
+        _unloadButton.ToggleMode = false;
+        _unloadButton.Visible = false;
+        _unloadButton.Pressed += () => _control.Unload();
+        column.AddChild(_unloadButton);
+
         _bloomButton = MakeToolButton("Dusk Bloom [,]");
         _bloomButton.Name = "dusk_bloom";
         _bloomButton.Icon = UiIcons.Get("dusk_bloom");
@@ -1239,6 +1248,7 @@ public partial class Hud : CanvasLayer
         RefreshDen();
         RefreshRuin();
         RefreshSluice();
+        RefreshShips();
         RefreshBloom();
         RefreshEarthWall();
         RefreshIceBridge();
@@ -1772,6 +1782,19 @@ public partial class Hud : CanvasLayer
               "Water that has already poured through stays where it is."
             : "The sluice's boards under the top one come out, and the water pours through into any lower ground on the far side: " +
               "a dug channel, a pit or the enemy's tunnels. The top board stays, so units still walk across.";
+    }
+
+    private void RefreshShips()
+    {
+        var (ships, aboard, seats) = _control.SelectedShips();
+        _unloadButton.Visible = ships > 0;
+        if (ships == 0) return;
+        _unloadButton.Disabled = aboard == 0;
+        _unloadButton.Text = $"Put ashore ({aboard}/{seats} aboard)";
+        _unloadButton.TooltipText = aboard == 0
+            ? "Nobody is aboard. Select units and right-click your ship: they walk aboard from the shore beside it."
+            : "Your selected ships sail to the nearest land within " + BoatSystem.UnloadReach + " columns and put everyone aboard " +
+              "ashore. Right-click land with a ship selected to put them ashore there instead.";
     }
 
     private void RefreshRuin()

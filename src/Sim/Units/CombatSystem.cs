@@ -191,7 +191,7 @@ public sealed partial class CombatSystem
         {
             if (u.Owner[i] != player || u.Subdued[i]) continue;
             var role = _sim.Content.Units[u.Def[i]].Role;
-            if (role is UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler) continue;
+            if (role is UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler or UnitRole.Boat) continue;
             ids.Add(u.Id[i]);
         }
         ids.Sort();

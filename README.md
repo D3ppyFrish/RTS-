@@ -26,6 +26,7 @@ scripts/ui-combat-screenshots.sh    # scripted battle: attack-move, tunnel under
 scripts/ui-automation-screenshots.sh  # scripted automation: automatic workers, repeat, a house put up on its own
 scripts/ui-supply-screenshots.sh      # scripted supply rules: a storehouse told to keep stone and wood is stocked from the town hall
 scripts/ui-cart-screenshots.sh        # scripted carts: a cart trained at the town hall stocks a storehouse with stone, 20 a load
+scripts/ui-ship-screenshots.sh        # scripted ships: a dock by the river builds a ship, spearmen board it, it sails across and puts them ashore
 scripts/ui-governor-screenshots.sh    # scripted town governor: a Defence governor runs the town, putting up a barracks and four watchtowers
 scripts/ui-evolution-screenshots.sh   # scripted evolution: evolve buttons, auto-evolve, a knight's panel
 scripts/ui-monsters-screenshots.sh    # scripted wolf lairs: Orcs beat a pack, ride one wolf and recruit one; Settlers get the reward

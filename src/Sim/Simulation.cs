@@ -56,6 +56,8 @@ public sealed class Simulation
     public DroppedItemSystem Items { get; }
     /// <summary>Terrain magic: earth walls (see <see cref="SpellSystem"/>).</summary>
     public SpellSystem Spells { get; }
+    /// <summary>Boats: sailing on water, units boarding them and being put ashore (see <see cref="BoatSystem"/>).</summary>
+    public BoatSystem Boats { get; }
     /// <summary>City-states' towns: their totems and holders, guards, tribute, caravan trade and mercenaries.</summary>
     public CityStateSystem Cities { get; }
     /// <summary>Short truces between rival players: offers, peace, warnings before it ends.</summary>
@@ -115,6 +117,7 @@ public sealed class Simulation
         DarkPower = new AwakeningSystem(this);
         Items = new DroppedItemSystem(this);
         Spells = new SpellSystem(this);
+        Boats = new BoatSystem(this);
         Cities = new CityStateSystem(this);
         Match = new MatchSystem(this);
         Truces = new TruceSystem(this);
@@ -235,7 +238,7 @@ public sealed class Simulation
     public int SpawnUnit(int owner, string unitId, int x, int z, int y = -1)
     {
         var def = Content.Unit(unitId);
-        if (y < 0) y = Walk.GroundLevel(World, x, z);
+        if (y < 0) y = def.IsBoat ? Boats.FloatLevel(x, z) : Walk.GroundLevel(World, x, z);
         if (y < 0) return -1;
         return Units.Spawn(owner, def.Index, Fix64.FromInt(x) + Fix64.Half, y, Fix64.FromInt(z) + Fix64.Half, Economy.MaxHp(owner, def));
     }
@@ -376,6 +379,7 @@ public sealed class Simulation
         Physics.Step();
         Hazards.Step();
         DarkPower.Step();
+        Boats.Step();
         Combat.Step();
         Blood.Step();
         Evolution.Step();
@@ -513,6 +517,8 @@ public sealed class Simulation
             case TradeDealCommand td: Deals.Apply(td); break;
             case EndTradeDealCommand ed: Deals.Apply(ed); break;
             case MarketCommand mk: Economy.Apply(mk); break;
+            case BoardCommand bo: Boats.Apply(bo); break;
+            case UnloadCommand ul: Boats.Apply(ul); break;
         }
         if (command is UnitsCommand uc) Automation.Note(uc);
     }
@@ -523,6 +529,11 @@ public sealed class Simulation
     /// <summary>Starts unit i walking alone to level y of column (x, z). Jobs move their units with this.</summary>
     internal void SendUnit(int i, int x, int z, int y)
     {
+        if (Content.Units[Units.Def[i]].IsBoat)
+        {
+            Boats.Sail(i, x, z);
+            return;
+        }
         var field = Paths.Request(x, z, y, Units.Owner[i]);
         Units.Order[i] = UnitOrder.Move;
         Units.OrderX[i] = x;
@@ -544,6 +555,7 @@ public sealed class Simulation
     {
         if (x < 0 || z < 0 || x >= World.SizeX || z >= World.SizeZ) return;
         var indexes = OwnedUnits(m);
+        SailBoats(indexes, x, z);
         if (indexes.Count == 0) return;
         // Aim for the nearest spot a unit can stand on (a click on water or a wall snaps to the shore or its foot).
         var (gx, gz, gy) = StandingGoal(x, z, y);
@@ -577,6 +589,21 @@ public sealed class Simulation
         }
     }
 
+    /// <summary>
+    /// The boats among a move order's units sail to column (x, z) (or, on land, put whoever is aboard ashore by it; see
+    /// <see cref="BoatSystem.Sail"/>), and are taken out of the list: the rest walk.
+    /// </summary>
+    private void SailBoats(List<int> indexes, int x, int z)
+    {
+        for (int k = indexes.Count - 1; k >= 0; k--)
+        {
+            int i = indexes[k];
+            if (!Content.Units[Units.Def[i]].IsBoat) continue;
+            Boats.Sail(i, x, z);
+            indexes.RemoveAt(k);
+        }
+    }
+
     /// <summary>How close (blocks) a unit on a formation move comes to its place before it stops.</summary>
     public static readonly Fix64 FormationArrive = Fix64.FromRatio(1, 4);
 
@@ -590,6 +617,7 @@ public sealed class Simulation
         int last = World.SizeX - 1, lastZ = World.SizeZ - 1;
         if (f.X1 < 0 || f.Z1 < 0 || f.X1 > last || f.Z1 > lastZ || f.X2 < 0 || f.Z2 < 0 || f.X2 > last || f.Z2 > lastZ) return;
         var indexes = OwnedUnits(f);
+        SailBoats(indexes, (f.X1 + f.X2) / 2, (f.Z1 + f.Z2) / 2);
         if (indexes.Count == 0) return;
         var members = new Formations.Member[indexes.Count];
         Fix64 cap = Fix64.Zero;
@@ -695,7 +723,8 @@ public sealed class Simulation
     /// Indexes of the command's units that exist and belong to the commanding player, without duplicates, in
     /// the command's order. Routing units are left out: they do not take orders until they rally. So are
     /// beaten monsters, until the player has them ridden or recruited (see <see cref="MonsterSystem"/>), and a
-    /// city-state town's guards and tribute caravans, which go about their own business (see <see cref="CityStateSystem"/>).
+    /// city-state town's guards and tribute caravans, which go about their own business (see <see cref="CityStateSystem"/>),
+    /// and units aboard a boat, until it puts them ashore (see <see cref="BoatSystem"/>).
     /// </summary>
     /// <summary>Unit i's most hit points: its type's for its owner, and the Dusk Staff's and its relic's if it bears them.</summary>
     public int MaxHpOf(int i) =>
@@ -712,7 +741,7 @@ public sealed class Simulation
         foreach (int id in c.Units)
         {
             int i = Units.IndexOf(id);
-            if (i >= 0 && Units.Owner[i] == c.PlayerId && Units.Rout[i] == 0 && !Units.Subdued[i] && Units.Town[i] == 0 && seen.Add(id)) result.Add(i);
+            if (i >= 0 && Units.Owner[i] == c.PlayerId && Units.Rout[i] == 0 && !Units.Subdued[i] && Units.Town[i] == 0 && Units.Aboard[i] == 0 && seen.Add(id)) result.Add(i);
         }
         return result;
     }

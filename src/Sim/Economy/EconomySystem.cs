@@ -760,7 +760,9 @@ public sealed partial class EconomySystem
         if (_population[owner] >= Housing(owner)) return;
         var def = _sim.Content.Units[b.Queue[0]];
         if (b.TrainTicks < def.TrainTicks) b.TrainTicks = Math.Min(b.TrainTicks + Steps(b), def.TrainTicks);
-        if (b.TrainTicks < def.TrainTicks || !AccessSpot(b, out int x, out int z, out int y)) return;
+        if (b.TrainTicks < def.TrainTicks) return;
+        int x, z, y;
+        if (def.IsBoat ? !_sim.Boats.Launch(b, out x, out z, out y) : !AccessSpot(b, out x, out z, out y)) return;
         int id = U.Spawn(owner, def.Index, Fix64.FromInt(x) + Fix64.Half, y, Fix64.FromInt(z) + Fix64.Half, MaxHp(owner, def));
         if (def.Role == UnitRole.Worker) U.Auto[U.IndexOf(id)] = Player(owner).AutoWorkers;
         else if (def.IsHauler) U.Auto[U.IndexOf(id)] = true; // a cart looks for supply work on its own

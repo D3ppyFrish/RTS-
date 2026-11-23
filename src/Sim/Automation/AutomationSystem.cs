@@ -173,7 +173,7 @@ public sealed partial class AutomationSystem
         var u = U;
         for (int i = 0; i < u.Count; i++)
         {
-            if (!u.Auto[i] || u.Held[i] || (tick + u.Id[i]) % Tps != 0 || !Idle(i)) continue;
+            if (!u.Auto[i] || u.Held[i] || u.Aboard[i] != 0 || (tick + u.Id[i]) % Tps != 0 || !Idle(i)) continue;
             int id = u.Id[i];
             CheckLastJob(id, tick);
             var job = FindJob(i, out var assignment);
@@ -756,7 +756,7 @@ public sealed partial class AutomationSystem
         SortedDictionary<long, List<int>>? groups = null;
         for (int i = 0; i < u.Count; i++)
         {
-            if (u.Stance[i] != UnitStance.Retreat || u.HitBy[i] == 0 || u.Rout[i] > 0 || !_sim.Combat.Hurt(i)) continue;
+            if (u.Stance[i] != UnitStance.Retreat || u.Aboard[i] != 0 || u.HitBy[i] == 0 || u.Rout[i] > 0 || !_sim.Combat.Hurt(i)) continue;
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
             var hall = NearestHall(u.Owner[i], x, z);
             if (hall == null || hall.ColumnDistance(x, z) <= CombatSystem.HomeRadius) continue;

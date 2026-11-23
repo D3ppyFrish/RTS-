@@ -38,7 +38,7 @@ public class ContentTests
     {
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs" }, db.Factions.Select(f => f.Id));
-        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "barracks", "great_barracks", "siege_workshop", "smelter", "foundry", "sawmill", "mason_yard", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "hunting_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "listening_post", "torch", "campfire", "wolf_lodge", "boar_pen", "crab_pots", "hall_of_legends", "beast_throne", "goblin_totem", "ogre_idol", "kobold_crystal", "troll_stone", "centaur_standard", "merfolk_conch", "bridge" }, db.Buildings.Select(b => b.Id));
+        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "barracks", "great_barracks", "siege_workshop", "dock", "smelter", "foundry", "sawmill", "mason_yard", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "hunting_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "listening_post", "torch", "campfire", "wolf_lodge", "boar_pen", "crab_pots", "hall_of_legends", "beast_throne", "goblin_totem", "ogre_idol", "kobold_crystal", "troll_stone", "centaur_standard", "merfolk_conch", "bridge" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "catapult", "battering_ram", "healer" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "master_builder", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
@@ -97,7 +97,7 @@ public class ContentTests
         foreach (var r in Enum.GetValues<UnitRole>())
         {
             // Every role that fights is strong against workers and caravans; those two are strong against nothing.
-            bool fights = r is not (UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler);
+            bool fights = r is not (UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler or UnitRole.Boat);
             Assert.Equal(fights, c.StrongAgainst(r, UnitRole.Worker));
             Assert.Equal(fights, c.StrongAgainst(r, UnitRole.Trader));
             Assert.Equal(fights, c.StrongAgainst(r, UnitRole.Hauler));
