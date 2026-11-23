@@ -82,7 +82,7 @@ public static class StructureDetail
     public static bool IsStructure(BlockType t) =>
         t is BlockType.Planks or BlockType.Thatch or BlockType.RoofTile or BlockType.StoneBrick
             or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle
-            or BlockType.Floor;
+            or BlockType.Floor or BlockType.Ladder;
 
     /// <summary>
     /// Blocks drawn as fine voxels: building blocks, and the rubble collapses leave, drawn as heaps of lumps.
@@ -279,6 +279,7 @@ public static class StructureDetail
             BlockType.StoneBrick => Stone(x, y, z),
             BlockType.Rampart => Rampart(x, y, z),
             BlockType.Trestle => Trestle(x, y, z),
+            BlockType.Ladder => Rungs(x, y, z),
             BlockType.Floor => Floorboards(x, y, z),
             BlockType.TreeRubble => Log(x, y, z),
             BlockType.DuskWood => DuskTrunk(x, y, z),
@@ -617,6 +618,21 @@ public static class StructureDetail
             int u = Tangent(d, gx, gz) & (Size - 1);
             bool lean = ((Tangent(d, _wx, _wz) + _wy) & 1) == 0;
             return (lean ? u : Size - 1 - u) == y ? StructurePalette.StakeA : StructurePalette.Empty;
+        }
+
+        /// <summary>
+        /// A siege ladder's rung (<see cref="BlockType.Ladder"/>): two rails standing a voxel off the face it leans on
+        /// (the first solid block beside it), with two rungs across between them in each block. The rest is empty: it is
+        /// seen, walked and shot through.
+        /// </summary>
+        private byte Rungs(int x, int y, int z)
+        {
+            int side = BlockInfo.IsSolid(_px) ? PX : BlockInfo.IsSolid(_nx) ? NX : BlockInfo.IsSolid(_pz) ? PZ : NZ;
+            int depth = side switch { PX => Size - 1 - x, NX => x, PZ => Size - 1 - z, _ => z };
+            int u = side is PX or NX ? z : x;
+            if (depth is < 1 or > 2) return StructurePalette.Empty;
+            if (u is 1 or 6) return StructurePalette.StakeB;
+            return u is > 1 and < 6 && depth == 1 && (y & 3) == 1 ? StructurePalette.PlankB : StructurePalette.Empty;
         }
 
         /// <summary>

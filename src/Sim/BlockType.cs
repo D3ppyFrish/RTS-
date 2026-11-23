@@ -151,14 +151,21 @@ public enum BlockType : byte
     Gloom,
     /// <summary>A gloom pine's crown (the shadowed wilds): blue-black needles with pale specks that glimmer.</summary>
     GloomLeaves,
+    /// <summary>
+    /// A rung of a siege ladder leaning on a wall or a cliff (see <see cref="Economy.Ladder"/>): two rails and a rung
+    /// against the face. Not solid: units stand in it, see and shoot through it, and nobody stands on it; a unit at
+    /// its foot climbs it to the top of what it leans on, and one up there climbs down it (see <see cref="Units.Walk"/>).
+    /// </summary>
+    Ladder,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.GloomLeaves;
+    public const BlockType Last = BlockType.Ladder;
 
-    public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water;
+    /// <summary>Anything but air, water and a ladder's rungs (which units stand in and see through).</summary>
+    public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Ladder;
 
     /// <summary>Bedrock, water, ice, lava and the dusk tree cannot be dug.</summary>
     public static bool IsDiggable(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Bedrock && t != BlockType.Lava

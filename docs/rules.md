@@ -486,6 +486,28 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   defender's answer is to dig it away, or to knock the wall down under its top. Leaves in the way are pushed
   aside.
 
+- **Siege ladders** (`LadderCommand`, `EconomySystem.Ladders.cs`, `Ladder`, `BlockType.Ladder`): workers and sappers
+  raise a ladder against a wall, a tower or a cliff. It is placed by dragging from its foot onto the face: the foot is
+  the column the drag starts in, and it leans on the next column along whichever of x and z the drag goes further in
+  (`LadderFace`). The top (the level units stand at on the face) must be 2 to 10 levels over the ground at the foot
+  (`Walk.MaxLadder`), and the foot column must be open from the ground to two levels over the top: no building,
+  ground or trunk there, nor a city-state's town (`PlanLadder`); leaves in the way are pushed aside. The builders
+  stand at the foot or beside it and put in a rung at a time from the bottom, each 1 second of work (`LadderRungTicks`,
+  at the unit's work speed) and 2 wood (`WoodPerRung`) from the storage nearest it; with no wood left they stop.
+  A rung (`BlockType.Ladder`) is not solid: units stand in it at the foot, see and shoot through it, and nobody
+  stands on one. Once every rung is in, a unit at the foot steps straight on up it onto the top of the face, and one
+  up there steps straight off onto the top rung and down to the foot (`Walk.ClimbsLadder`, `Walk.DescendsLadder`;
+  never on a diagonal), so a ladder is a quick, cheap way onto a wall that does not break it, where a ramp is slow
+  and costs stone; from a wall, sent on, units climb down the far side (see Climbing down under Moving). It is
+  fragile:
+  - An enemy standing on the top beside it (level with its top, in a column next to its foot) with none of the
+    ladder's side up there throws it down after 2 seconds (`LadderPushTicks`; machines do not count either way), so
+    the first ones up must hold the top for the rest to follow. A ladder being raised is thrown down the same way.
+  - It falls when the top it leans on is gone (the wall knocked down under it, the cliff's edge dug), when the ground
+    under its foot is gone, or when a rung is (something fell into it).
+  - A ladder nobody is raising any more, not yet up, is taken down. A thrown-down ladder is gone: its wood is lost.
+  - Anyone can use one, the enemy too: defenders on the wall can climb down it.
+
 - **Dams** (`DamCommand`, `SluiceCommand`, `EconomySystem.Dams.cs`, `Dam`; the design doc's "Place: ... dams" and
   "Flood: breaching a dam or bank sends water into lower dug areas"): workers and sappers build a wall of rammed earth
   (`BlockType.Soil`) across water or a dug channel. It is drawn from bank to bank like a bridge: both ends must be
@@ -517,6 +539,14 @@ into the dry channel, and shutting it puts the boards back through the water; th
 in the gap; an enemy sapper digging into the dam lets the water through; a dam needs banks, water and room, and
 workers or sappers, a dam nobody builds is dropped and its sluice does not open before it is done; and the commands
 are logged and the same inputs give the same state.
+
+`LadderTests` checks siege ladders: workers and sappers raise a ladder up a cliff 5 levels high a rung at a time
+from the bottom, 2 wood a rung, and a spearman who could not climb the cliff climbs it onto the top and back down;
+a ladder against a wooden wall brings an enemy spearman onto the wall and down the far side; a defender on the top
+beside it throws it down after 2 seconds unless one of the attackers holds the top too; it falls when the top it
+leans on is dug away; a plan needs a face 2 to 10 levels up beside the foot and room over the foot, soldiers do not
+raise ladders, and one nobody raises any more (the wood ran out) is taken down; and the command is logged and the
+same inputs give the same state.
 
 `RampTests` checks ramps: workers heap a ramp up a cliff 5 levels high from the foot up, a column at a time and a
 stone a block, and a spearman who could not climb it walks up it; a ramp to a wooden wall brings an enemy spearman

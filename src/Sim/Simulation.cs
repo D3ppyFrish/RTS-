@@ -469,6 +469,7 @@ public sealed class Simulation
             case CleanCommand cl: Economy.Apply(cl); break;
             case DigAreaCommand da: Economy.Apply(da); break;
             case RampCommand rc: Economy.Apply(rc); break;
+            case LadderCommand lc: Economy.Apply(lc); break;
             case DamCommand dc: Economy.Apply(dc); break;
             case SluiceCommand sl: Economy.Apply(sl); break;
             case WorkCommand w: Economy.Apply(w); break;

@@ -39,6 +39,7 @@ scripts/ui-dig-screenshots.sh         # scripted dig tool: workers and sappers d
 scripts/ui-wall-screenshots.sh        # scripted walls: a gate placed, a wall drawn through it and built, upgraded twice, archers posted on it, a stone tower put onto it and a watchtower beside it
 scripts/ui-bridge-screenshots.sh      # scripted bridge: a deck drawn across a river and laid by the workers
 scripts/ui-ramp-screenshots.sh        # scripted ramp: a ramp drawn up a cliff, heaped by the workers and walked up
+scripts/ui-ladder-screenshots.sh      # scripted siege ladder: a ladder placed against a cliff, raised by the workers and climbed
 scripts/ui-dam-screenshots.sh         # scripted dam: a dam drawn across a channel, built, holding the water back, then its sluice opened
 scripts/determinism.sh              # 10-minute headless match, replayed twice, hashes compared
 scripts/ai-matches.sh               # Hard computer against Classic, five matches with fog; each must have a winner within 40 minutes

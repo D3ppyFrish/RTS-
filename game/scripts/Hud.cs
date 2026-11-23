@@ -77,6 +77,7 @@ public partial class Hud : CanvasLayer
     private Button _growForestButton = null!;
     private Button _iceBridgeButton = null!;
     private Button _rampButton = null!;
+    private Button _ladderButton = null!;
     private Button _damButton = null!;
     private Button _sluiceButton = null!;
     private Button _digButton = null!;
@@ -576,6 +577,16 @@ public partial class Hud : CanvasLayer
                                   "enemy can walk it too, and anyone can dig it away.";
         _rampButton.Pressed += () => _control.ToggleRamp();
         grid.AddChild(_rampButton);
+        _ladderButton = MakeToolButton("");
+        _ladderButton.Name = "build_ladder";
+        _ladderButton.Icon = UiIcons.Get("ladder");
+        _ladderButton.TooltipText = "Drag from the foot of a wall, a tower or a cliff to its face for the selected workers and " +
+                                    $"sappers to raise a siege ladder against it, 2 to {Walk.MaxLadder} levels up, a rung at a time. " +
+                                    "Units at its foot climb it onto the top, and from a wall they climb down the far side. Each rung " +
+                                    $"costs {EconomySystem.WoodPerRung} wood. It is quick and cheap, but an enemy on the top beside it " +
+                                    "throws it down unless your units hold the top, and anyone up there can climb down it.";
+        _ladderButton.Pressed += () => _control.ToggleLadder();
+        grid.AddChild(_ladderButton);
         _damButton = MakeToolButton("");
         _damButton.Name = "build_dam";
         _damButton.Icon = UiIcons.Get("dam");
@@ -1187,6 +1198,9 @@ public partial class Hud : CanvasLayer
         _rampButton.Text = $"Ramp  [Shift+X]\n{EconomySystem.StonePerRamp} stone a block";
         _rampButton.Disabled = econ.Stock(player, Good.Stone) < EconomySystem.StonePerRamp;
         _rampButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Ramp);
+        _ladderButton.Text = $"Ladder  [Shift+K]\n{EconomySystem.WoodPerRung} wood a rung";
+        _ladderButton.Disabled = econ.Stock(player, Good.Wood) < EconomySystem.WoodPerRung;
+        _ladderButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Ladder);
         _damButton.Text = $"Dam  [Shift+O]\n{EconomySystem.StonePerRamp} stone a block";
         _damButton.Disabled = econ.Stock(player, Good.Stone) < EconomySystem.StonePerRamp;
         _damButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Dam);
@@ -2020,6 +2034,17 @@ public partial class Hud : CanvasLayer
                        (_control.OwnDiggers().Count == 0 ? "   (select workers or sappers first)" : "") +
                        "\nShift: draw another   Right click or Esc to stop";
             }
+            case PlayerControl.ToolMode.Ladder:
+            {
+                int wood = _control.LadderRungs * EconomySystem.WoodPerRung;
+                return (!_control.WallStarted ? "Ladder: drag from the foot to the face of a wall, a tower or a cliff for the selected workers and sappers to raise a ladder against it"
+                           : _control.LadderTop < 0
+                               ? $"Ladder: it must lean on something 2 to {Walk.MaxLadder} levels higher beside its foot, with nothing over the foot"
+                               : $"Ladder: let go to raise {_control.LadderRungs} rungs up to level {_control.LadderTop} ({wood} wood" +
+                                 (wood > _sim.Economy.Stock(PlayerControl.LocalPlayer, Good.Wood) ? ", more than you have" : "") + ")") +
+                       (_control.OwnDiggers().Count == 0 ? "   (select workers or sappers first)" : "") +
+                       "\nShift: place another   Right click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Dam:
             {
                 int stone = _control.DamBlocks * EconomySystem.StonePerRamp;
@@ -2037,7 +2062,7 @@ public partial class Hud : CanvasLayer
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+O: dam   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Shift+L: grow forest";
         }
     }
@@ -2473,6 +2498,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Tunnel => "tunnelling",
         UnitJob.Ramp => u.Phase[i] == JobPhase.Working ? "heaping earth onto a ramp" : "going to the ramp",
         UnitJob.Dam => u.Phase[i] == JobPhase.Working ? "building a dam" : "going to the dam",
+        UnitJob.Ladder => u.Phase[i] == JobPhase.Working ? "raising a ladder" : "going to the ladder",
         UnitJob.Clean => u.Phase[i] == JobPhase.Working ? "scrubbing blood" : "cleaning blood",
         UnitJob.Post => u.Phase[i] == JobPhase.Working ? "climbing a wall" : "going to its post on a wall",
         UnitJob.Dig => u.Phase[i] switch

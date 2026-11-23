@@ -141,6 +141,12 @@ public static class UiIcons
             "........kkkk", "........ksSk", "........kssk", "......kkkSsk", "......kbkssk", "....kkbBksSk",
             "....kbbbkssk", "..kkbBbbkSsk", "..kbbbbBkssk", "kkbBbbbbksSk", "kbbbbBbbkssk", "kkkkkkkkkkkk",
         },
+        // Ladder: a wooden siege ladder raised against a stone wall, up to its top.
+        ["ladder"] = new[]
+        {
+            ".......kkkkk", "..kk.kkksSsk", "..ko.kokssSk", "..kooookSssk", "..kOOOOksSsk", "..ko.kokssSk",
+            "..kooookSssk", "..kOOOOksSsk", "..ko.kokssSk", "..kooookSssk", "..kOOOOksSsk", "kkkkkkkkkkkk",
+        },
         // Dam: an earth dam holding back deep water from dry ground, with a timber sluice in its middle.
         ["dam"] = new[]
         {

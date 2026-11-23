@@ -277,6 +277,18 @@ public sealed record RampCommand(int PlayerId, int[] Units, int X1, int Z1, int 
 }
 
 /// <summary>
+/// The workers and sappers among the units raise a siege ladder with its foot in column (X1, Z1), leaning on the
+/// column beside it toward (X2, Z2): a wall, a tower or a cliff 2 to <see cref="Units.Walk.MaxLadder"/> levels high
+/// (see <see cref="Economy.EconomySystem.PlanLadder"/>). Each rung costs wood as it goes in. Other units ignore it.
+/// </summary>
+public sealed record LadderCommand(int PlayerId, int[] Units, int X1, int Z1, int X2, int Z2) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(LadderCommand? other) =>
+        base.Equals(other) && X1 == other!.X1 && Z1 == other.Z1 && X2 == other.X2 && Z2 == other.Z2;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X1, Z1, X2, Z2);
+}
+
+/// <summary>
 /// The player's workers and sappers among <paramref name="Units"/> build a dam from bank column (X1, Z1) to bank
 /// column (X2, Z2), across water or a dug channel (see <see cref="Economy.Dam"/>, <see cref="Economy.EconomySystem.PlanDam"/>).
 /// </summary>
