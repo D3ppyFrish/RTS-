@@ -17,7 +17,7 @@ namespace Rts.Sim.Units;
 /// whoever is aboard can be put ashore, and puts them ashore there (<see cref="UnitJob.Land"/>). An
 /// <see cref="UnloadCommand"/> does that where the boat is.</item>
 /// <item><b>Boarding</b> (<see cref="BoardCommand"/>): each unit walks to the shore beside the boat and steps aboard
-/// once it is within <see cref="BoardReach"/> of it, while it has a seat free (<see cref="UnitDef.Seats"/>). Aboard
+/// once it is within <see cref="BoardReach"/> of it (or on the spot beside it it walked to), while it has a seat free (<see cref="UnitDef.Seats"/>). Aboard
 /// (<see cref="UnitStore.Aboard"/>) it rides where the boat goes, takes no orders and is not moved by anything else;
 /// it can still be shot, and archers aboard shoot back from the deck.</item>
 /// <item><b>Landing</b>: the boat puts them ashore on the standing ground within <see cref="LandReach"/> columns of
@@ -587,7 +587,10 @@ public sealed class BoatSystem
             GiveUp(i);
             return;
         }
-        if (Fix64.Max(Fix64.Abs(u.X[i] - u.X[b]), Fix64.Abs(u.Z[i] - u.Z[b])) <= BoardReach && Math.Abs(u.Y[i] - u.Y[b]) <= BoardRise)
+        int bx = u.X[b].FloorToInt(), bz = u.Z[b].FloorToInt(), at = bz * SizeX + bx;
+        // Aboard once beside it, or on the spot beside it it was sent to (a boat put in two columns off the shore).
+        bool there = u.JobY[i] == at && u.X[i].FloorToInt() == u.JobX[i] && u.Z[i].FloorToInt() == u.JobZ[i];
+        if ((there || Fix64.Max(Fix64.Abs(u.X[i] - u.X[b]), Fix64.Abs(u.Z[i] - u.Z[b])) <= BoardReach) && Math.Abs(u.Y[i] - u.Y[b]) <= BoardRise)
         {
             u.ClearJob(i);
             u.Order[i] = UnitOrder.Idle;
@@ -597,7 +600,6 @@ public sealed class BoatSystem
             _load[b]++;
             return;
         }
-        int bx = u.X[b].FloorToInt(), bz = u.Z[b].FloorToInt(), at = bz * SizeX + bx;
         bool idle = u.Order[i] == UnitOrder.Idle;
         // On its way: it looks again now and then in case the boat moved.
         if (!idle && (u.JobY[i] == at || (_sim.Tick + u.Id[i]) % BoardRecheck != 0)) return;

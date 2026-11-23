@@ -160,6 +160,7 @@ public sealed partial class AiPlayer
         SiteStep(sim, hall, home, HomeGuardPercent(sim), issue);
         GreatWorkStep(sim, hall, home, HomeGuardPercent(sim), issue);
         home.AddRange(engines);
+        Fleet(sim, hall, home, issue);
 
         // Defence: enemies it sees by any of its buildings are met by everyone at home, and by the wave too
         // when those at home are not enough.
@@ -216,7 +217,7 @@ public sealed partial class AiPlayer
                 }
                 Micro(sim, _wave, issue);
                 Reinforce(sim, home, issue);
-                if (Marching(sim) || Seeking(sim, hall, issue)) return;
+                if (Ferry(sim, issue) || Marching(sim) || Seeking(sim, hall, issue)) return;
             }
             else Doing = "lair";
             StepWave(sim, hall, issue);

@@ -604,6 +604,7 @@ public sealed partial class AiPlayer
         SiteStep(sim, hall, home, GuardPercent, issue);
         GreatWorkStep(sim, hall, home, GuardPercent, issue);
         home.AddRange(engines);
+        Fleet(sim, hall, home, issue);
 
         // Defence: as the classic player, with the fighting done well from Normal up.
         int threat = NearestEnemy(sim, hx, hz, DefendRadius, soldiersOnly: false);
@@ -641,7 +642,7 @@ public sealed partial class AiPlayer
                     return;
                 }
                 if (Skilled) Micro(sim, _wave, issue);
-                if (Marching(sim) || Seeking(sim, hall, issue)) return;
+                if (Ferry(sim, issue) || Marching(sim) || Seeking(sim, hall, issue)) return;
             }
             StepWave(sim, hall, issue);
             return;
@@ -1052,7 +1053,7 @@ public sealed partial class AiPlayer
         bool trained = false;
         foreach (var b in sim.Buildings.All)
         {
-            if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2) continue;
+            if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2 || Docks(sim, b.Def)) continue;
             long total = 0;
             foreach (string id in b.Def.Trains)
                 if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && (!anyAffordable || Affordable(sim, d.Cost)))
@@ -1096,11 +1097,12 @@ public sealed partial class AiPlayer
         var mine = new int[roles];
         var u = sim.Units;
         for (int i = 0; i < u.Count; i++)
-            if (u.Owner[i] == Player && u.Town[i] == 0) mine[(int)sim.Content.Units[u.Def[i]].Role]++;
+            if (u.Owner[i] == Player && u.Town[i] == 0 && !sim.Content.Units[u.Def[i]].IsBoat) mine[(int)sim.Content.Units[u.Def[i]].Role]++;
         foreach (var b in sim.Buildings.All)
         {
             if (b.Owner != Player || b.Def.Kind != BuildingKind.Barracks) continue;
-            foreach (int q in b.Queue) mine[(int)sim.Content.Units[q].Role]++;
+            foreach (int q in b.Queue)
+                if (!sim.Content.Units[q].IsBoat) mine[(int)sim.Content.Units[q].Role]++;
         }
         return (seen, mine);
     }

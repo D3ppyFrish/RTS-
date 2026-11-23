@@ -59,8 +59,8 @@ public sealed partial class AiPlayer
         return engines;
     }
 
-    /// <summary>A barracks (counted as one: not a siege workshop).</summary>
-    private static bool IsBarracks(Simulation sim, BuildingDef def) => def.Kind == BuildingKind.Barracks && !SiegeWorks(sim, def);
+    /// <summary>A barracks (counted as one: not a siege workshop or a dock).</summary>
+    private static bool IsBarracks(Simulation sim, BuildingDef def) => def.Kind == BuildingKind.Barracks && !SiegeWorks(sim, def) && !Docks(sim, def);
 
     private BuildingDef? SiegeWorksDef(Simulation sim)
     {
