@@ -1023,8 +1023,17 @@ have no magic and their units are weak one on one; they win by surprise and numb
   and the Queen's Chamber are heaps of **hive earth** (`BlockType.Hive`, soil packed hard with resin) like ant hills,
   not walls and a roof: round at the foot, straight-sided for their wall height, then narrowing to a rounded top,
   with a round tunnel mouth for a door and tunnel holes in their sides. Hollow like any building; hive earth is as
-  tough as planks and breaks into plain rubble. The town hall, houses and the other buildings everyone has look
-  the same for the Deepfolk as for anyone.
+  tough as planks and breaks into plain rubble.
+- **The whole hive looks natural** (`"look": "mound"` in `data/factions.json`, `FactionDef.Look`, `BuildingDef.Shaped`,
+  `Building.Look`/`Shape`): every building a Deepfolk player puts up takes their shape. The town hall, houses,
+  storehouses, workshops, docks and the rest everyone has are mounds of hive earth on the same footprint, as tall as
+  the house with its roof would be (a small one a level or two taller) and with the door in the same place; walls,
+  gates and towers are the same columns of hive earth (a gate keeps its leaves). Only the blocks change: each
+  building is exactly as hard to bring down (its blocks' toughness is scaled to the usual building's, within a few
+  hit points of rounding), houses as many, trains and stores the same. Fields, bridges, lights and totems look the
+  same for everyone. A building keeps the shape it was put up in when it is captured (a Deepfolk mound taken by the
+  Settlers stays a mound; a Settler house taken by the Deepfolk stays a house), and grows in that shape when it is
+  upgraded. Plans and building sites show the owner's shape.
 
 - **Techs** (`data/techs.json`): Hardened chitin (+10 hit points for their line infantry, +8 for their ranged
   units), Brood warrens (each brood chamber houses 6 more; needs farming), and their final tech, The Queen's brood,

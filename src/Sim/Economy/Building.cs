@@ -47,6 +47,16 @@ public sealed class Building
     public int Owner { get; internal set; }
     /// <summary>What it is. Changes only when an upgrade is finished (see <see cref="Upgrade"/>).</summary>
     public BuildingDef Def { get; internal set; }
+    /// <summary>
+    /// The shape it was put up in: its owner's faction's (see <see cref="Content.FactionDef.Look"/>) when it was placed.
+    /// It keeps it when it is captured, and grows in it when it is upgraded.
+    /// </summary>
+    public BuildingLook Look { get; }
+    /// <summary>
+    /// What its blocks are (<see cref="BuildingDef.Blocks"/>), with their toughness and its height: <see cref="Def"/> in
+    /// its <see cref="Look"/> (see <see cref="BuildingDef.Shaped"/>). Everything else about it is <see cref="Def"/>'s.
+    /// </summary>
+    public BuildingDef Shape => Def.Shaped(Look);
     /// <summary>The footprint's corner. Moves only when an upgrade that grows it is finished (see <see cref="CornerOf"/>).</summary>
     public int X { get; internal set; }
     public int Y { get; internal set; }
@@ -144,17 +154,18 @@ public sealed class Building
     }
 
     /// <summary>The toughness of the blocks placed so far.</summary>
-    public int Built => Def.ToughnessOf(Placed);
+    public int Built => Shape.ToughnessOf(Placed);
     /// <summary>What it can take before it collapses, from <see cref="MaxHealth"/> down to 0.</summary>
     public int Health => Math.Max(0, Built / 2 - Lost - Damage);
     /// <summary>Half the toughness of what is built: a building collapses when it has lost that much.</summary>
     public int MaxHealth => Built / 2;
 
-    internal Building(int id, int owner, BuildingDef def, int x, int y, int z)
+    internal Building(int id, int owner, BuildingDef def, int x, int y, int z, BuildingLook look)
     {
         Id = id;
         Owner = owner;
         Def = def;
+        Look = look;
         X = x;
         Y = y;
         Z = z;
@@ -178,7 +189,7 @@ public sealed class Building
 
     /// <summary>True if block (x, y, z) is inside the building's box (footprint by its full height).</summary>
     public bool Contains(int x, int y, int z) =>
-        Covers(x, z) && y >= Y + (Def.Walkable ? -1 : 0) && y < Y + Math.Max(Def.Height, 1);
+        Covers(x, z) && y >= Y + (Def.Walkable ? -1 : 0) && y < Y + Math.Max(Shape.Height, 1);
 
     /// <summary>Squared horizontal distance from (x, z) to the footprint's centre, in half blocks.</summary>
     public long CentreDistance2(int x, int z)
@@ -200,9 +211,9 @@ public sealed class BuildingStore
 
     public Building? Get(int id) => _byId.TryGetValue(id, out var b) ? b : null;
 
-    internal Building Add(int owner, BuildingDef def, int x, int y, int z)
+    internal Building Add(int owner, BuildingDef def, int x, int y, int z, BuildingLook look = BuildingLook.Standard)
     {
-        var b = new Building(_nextId++, owner, def, x, y, z);
+        var b = new Building(_nextId++, owner, def, x, y, z, look);
         _list.Add(b);
         _byId.Add(b.Id, b);
         return b;
@@ -250,7 +261,7 @@ public sealed class BuildingStore
         Mix(_nextId);
         foreach (var b in _list)
         {
-            Mix(b.Id); Mix(b.Owner); Mix(b.Def.Index); Mix(b.X); Mix(b.Y); Mix(b.Z);
+            Mix(b.Id); Mix(b.Owner); Mix(b.Def.Index); Mix((int)b.Look); Mix(b.X); Mix(b.Y); Mix(b.Z);
             Mix((int)b.State); Mix(b.Work); Mix(b.Placed);
             foreach (int s in b.Stock) Mix(s);
             foreach (int s in b.Supply) Mix(s);

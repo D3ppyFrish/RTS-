@@ -69,8 +69,8 @@ void fragment() {
     private ShaderMaterial _depth = null!;
     private readonly Dictionary<int, MeshInstance3D> _shown = new();
     private readonly HashSet<int> _seen = new();
-    /// <summary>Meshes by (building definition, first block still to come).</summary>
-    private readonly Dictionary<(int Def, int From), ArrayMesh?> _meshes = new();
+    /// <summary>Meshes by (building definition, its shape, first block still to come).</summary>
+    private readonly Dictionary<(int Def, bool Base, int From), ArrayMesh?> _meshes = new();
     private MeshInstance3D _cursor = null!;
 
     /// <summary>Hides what is above level y of the height slice (a large y: nothing).</summary>
@@ -117,7 +117,7 @@ void fragment() {
                 from = b.Placed;
                 sites++;
             }
-            var mesh = MeshFor(b.Def, from);
+            var mesh = MeshFor(b.Shape, from);
             if (mesh == null) continue;
             _seen.Add(b.Id);
             if (!_shown.TryGetValue(b.Id, out var node))
@@ -137,7 +137,7 @@ void fragment() {
         for (int k = 0; k < ruins.Count; k++)
         {
             var r = ruins[k];
-            if (r.Owner != player || MeshFor(r.Def, 0) is not { } mesh) continue;
+            if (r.Owner != player || MeshFor(r.Def.Shaped(_sim.Economy.LookOf(r.Owner)), 0) is not { } mesh) continue;
             int key = -1 - k;
             _seen.Add(key);
             ruinCount++;
@@ -167,7 +167,7 @@ void fragment() {
 
         // The build tool's cursor: what it would make there.
         var ghost = control.Ghost;
-        if (ghost.Visible && control.BuildDef is { } def && MeshFor(def, 0) is { } m)
+        if (ghost.Visible && control.BuildDef is { } def && MeshFor(def.Shaped(_sim.Economy.LookOf(player)), 0) is { } m)
         {
             bool fits = ghost.Result is PlaceResult.Ok or PlaceResult.CannotAfford;
             var tint = !fits ? BlockedColor
@@ -185,11 +185,11 @@ void fragment() {
     /// <summary>The fine-voxel model of the building's blocks from index <paramref name="from"/> on (null if none are left), cached.</summary>
     private ArrayMesh? MeshFor(BuildingDef def, int from)
     {
-        if (_meshes.TryGetValue((def.Index, from), out var mesh)) return mesh;
+        if (_meshes.TryGetValue((def.Index, def.IsBase, from), out var mesh)) return mesh;
         // A site's mesh changes as its blocks go up: keep only the newest few of each definition.
         if (from > 0 && _meshes.Count > 256) _meshes.Clear();
         mesh = Build(def, from);
-        _meshes[(def.Index, from)] = mesh;
+        _meshes[(def.Index, def.IsBase, from)] = mesh;
         return mesh;
     }
 

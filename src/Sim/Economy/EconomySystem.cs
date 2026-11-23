@@ -382,7 +382,7 @@ public sealed partial class EconomySystem
         }
         baseY = Under(x + def.SizeX / 2, z + def.SizeZ / 2)?.Y
                 ?? (level >= 0 ? Walk.NearestStandLevel(w, x + def.SizeX / 2, z + def.SizeZ / 2, level, 2) : Walk.GroundLevel(w, x + def.SizeX / 2, z + def.SizeZ / 2));
-        int clear = Math.Max(def.Height, Walk.Clearance);
+        int clear = Math.Max(def.Shaped(LookOf(player)).Height, Walk.Clearance);
         if (baseY < 2 || baseY + clear >= w.SizeY) return PlaceResult.Uneven;
         for (int cz = z; cz <= z1; cz++)
         for (int cx = x; cx <= x1; cx++)
@@ -393,7 +393,7 @@ public sealed partial class EconomySystem
             // A high column is cut down: its top block must be plain ground with solid ground under it.
             if (g == baseY + 1 && (!BlockInfo.IsGround(w.Get(cx, baseY, cz)) || !BlockInfo.IsSolid(w.Get(cx, baseY - 1, cz))))
                 return PlaceResult.Blocked;
-            int from = under == null ? Math.Max(g, baseY) : Math.Max(under.Y + Math.Max(under.Def.Height, 1), baseY);
+            int from = under == null ? Math.Max(g, baseY) : Math.Max(under.Y + Math.Max(under.Shape.Height, 1), baseY);
             for (int y = from; y < baseY + clear; y++)
                 if (w.Get(cx, y, cz) is var c && c != BlockType.Air && !BlockInfo.IsLeaves(c)) return PlaceResult.Blocked;
         }
@@ -470,7 +470,7 @@ public sealed partial class EconomySystem
     {
         if (!tower.Def.IsTower) return;
         var all = Buildings.All;
-        int top = tower.Y + tower.Def.Height;
+        int top = tower.Y + tower.Shape.Height;
         List<Building>? taken = null;
         foreach (var b in all)
             if (b != tower && TakesPlaceOf(tower.Owner, tower.Def, tower.X, tower.Z, b)) (taken ??= new List<Building>()).Add(b);
@@ -480,13 +480,13 @@ public sealed partial class EconomySystem
             // What it has above or below the tower goes; the rest becomes the tower's own blocks below.
             for (int k = 0; k < b.Placed; k++)
             {
-                var t = b.Def.Blocks[k];
+                var t = b.Shape.Blocks[k];
                 int x = b.X + t.X, y = b.Y + t.Y, z = b.Z + t.Z;
                 if ((y < tower.Y || y >= top) && World.Get(x, y, z) == t.Block) World.Set(x, y, z, y < tower.Y ? BlockType.Soil : BlockType.Air);
             }
             Buildings.Remove(b);
         }
-        var blocks = tower.Def.Blocks;
+        var blocks = tower.Shape.Blocks;
         for (int k = 0; k < blocks.Count; k++)
         {
             var t = blocks[k];
@@ -498,7 +498,7 @@ public sealed partial class EconomySystem
             if (tower.Gone != null && tower.Gone[k])
             {
                 tower.Gone[k] = false;
-                tower.Lost -= tower.Def.BlockToughness(k);
+                tower.Lost -= tower.Shape.BlockToughness(k);
             }
         }
     }
@@ -510,8 +510,8 @@ public sealed partial class EconomySystem
     {
         if (CanPlace(owner, def, x, z, out int baseY, checkPlayer: false, level: level) != PlaceResult.Ok) return null;
         var b = Prepare(owner, def, x, z, baseY);
-        foreach (var t in def.Blocks) World.Set(b.X + t.X, b.Y + t.Y, b.Z + t.Z, t.Block);
-        b.Placed = def.Blocks.Count;
+        foreach (var t in b.Shape.Blocks) World.Set(b.X + t.X, b.Y + t.Y, b.Z + t.Z, t.Block);
+        b.Placed = b.Shape.Blocks.Count;
         b.Work = def.BuildTicks;
         b.State = BuildingState.Active;
         Absorb(b);
@@ -524,7 +524,7 @@ public sealed partial class EconomySystem
     /// </summary>
     internal void Demolish(Building b)
     {
-        var blocks = b.Def.Blocks;
+        var blocks = b.Shape.Blocks;
         for (int k = 0; k < b.Placed && k < blocks.Count; k++)
         {
             var t = blocks[k];
@@ -540,9 +540,13 @@ public sealed partial class EconomySystem
     /// </summary>
     private Building Prepare(int owner, BuildingDef def, int x, int z, int baseY)
     {
-        Level(owner, def, x, z, baseY);
-        return Buildings.Add(owner, def, x, baseY, z);
+        var look = LookOf(owner);
+        Level(owner, def.Shaped(look), x, z, baseY);
+        return Buildings.Add(owner, def, x, baseY, z, look);
     }
+
+    /// <summary>The shape <paramref name="owner"/>'s buildings are put up in: their faction's (see <see cref="FactionDef.Look"/>).</summary>
+    public BuildingLook LookOf(int owner) => owner < 0 ? BuildingLook.Standard : _sim.FactionOf(owner).Look;
 
     private void Level(int owner, BuildingDef def, int x, int z, int baseY)
     {
@@ -573,7 +577,7 @@ public sealed partial class EconomySystem
     /// </summary>
     private void StepSite(Building b)
     {
-        var blocks = b.Def.Blocks;
+        var blocks = b.Shape.Blocks;
         int target = (int)((long)Math.Min(b.Work, b.Def.BuildTicks) * blocks.Count / b.Def.BuildTicks);
         if (b.Placed < target && !b.Def.Walkable && _sim.Tick % 10 == 0) ClearSite(b);
         while (b.Placed < target)
@@ -627,7 +631,7 @@ public sealed partial class EconomySystem
             }
             else if (u.Order[i] != UnitOrder.Idle || u.Job[i] != UnitJob.None) continue;
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
-            if (!b.Covers(x, z) || u.Y[i] < b.Y - 1 || u.Y[i] > b.Y + b.Def.Height) continue;
+            if (!b.Covers(x, z) || u.Y[i] < b.Y - 1 || u.Y[i] > b.Y + b.Shape.Height) continue;
             if (SpotBeside(from, x, z, out int sx, out int sz, out int sy)) _sim.SendUnit(i, sx, sz, sy);
         }
     }
@@ -951,7 +955,7 @@ public sealed partial class EconomySystem
         if (!_sim.Content.TryGetBuilding(c.Building, out var def)) return;
         var fit = CanPlace(c.PlayerId, def, c.X, c.Z, out int baseY, level: c.Y);
         if (fit != PlaceResult.Ok && fit != PlaceResult.CannotAfford) return;
-        var b = Buildings.Add(c.PlayerId, def, c.X, baseY, c.Z);
+        var b = Buildings.Add(c.PlayerId, def, c.X, baseY, c.Z, LookOf(c.PlayerId));
         b.State = BuildingState.Planned;
     }
 
@@ -982,7 +986,7 @@ public sealed partial class EconomySystem
     {
         if (CanPlace(b.Owner, b.Def, b.X, b.Z, out int baseY, ignore: b, level: LevelOf(b)) != PlaceResult.Ok) return false;
         if (!TrySpend(b.Owner, b.Def.Cost, b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2)) return false;
-        Level(b.Owner, b.Def, b.X, b.Z, baseY);
+        Level(b.Owner, b.Shape, b.X, b.Z, baseY);
         b.Y = baseY;
         b.State = BuildingState.Site;
         return true;

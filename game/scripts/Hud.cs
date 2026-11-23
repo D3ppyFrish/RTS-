@@ -2366,7 +2366,7 @@ public partial class Hud : CanvasLayer
         {
             int posted = 0, first = -1;
             for (int i = 0; i < u.Count; i++)
-                if (u.Y[i] == b.Y + b.Def.Height && b.Covers(u.X[i].FloorToInt(), u.Z[i].FloorToInt()) && econ.WallUnder(i) == b)
+                if (u.Y[i] == b.Y + b.Shape.Height && b.Covers(u.X[i].FloorToInt(), u.Z[i].FloorToInt()) && econ.WallUnder(i) == b)
                 {
                     if (first < 0) first = i;
                     posted++;

@@ -605,7 +605,7 @@ public sealed partial class CombatSystem
     {
         var u = U;
         int dy = u.Y[i] - b.Y;
-        if (!def.IsRanged && (dy < -1 || dy > Math.Max(3, b.Def.Height))) return false;
+        if (!def.IsRanged && (dy < -1 || dy > Math.Max(3, b.Shape.Height))) return false;
         Fix64 reach = def.IsRanged && dy >= HighGround ? def.Range * HighGroundBonus : def.Range;
         Fix64 dx = Gap(u.X[i], b.X, b.MaxX + 1), dz = Gap(u.Z[i], b.Z, b.MaxZ + 1);
         if (dx > reach || dz > reach) return false;
@@ -712,7 +712,7 @@ public sealed partial class CombatSystem
         if (b != null)
         {
             // Beside it, as high up as a blow still reaches it from: the rubble heaped against a tall wall counts.
-            if (!_sim.Economy.SpotBeside(b, x, z, out gx, out gz, out gy, Math.Max(3, b.Def.Height)))
+            if (!_sim.Economy.SpotBeside(b, x, z, out gx, out gz, out gy, Math.Max(3, b.Shape.Height)))
             {
                 GiveUp(i);
                 return;
@@ -786,7 +786,7 @@ public sealed partial class CombatSystem
         {
             int cx = w.X + dx, cz = w.Z + dz;
             if (Math.Max(Math.Abs(cx - x), Math.Abs(cz - z)) >= d || !World.InBounds(cx, 0, cz)) continue;
-            if (Walk.NearestStandLevel(World, cx, cz, w.Y, Math.Max(3, w.Def.Height)) >= 0 && Buildings.AtColumn(cx, cz) == null) return true;
+            if (Walk.NearestStandLevel(World, cx, cz, w.Y, Math.Max(3, w.Shape.Height)) >= 0 && Buildings.AtColumn(cx, cz) == null) return true;
         }
         return false;
     }

@@ -39,7 +39,7 @@ public sealed partial class CombatSystem
         _changed.RemoveAll(key =>
         {
             int x = (int)(key & 0xFFFFF), z = (int)((key >> 20) & 0xFFFFF), y = (int)(key >> 40);
-            return b.Covers(x, z) && y >= b.Y - 1 && y <= b.Y + b.Def.Height;
+            return b.Covers(x, z) && y >= b.Y - 1 && y <= b.Y + b.Shape.Height;
         });
     }
 
@@ -93,7 +93,7 @@ public sealed partial class CombatSystem
                 Collapse(b);
                 return;
             }
-            int tough = b.Def.BlockToughness(k);
+            int tough = b.Shape.BlockToughness(k);
             if (b.Damage < tough) return;
             b.Damage -= tough;
             int ax = U.X[i].FloorToInt(), az = U.Z[i].FloorToInt();
@@ -111,7 +111,7 @@ public sealed partial class CombatSystem
     /// </summary>
     private int Pick(Building b, Fix64 x, Fix64 z, bool undermine, bool blast = false)
     {
-        var blocks = b.Def.Blocks;
+        var blocks = b.Shape.Blocks;
         int bestX = 0, bestZ = 0;
         bool found = false;
         Fix64 bestD = Fix64.MaxValue;
@@ -160,7 +160,7 @@ public sealed partial class CombatSystem
     /// </summary>
     private void Topple(Building b, int k, int fromX, int fromZ)
     {
-        var t = b.Def.Blocks[k];
+        var t = b.Shape.Blocks[k];
         int hx = b.X + t.X, hy = b.Y + t.Y, hz = b.Z + t.Z;
         int ddx = hx - fromX, ddz = hz - fromZ;
         if (ddx == 0 && ddz == 0) ddx = 1;
@@ -185,8 +185,8 @@ public sealed partial class CombatSystem
         if (!World.InBounds(x, y, z)) return false;
         var w = Buildings.At(x, y, z);
         if (w == null || w.Owner != owner || !w.Def.Thick) return false;
-        int k = w.Def.BlockAt(x - w.X, y - w.Y, z - w.Z);
-        return k >= 0 && k < w.Placed && World.Get(x, y, z) == w.Def.Blocks[k].Block;
+        int k = w.Shape.BlockAt(x - w.X, y - w.Y, z - w.Z);
+        return k >= 0 && k < w.Placed && World.Get(x, y, z) == w.Shape.Blocks[k].Block;
     }
 
     private readonly List<(int X, int Y, int Z)> _topple = new();
@@ -201,7 +201,7 @@ public sealed partial class CombatSystem
     /// </summary>
     private void KnockOut(Building b, int k, int fromX, int fromZ)
     {
-        var t = b.Def.Blocks[k];
+        var t = b.Shape.Blocks[k];
         int x = b.X + t.X, y = b.Y + t.Y, z = b.Z + t.Z;
         if (t.Y < 0) World.Set(x, y, z, BlockType.Soil);
         else _sim.Physics.Release(new[] { (x, y, z) }, fromX, fromZ, KnockSpeed, b.Def.IsWall);
@@ -260,14 +260,14 @@ public sealed partial class CombatSystem
     {
         var b = Buildings.At(x, y, z);
         if (b == null) return;
-        int k = b.Def.BlockAt(x - b.X, y - b.Y, z - b.Z);
+        int k = b.Shape.BlockAt(x - b.X, y - b.Y, z - b.Z);
         if (k < 0 || k >= b.Placed) return;
-        var t = b.Def.Blocks[k];
+        var t = b.Shape.Blocks[k];
         if (World.Get(x, y, z) == t.Block) return;
-        b.Gone ??= new bool[b.Def.Blocks.Count];
+        b.Gone ??= new bool[b.Shape.Blocks.Count];
         if (b.Gone[k]) return;
         b.Gone[k] = true;
-        b.Lost += b.Def.BlockToughness(k);
+        b.Lost += b.Shape.BlockToughness(k);
         _hurt.Add(b);
     }
 
@@ -281,7 +281,7 @@ public sealed partial class CombatSystem
         var b = Buildings.At(x, y + 1, z);
         if (b == null || b.Def.Walkable) return;
         _column.Clear();
-        int top = b.Y + b.Def.Height;
+        int top = b.Y + b.Shape.Height;
         for (int cy = y + 1; cy < World.SizeY; cy++)
         {
             var t = World.Get(x, cy, z);

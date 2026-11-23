@@ -87,6 +87,21 @@ public enum BuildingKind : byte
     ListeningPost,
 }
 
+/// <summary>
+/// The shape a faction's buildings take (<c>"look"</c> in <c>data/factions.json</c>, <see cref="Content.FactionDef.Look"/>;
+/// see <see cref="BuildingDef.Shaped"/>).
+/// </summary>
+public enum BuildingLook : byte
+{
+    /// <summary>As the building's data says: houses with walls and a roof, walls and towers of their materials.</summary>
+    Standard,
+    /// <summary>
+    /// The Deepfolk's: every hollow building a mound of hive earth like an ant hill (see <see cref="BuildingDef.Mound"/>),
+    /// and walls, gates and towers ramparts of hive earth.
+    /// </summary>
+    Mound,
+}
+
 /// <summary>One block of a building, relative to its footprint corner and base level.</summary>
 public readonly record struct TemplateBlock(int X, int Y, int Z, BlockType Block);
 
@@ -268,6 +283,45 @@ public sealed class BuildingDef
     /// <summary>A column of bridge deck (see <see cref="BuildingKind.Bridge"/>).</summary>
     public bool IsBridge => Kind == BuildingKind.Bridge;
 
+    // The shape of a building of this kind for a faction with BuildingLook.Mound (see Shaped): this definition again,
+    // built of hive earth. _base is the definition it is the shape of (null for a definition from the data).
+    private BuildingDef? _mound;
+    private BuildingDef? _base;
+
+    /// <summary>True for a definition from the data; false for one made by <see cref="Shaped"/>.</summary>
+    public bool IsBase => _base == null;
+
+    /// <summary>
+    /// What a building of this kind is made of when a player whose faction builds with <paramref name="look"/> puts it
+    /// up (see <see cref="Building.Shape"/>): this definition for <see cref="BuildingLook.Standard"/>; for
+    /// <see cref="BuildingLook.Mound"/>, one that is the same building in every way but its blocks. A hollow building
+    /// becomes a mound of hive earth (see <see cref="Mound"/>) on the same footprint, as tall as it was with its roof
+    /// and with its door in the same place; a wall, gate or tower is the same column of hive earth (a gate keeping its
+    /// leaves). Either way its blocks add up to the same toughness as before, so it is as hard to bring down. Fields,
+    /// bridges, lights and totems, and buildings that are mounds already, are as they are.
+    /// </summary>
+    public BuildingDef Shaped(BuildingLook look)
+    {
+        if (look == BuildingLook.Standard || _base != null || Mound
+            || Kind is BuildingKind.Farm or BuildingKind.Totem or BuildingKind.Light or BuildingKind.Bridge) return this;
+        var mound = _mound;
+        if (mound == null)
+        {
+            // Built in a local first: definitions are shared, and another thread may be reading them.
+            mound = (BuildingDef)MemberwiseClone();
+            mound._base = this;
+            mound._mound = null;
+            mound._blocks = null;
+            mound._toughness = null;
+            mound._indexAt = null;
+            mound._height = -1;
+            mound._solid = mound._hollow = 1;
+            _ = mound.Blocks;
+            _mound = mound;
+        }
+        return mound;
+    }
+
     private TemplateBlock[]? _blocks;
     private int[]? _toughness;
     // A hollow building's blocks are made tougher by solid / hollow (the toughness of the solid building it would
@@ -344,6 +398,7 @@ public sealed class BuildingDef
 
     private TemplateBlock[] BuildTemplate()
     {
+        if (_base != null) return HiveTemplate(_base);
         var list = new List<TemplateBlock>();
         if (Kind == BuildingKind.Farm)
         {
@@ -426,35 +481,44 @@ public sealed class BuildingDef
     /// ellipse a little bigger than will fit in the footprint, so its corners are cut, as wide up to the top of the
     /// walls and then narrowing like a dome, to nothing at <paramref name="peak"/> levels over the walls.
     /// </summary>
-    private bool InMound(int x, int z, int y, int peak)
+    private bool InMound(int x, int z, int y, int peak) => InMound(x, z, y, WallHeight, peak);
+
+    private bool InMound(int x, int z, int y, int walls, int peak)
     {
+        // The footprint's corners are always open, so even a small mound is round at the foot.
+        if (SizeX >= 3 && SizeZ >= 3 && (x == 0 || x == SizeX - 1) && (z == 0 || z == SizeZ - 1)) return false;
         // In half blocks from the middle; inside if (cx/SizeX)^2 + (cz/SizeZ)^2 <= 13/10 * (1 - up/peak)^2 * (1 + up/peak):
         // a cone with a little bulge, like a heap of earth.
         long cx = 2 * x + 1 - SizeX, cz = 2 * z + 1 - SizeZ, sx = SizeX, sz = SizeZ;
-        long up = Math.Max(0, y - (WallHeight - 1)), p = peak;
+        long up = Math.Max(0, y - (walls - 1)), p = peak;
         return (cx * cx * sz * sz + cz * cz * sx * sx) * 10 * p * p * p <= 13 * sx * sx * sz * sz * (p - up) * (p - up) * (p + up);
     }
 
-    private TemplateBlock[] MoundTemplate()
+    /// <summary>A mound's peak: how many levels over its walls it narrows to nothing.</summary>
+    private int MoundPeak => Math.Max(SizeX, SizeZ) / 2 + 2;
+
+    private TemplateBlock[] MoundTemplate() => MoundTemplate(WallHeight, Wall, Footing);
+
+    private TemplateBlock[] MoundTemplate(int walls, BlockType wall, BlockType footing)
     {
         var list = new List<TemplateBlock>();
-        int doorX = SizeX / 2, peak = Math.Max(SizeX, SizeZ) / 2 + 2;
+        int doorX = SizeX / 2, peak = MoundPeak;
         int solid = 0;
-        for (int y = 0; y < WallHeight + peak; y++)
+        for (int y = 0; y < walls + peak; y++)
         for (int z = 0; z < SizeZ; z++)
         for (int x = 0; x < SizeX; x++)
         {
-            if (!InMound(x, z, y, peak)) continue;
-            var block = y == 0 && Footing != BlockType.Air ? Footing : Wall;
+            if (!InMound(x, z, y, walls, peak)) continue;
+            var block = y == 0 && footing != BlockType.Air ? footing : wall;
             bool door = z == SizeZ - 1 && x == doorX && y < 2;
             if (door) block = BlockType.Door;
             solid += BlockInfo.Toughness(block);
             // The shell: blocks with open air (outside the mound) beside them or over them. The rest is the room.
-            bool shell = door || !InMound(x, z, y + 1, peak);
+            bool shell = door || !InMound(x, z, y + 1, walls, peak);
             for (int d = 0; d < 4 && !shell; d++)
             {
                 int nx = x + (d == 0 ? 1 : d == 1 ? -1 : 0), nz = z + (d == 2 ? 1 : d == 3 ? -1 : 0);
-                shell = nx < 0 || nz < 0 || nx >= SizeX || nz >= SizeZ || !InMound(nx, nz, y, peak);
+                shell = nx < 0 || nz < 0 || nx >= SizeX || nz >= SizeZ || !InMound(nx, nz, y, walls, peak);
             }
             if (!shell && y > 0) continue;
             list.Add(new TemplateBlock(x, y, z, shell ? block : BlockType.Floor));
@@ -464,5 +528,38 @@ public sealed class BuildingDef
         if (hollow > 0 && solid > hollow) (_solid, _hollow) = (solid, hollow);
         list.Sort((a, b) => a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.Z != b.Z ? a.Z.CompareTo(b.Z) : a.X.CompareTo(b.X));
         return list.ToArray();
+    }
+
+    /// <summary>
+    /// The blocks of <paramref name="from"/> in hive earth (see <see cref="Shaped"/>), with each block's toughness
+    /// scaled so that all of them add up to the toughness of <paramref name="from"/>.
+    /// </summary>
+    private TemplateBlock[] HiveTemplate(BuildingDef from)
+    {
+        TemplateBlock[] blocks;
+        if (IsRampart)
+        {
+            var list = new List<TemplateBlock>();
+            foreach (var t in from.Blocks)
+                list.Add(t with { Block = t.Block == BlockType.Gate ? BlockType.Gate : BlockType.Hive });
+            blocks = list.ToArray();
+        }
+        else
+        {
+            // As tall as the house with its roof: a mound is (walls + peak - 1) levels high. Its walls are at least
+            // two high, so the door fits.
+            int walls = Math.Max(2, from.Height - MoundPeak + 1);
+            blocks = MoundTemplate(walls, BlockType.Hive, BlockType.Air);
+        }
+        long sum = 0;
+        foreach (var t in blocks) sum += BlockInfo.Toughness(t.Block) * Sturdy;
+        if (sum <= 0) return blocks;
+        int target = from.Toughness;
+        (_solid, _hollow) = (target, (int)sum);
+        // Each block's toughness is rounded down: scale up once more for what the rounding lost.
+        long total = 0;
+        foreach (var t in blocks) total += BlockInfo.Toughness(t.Block) * Sturdy * _solid / _hollow;
+        if (total > 0 && total < target) _solid = (int)((long)target * target / total);
+        return blocks;
     }
 }

@@ -219,14 +219,14 @@ public partial class Ambience : Node3D
         {
             if (b.State != BuildingState.Active || !_fog.Shows(b)) continue;
             float seed = (b.Id * 0.618034f) % 1f;
-            var def = b.Def;
+            var def = b.Shape;
             if (def.Kind == BuildingKind.Light)
             {
                 var top = new Vector3(b.X + 0.5f, b.Y + def.WallHeight, b.Z + 0.5f) * Bs;
                 if (storm) _chimneys.Add((top, 0.35f, seed)); // put out: a wisp of smoke
                 else _fires.Add((top, def.WallHeight <= 1 ? 0.75f : 0.42f, seed));
             }
-            else if (def.Chimney)
+            else if (def.Chimney && def.IsBase)
                 _chimneys.Add((new Vector3(b.X + def.SizeX - 0.5f, b.Y + def.Height, b.Z + 0.5f) * Bs, 1f, seed));
             else if (cooking && def.Kind is BuildingKind.House or BuildingKind.TownHall)
                 _chimneys.Add((new Vector3(b.X + def.SizeX / 2f, b.Y + def.Height, b.Z + def.SizeZ / 2f) * Bs, 0.7f, seed));

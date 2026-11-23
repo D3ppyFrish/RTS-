@@ -28,6 +28,11 @@ public sealed class FactionDef
     /// <summary>How a computer player plays it (see <see cref="AI.AiPlayer"/>).</summary>
     public AiStyle AiStyle { get; init; }
     /// <summary>
+    /// The shape its players' buildings take (<c>"look"</c> in the data; see <see cref="BuildingDef.Shaped"/>): the
+    /// usual houses and walls, or the Deepfolk's mounds of hive earth.
+    /// </summary>
+    public BuildingLook Look { get; init; }
+    /// <summary>
     /// The units it has its own in place of (<c>"replaces"</c> in the data), from the replaced one to its own, in data
     /// order: its players cannot train the replaced one, and its matches start with its own instead (see
     /// <see cref="StartUnits"/>).

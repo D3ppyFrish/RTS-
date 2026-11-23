@@ -532,7 +532,7 @@ public class ContentTests
         var files = Files();
         Edit(files, "factions.json", "\"name\": \"Orcs\",", "\"name\": \"Orcs\"");
         var e = Fails(files);
-        Assert.StartsWith("factions.json line 30: ", e.Errors[0]); // the line of the Orcs in the file
+        Assert.StartsWith("factions.json line 35: ", e.Errors[0]); // the line of the Orcs in the file
 
         files = Files();
         files["units.json"] = "{ \"id\": \"worker\" }";

@@ -950,7 +950,7 @@ public partial class PlayerControl : Node
         // A site with nothing built yet, or a field: the ground under its footprint.
         b = _sim.Buildings.AtColumn(hit.X, hit.Z);
         if (b != null && b.Planned && b.Owner != LocalPlayer) return null; // others' plans are not seen
-        return b != null && hit.Y >= b.Y - 2 && hit.Y < b.Y + Math.Max(b.Def.Height, 1) ? b : null;
+        return b != null && hit.Y >= b.Y - 2 && hit.Y < b.Y + Math.Max(b.Shape.Height, 1) ? b : null;
     }
 
     /// <summary>The city-state town whose square (ground or huts) is under the cursor, or null.</summary>
@@ -2351,7 +2351,7 @@ public partial class PlayerControl : Node
             if (ownSet.Contains(id)) tending++;
         return $"selected={_selected.Count} first_id={(_selected.Count > 0 ? _selected[0] : 0)} own={own.Count} preview={_preview.Count} dragging={(_dragging ? 1 : 0)} " +
                $"paused={(_clock.Paused ? 1 : 0)} speed={_clock.Speed} slice={_slice.Level} tool={Tool} " +
-               $"working={working} buildings={buildings} sites={sites} building={building} queue={sel?.Queue.Count ?? 0} rally={(sel is { HasRally: true } ? $"{sel.RallyX},{sel.RallyZ}" : "none")} " +
+               $"working={working} buildings={buildings} sites={sites} building={building} look={(sel != null ? sel.Look.ToString().ToLowerInvariant() : "none")} queue={sel?.Queue.Count ?? 0} rally={(sel is { HasRally: true } ? $"{sel.RallyX},{sel.RallyZ}" : "none")} " +
                $"ghost={(Ghost.Visible ? Ghost.Result.ToString() : "none")} road={_roadPreview.Count} " +
                $"plans={plans} plans_ready={ready} plan_mode={(PlanMode ? 1 : 0)} " +
                $"supply={(supply.Count > 0 ? string.Join(',', supply) : "none")} on_supply={onSupply} carts={carts} carts_on_supply={cartsOnSupply} cart_load={cartLoad} " +
