@@ -184,15 +184,15 @@ public class ResearchTests
         Hall(sim, 0, 4, 4);
         sim.Economy.PlaceFinished(0, sim.Content.Building("house"), 20, 4);
         var econ = sim.Economy;
-        Assert.Equal(30, econ.WorkTicks(0, BlockType.Stone));
+        Assert.Equal(25, econ.WorkTicks(0, BlockType.Stone));
         Assert.Equal(5, econ.Capacity(0));
         Assert.Equal(5, econ.FarmYieldOf(0));
         Assert.Equal(30, econ.Housing(0));
 
-        Grant(sim, 0, "tools");                  // 25% faster gathering
-        Assert.Equal(24, econ.WorkTicks(0, BlockType.Stone));
-        Grant(sim, 0, "settler_guilds");         // and 15% more
-        Assert.Equal(30 * 100 / 140, econ.WorkTicks(0, BlockType.Stone));
+        Grant(sim, 0, "tools");                  // tools, not faster gathering (#146)
+        Assert.Equal(25, econ.WorkTicks(0, BlockType.Stone));
+        Grant(sim, 0, "settler_guilds");         // 15% faster gathering
+        Assert.Equal(25 * 100 / 115, econ.WorkTicks(0, BlockType.Stone));
         Grant(sim, 0, "roads", "carts");         // 3 more goods a load
         Assert.Equal(8, econ.Capacity(0));
         Grant(sim, 0, "farming", "crop_rotation"); // 2 more food a harvest
@@ -201,7 +201,7 @@ public class ResearchTests
         Assert.Equal(32, econ.Housing(0));
 
         // Nothing changed for the other player.
-        Assert.Equal(30, econ.WorkTicks(1, BlockType.Stone));
+        Assert.Equal(25, econ.WorkTicks(1, BlockType.Stone));
         Assert.Equal(5, econ.Capacity(1));
     }
 
@@ -212,13 +212,13 @@ public class ResearchTests
         {
             var sim = Flat();
             Hall(sim, 0, 4, 4);
-            if (tools) Grant(sim, 0, "tools");
+            if (tools) Grant(sim, 0, "settler_guilds");
             sim.World.Set(30, Ground + 1, 30, BlockType.Stone);
             int w = sim.SpawnUnit(0, "worker", 28, 30);
             sim.Schedule(0, new GatherCommand(0, new[] { w }, 30, Ground + 1, 30));
             return RunUntil(sim, () => sim.World.Get(30, Ground + 1, 30) == BlockType.Air, 400, "the dig");
         }
-        Assert.Equal(30 - 24, TicksToDig(false) - TicksToDig(true));
+        Assert.Equal(25 - 25 * 100 / 115, TicksToDig(false) - TicksToDig(true));
     }
 
     [Fact]

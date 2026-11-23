@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Fell, Prospect, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -260,7 +260,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Test:
@@ -278,7 +278,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -398,10 +398,12 @@ public partial class PlayerControl : Node
             case Key.T when TerrainTool:
                 SetTool(Tool == ToolMode.Terrain ? ToolMode.Select : ToolMode.Terrain);
                 break;
+            case Key.X when key.CtrlPressed: ToggleFell(); break;
             case Key.X when key.ShiftPressed: ToggleRamp(); break;
             case Key.X:
                 SetTool(Tool == ToolMode.Tunnel ? ToolMode.Select : ToolMode.Tunnel);
                 break;
+            case Key.Z when key.CtrlPressed: ToggleProspect(); break;
             case Key.Z when key.ShiftPressed: ToggleChasm(); break;
             case Key.Z:
                 ToggleDig();
@@ -1069,7 +1071,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1809,6 +1811,80 @@ public partial class PlayerControl : Node
     /// <summary>The Ramp button and key (Shift+X): starts (or stops) drawing ramps for the selected workers and sappers to heap up.</summary>
     public void ToggleRamp() => SetTool(Tool == ToolMode.Ramp ? ToolMode.Select : ToolMode.Ramp);
 
+    /// <summary>The Fell tree button and key (Ctrl+X): pick a tree, then drag the way it should fall, for the selected militia to fell.</summary>
+    public void ToggleFell() => SetTool(Tool == ToolMode.Fell ? ToolMode.Select : ToolMode.Fell);
+
+    /// <summary>The Sound for ore button and key (Ctrl+Z): click a spot for the selected foremen to sound the ground there.</summary>
+    public void ToggleProspect() => SetTool(Tool == ToolMode.Prospect ? ToolMode.Select : ToolMode.Prospect);
+
+    /// <summary>The selected units of yours that can fell a tree the way you choose (see <see cref="FellCommand"/>).</summary>
+    public List<int> OwnFellers()
+    {
+        var list = new List<int>();
+        foreach (int id in OwnSelected())
+            if (_sim.Economy.FellTicksOf(_sim.Units.IndexOf(id)) > 0) list.Add(id);
+        return list;
+    }
+
+    /// <summary>The selected units of yours that can sound the ground (see <see cref="ProspectCommand"/>).</summary>
+    public List<int> OwnProspectors()
+    {
+        var list = new List<int>();
+        foreach (int id in OwnSelected())
+            if (_sim.Economy.ProspectTicksOf(_sim.Units.IndexOf(id)) > 0) list.Add(id);
+        return list;
+    }
+
+    /// <summary>Your units doing this job (for the status line).</summary>
+    private int Jobs(UnitJob job)
+    {
+        int n = 0;
+        var u = _sim.Units;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == LocalPlayer && u.Job[i] == job) n++;
+        return n;
+    }
+
+    /// <summary>The tree the fell tool picked (its trunk's column), or (-1, -1) while none is picked.</summary>
+    public (int X, int Z) FellTree { get; private set; } = (-1, -1);
+
+    /// <summary>The columns the picked tree comes down on, the way it is being dragged (see <see cref="PhysicsSystem.FallColumns"/>).</summary>
+    private void UpdateFellPreview()
+    {
+        FellTree = (-1, -1);
+        if (!_wallDragging || !_sim.Economy.FindTree(_wallX, _wallZ, out int tx, out int baseY, out int tz)) return;
+        FellTree = (tx, tz);
+        if (!GroundUnder(_mousePos, out int x2, out _, out int z2) || (x2 == _wallX && z2 == _wallZ)) return;
+        int dx = x2 - _wallX, dz = z2 - _wallZ;
+        (dx, dz) = Math.Abs(dx) >= Math.Abs(dz) ? (Math.Sign(dx), 0) : (0, Math.Sign(dz));
+        var (_, top) = Harvest.Span(World, tx, baseY, tz);
+        int reach = top - baseY + 3;
+        for (int k = 1; k <= reach; k++)
+        {
+            int x = tx + dx * k, z = tz + dz * k;
+            if (!World.InBounds(x, 0, z)) break;
+            int y = Walk.GroundLevel(World, x, z);
+            if (y >= 1) _wallPreview.Add((x, y, z, true));
+        }
+    }
+
+    /// <summary>The ring of ground the selected prospectors would sound, round the column under the cursor.</summary>
+    private void UpdateProspectPreview()
+    {
+        int r = _sim.Economy.ProspectRadius(LocalPlayer);
+        if (r <= 0 || !GroundUnder(_mousePos, out int cx, out _, out int cz)) return;
+        for (int dz = -r; dz <= r; dz++)
+        for (int dx = -r; dx <= r; dx++)
+        {
+            int d2 = dx * dx + dz * dz;
+            if (d2 > r * r || d2 <= (r - 1) * (r - 1) && (dx != 0 || dz != 0)) continue;
+            int x = cx + dx, z = cz + dz;
+            if (!World.InBounds(x, 0, z)) continue;
+            int y = Walk.GroundLevel(World, x, z);
+            if (y >= 1) _wallPreview.Add((x, y, z, true));
+        }
+    }
+
     /// <summary>The Ladder button and key (Shift+K): starts (or stops) placing siege ladders for the selected workers and sappers to raise.</summary>
     public void ToggleLadder() => SetTool(Tool == ToolMode.Ladder ? ToolMode.Select : ToolMode.Ladder);
 
@@ -1885,6 +1961,13 @@ public partial class PlayerControl : Node
                 _sim.Schedule(_sim.Tick, new LadderCommand(LocalPlayer, OwnDiggers().ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.Dam)
                 _sim.Schedule(_sim.Tick, new DamCommand(LocalPlayer, OwnDiggers().ToArray(), _wallX, _wallZ, x2, z2));
+            else if (Tool == ToolMode.Fell)
+            {
+                if (x2 != _wallX || z2 != _wallZ)
+                    _sim.Schedule(_sim.Tick, new FellCommand(LocalPlayer, OwnFellers().ToArray(), _wallX, _wallZ, x2 - _wallX, z2 - _wallZ));
+            }
+            else if (Tool == ToolMode.Prospect)
+                _sim.Schedule(_sim.Tick, new ProspectCommand(LocalPlayer, OwnProspectors().ToArray(), x2, z2));
             else _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
                 ? new BridgeCommand(LocalPlayer, workers, BridgeBuilding, _wallX, _wallZ, x2, z2)
                 : new WallCommand(LocalPlayer, workers, WallBuilding, _wallX, _wallZ, x2, z2));
@@ -1918,6 +2001,16 @@ public partial class PlayerControl : Node
         if (Tool == ToolMode.Ladder)
         {
             UpdateLadderPreview();
+            return;
+        }
+        if (Tool == ToolMode.Fell)
+        {
+            UpdateFellPreview();
+            return;
+        }
+        if (Tool == ToolMode.Prospect)
+        {
+            UpdateProspectPreview();
             return;
         }
         if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)
@@ -2410,6 +2503,9 @@ public partial class PlayerControl : Node
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
                $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
+               $"fellers={OwnFellers().Count} prospectors={OwnProspectors().Count} soundings={_sim.Economy.Soundings(LocalPlayer)} " +
+               $"prospected={_sim.Economy.ProspectedOre(LocalPlayer).Count} felling={Jobs(UnitJob.Fell)} prospecting={Jobs(UnitJob.Prospect)} " +
+               $"falling_trees={_sim.Physics.FallingTrees.Count} aimed_felled={_sim.Physics.AimedLanded} tree_crushed={_sim.Physics.TreeCrushed} " +
                $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} shield_wall={walled} " +
                $"rebuild={(_sim.Economy.Rebuilds(LocalPlayer) ? 1 : 0)} ruins={OwnRuins()} " +
                $"governor={(sel?.Governor ?? GovernorFocus.None).ToString().ToLowerInvariant()} town_guard={(sel != null ? _sim.Combat.TownGuardCount(sel) : 0)} " +

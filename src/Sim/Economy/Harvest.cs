@@ -77,8 +77,28 @@ public static class Harvest
     /// </summary>
     public static BlockType JobKind(BlockType b) => BlockInfo.IsTrunk(b) || b == BlockType.TreeRubble ? BlockType.Wood : b;
 
-    /// <summary>Ticks of work to take one block (for a tree, per trunk block).</summary>
+    /// <summary>
+    /// Ticks of work to take one block (for a tree, per trunk block). A fifth quicker than before Better tools gave
+    /// tools in place of 25% faster gathering (issue #146), so the economy keeps its pace.
+    /// </summary>
     public static int WorkTicks(BlockType b) => b switch
+    {
+        BlockType.Stone or BlockType.LooseRock => 25,
+        BlockType.IronOre => 33,
+        BlockType.Coal => 25,
+        BlockType.Crystal => 50,
+        BlockType.GoldOre => 50,
+        BlockType.BerryBush => 33,
+        _ when BlockInfo.IsTrunk(b) => 17,
+        _ when BlockInfo.IsRubble(b) => 8,
+        _ => 12,
+    };
+
+    /// <summary>
+    /// Ticks of work for a unit tunnelling through a block (see <see cref="Units.CombatSystem"/>): the pace digging had
+    /// before gathering was made quicker (#146), as Better tools never sped tunnels up.
+    /// </summary>
+    public static int TunnelTicks(BlockType b) => b switch
     {
         BlockType.Stone or BlockType.LooseRock => 30,
         BlockType.IronOre => 40,
@@ -191,6 +211,76 @@ public static class Harvest
             placed.Add((x, y, z));
             laid++;
         }
+    }
+
+    /// <summary>Widest gap or stream (columns) the trunk of an aimed tree lies across as a log bridge (see <see cref="LayAimed"/>).</summary>
+    public const int MaxLogSpan = 2;
+
+    /// <summary>
+    /// A tree felled the way a player chose (see <see cref="World.PhysicsSystem.FellTreeAimed"/>) lies down: like
+    /// <see cref="LayFelled"/>, but straight the way it fell, never turning. Where open ground (a gap, or a stream)
+    /// of up to <see cref="MaxLogSpan"/> columns lies in front of it and the far side is level with where it stands,
+    /// the trunk lies across at that level as a log bridge (resting on both sides), with enough logs left to reach.
+    /// Logs that find no place heap up over the stump.
+    /// </summary>
+    public static void LayAimed(VoxelWorld w, int x, int baseY, int z, int logs, int dirX, int dirZ,
+        List<(int X, int Y, int Z)> placed)
+    {
+        int cx = x, cy = baseY, cz = z, laid = 0;
+        while (laid < logs)
+        {
+            int span = 0;
+            while (span <= MaxLogSpan && Gap(w, cx + dirX * (span + 1), cy, cz + dirZ * (span + 1))) span++;
+            if (span > 0)
+            {
+                int bx = cx + dirX * (span + 1), bz = cz + dirZ * (span + 1);
+                if (span > MaxLogSpan || !Bank(w, bx, cy, bz) || logs - laid < span + 1)
+                {
+                    // Too wide, or nothing level to rest on over there: it drops in as any tree would, or stops.
+                    if (!LogSpot(w, cx + dirX, cy, cz + dirZ, out int dy)) break;
+                    cx += dirX; cz += dirZ; cy = dy;
+                    w.Set(cx, cy, cz, BlockType.TreeRubble);
+                    placed.Add((cx, cy, cz));
+                    laid++;
+                    continue;
+                }
+                for (int k = 1; k <= span + 1; k++)
+                {
+                    int lx = cx + dirX * k, lz = cz + dirZ * k;
+                    w.Set(lx, cy, lz, BlockType.TreeRubble);
+                    placed.Add((lx, cy, lz));
+                    laid++;
+                }
+                cx = bx; cz = bz;
+                continue;
+            }
+            if (!LogSpot(w, cx + dirX, cy, cz + dirZ, out int ny)) break;
+            cx += dirX; cz += dirZ; cy = ny;
+            w.Set(cx, cy, cz, BlockType.TreeRubble);
+            placed.Add((cx, cy, cz));
+            laid++;
+        }
+        int y = baseY;
+        while (y > 1 && w.Get(x, y - 1, z) == BlockType.Air) y--;
+        for (; laid < logs && y < w.SizeY; y++)
+        {
+            if (w.Get(x, y, z) != BlockType.Air) continue;
+            w.Set(x, y, z, BlockType.TreeRubble);
+            placed.Add((x, y, z));
+            laid++;
+        }
+    }
+
+    /// <summary>True if column (x, z) is open at level y and under it (air or water): a log there would lie over a gap.</summary>
+    private static bool Gap(VoxelWorld w, int x, int y, int z) =>
+        y >= 1 && w.InBounds(x, y, z) && w.Get(x, y, z) == BlockType.Air && w.Get(x, y - 1, z) is BlockType.Air or BlockType.Water;
+
+    /// <summary>True if a log can rest at level y of column (x, z): open there, on ground it can lie on.</summary>
+    private static bool Bank(VoxelWorld w, int x, int y, int z)
+    {
+        if (y < 1 || !w.InBounds(x, y, z) || w.Get(x, y, z) != BlockType.Air) return false;
+        var below = w.Get(x, y - 1, z);
+        return BlockInfo.CanStandOn(below) && !BlockInfo.IsLeaves(below);
     }
 
     /// <summary>

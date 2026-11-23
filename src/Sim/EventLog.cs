@@ -111,6 +111,11 @@ public enum GameEventKind : byte
     /// who ended it, or -1 if one of the two is out of the match.
     /// </summary>
     DealEnded,
+    /// <summary>
+    /// The player's prospector sounded the ground at (x, y, z) (see <see cref="Economy.EconomySystem.Sound"/>) and
+    /// found <see cref="GameEvent.Def"/> blocks of ore, coal, gold and crystal they did not know of.
+    /// </summary>
+    Prospected,
 }
 
 /// <summary>
@@ -253,6 +258,10 @@ public sealed class EventLog
     /// <summary>A brood of <paramref name="count"/> corrupted beasts rose at (x, y, z) and is coming for the player.</summary>
     internal void BroodRising(int player, int x, int y, int z, int count) =>
         Add(player, GameEventKind.BroodRising, x, y, z, 0, count);
+
+    /// <summary>The player's prospector sounded the ground at (x, y, z) and found <paramref name="found"/> new blocks of ore.</summary>
+    internal void Prospected(int player, int x, int y, int z, int found) =>
+        Add(player, GameEventKind.Prospected, x, y, z, 0, found);
 
     /// <summary>Tells the player about a truce with <paramref name="rival"/> (one of the Truce kinds).</summary>
     internal void Truce(int player, GameEventKind kind, int rival, int def) =>

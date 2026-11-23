@@ -98,7 +98,7 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>Ticks a sapper takes to dig out a block.</summary>
-    public static int DigTicks(BlockType b) => Math.Max(1, Harvest.WorkTicks(b) / SapperDigSpeed);
+    public static int DigTicks(BlockType b) => Math.Max(1, Harvest.TunnelTicks(b) / SapperDigSpeed);
 
     /// <summary>True if a tunnel can be dug through the block: natural ground or a road, not bedrock or a building.</summary>
     public static bool Tunnelable(BlockType b) =>
@@ -209,7 +209,7 @@ public sealed partial class CombatSystem
                 return;
             }
             // A worker digging itself out digs at its gathering pace, a sapper twice as fast.
-            int ticks = Def(i).Role == UnitRole.Sapper ? DigTicks(block) : Harvest.WorkTicks(block);
+            int ticks = Def(i).Role == UnitRole.Sapper ? DigTicks(block) : Harvest.TunnelTicks(block);
             // Near a hero that works the breach, a sapper digs faster still.
             if (++u.JobTimer[i] < Math.Max(1, ticks * 100 / Def(i).WorkPercent * 100 / (100 + UndermineOf(i)))) return;
             u.JobTimer[i] = 0;

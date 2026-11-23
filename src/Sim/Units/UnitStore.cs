@@ -138,6 +138,13 @@ public enum UnitJob : byte
     /// ashore there (see <see cref="BoatSystem"/>).
     /// </summary>
     Land,
+    /// <summary>
+    /// Fell the tree standing in column (<see cref="UnitStore.JobX"/>, JobZ), its trunk starting at level JobY, so it
+    /// falls the way <see cref="UnitStore.JobTarget"/> says (0 +x, 1 -x, 2 +z, 3 -z; see <see cref="FellCommand"/>).
+    /// </summary>
+    Fell,
+    /// <summary>Sound the ground at column (<see cref="UnitStore.JobX"/>, JobZ) (see <see cref="ProspectCommand"/>).</summary>
+    Prospect,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

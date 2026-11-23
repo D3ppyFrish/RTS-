@@ -33,6 +33,26 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   out of. As the block is taken it checks again, since others may have dug nearby meanwhile: a block
   whose digging would leave it, or anyone standing close by, in a hole with no way out is left, and
   the worker moves on (#37).
+- **Better tools: aimed felling and prospecting** (`FellCommand`, `ProspectCommand`, `felling` and `prospecting`
+  tech effects, `EconomySystem.Tools.cs`, #146). Better tools no longer makes gathering faster: base gathering is a
+  fifth quicker for everyone instead (a trunk block 0.85 seconds, stone 1.25, iron ore 1.65, crystal and gold 2.5;
+  quarry rounds 10 seconds, mine rounds 12), so the economy keeps its pace. In its place it gives two tools.
+  **Aimed felling:** a Settler militia (an Orc or Deepfolk worker, twice as slowly) is ordered to fell a tree the
+  way the player drags. It walks round to the back of the tree, works at it 4 seconds (8 for an Orc or Deepfolk
+  worker; twice that for a big tree) and brings it down that way, straight, never turning. Where it lands
+  (its trunk's length plus two, the last three columns a column wider each side for the crown) every unit near
+  the ground takes 60 damage, friend or foe, and each building there is hit once for 60, as by a blow. Its logs lie
+  along the way it fell; where a gap or a stream of one or two columns lies in front of it, with level ground
+  on the far side and logs enough to reach, the trunk lies across at the ground's level, resting on both
+  sides, as a log bridge units walk over (it is tree rubble: half speed, and anyone clearing it for wood takes
+  it away, the logs over the gap then falling in). Its wood is gathered where it fell, like any felled tree's.
+  **Prospecting:** a Settler foreman or Master Builder (an Orc or Deepfolk worker, twice as slowly) is ordered to
+  sound the ground at a spot. It walks there, works 8 seconds (16) and then every iron ore, coal, gold and crystal
+  block within 12 columns, at any depth, is known to its player: the game draws it through the ground in its
+  own colour until it is dug out, and the ground round the spot comes out of the fog as seen. An alert says how
+  many blocks were found. Other players learn nothing. Computer players (Easy and up) sound the ground once by
+  each storage building of theirs (town hall and storehouses) once they have the tech, with the nearest unit
+  that can; they leave felling to players.
 - **Buildings** (`BuildCommand`, from `data/buildings.json`): town hall, storehouse, house, farm, barracks,
   smelter, quarry and mine. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
   A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column
@@ -112,9 +132,9 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   get theirs the same way. The top bar shows it after crystal. All numbers are first guesses for playtesting.
 - **Quarries and mines** (`WorkCommand`, kind `quarry` in `data/buildings.json`, #50): buildings workers work, like
   a farm, for goods that never run out, wherever they stand. A quarry (5 by 5, 60 wood) takes three workers, each
-  bringing 5 stone every 12 seconds of work; a mine (5 by 5, 60 wood and 40 stone, needs Smelting) takes two, each
-  round of 15 seconds giving 4 iron ore and then 2 coal, in turn, which is what a smelter uses. Each load goes to
-  the nearest storage, like any gathered goods. Gathering techs (Better tools) make the rounds quicker, and a
+  bringing 5 stone every 10 seconds of work; a mine (5 by 5, 60 wood and 40 stone, needs Smelting) takes two, each
+  round of 12 seconds giving 4 iron ore and then 2 coal, in turn, which is what a smelter uses. Each load goes to
+  the nearest storage, like any gathered goods. Gathering techs (Craft guilds) make the rounds quicker, and a
   worker's work speed counts. Automatic workers work one when the good it gives is the one the player needs most
   and it has a free place (a mine's ore and coal, like dug ore and coal, only once there is a smelter); otherwise
   they gather block by block as before.
