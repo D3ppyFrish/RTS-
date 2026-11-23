@@ -182,7 +182,7 @@ public sealed class BoatSystem
     {
         var u = U;
         int b = u.IndexOf(c.Boat);
-        if (b < 0 || u.Owner[b] != c.PlayerId || !Def(b).IsBoat) return;
+        if (b < 0 || u.Owner[b] != c.PlayerId || !Def(b).IsBoat || Def(b).Seats == 0) return;
         foreach (int i in _sim.OwnedUnits(c))
         {
             if (Def(i).IsBoat) continue;
@@ -307,7 +307,9 @@ public sealed class BoatSystem
     {
         var u = U;
         bool landing = u.Job[i] == UnitJob.Land;
-        var field = landing ? LandField(u.JobX[i], u.JobZ[i]) : SailField(u.OrderX[i], u.OrderZ[i]);
+        var field = landing ? LandField(u.JobX[i], u.JobZ[i])
+            : u.Order[i] == UnitOrder.Chase ? ReachField(u.OrderX[i], u.OrderZ[i], ReachOf(Def(i)))
+            : SailField(u.OrderX[i], u.OrderZ[i]);
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
         int c = z * SizeX + x;
         int d = field == null || !Navigable(x, z) ? -1 : field.Dist[c];
@@ -375,6 +377,45 @@ public sealed class BoatSystem
         if (!Navigable(x, z)) return null;
         long key = (long)z * SizeX + x;
         return Get(key, () => { _sources.Clear(); _sources.Add(z * SizeX + x); });
+    }
+
+    /// <summary>
+    /// How near (columns, from the middle of what it is after) a ship that fights sails to shoot: a block inside its
+    /// range, so it is in reach when it stops (see <see cref="CombatSystem"/>).
+    /// </summary>
+    public static int ReachOf(UnitDef def) => Math.Max(1, def.Range.FloorToInt() - 1);
+
+    /// <summary>
+    /// Ship i, which fights, goes after something at column (x, z) (on land or water): it sails to the nearest water
+    /// within <see cref="ReachOf"/> columns of it. The combat system calls this in place of a walk; with no such water
+    /// it stops, and the combat system gives up the chase.
+    /// </summary>
+    internal void Chase(int i, int x, int z)
+    {
+        var u = U;
+        u.Order[i] = UnitOrder.Chase;
+        u.OrderX[i] = x;
+        u.OrderZ[i] = z;
+        u.Blocked[i] = 0;
+        u.Field[i] = 0;
+    }
+
+    // The water within r columns of (x, z), as the sources of a way over the water.
+    private Field? ReachField(int x, int z, int r)
+    {
+        long key = (2L << 40) | ((long)r << 32) | ((long)z * SizeX + x);
+        if (_fields.TryGetValue(key, out var f) && Fresh(f)) { f.Used = _sim.Tick; return f; }
+        FindReach(x, z, r);
+        if (_sources.Count == 0) return null;
+        return Get(key, () => FindReach(x, z, r));
+    }
+
+    private void FindReach(int x, int z, int r)
+    {
+        _sources.Clear();
+        for (int dz = -r; dz <= r; dz++)
+        for (int dx = -r; dx <= r; dx++)
+            if (dx * dx + dz * dz <= r * r && Navigable(x + dx, z + dz)) _sources.Add((z + dz) * SizeX + x + dx);
     }
 
     private Field? LandField(int x, int z)

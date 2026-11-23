@@ -701,6 +701,13 @@ public sealed partial class CombatSystem
             return;
         }
         int gx, gz, gy;
+        if (Def(i).IsBoat)
+        {
+            // A ship sails within range of it by water (see BoatSystem.Chase).
+            if (b != null) _sim.Boats.Chase(i, (b.X + b.MaxX) / 2, (b.Z + b.MaxZ) / 2);
+            else _sim.Boats.Chase(i, u.X[t].FloorToInt(), u.Z[t].FloorToInt());
+            return;
+        }
         if (b != null)
         {
             // Beside it, as high up as a blow still reaches it from: the rubble heaped against a tall wall counts.
@@ -886,6 +893,7 @@ public sealed partial class CombatSystem
             AddShot(i, def, Clamp(u.X[i], b.X, b.MaxX + 1), b.Y + 1, Clamp(u.Z[i], b.Z, b.MaxZ + 1));
             _sim.Evolution.Damaged(i, damage);
             HitBuilding(b, damage, i, def.Role == UnitRole.Sapper || def.Ram, def.Blast);
+            if (def.Crater > 0) CraterBeside(i, def, b);
             return true;
         }
         if (_pending[t] >= u.Hp[t])
@@ -901,6 +909,7 @@ public sealed partial class CombatSystem
         {
             Fix64 side = (u.Id[i] & 1) == 0 ? Fix64.One : -Fix64.One;
             AddShot(i, def, u.X[t] + side, u.Y[t], u.Z[t] + side / 2);
+            Crater(u.X[t] + side, u.Y[t], u.Z[t] + side / 2, def.Crater);
             Misses++;
             return true;
         }
@@ -913,6 +922,7 @@ public sealed partial class CombatSystem
         }
         _shots.Add(new Shot(_sim.Tick, u.Id[i], u.X[i], u.Y[i], u.Z[i], u.X[t], u.Y[t], u.Z[t], def.IsRanged, def.Splash > Fix64.Zero,
             part, dealt, blocked));
+        Crater(u.X[t], u.Y[t], u.Z[t], def.Crater);
         return true;
     }
 

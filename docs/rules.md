@@ -227,6 +227,18 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   back from the deck. **Whoever is aboard a ship that is sunk goes down with it.**
 - **Putting ashore** (`UnloadCommand`, the Put ashore button, or a right-click on land): everyone aboard steps off
   onto the ground within 2 columns of the ship, nearest first, a few to a column, and stands there.
+- **The bombard ship** (`BombardShipTests`; `"sails": true` in `data/units.json`, `UnitDef.Sails`,
+  `BoatSystem.Chase`): the dock also builds the **bombard ship** (60 planks, 60 wood, 20 iron, 40 food, 45
+  seconds, needs Smelting), a siege engine of the siege role that sails like a ship but carries nobody (no seats:
+  nobody boards it). It is slow (2.5 blocks a second, half the transport ship's pace) and has 240 hit points,
+  armour 2 all over. Like the catapult it lobs (no clear line needed), has a blast (full damage to thick walls,
+  toppling them) and dead ground (`minRange` 4: it cannot hit a unit nearer than that), and its shells blow
+  **craters** (2 blocks, see Craters under Combat): a shell every 6 seconds out to 16 blocks for 35 crushing
+  damage with a 1.5 block splash. Sent at a building or a unit on the shore, it sails to the nearest water within
+  its range less a block (`BoatSystem.ReachOf`) by the shortest way by water and shells it from there; with no such
+  water it gives up. Being a siege machine it takes double damage from cavalry and heavy infantry if they ever
+  reach it, but its real bane is other siege: **siege attacks deal it twice their damage** (`"weakTo": { "siege":
+  100 }`), so catapults on the shore and other bombard ships sink it quickly.
 - **Computer players** do not build docks or ships yet. All numbers are first guesses.
 
 ## Combat
@@ -267,6 +279,17 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   - **Lobbed shots** (`lobs`): its stones go up in a high arc, so it needs no clear line: it hits what stands behind a
     wall or a hill, where arrows cannot reach.
   - **A machine** (`machine`): it never breaks and runs however low its morale falls, and it does not bleed.
+  - **Craters** (`crater`, 2 blocks, the catapult and the bombard ship; `CombatSystem.Crater`, `CraterTests`): where a stone lands, on a unit, beside
+    it on a miss, or at the foot of the building it hits on the catapult's side, it blows a bowl in the open ground
+    reaching 2 blocks round: two blocks deep in the middle, one at the edge. The earth is thrown onto the rim as
+    rubble, a block to a column while it lasts, so a crater is a pit with a rough lip that units walk round or
+    through slowly, and whoever stood there drops into it. Only natural ground open to the sky is dug (grass, soil,
+    sand, mud, stone and rubble): a building's blocks, ground under water, a roof, a tree or bedrock are left
+    alone, and a stone landing underground or on a roof leaves no crater; nor is the ground under a building's
+    footprint dug, so a crater never undermines it. Stones at a building land up to two columns either way of
+    the aim at its foot, so a bombardment pocks the ground along it. Stones that keep landing in the same place
+    dig the crater deeper. A unit down in a crater is hidden from direct shots (arrows need a clear line), but
+    not from lobbed stones.
   Siege is weak against cavalry and heavy infantry (`data/roles.json`). Computer players from Easy up build them (see
   Computer players). All numbers are first guesses for playtesting.
 - **Battering rams** (`RamTests`; the design doc's siege role, "break walls", and the siege concept art's covered ram

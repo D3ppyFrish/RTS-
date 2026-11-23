@@ -629,7 +629,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "ram", "gates", "cover", "seats");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "ram", "gates", "cover", "seats", "crater", "sails");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -662,8 +662,10 @@ public static class ContentLoader
                 Ram = o.Bool("ram"),
                 Gates = o.Int("gates", 10, 1000, 100),
                 Cover = o.Int("cover", 0, 100, 0),
+                Crater = o.Int("crater", 0, 4, 0),
                 Carry = o.Int("carry", 1, 100, 0),
                 Seats = o.Int("seats", 1, 50, 0),
+                Sails = o.Bool("sails"),
                 WeakTo = o.RolePercents("weakTo", 1, 1000),
                 Attack = o.Enum("attack", AttackKind.Slash, required: false),
                 Body = body,
@@ -703,6 +705,8 @@ public static class ContentLoader
                 o.Error("\"minRange\" must be less than \"range\"");
             if ((def.MinRange > Fix64.Zero || def.Lobs) && !def.IsRanged)
                 o.Error("only a ranged unit can have \"minRange\" or \"lobs\"");
+            if (def.Crater > 0 && !(def.Blast && def.IsRanged))
+                o.Error("only a ranged unit with \"blast\" can leave a \"crater\"");
             if (def.Ram && (def.IsRanged || !def.CanAttack))
                 o.Error("a ram (\"ram\") strikes close up: it needs \"damage\" and no \"range\" over 2");
             if (def.Heal == 0 && (o.Has("healTime") || o.Has("healRange")))
@@ -742,6 +746,8 @@ public static class ContentLoader
                 o.Error("is a cart (role hauler): it needs a \"carry\" and cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"");
             if (def.Role == UnitRole.Boat && (def.Seats == 0 || def.Damage > 0 || evolvesFrom != null || def.Lair != null || hiredFrom != null))
                 o.Error("is a boat (role boat): it needs \"seats\" and cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"");
+            if (def.Sails && (def.Role == UnitRole.Boat || !def.Machine || evolvesFrom != null || def.Lair != null || hiredFrom != null || def.Ram))
+                o.Error("sails (\"sails\"): it is a ship of a role other than boat, a machine, and cannot have \"evolvesFrom\", \"lair\", \"hiredFrom\" or \"ram\"");
             if (def.Role != UnitRole.Boat && def.Seats > 0)
                 o.Error("only a boat (role boat) has \"seats\"");
             if (def.Role != UnitRole.Hauler && def.Carry > 0)

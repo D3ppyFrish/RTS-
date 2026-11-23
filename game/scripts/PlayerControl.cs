@@ -618,7 +618,7 @@ public partial class PlayerControl : Node
         int target = PickUnit(screen);
         // A click on someone aboard a ship is a click on the ship.
         if (target > 0 && _sim.Units.Aboard[_sim.Units.IndexOf(target)] is int ship and > 0 && _sim.Units.Exists(ship)) target = ship;
-        if (target > 0 && OwnerOf(target) == LocalPlayer && IsBoat(target))
+        if (target > 0 && OwnerOf(target) == LocalPlayer && IsBoat(target) && _sim.Content.Units[_sim.Units.Def[_sim.Units.IndexOf(target)]].Seats > 0)
         {
             // Your own ship: the rest of the selection walks aboard.
             var riders = own.FindAll(id => id != target && !IsBoat(id));
@@ -2375,6 +2375,7 @@ public partial class PlayerControl : Node
                $"farms={OwnKind(BuildingKind.Farm)} barracks={OwnKind(BuildingKind.Barracks)} storehouses={OwnKind(BuildingKind.Storehouse)} " +
                $"catapults={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].Id == "catapult")} " +
                $"rams={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].Id == "battering_ram")} " +
+               $"craters={_sim.Combat.Craters} " +
                $"siege_workshops={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Active && b.Def.Id == "siege_workshop")} " +
                $"ships={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].IsBoat)} " +
                $"aboard={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Aboard[i] != 0)} " +

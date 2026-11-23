@@ -187,7 +187,8 @@ public class RamTests
             var sim = Flat();
             int m = sim.SpawnUnit(0, machine, 20, 20);
             sim.Units.Stance[Index(sim, m)] = UnitStance.Hold;
-            var ids = Enumerable.Range(0, count).Select(k => sim.SpawnUnit(1, attacker, 28, 18 + k)).ToArray();
+            // 4 blocks off, in the catapult's dead ground: it cannot shoot back (its craters would give them cover).
+            var ids = Enumerable.Range(0, count).Select(k => sim.SpawnUnit(1, attacker, 24, 18 + k)).ToArray();
             sim.Schedule(0, new AttackCommand(1, ids, m));
             Run(sim, seconds);
             return sim.Units.Exists(m) ? Hp(sim, m) * 100 / sim.Content.Unit(machine).MaxHp : 0;

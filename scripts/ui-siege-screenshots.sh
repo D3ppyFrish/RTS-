@@ -2,7 +2,7 @@
 # Scripted-input screenshot test for siege workshops and catapults, in test mode: you get every tech, goods and
 # instant training; the test panel puts up a siege workshop of yours, which is selected and trains a catapult from
 # its panel; then two more catapults of yours are put down, box-selected and sent at an Orc barracks some 14 blocks off,
-# which their stones knock down. Saves PNGs to OUT_DIR and fails if the UI state is not
+# which their stones knock down, blowing craters in the ground where they land. Saves PNGs to OUT_DIR and fails if the UI state is not
 # as expected.
 # Usage: scripts/ui-siege-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -71,6 +71,10 @@ key plus*2
 ticks 3200
 print
 shot $OUT/ui-siege-after.png
+key minus*2
+camera 172,406 220 50 14
+wait 3
+shot $OUT/ui-siege-craters.png
 "
 LOG="$OUT/ui-siege.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
@@ -87,5 +91,6 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 ENEMY="$(field "${UI[3]}" enemy_buildings)"
 [ "$(field "${UI[4]}" selected)" -ge 1 ] && [ "$(field "${UI[4]}" fighting)" -ge 1 ] || fail "no catapult selected and sent at the barracks: ${UI[4]}"
 [ "$(field "${UI[5]}" enemy_buildings)" -lt "$ENEMY" ] || fail "the catapults did not bring the barracks down: ${UI[5]} (was $ENEMY)"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 3 ] || fail "missing screenshots"
+[ "$(field "${UI[5]}" craters)" -ge 1 ] || fail "the catapults' stones left no craters: ${UI[5]}"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 4 ] || fail "missing screenshots"
 echo "UI siege screenshot test OK: $OUT"

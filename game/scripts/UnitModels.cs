@@ -804,6 +804,25 @@ public static class UnitModels
             .Box(0, 35, 6, 0, 35, 9, Team).Box(0, 31, -6, 0, 31, -3, Team)               // pennants
             .Box(-5, -3, 8, -5, -2, 9, Dark).Box(4, -3, 8, 4, -2, 9, Dark),              // hawse holes
 
+        // A bombard ship: the ship's hull, broader and lower, with one mast and a square sail banded in its owner's
+        // colour, and on the foredeck a squat iron bombard on a timber bed, its mouth over the bow.
+        "bombard_ship" => new Builder()
+            .Box(-6, -5, -10, 5, -1, 10, Hull)                                           // the hull, under the deck
+            .Box(-5, -6, -10, 4, -6, 9, HullDark)                                        // the keel side, mostly under water
+            .Box(-5, -5, 11, 4, -1, 12, Hull).Box(-4, -4, 13, 3, -1, 14, Hull)           // the bow narrowing
+            .Box(-2, -3, 15, 1, 0, 16, Hull)
+            .Box(-6, -5, -12, 5, 2, -11, HullDark)                                       // a raised stern castle
+            .Box(-5, -1, -10, 4, -1, 12, Deck).Box(-4, -1, 13, 3, -1, 14, Deck)          // the deck
+            .Box(-6, 0, -10, -6, 1, 12, Team).Box(5, 0, -10, 5, 1, 12, Team)             // gunwales in its owner's colour
+            .Box(-1, 0, -12, 0, 6, -12, Wood).Box(-1, 5, -14, 0, 5, -12, Wood)           // the rudder post and tiller
+            .Box(0, 0, -4, 0, 28, -4, Wood)                                              // the mast
+            .Box(-8, 26, -4, 8, 26, -4, Wood).Box(-8, 14, -4, 8, 14, -4, Wood)           // yards
+            .Box(-7, 15, -3, 7, 25, -3, Sailcloth).Box(-7, 19, -3, 7, 20, -3, Team)      // the sail, banded
+            .Box(0, 29, -4, 0, 29, -1, Team)                                             // pennant
+            .Box(-3, 0, 3, 2, 1, 10, Wood)                                               // the bombard's bed
+            .Box(-2, 2, 4, 1, 4, 13, Iron).Box(-3, 2, 4, 2, 5, 6, Iron)                  // the barrel and its breech
+            .Box(-1, 3, 13, 0, 3, 13, Dark),                                             // its mouth
+
         // Trade with the city-states: a pack mule with saddlebags in its owner's colour (what it carries goes on
         // its back), and the goblins' mercenaries.
         "caravan" => new Builder()
