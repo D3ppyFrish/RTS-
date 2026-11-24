@@ -11,7 +11,8 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
 # Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it. The water's
-# edge west of it: a 4 by 4 hut fits with its corner at 82,383 (the mouse on its middle, 84,385).
+# edge west of it: a 4 by 4 hut fits with its corner at 82,383 (the mouse on its middle, 84,385). That is more than
+# 32 columns from the town hall, a far site: its builders carry its wood out first (issue #149), so it takes longer.
 STEPS="
 wait 20
 camera 131,389 45 55 22
@@ -36,7 +37,7 @@ clickworld 84,g,385
 ticks 4
 print
 key plus*2
-ticks 900
+ticks 2400
 print
 clickworld 84,g,385 right
 ticks 300
