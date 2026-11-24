@@ -71,6 +71,7 @@ public static partial class Sculpted
         ["archer"] = ImportedRig("res://models/archer.vox.gz"),
         ["rider"] = ImportedRig("res://models/rider.vox.gz", stride: 1.6f, bob: 1.5f),
         ["mage"] = ImportedRig("res://models/mage.vox.gz"),
+        ["healer"] = ImportedRig("res://models/healer.vox.gz"),
         ["golem"] = new RigDef
         {
             Roles = new[] { Role.LegA, Role.LegB, Role.Body, Role.Head, Role.ArmA, Role.ArmB, Role.Fixed },
