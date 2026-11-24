@@ -107,6 +107,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's gates with murder holes drop stones (a <see cref="TechEffectType.MurderHoles"/> tech).</summary>
     public bool HasMurderHoles(int player) => Find(player)?.MurderHoles ?? false;
 
+    /// <summary>True if the player's workers can repair their buildings (a <see cref="TechEffectType.Repair"/> tech).</summary>
+    public bool CanRepair(int player) => Find(player)?.Repair ?? false;
+
     /// <summary>True if the player's units of this type can take up a shield wall (a <see cref="TechEffectType.ShieldWall"/> tech).</summary>
     public bool CanShieldWall(int player, UnitDef def) => Find(player)?.ShieldWall[def.Index] ?? false;
 
@@ -172,7 +175,7 @@ public sealed partial class EconomySystem
     {
         var units = Content.Units;
         p.GatherPercent = p.CarryBonus = p.FarmBonus = 0;
-        p.Roads = p.SpareWorkers = p.MurderHoles = false;
+        p.Roads = p.SpareWorkers = p.MurderHoles = p.Repair = false;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
@@ -194,6 +197,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.Roads: p.Roads = true; break;
                     case TechEffectType.SpareWorkers: p.SpareWorkers = true; break;
                     case TechEffectType.MurderHoles: p.MurderHoles = true; break;
+                    case TechEffectType.Repair: p.Repair = true; break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.Amount;

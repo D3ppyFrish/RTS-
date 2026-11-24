@@ -71,6 +71,10 @@ public sealed class SandboxSystem
                 return true;
             case SandboxTimeCommand c: if (On && _sim.DayNight) _sim.SetClock(c.Minute); return true;
             case SandboxGoodsCommand c: if (On) Goods(c); return true;
+            case SandboxDamageCommand c:
+                if (On && c.Damage > 0 && _sim.Buildings.AtColumn(c.X, c.Z) is { } hit)
+                    _sim.Combat.HitByTree(hit, Math.Min(c.Damage, 100000), c.X, c.Z, hit.Owner);
+                return true;
             case SandboxTechCommand c: if (On) Tech(c); return true;
             case SandboxCheatCommand c:
                 if (On && c.Owner >= 0 && c.Owner < _cheats.Length && Enum.IsDefined(c.Cheat))

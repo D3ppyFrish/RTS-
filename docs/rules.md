@@ -135,8 +135,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   a farm, for goods that never run out, wherever they stand. A quarry (5 by 5, 60 wood) takes three workers, each
   bringing 5 stone every 10 seconds of work; a mine (5 by 5, 60 wood and 40 stone, needs Smelting) takes two, each
   round of 12 seconds giving 4 iron ore and then 2 coal, in turn, which is what a smelter uses. Each load goes to
-  the nearest storage, like any gathered goods. Gathering techs (Craft guilds) make the rounds quicker, and a
-  worker's work speed counts. Automatic workers work one when the good it gives is the one the player needs most
+  the nearest storage, like any gathered goods. Gathering techs make the rounds quicker (none in the game's data
+  does any more: Craft guilds gives repair instead, #150), and a worker's work speed counts. Automatic workers work one when the good it gives is the one the player needs most
   and it has a free place (a mine's ore and coal, like dug ore and coal, only once there is a smelter); otherwise
   they gather block by block as before.
 - **Fishing huts** (kind `quarry` with `"shore": true` in `data/buildings.json`): a 4 by 4 hut of planks and thatch
@@ -577,6 +577,22 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   unheld gate drops nothing, so the attacker's answer is to clear the walls first. Masonry no longer makes
   houses hold more: that bonus is gone (the manor and castle keep it unlocks are the roomier houses).
   Hard posts a ranged soldier from home by each of its gates that has murder holes, so they are held.
+- **Repair** (Craft guilds, issue #150; a `repair` effect in `data/techs.json`, `RepairCommand`, `UnitJob.Repair`,
+  `EconomySystem.Repair.cs`, `RepairTests`): Craft guilds no longer makes workers gather 15% faster; with it, a Settler
+  player's workers repair their own damaged buildings, walls, gates and towers. Right-click one with workers selected
+  (or automatic workers take it as building work): they stand beside it and mend it a step at a time. Each step puts
+  back one knocked-out block where it stood (bottom up, once its place is clear of units and solid ground or blocks
+  are under it; rubble lying there is cleared away), or once every block is back, the damage dealt toward its next
+  block. A step takes as long as building that much of it did (a stone wall's 75-hit-point block about a second, at
+  the usual work speed), four times as long while it is **under fire** (hit by another side in the last 5 seconds),
+  so repairing holds a siege but does not outpace one. Each step costs its share of half the building's cost over all
+  of its hit points, taken from storage (all of a stone wall's 225 hit points: 5 of its 10 stone); with nothing to
+  pay with, the workers stop. Sent to a wall, gate or tower, they go on along it to the next damaged stretch within
+  8 columns (the one fewest are mending, then the nearest) until it is all whole. Automatic workers repair, up to 2
+  at a building, only while no enemy (wild game aside) is within 16 columns of it and the next step can be paid for;
+  computer players' workers are automatic, so Settler computer players repair the same way once no enemy is near.
+  The Orcs and the Deepfolk have no repair: it is the Settlers' builder edge. Rebuilding a ruin from scratch (rebuild
+  orders, under Automation) stays open to everyone. All numbers are first guesses for playtesting.
 - **Breaking through** (`Breach`, `BreachFor`): units sent at a building they cannot get to (it is walled
   in) go for a wall, gate or facing of its owner within 16 columns instead: one they can get at from where
   they are, with the shortest way from them through it to the building (ties to the one nearer the

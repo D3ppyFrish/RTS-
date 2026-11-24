@@ -387,6 +387,17 @@ public sealed record FellCommand(int PlayerId, int[] Units, int X, int Z, int Di
 }
 
 /// <summary>
+/// The command's workers repair the player's damaged building <paramref name="Building"/>: they mend it a block at a time,
+/// putting back lost hit points and knocked-out blocks, for half its cost over all of its hit points, taken from storage.
+/// Only for a player with the tech for it (see <see cref="Content.TechEffectType.Repair"/>).
+/// </summary>
+public sealed record RepairCommand(int PlayerId, int[] Units, int Building) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(RepairCommand? other) => base.Equals(other) && Building == other!.Building;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building);
+}
+
+/// <summary>
 /// The units sound the ground at column (<paramref name="X"/>, <paramref name="Z"/>): units whose player has the tech
 /// for it (see <see cref="Content.TechEffectType.Prospecting"/>). After a while there, every ore, coal, gold and crystal
 /// block round the spot, at any depth, shows to their player through the ground.
@@ -603,6 +614,12 @@ public sealed record SandboxTimeCommand(int PlayerId, int Minute) : Command(Play
 
 /// <summary>Test mode: <paramref name="Owner"/>'s town hall (or first storage) gets <paramref name="Amount"/> more of every good.</summary>
 public sealed record SandboxGoodsCommand(int PlayerId, int Owner, int Amount) : Command(PlayerId);
+
+/// <summary>
+/// Test mode: the building standing on column (X, Z) takes <paramref name="Damage"/> as from a blow there, knocking out
+/// blocks as a siege would (not counted as being under fire), for trying out repairs.
+/// </summary>
+public sealed record SandboxDamageCommand(int PlayerId, int X, int Z, int Damage) : Command(PlayerId);
 
 /// <summary>Test mode: <paramref name="Owner"/> has the tech (by id) at once, or every tech with "all".</summary>
 public sealed record SandboxTechCommand(int PlayerId, int Owner, string Tech) : Command(PlayerId);

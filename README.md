@@ -226,7 +226,8 @@ steps such as `drag 500,300 900,600`, `click 1150,330 right`, `key space`, `key 
 `camera X,Z YAW PITCH DISTANCE`, `shot PATH` and `print`, separated by `;` or new lines (the full list is
 in `game/scripts/InputScript.cs`; `clickworld X,Y,Z` clicks a block wherever the camera shows it, and
 `clickui NAME` clicks a HUD button by name, such as `tech_roads` or `train_worker`; `dragworld` drags
-between two blocks; `waitmatch` waits for a match started from the start screen).
+between two blocks; `waitmatch` waits for a match started from the start screen; in test mode `damage X,Z AMOUNT`
+knocks blocks out of the building on that column, as `scripts/ui-repair-screenshots.sh` does before its workers repair the wall).
 `scripts/ui-screenshots.sh` uses it to box-select the starting units, order them to move, pause, and
 cut a hill with the height slice; `scripts/ui-economy-screenshots.sh` sends the workers to dig the
 stone outcrop, researches roads from the tech tree, places and builds a house, queues a worker at the

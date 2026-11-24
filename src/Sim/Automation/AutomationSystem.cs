@@ -306,7 +306,7 @@ public sealed partial class AutomationSystem
                 or CaptureCommand or BurnCommand or TunnelCommand or SearchRuinCommand:
                 held = true;
                 break;
-            case GatherCommand or WorkCommand or BuildCommand or DigAreaCommand or WallCommand or BridgeCommand:
+            case GatherCommand or WorkCommand or BuildCommand or DigAreaCommand or WallCommand or BridgeCommand or RepairCommand:
                 held = false;
                 break;
             default:
@@ -388,6 +388,12 @@ public sealed partial class AutomationSystem
                 }
                 var best = all[nearest[rank]];
                 var job = rank switch { 0 => UnitJob.Build, 1 => UnitJob.Farm, 2 or 4 => UnitJob.Haul, _ => UnitJob.Supply };
+                // Building work on a building that stands is repairing it (Craft guilds).
+                if (rank == 0 && !best.WantsBuilders)
+                {
+                    assignment = new Assignment(tick, UnitJob.Repair, best.Id, 0, 0, 0, BlockType.Air);
+                    return new RepairCommand(owner, me, best.Id);
+                }
                 assignment = new Assignment(tick, job, best.Id, 0, 0, 0, BlockType.Air);
                 return new WorkCommand(owner, me, best.Id);
             }
@@ -419,7 +425,8 @@ public sealed partial class AutomationSystem
     }
 
     /// <summary>
-    /// How much building b wants another worker: 0 for a site short of builders, 1 for a farm with room,
+    /// How much building b wants another worker: 0 for a site short of builders (or a damaged building its owner can
+    /// repair, with fewer than <see cref="MaxRepairers"/> at it and no enemy near: see <see cref="EconomySystem.WantsRepair"/>), 1 for a farm with room,
     /// 2 for a smelter with no hauler and something to smelt or carry away (a shrine with crystal to channel, a workshop with something to work while what it makes is short), 3 for storage short under its
     /// supply rules with fewer than <see cref="SupplyWorkers"/> on supply duty, 4 for an orchard with baskets of fruit
     /// waiting and nobody carrying them; -1 if it wants none.
@@ -430,6 +437,8 @@ public sealed partial class AutomationSystem
         int working = _working.GetValueOrDefault(b.Id);
         // A bridge's deck is built from beside it: not before there is ground or deck to stand on there.
         if (b.WantsBuilders) return working < MaxBuilders(b.Upgrade ?? b.Def) && (!b.Def.IsBridge || Economy.BridgeAccess(b, out _, out _, out _)) ? 0 : -1;
+        // A damaged building its owner can repair, with nobody hostile near it, is building work too.
+        if (b.Damaged && working < MaxRepairers && Economy.WantsRepair(b)) return 0;
         if (b.Def.Storage) return b.HasSupply && working < SupplyWorkers && Economy.WantsSupply(b) ? 3 : -1;
         if (b.Def.Kind == BuildingKind.Farm) return working < b.Def.WorkerSlots ? 1 : -1;
         if (b.Def.Kind == BuildingKind.Orchard) return working < b.Def.WorkerSlots && EconomySystem.Baskets(b) > 0 ? 4 : -1;
@@ -443,6 +452,9 @@ public sealed partial class AutomationSystem
                       && b.Stock[(int)Good.Coal] + s.Stock[(int)Good.Coal] >= EconomySystem.CoalPerIngot;
         return inputs || b.Stock[(int)Good.Iron] > 0 ? 2 : -1;
     }
+
+    /// <summary>Most automatic workers sent to repair a damaged building at once.</summary>
+    public const int MaxRepairers = 2;
 
     /// <summary>Most automatic workers sent to build a site: one, and one more for each half minute of work.</summary>
     public static int MaxBuilders(BuildingDef def) => 1 + def.BuildTicks / (30 * Tps);
@@ -612,6 +624,7 @@ public sealed partial class AutomationSystem
             untouched = b != null && a.Job switch
             {
                 UnitJob.Build => b.WantsBuilders,
+                UnitJob.Repair => b.Damaged,
                 UnitJob.Supply => Economy.WantsSupply(b), // it left while there was still supply work there
                 _ => b.Active,
             };
@@ -863,7 +876,7 @@ public sealed partial class AutomationSystem
                 foreach (var w in q.Def.Works) s.Gatherers[(int)w.Good]++;
                 if (q.Def.Hunts > 0) s.Gatherers[(int)Good.Food]++;
             }
-            if (u.Job[i] is UnitJob.Build or UnitJob.Farm or UnitJob.Haul or UnitJob.Supply or UnitJob.Quarry)
+            if (u.Job[i] is UnitJob.Build or UnitJob.Farm or UnitJob.Haul or UnitJob.Supply or UnitJob.Quarry or UnitJob.Repair)
                 _working[u.JobTarget[i]] = _working.GetValueOrDefault(u.JobTarget[i]) + 1;
         }
         foreach (var b in Buildings.All)

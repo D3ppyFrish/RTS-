@@ -330,7 +330,7 @@ public sealed partial class EconomySystem
         b.Def = to;
         b.Placed = to.Shaped(b.Look).Blocks.Count;
         b.Work = to.BuildTicks;
-        b.Lost = b.Damage = 0;
+        b.Lost = b.Damage = b.Mended = 0;
         b.Gone = null;
         b.Upgrade = null;
         b.UpgradeWork = 0;

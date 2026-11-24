@@ -18,6 +18,9 @@
 //                                         building it comes down on, and lies across a gap of one or two as a log bridge
 //   prospecting   { role or unit, faction, time, radius } those units can sound the ground, in time seconds: every ore,
 //                                         coal, gold and crystal block within radius columns, at any depth, shows to the player
+//   murder_holes                          stone gates drop stones on enemies at them while held (murderHoles in buildings.json)
+//   repair                                workers can repair the player's damaged buildings, walls, gates and towers, a block at
+//                                         a time, for half the cost over all its hit points (see "Repair" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
 // ruin (their units searched an old ruin), lair (their unit got the last of a monster lair's pack) or town
 // (they broke a city-state's totem and took the town).
@@ -54,9 +57,9 @@
     "cost": { "stone": 40, "wood": 20 }, "researchTime": 30, "requires": [ "masonry" ] },
   { "id": "sapping", "icon": "shovel", "name": "Sapping", "description": "Tunnellers who bring down walls.",
     "cost": { "wood": 40, "stone": 40 }, "researchTime": 30, "requires": [ "masonry" ] },
-  { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades.",
+  { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades. Your workers can repair your damaged buildings, walls, gates and towers: right-click one with workers, and they put back its lost hit points and knocked-out blocks a block at a time, paying half the building's cost for all of its hit points from storage. Slow under fire. Automatic workers repair once no enemy is near. Only the Settlers have repair.",
     "cost": { "wood": 80, "stone": 40 }, "researchTime": 40, "requires": [ "tools" ],
-    "effects": [ { "type": "gather_speed", "percent": 15 } ] },
+    "effects": [ { "type": "repair" } ] },
   { "id": "settler_drill", "icon": "shield", "name": "Drilled ranks", "faction": "settlers", "description": "Line infantry can lock shields into a wall: it cannot move, but arrows and charges from the front do little. Weak from the sides unless the wall is a line.",
     "cost": { "food": 50, "iron": 5 }, "researchTime": 40, "requires": [ "smelting" ],
     "effects": [ { "type": "shield_wall", "role": "line_infantry" } ] },

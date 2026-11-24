@@ -284,4 +284,20 @@ public class SandboxTests
         Assert.Equal(sim.Tick, again.Tick);
         Assert.NotEmpty(replayed);
     }
+
+    [Fact]
+    public void TestModeDamageKnocksBlocksOutOfABuilding()
+    {
+        var sim = TestSim();
+        var wall = sim.Economy.PlaceFinished(0, sim.Content.Building("stone_wall"), 30, 30)!;
+        Do(sim, new SandboxDamageCommand(0, 30, 30, 150));
+        Assert.Equal(wall.MaxHealth - 150, wall.Health);
+        Assert.True(wall.Damaged);
+        Assert.False(sim.Economy.UnderFire(wall)); // not a siege: repairs to it go at the usual pace
+
+        var off = TestSim(testMode: false);
+        var other = off.Economy.PlaceFinished(0, off.Content.Building("stone_wall"), 30, 30)!;
+        Do(off, new SandboxDamageCommand(0, 30, 30, 150));
+        Assert.False(other.Damaged);
+    }
 }
