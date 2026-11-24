@@ -530,7 +530,7 @@ public static class ContentLoader
         {
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
-                "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
+                "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime", "grow",
                 "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
@@ -554,7 +554,7 @@ public static class ContentLoader
                 };
             }
             int slots = o.Int("workerSlots", 0, 20, 0);
-            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop && slots == 0)
+            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop or BuildingKind.Orchard && slots == 0)
                 o.Error($"a {SnakeName(kind)} needs \"workerSlots\" of 1 or more, or nobody can work it");
             int wallHeight = o.Int("wallHeight", 1, 12, 3);
             if (kind is BuildingKind.Wall or BuildingKind.Tower && wallHeight <= Walk.MaxClimb)
@@ -588,6 +588,7 @@ public static class ContentLoader
                 FromDen = o.Bool("fromDen"),
                 Yield = o.Cost("yield"),
                 YieldTicks = o.Int("yieldTime", 1, MaxSeconds, 0) * Tps,
+                GrowTicks = o.Int("grow", 1, MaxSeconds, 0) * Tps,
                 Sturdy = o.Int("sturdy", 1, 1000, 1),
                 Thick = o.Bool("thick"),
                 Walkway = o.Bool("walkway"),
@@ -638,6 +639,9 @@ public static class ContentLoader
             if (def.Aim > 0 && !def.Walkway) o.Error("\"aim\" is for the units posted on it: it needs a \"walkway\"");
             if (def.Walkway && wallHeight <= CombatSystem.MeleeHeight + 1)
                 o.Error($"a \"walkway\" needs \"wallHeight\" of {CombatSystem.MeleeHeight + 2} or more, or blows from the ground reach the units on it");
+            if (kind == BuildingKind.Orchard && (def.GrowTicks == 0 || def.Yield.Length == 0))
+                o.Error("an orchard needs \"grow\" (the seconds its trees take to grow) and \"yield\" with \"yieldTime\" (the basket they bear, and how often)");
+            if (kind != BuildingKind.Orchard && def.GrowTicks > 0) o.Error("only an orchard has \"grow\"");
             if ((def.Yield.Length > 0) != (def.YieldTicks > 0))
                 o.Error("\"yield\" and \"yieldTime\" go together: the goods it brings in, and the seconds between");
             if (def.FromDen && kind is BuildingKind.TownHall or BuildingKind.Wall or BuildingKind.Gate or BuildingKind.Totem or BuildingKind.Bridge or BuildingKind.Tower)
@@ -1570,6 +1574,7 @@ public static class ContentLoader
                 h.Add(b.FromDen ? 1 : 0);
                 h.Add(b.Yield);
                 h.Add(b.YieldTicks);
+                h.Add(b.GrowTicks);
                 h.Add(b.Requires);
                 h.Add(b.Faction?.Index ?? -1);
                 h.Add(b.Sturdy);

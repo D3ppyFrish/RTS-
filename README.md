@@ -152,7 +152,8 @@ replay made with different data says so instead of drifting apart.
   effects: faster gathering, bigger loads, richer farms, more housing, more hit points (for units
   already alive too), faster walking, roads, showing the map's ruins, lairs or towns through the fog
   (`reveal`), wild monsters sparing workers (`spare_workers`), the shield wall (`shield_wall`), aimed felling and
-  prospecting (`felling`, `prospecting`), and murder holes in stone gates (`murder_holes`, Masonry).
+  prospecting (`felling`, `prospecting`), and murder holes in stone gates (`murder_holes`, Masonry). Crop rotation
+  has no effect: it unlocks the orchard (see [Economy](docs/rules.md#economy)).
   Design principle for new techs: **research gives tools, not numbers**. A tech should give players a new
   ability, unit option, building or tactic to outsmart enemies and adapt, not just a higher number; stat
   buffs are mostly avoided. The stat effects above are to be replaced (see issue #80, on hold).

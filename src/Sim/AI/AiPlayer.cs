@@ -427,6 +427,7 @@ public sealed partial class AiPlayer
             && Affordable(sim, barracksDef.Cost))
             PlaceNear(sim, barracksDef, Middle(hall), Automation.AutomationSystem.PlanRadius, issue);
 
+        if (!site) Orchards(sim, hall, issue);
         if (Smart) SiegeEconomy(sim, hall, workers, issue);
         if (Smart) Shipyard(sim, hall, workers, issue);
         if (Smart) Carts(sim, hall, issue);

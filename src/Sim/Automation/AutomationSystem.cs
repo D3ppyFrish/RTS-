@@ -344,9 +344,10 @@ public sealed partial class AutomationSystem
         }
 
         // The nearest building of each kind that needs a worker: a site short of builders (rank 0), a farm
-        // with room (1), a smelter with no hauler (2), storage short under its supply rules (3).
-        Span<int> nearest = stackalloc int[4];
-        Span<long> nearestD = stackalloc long[4];
+        // with room (1), a smelter with no hauler (2), storage short under its supply rules (3), an orchard with
+        // baskets of fruit and nobody to carry them (4).
+        Span<int> nearest = stackalloc int[5];
+        Span<long> nearestD = stackalloc long[5];
         nearest.Fill(-1);
         var all = Buildings.All;
         for (int k = 0; k < all.Count; k++)
@@ -371,6 +372,8 @@ public sealed partial class AutomationSystem
         foreach (var kind in WorkPriorities.Unpack(IsCart(i) ? CartPriorities : PrioritiesOf(i)))
         {
             int rank = kind switch { WorkKind.Build => 0, WorkKind.Farm => 1, WorkKind.Smelt => 2, WorkKind.Supply => 3, _ => -1 };
+            // Carrying an orchard's fruit in is farm work, after the farms; and a cart's, after its supply duty.
+            if (rank == 1 && (IsCart(i) || nearest[1] < 0) || rank == 3 && IsCart(i) && nearest[3] < 0) rank = 4;
             if (rank >= 0)
             {
                 if (nearest[rank] < 0)
@@ -380,7 +383,7 @@ public sealed partial class AutomationSystem
                     continue;
                 }
                 var best = all[nearest[rank]];
-                var job = rank switch { 0 => UnitJob.Build, 1 => UnitJob.Farm, 2 => UnitJob.Haul, _ => UnitJob.Supply };
+                var job = rank switch { 0 => UnitJob.Build, 1 => UnitJob.Farm, 2 or 4 => UnitJob.Haul, _ => UnitJob.Supply };
                 assignment = new Assignment(tick, job, best.Id, 0, 0, 0, BlockType.Air);
                 return new WorkCommand(owner, me, best.Id);
             }
@@ -414,7 +417,8 @@ public sealed partial class AutomationSystem
     /// <summary>
     /// How much building b wants another worker: 0 for a site short of builders, 1 for a farm with room,
     /// 2 for a smelter with no hauler and something to smelt or carry away (a shrine with crystal to channel, a workshop with something to work while what it makes is short), 3 for storage short under its
-    /// supply rules with fewer than <see cref="SupplyWorkers"/> on supply duty; -1 if it wants none.
+    /// supply rules with fewer than <see cref="SupplyWorkers"/> on supply duty, 4 for an orchard with baskets of fruit
+    /// waiting and nobody carrying them; -1 if it wants none.
     /// </summary>
     private int Wants(Building b, Stats s)
     {
@@ -424,6 +428,7 @@ public sealed partial class AutomationSystem
         if (b.WantsBuilders) return working < MaxBuilders(b.Upgrade ?? b.Def) && (!b.Def.IsBridge || Economy.BridgeAccess(b, out _, out _, out _)) ? 0 : -1;
         if (b.Def.Storage) return b.HasSupply && working < SupplyWorkers && Economy.WantsSupply(b) ? 3 : -1;
         if (b.Def.Kind == BuildingKind.Farm) return working < b.Def.WorkerSlots ? 1 : -1;
+        if (b.Def.Kind == BuildingKind.Orchard) return working < b.Def.WorkerSlots && EconomySystem.Baskets(b) > 0 ? 4 : -1;
         if (b.Def.Kind == BuildingKind.Shrine)
             return working < b.Def.WorkerSlots && b.Stock[(int)Good.Crystal] + s.Stock[(int)Good.Crystal] > 0 ? 2 : -1;
         if (b.Def.Kind == BuildingKind.Workshop)
@@ -842,7 +847,7 @@ public sealed partial class AutomationSystem
             if (IsCart(i))
             {
                 // A cart on supply duty counts against the building's supply workers like a worker does.
-                if (u.Job[i] == UnitJob.Supply) _working[u.JobTarget[i]] = _working.GetValueOrDefault(u.JobTarget[i]) + 1;
+                if (u.Job[i] is UnitJob.Supply or UnitJob.Haul) _working[u.JobTarget[i]] = _working.GetValueOrDefault(u.JobTarget[i]) + 1;
                 continue;
             }
             if (!IsWorker(i)) continue;

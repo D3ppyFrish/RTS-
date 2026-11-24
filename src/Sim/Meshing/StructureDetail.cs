@@ -38,11 +38,14 @@ public static class StructurePalette
     public const byte GloomA = 76, GloomB = 77, GloomDark = 78, GloomGlow = 79;
     // The Deepfolk's hive earth: packed soil in two shades, the dark of a tunnel mouth, and glints of resin.
     public const byte HiveA = 80, HiveB = 81, HiveDark = 82, HiveResin = 83;
+    // An orchard's fruit trees: glossy leaves in two greens, and the ripe fruit hanging in them.
+    public const byte OrchardLeafA = 84, OrchardLeafB = 85, Fruit = 86;
     /// <summary>One more than the highest colour.</summary>
-    public const byte Count = 84;
+    public const byte Count = 87;
 
     /// <summary>Leaf colours: drawn swaying in the wind.</summary>
-    public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark || c is >= GloomA and <= GloomDark;
+    public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark || c is >= GloomA and <= GloomDark
+        or OrchardLeafA or OrchardLeafB or Fruit;
 
     /// <summary>Colours that glow by themselves (a dusk tree's specks, a gloom pine's).</summary>
     public static bool IsGlow(byte c) => c is DuskGlow or DuskVein or GloomGlow;
@@ -92,7 +95,7 @@ public static class StructureDetail
     public static bool IsDetailed(BlockType t) => IsStructure(t) || BlockInfo.IsRubble(t) || IsTree(t);
 
     /// <summary>Standing trees (every kind): trunks and leaves.</summary>
-    public static bool IsTree(BlockType t) => BlockInfo.IsTrunk(t) || BlockInfo.IsLeaves(t) || BlockInfo.IsDuskTree(t);
+    public static bool IsTree(BlockType t) => BlockInfo.IsTrunk(t) || BlockInfo.IsLeaves(t) || BlockInfo.IsDuskTree(t) || t == BlockType.Orchard;
 
     /// <summary>Index in a 3 x 3 x 3 neighbourhood of the block at offset (dx, dy, dz) from its middle.</summary>
     public static int NeighbourIndex(int dx, int dy, int dz) => ((dy + 1) * 3 + (dz + 1)) * 3 + (dx + 1);
@@ -164,11 +167,16 @@ public static class StructureDetail
             if (BlockInfo.IsDuskTree(_self))
                 for (int k = 0; k < 27; k++)
                     if (k != 13 && BlockInfo.IsDuskTree(n[k])) _links |= 1 << k;
+            // An orchard's trees are not solid, but one tree's blocks close one another in, like any crown's.
+            bool orchard = _self == BlockType.Orchard;
             for (int d = 0; d < 6; d++)
-                if (!BlockInfo.IsSolid(NeighbourOf(d))) _open |= 1 << d;
+                if (!BlockInfo.IsSolid(NeighbourOf(d)) && !(orchard && NeighbourOf(d) == BlockType.Orchard)) _open |= 1 << d;
             _openCorners = 0;
             for (int k = 0; k < Corners.Length; k++)
-                if (!BlockInfo.IsSolid(n[NeighbourIndex(Corners[k].X, 0, Corners[k].Z)])) _openCorners |= 1 << k;
+            {
+                var c = n[NeighbourIndex(Corners[k].X, 0, Corners[k].Z)];
+                if (!BlockInfo.IsSolid(c) && !(orchard && c == BlockType.Orchard)) _openCorners |= 1 << k;
+            }
 
             bool xPair = Open(PX) && Open(NX), zPair = Open(PZ) && Open(NZ);
             bool anySide = (_open & (1 << PX | 1 << NX | 1 << PZ | 1 << NZ)) != 0;
@@ -288,6 +296,7 @@ public static class StructureDetail
             BlockType.DuskWood => DuskTrunk(x, y, z),
             BlockType.DuskBranch => DuskBranch(x, y, z),
             BlockType.MushroomCap => Cap(x, y, z),
+            BlockType.Orchard => FruitTree(x, y, z),
             _ when BlockInfo.IsTrunk(_self) => Trunk(x, y, z),
             BlockType.WillowLeaves when Open(NY) => Strands(x, y, z),
             _ when BlockInfo.IsLeaves(_self) => Leaves(x, y, z),
@@ -831,6 +840,32 @@ public static class StructureDetail
             return (hb % 5) switch { 0 => b, 1 => c, _ => a };
         }
 
+        /// <summary>
+        /// An orchard's fruit tree (<see cref="BlockType.Orchard"/>): with its crown over it, the trunk; with nothing
+        /// over or under it, a sapling, a little tuft of leaves on a stem; otherwise its crown, leafy like any tree's,
+        /// with fruit hanging on the outside.
+        /// </summary>
+        private byte FruitTree(int x, int y, int z)
+        {
+            int dx = 2 * x - 7, dz = 2 * z - 7, d2 = dx * dx + dz * dz;
+            if (_ny != BlockType.Orchard && _py == BlockType.Orchard)
+                return d2 <= 20 ? (Hash(x, _wy * Size + y, z) % 3 == 0 ? StructurePalette.BarkB : StructurePalette.BarkA) : StructurePalette.Empty;
+            if (_ny != BlockType.Orchard && _py != BlockType.Orchard)
+            {
+                // A sapling: a stem, and a tuft of leaves up top.
+                if (y < 3) return d2 <= 2 ? StructurePalette.BarkA : StructurePalette.Empty;
+                int r = y < 6 ? 26 : 12;
+                return d2 <= r ? (Hash(x, y, z) % 3 == 0 ? StructurePalette.OrchardLeafB : StructurePalette.OrchardLeafA) : StructurePalette.Empty;
+            }
+            byte leaf = Leaves(x, y, z);
+            if (leaf == StructurePalette.Empty) return leaf;
+            // Fruit: on the outside of the crown, now and then, two voxels across.
+            bool outside = false;
+            for (int d = 0; d < 6 && !outside; d++) outside = d != PY && Open(d) && Depth(d, x, y, z) < 1;
+            if (outside && Hash((_wx * Size + x) >> 1, (_wy * Size + y) >> 1, (_wz * Size + z) >> 1) % 11 == 0) return StructurePalette.Fruit;
+            return leaf;
+        }
+
         /// <summary>This block's leaf colours: mid, deep, second, sunlit and underside.</summary>
         private (byte A, byte B, byte C, byte Light, byte Under) LeafColours() => _self switch
         {
@@ -844,6 +879,8 @@ public static class StructureDetail
                 StructurePalette.DuskB, StructurePalette.DuskDark),
             BlockType.GloomLeaves => (StructurePalette.GloomA, StructurePalette.GloomB, StructurePalette.GloomA,
                 StructurePalette.GloomB, StructurePalette.GloomDark),
+            BlockType.Orchard => (StructurePalette.OrchardLeafA, StructurePalette.OrchardLeafB, StructurePalette.OrchardLeafA,
+                StructurePalette.LeafYellow, StructurePalette.LeafDark),
             _ => (StructurePalette.LeafA, StructurePalette.LeafB, StructurePalette.LeafC, StructurePalette.LeafYellow,
                 StructurePalette.LeafDark),
         };

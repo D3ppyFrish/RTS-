@@ -334,7 +334,7 @@ public class DeepfolkTests
     /// <summary>Hollow buildings everyone has: the Deepfolk put up each of them as a mound of hive earth.</summary>
     public static IEnumerable<object[]> HollowBuildings() =>
         ContentLoader.LoadEmbedded().Buildings
-            .Where(d => !d.Mound && !d.IsRampart && d.Kind is not (BuildingKind.Farm or BuildingKind.Totem or BuildingKind.Light or BuildingKind.Bridge))
+            .Where(d => !d.Mound && !d.IsRampart && d.Kind is not (BuildingKind.Farm or BuildingKind.Orchard or BuildingKind.Totem or BuildingKind.Light or BuildingKind.Bridge))
             .Select(d => new object[] { d.Id });
 
     [Theory]

@@ -85,6 +85,14 @@ public enum BuildingKind : byte
     /// which nobody on the surface sees otherwise (see <see cref="VisionSystem"/>).
     /// </summary>
     ListeningPost,
+    /// <summary>
+    /// An orchard (see <see cref="EconomySystem"/>'s orchards): a field planted with fruit trees that grow for
+    /// <see cref="BuildingDef.GrowTicks"/> and then bear a basket of its <see cref="BuildingDef.Yield"/> every
+    /// <see cref="BuildingDef.YieldTicks"/> with nobody working it, which workers and carts carry to storage. Its grown
+    /// trees screen sight and shots like a hedge, and units push through them slowly. Raiders cut it down, and it
+    /// grows again from saplings.
+    /// </summary>
+    Orchard,
 }
 
 /// <summary>
@@ -212,6 +220,8 @@ public sealed class BuildingDef
     public GoodAmount[] Yield { get; init; } = Array.Empty<GoodAmount>();
     /// <summary>Ticks between its yields; 0 when it has none.</summary>
     public int YieldTicks { get; init; }
+    /// <summary>An orchard: ticks its saplings take to grow into fruit trees, once planted; 0 for anything else.</summary>
+    public int GrowTicks { get; init; }
     /// <summary>
     /// How many times the damage of the same block elsewhere each of its blocks takes before it is knocked out
     /// (1 unless given): what makes one tier of wall sturdier than the last (see <see cref="BlockToughness"/>).
@@ -277,7 +287,7 @@ public sealed class BuildingDef
     }
 
     /// <summary>Units stand on it rather than next to it.</summary>
-    public bool Walkable => Kind == BuildingKind.Farm;
+    public bool Walkable => Kind is BuildingKind.Farm or BuildingKind.Orchard;
 
     /// <summary>A wall or gate: laid in lines, and put right next to other walls and gates.</summary>
     public bool IsWall => Kind is BuildingKind.Wall or BuildingKind.Gate;
@@ -309,7 +319,7 @@ public sealed class BuildingDef
     public BuildingDef Shaped(BuildingLook look)
     {
         if (look == BuildingLook.Standard || _base != null || Mound
-            || Kind is BuildingKind.Farm or BuildingKind.Totem or BuildingKind.Light or BuildingKind.Bridge) return this;
+            || Kind is BuildingKind.Farm or BuildingKind.Orchard or BuildingKind.Totem or BuildingKind.Light or BuildingKind.Bridge) return this;
         var mound = _mound;
         if (mound == null)
         {
@@ -406,7 +416,7 @@ public sealed class BuildingDef
     {
         if (_base != null) return HiveTemplate(_base);
         var list = new List<TemplateBlock>();
-        if (Kind == BuildingKind.Farm)
+        if (Kind is BuildingKind.Farm or BuildingKind.Orchard)
         {
             // The field replaces the ground surface, one level below where units stand.
             for (int z = 0; z < SizeZ; z++)

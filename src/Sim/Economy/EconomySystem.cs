@@ -127,7 +127,8 @@ public sealed partial class EconomySystem
     public const int CoalPerIngot = 1;
     /// <summary>Ticks of farm work for one harvest of <see cref="FarmYield"/> food.</summary>
     public const int FarmTicks = 15 * Tps;
-    public const int FarmYield = 5;
+    /// <remarks>6 since Crop rotation gives orchards instead of 2 more food a harvest (issue #148): the base pace makes up some of it.</remarks>
+    public const int FarmYield = 6;
     /// <summary>Longest road one command lays, and the stone each road block costs.</summary>
     public const int MaxRoad = 64;
     public const int StonePerRoad = 1;
@@ -302,6 +303,7 @@ public sealed partial class EconomySystem
         PruneDams();
         StepLadders();
         StepSaplings();
+        StepOrchards();
 
         var all = Buildings.All;
         for (int k = 0; k < all.Count; k++)
@@ -318,7 +320,11 @@ public sealed partial class EconomySystem
                 else if (b.Def.Kind == BuildingKind.Shrine) StepShrine(b);
                 else if (b.Def.Kind == BuildingKind.Workshop) StepWorkshop(b);
                 if (b.Queue.Count > 0) StepTraining(b);
-                if (b.Def.YieldTicks > 0 && (_sim.Tick + b.Id) % b.Def.YieldTicks == 0) BringYield(b);
+                if (b.Def.YieldTicks > 0 && (_sim.Tick + b.Id) % b.Def.YieldTicks == 0)
+                {
+                    if (b.Def.Kind == BuildingKind.Orchard) Bear(b);
+                    else BringYield(b);
+                }
             }
             if (b.Def.Raidable && !b.Planned && StepRaid(b)) k--; // burned down
         }
@@ -532,6 +538,7 @@ public sealed partial class EconomySystem
         b.Work = def.BuildTicks;
         b.State = BuildingState.Active;
         Absorb(b);
+        if (def.Kind == BuildingKind.Orchard) Replant(b);
         return b;
     }
 
@@ -548,6 +555,7 @@ public sealed partial class EconomySystem
             int x = b.X + t.X, y = b.Y + t.Y, z = b.Z + t.Z;
             if (World.InBounds(x, y, z) && World.Get(x, y, z) == t.Block) World.Set(x, y, z, t.Y < 0 ? BlockType.Soil : BlockType.Air);
         }
+        ClearTrees(b);
         Buildings.Remove(b);
     }
 
@@ -614,6 +622,7 @@ public sealed partial class EconomySystem
         {
             b.State = BuildingState.Active;
             Absorb(b);
+            if (b.Def.Kind == BuildingKind.Orchard) Replant(b);
             _sim.Events.BuildingFinished(b);
         }
     }
@@ -850,6 +859,12 @@ public sealed partial class EconomySystem
         b.RaidPlayer = -1;
         b.Raid = RaidKind.None;
         b.RaidTicks = 0;
+        if (b.Def.Kind == BuildingKind.Orchard)
+        {
+            // An orchard is cut down, whether its raiders came to burn it or to take it.
+            CutDown(b);
+            return false;
+        }
         if (kind == RaidKind.Capture)
         {
             b.Owner = player;
@@ -1081,7 +1096,16 @@ public sealed partial class EconomySystem
         // Carts only haul: they unload at storage, or take supply duty at storage with supply rules.
         foreach (int i in OwnedUnits(c))
         {
-            if (!_sim.Content.Units[U.Def[i]].IsHauler || !b.Def.Storage || !b.Active) continue;
+            if (!_sim.Content.Units[U.Def[i]].IsHauler || !b.Active) continue;
+            if (b.Def.Kind == BuildingKind.Orchard)
+            {
+                // A cart takes an orchard's baskets to storage (once it has unloaded what it carries).
+                if (U.Job[i] == UnitJob.Haul && U.JobTarget[i] == b.Id) continue;
+                StartJob(i, UnitJob.Haul, b.Id);
+                if (U.CarryAmount[i] > 0) GoToStorage(i);
+                continue;
+            }
+            if (!b.Def.Storage) continue;
             if (U.CarryAmount[i] > 0)
             {
                 StartJob(i, UnitJob.Deliver, 0);
@@ -1100,7 +1124,7 @@ public sealed partial class EconomySystem
             {
                 StartJob(i, UnitJob.Build, b.Id);
             }
-            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop)
+            else if (b.Def.Kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop or BuildingKind.Orchard)
             {
                 var job = JobAt(b.Def);
                 if (U.Job[i] == job && U.JobTarget[i] == b.Id) continue;

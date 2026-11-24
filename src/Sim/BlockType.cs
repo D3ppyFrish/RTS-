@@ -163,15 +163,22 @@ public enum BlockType : byte
     /// mouths. As tough as planks; it breaks into plain rubble.
     /// </summary>
     Hive,
+    /// <summary>
+    /// A fruit tree of an orchard (see <see cref="Economy.BuildingKind.Orchard"/>): its crown, trunk or sapling. Not
+    /// solid: units push through the branches (slowly, see <see cref="Units.UnitMovement"/>), but it is too thick to see
+    /// or shoot through (see <see cref="Units.CombatSystem.ClearLine"/>, <see cref="VisionSystem"/>), so a grown orchard
+    /// screens what is behind it like a hedge.
+    /// </summary>
+    Orchard,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Hive;
+    public const BlockType Last = BlockType.Orchard;
 
-    /// <summary>Anything but air, water and a ladder's rungs (which units stand in and see through).</summary>
-    public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Ladder;
+    /// <summary>Anything but air, water, a ladder's rungs and an orchard's trees (which units stand in).</summary>
+    public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Ladder && t != BlockType.Orchard;
 
     /// <summary>Bedrock, water, ice, lava and the dusk tree cannot be dug.</summary>
     public static bool IsDiggable(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Bedrock && t != BlockType.Lava

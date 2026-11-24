@@ -80,7 +80,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   command's workers build (with none, automatic workers may take it on). Until then nothing works on it:
   automatic workers leave it alone, it gives no housing, sight or production, cannot be attacked or
   raided, and other players do not see it. `CancelPlanCommand` removes one.
-- **Farms and the smelter** (`WorkCommand`): two farmers each bring 5 food every 15 seconds. The
+- **Farms and the smelter** (`WorkCommand`): two farmers each bring 6 food every 15 seconds (5 before Crop rotation
+  gave orchards in place of 2 more food a harvest, #148). The
   smelter's worker keeps it supplied with ore and coal from storage and carries its ingots back
   (2 ore + 1 coal = 1 iron in 10 seconds).
 - **Workshops: sawmills and planks, mason's yards and cut stone** (`SawmillTests`, `MasonTests`; the design doc's
@@ -155,6 +156,23 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   nobody stands on its trunk's columns, and wood cutters fell it like any other. A sapling dug up, built over or
   knocked off by a tree felled beside it is gone. When there is no room left the foresters wait and try again. The
   rounds give no goods, so automatic workers leave the lodge alone.
+- **Orchards** (Crop rotation; kind `orchard` in `data/buildings.json`; `EconomySystem.Orchards.cs`, `OrchardTests`, #148):
+  Crop rotation no longer makes harvests richer (farms give 6 food a harvest for everyone instead of 5); it opens
+  the orchard, a 6 by 6 field (30 wood, 15 seconds to build) planted with four fruit trees. Finished, it is
+  saplings; 4 minutes later they have grown into a block of fruit trees (`BlockType.Orchard`): trunks at the foot,
+  crowns three columns across filling the field from head height up, four levels high in all. A grown orchard
+  bears a basket of 10 food every 30 seconds with nobody working it; up to 3 baskets wait there, and it bears no
+  more until one is taken. Automatic workers (as farm work, when no farm has a free place) and carts (when no
+  storage wants supply) carry the baskets to storage, one at a time; a worker sent there by right click does the
+  same. Its trees are not solid: units walk through them at half pace, and find their way round an orchard when
+  that is quicker (a step into its trees costs double, like rubble). But they are too thick to see or shoot
+  through: an arrow or bolt cannot pass a tree block (`CombatSystem.ClearLine`), and under fog of war a unit or
+  building sees only 2 columns into a grown orchard and nothing beyond it along that line (`VisionSystem`,
+  `ScreenDepth`), unless it looks down from over the trees (a tower, a hill). So an orchard screens a flank or a
+  line of archers, and slows an attack through it. It can be raided (`raidable`): enemies who burn it or take it
+  cut it down instead; its baskets are lost and it grows again from saplings, giving nothing until then.
+  Destroyed or demolished, its trees go with it. Computer players lay out an orchard near their town hall once
+  they have Crop rotation, and a second once the first has grown.
 - **Hunting** (kind `quarry` with `"hunts"` in `data/buildings.json`; `EconomySystem.Hunt.cs`, `HuntingTests`): herds of
   **red deer** (`deer` in `data/units.json`, with `game`) graze the grassland: one herd for every start, 48 to 88 blocks
   from it, and 3 more for each 512 by 512 blocks of map (`MonsterSystem.PlaceHerds`), each four deer that roam up to 28
@@ -679,7 +697,7 @@ its commands played back ends the same. An order of the player's always comes fi
 - **Automatic workers** (`AutomateCommand`, J; `AutomateAllCommand`, Shift+J): once a second an
   automatic worker with nothing to do takes the nearest job it is needed for, in this order: take what
   it carries to storage; build a site that can use another builder (one, plus one for every 30 seconds
-  of building); work a farm with a free place; keep a smelter going while there is something to smelt;
+  of building); work a farm with a free place (or else carry an orchard's baskets in); keep a smelter going while there is something to smelt;
   otherwise gather within 40 columns what is needed most, or, once nothing is left to gather that close,
   the nearest of anything within 128 columns. Food and wood are wanted 3 parts each and
   stone 2 (iron ore and coal 1 each once you have a smelter), spread over the workers already on each;

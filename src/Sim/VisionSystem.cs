@@ -21,7 +21,9 @@ public enum Sight : byte
 /// It is worked out every <see cref="UpdateTicks"/> ticks, after the units have moved, for every player who
 /// has units or buildings (not the wild monsters), the same on every machine, so a computer player can go by
 /// it. With day and night on (<see cref="Simulation.DayNight"/>), sight is shortened by the dark, the weather
-/// and the swamp's mist, but lit columns are seen from as far as by day (see <see cref="Conditions"/>). With fog of war off (<see cref="Simulation.Fog"/>) nothing is worked out and every player sees
+/// and the swamp's mist, but lit columns are seen from as far as by day (see <see cref="Conditions"/>). A grown orchard's
+/// trees screen sight: a unit or building sees only <see cref="ScreenDepth"/> columns into one, and nothing behind it,
+/// unless it looks down over the trees (see <see cref="Economy.BuildingKind.Orchard"/>). With fog of war off (<see cref="Simulation.Fog"/>) nothing is worked out and every player sees
 /// everything.
 /// <para>
 /// Units underground (natural ground over their heads: in a tunnel or a cave, see <see cref="Covered"/>) are not seen
@@ -168,6 +170,7 @@ public sealed class VisionSystem
         foreach (var g in _close)
             if (g != null) Array.Clear(g);
 
+        _sim.Economy.Screens(_screens);
         var u = _sim.Units;
         var defs = _sim.Content.Units;
         var c = _sim.Conditions;
@@ -185,6 +188,7 @@ public sealed class VisionSystem
             var sight = defs[u.Def[i]].Sight;
             int dark = c.SightPercent(x, z, false);
             var s = sight * dark / 100;
+            _viewer = (x, z, u.Y[i]);
             Stamp(p, x, z, x, z, (s * s).FloorToInt());
             Hear(p, x, z, x, z, under ? Math.Max((s * s).FloorToInt(), HearClose * HearClose) : HearClose * HearClose);
             if (!under) Fill(_close[p] ??= new byte[_sizeX * _sizeZ], x, z, x, z, SpotSubmerged * SpotSubmerged);
@@ -195,12 +199,14 @@ public sealed class VisionSystem
                 Stamp(p, x, z, x, z, (s * s).FloorToInt(), litOnly: true);
             }
         }
+        _viewer = null;
         foreach (var b in _sim.Buildings.All)
         {
             if ((uint)b.Owner >= (uint)_grids.Length || b.Planned) continue;
             if (b.Def.Hearing > 0 && b.Active) Hear(b.Owner, b.X, b.Z, b.MaxX, b.MaxZ, b.Def.Hearing * b.Def.Hearing);
             int dark = c.SightPercent(b.X, b.Z, false);
             int s = b.Def.Sight * dark / 100;
+            _viewer = ((b.X + b.MaxX) / 2, (b.Z + b.MaxZ) / 2, b.Y + b.Shape.Height);
             Stamp(b.Owner, b.X, b.Z, b.MaxX, b.MaxZ, s * s);
             int lit = lights ? c.SightPercent(b.X, b.Z, true) : dark;
             if (lit > dark)
@@ -209,6 +215,7 @@ public sealed class VisionSystem
                 Stamp(b.Owner, b.X, b.Z, b.MaxX, b.MaxZ, s * s, litOnly: true);
             }
         }
+        _viewer = null;
         // A held town whose scouts ride the land round it (the centaurs' camp) shows its holder that land, as a
         // building's sight would: less of it in the dark, more where it is lit.
         foreach (var town in _sim.Cities.Towns)
@@ -269,6 +276,7 @@ public sealed class VisionSystem
         var half = Disc(r2);
         int r = half.Length - 1;
         long seen = 0;
+        bool screened = ScreensNear(x0 - r, z0 - r, x1 + r, z1 + r);
         for (int z = Math.Max(0, z0 - r); z <= Math.Min(_sizeZ - 1, z1 + r); z++)
         {
             int dz = z < z0 ? z0 - z : z > z1 ? z - z1 : 0;
@@ -278,11 +286,70 @@ public sealed class VisionSystem
             for (int k = 0; k < row.Length; k++)
             {
                 if (litOnly && !lights.Lit(from + k, z)) continue;
+                if (screened && Screened(from + k, z)) continue;
                 if (row[k] == (byte)Sight.Unseen) seen++;
                 row[k] = (byte)Sight.Visible;
             }
         }
         _seen[player] += seen;
+    }
+
+    /// <summary>
+    /// How many columns of an orchard's grown trees one sees into (and through): further in, and behind it, is hidden.
+    /// </summary>
+    public const int ScreenDepth = 2;
+
+    // The grown orchards (see Economy.EconomySystem.Screens), and the one looking while Stamp runs: its column and level
+    // (null for a town's scouts, who ride all round and see past them).
+    private readonly List<(int X0, int Z0, int X1, int Z1, int Top)> _screens = new();
+    private (int X, int Z, int Y)? _viewer;
+    private readonly List<int> _near = new();
+
+    /// <summary>
+    /// Notes the orchards that screen the viewer's sight within the rectangle (x0, z0)-(x1, z1): those it does not stand
+    /// over (its eyes above their trees). True if there are any.
+    /// </summary>
+    private bool ScreensNear(int x0, int z0, int x1, int z1)
+    {
+        _near.Clear();
+        if (_viewer is not { } v) return false;
+        for (int k = 0; k < _screens.Count; k++)
+        {
+            var o = _screens[k];
+            if (o.X1 < x0 || o.X0 > x1 || o.Z1 < z0 || o.Z0 > z1 || v.Y + 1 > o.Top) continue;
+            _near.Add(k);
+        }
+        return _near.Count > 0;
+    }
+
+    /// <summary>
+    /// True if the viewer's line of sight to column (x, z) runs through more than <see cref="ScreenDepth"/> columns of
+    /// one of the orchards near it (see <see cref="ScreensNear"/>), the column itself counted, the viewer's own not.
+    /// Walks the line in half-column steps, in whole numbers.
+    /// </summary>
+    private bool Screened(int x, int z)
+    {
+        var v = _viewer!.Value;
+        int dx = x - v.X, dz = z - v.Z;
+        int n = 2 * Math.Max(Math.Abs(dx), Math.Abs(dz));
+        if (n <= 2 * ScreenDepth) return false;
+        foreach (int k in _near)
+        {
+            var o = _screens[k];
+            // Quick: the line's box misses the orchard.
+            if (Math.Max(x, v.X) < o.X0 || Math.Min(x, v.X) > o.X1 || Math.Max(z, v.Z) < o.Z0 || Math.Min(z, v.Z) > o.Z1) continue;
+            int inside = 0, lastX = v.X, lastZ = v.Z;
+            for (int s = 1; s <= n; s++)
+            {
+                // The column the line is in at step s, rounded to the nearest (the half rounds away from the viewer).
+                int cx = v.X + (2 * dx * s + Math.Sign(dx) * n) / (2 * n);
+                int cz = v.Z + (2 * dz * s + Math.Sign(dz) * n) / (2 * n);
+                if (cx == lastX && cz == lastZ) continue;
+                (lastX, lastZ) = (cx, cz);
+                if (cx >= o.X0 && cx <= o.X1 && cz >= o.Z0 && cz <= o.Z1 && ++inside > ScreenDepth) return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>

@@ -11,6 +11,16 @@ namespace Rts.Sim.Units;
 /// </summary>
 public sealed class UnitMovement
 {
+    /// <summary>How many times slower a unit goes pushing through an orchard's trees (<see cref="BlockType.Orchard"/>).</summary>
+    public const int OrchardSlow = 2;
+
+    /// <summary>True if unit i is in an orchard's trees: its body or head among their branches.</summary>
+    public bool InOrchard(UnitStore u, int i)
+    {
+        int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
+        return _sim.World.Get(x, u.Y[i], z) == BlockType.Orchard || _sim.World.Get(x, u.Y[i] + 1, z) == BlockType.Orchard;
+    }
+
     /// <summary>Distance (blocks) below which two units push each other apart.</summary>
     public static readonly Fix64 SeparationRadius = Fix64.FromRatio(7, 10);
     /// <summary>Largest separation push per tick.</summary>
@@ -139,6 +149,7 @@ public sealed class UnitMovement
         var underfoot = _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] - 1, u.Z[i].FloorToInt());
         if (underfoot == BlockType.Road) { speed *= 2; full *= 2; }
         else if (BlockInfo.IsRubble(underfoot)) { speed /= 2; full /= 2; } // picking a way over a heap of rubble
+        else if (InOrchard(u, i)) { speed /= OrchardSlow; full /= OrchardSlow; } // pushing through an orchard's branches
         else if (underfoot == BlockType.Quicksand) { speed /= Rts.Sim.World.HazardSystem.QuicksandSlow; full /= Rts.Sim.World.HazardSystem.QuicksandSlow; } // the sand grips
         if (formation)
         {

@@ -15,10 +15,10 @@ public static class Walk
     public const int MaxDrop = 3;
 
     /// <summary>A block a unit's body can occupy.</summary>
-    public static bool Passable(BlockType b) => b is BlockType.Air or BlockType.Water or BlockType.Gate or BlockType.Ladder;
+    public static bool Passable(BlockType b) => b is BlockType.Air or BlockType.Water or BlockType.Gate or BlockType.Ladder or BlockType.Orchard;
 
-    /// <summary>A block a unit's head can be in: air, a gate's leaf, or a ladder's rung.</summary>
-    public static bool Headroom(BlockType b) => b is BlockType.Air or BlockType.Gate or BlockType.Ladder;
+    /// <summary>A block a unit's head can be in: air, a gate's leaf, a ladder's rung, or an orchard's branches.</summary>
+    public static bool Headroom(BlockType b) => b is BlockType.Air or BlockType.Gate or BlockType.Ladder or BlockType.Orchard;
 
     /// <summary>Most rungs a ladder has: the most levels it climbs from its foot to the top of what it leans on.</summary>
     public const int MaxLadder = 10;
