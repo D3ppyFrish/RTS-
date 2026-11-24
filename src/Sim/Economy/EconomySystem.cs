@@ -615,9 +615,11 @@ public sealed partial class EconomySystem
             if (t.Y >= 0 && Occupied(x, y, z)) break;
             var current = World.Get(x, y, z);
             // Something built into the site meanwhile stays; the field replaces ground, walls fill air (a bridge's deck
-            // water too).
+            // water too). Rubble lying there (a felled tree's logs come down on a site) is cleared away, as a repair
+            // clears it: left in, it would stand in the wall as a gap that counts as whole until someone gathers it.
             if (t.Y < 0 ? current != BlockType.Air && current != BlockType.Water
-                : current == BlockType.Air || BlockInfo.IsLeaves(current) || (b.Def.IsBridge && current == BlockType.Water))
+                : current == BlockType.Air || BlockInfo.IsLeaves(current) || BlockInfo.IsRubble(current)
+                  || (b.Def.IsBridge && current == BlockType.Water))
                 World.Set(x, y, z, t.Block);
             b.Placed++;
         }

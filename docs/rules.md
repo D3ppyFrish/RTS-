@@ -56,7 +56,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
 - **Buildings** (`BuildCommand`, from `data/buildings.json`): town hall, storehouse, house, farm, barracks,
   smelter, quarry and mine. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
   A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column
-  gap from other buildings, and its cost; its voxel blocks go up layer by layer as workers build it.
+  gap from other buildings, and its cost; its voxel blocks go up layer by layer as workers build it (rubble lying where a block goes, such as a felled tree's logs, is cleared away for it).
 - **Building upgrades** (`UpgradeCommand`, `"upgrade"` and `"speed"` in `data/buildings.json`, #47): a
   finished building is upgraded where it stands into a bigger one of its kind, for that building's cost and
   build time. A house (4 by 4, houses 5) becomes a large house (6 by 6, houses 12; 45 wood, 10 stone) and then a
