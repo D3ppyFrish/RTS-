@@ -24,6 +24,8 @@
 //                                         soft a while (numbers: molt in roles.json)
 //   salvage                               workers can take down the player's own finished buildings for half their cost back
 //                                         and the goods they held (see "Salvage" in docs/rules.md)
+//   field_repairs                         workers can mend the player's damaged catapults and battering rams in the field
+//                                         for a share of their cost in materials (see "Field repairs" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
 // ruin (their units searched an old ruin), lair (their unit got the last of a monster lair's pack), town
 // (they broke a city-state's totem and took the town), giant (they beat a stone giant guarding a mountain
@@ -61,9 +63,9 @@
     "cost": { "stone": 40, "wood": 20 }, "researchTime": 30, "requires": [ "masonry" ] },
   { "id": "sapping", "icon": "shovel", "name": "Sapping", "description": "Tunnellers who bring down walls.",
     "cost": { "wood": 40, "stone": 40 }, "researchTime": 30, "requires": [ "masonry" ] },
-  { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades, taking down as well as putting up. Your workers can salvage your own finished buildings: mark one to take down, and workers (automatic ones too) take it apart in half the time it took to build, bringing back half its cost (less if it is damaged) and every good it held to your nearest other storage. Move your town, strip a far storehouse before raiders take it, or clear an outgrown wall. Only the Settlers can salvage.",
+  { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades, taking down as well as putting up. Salvage: mark one of your finished buildings to take down, and workers (automatic ones too) take it apart in half the time it took to build, bringing back half its cost (less if it is damaged) and every good it held to your nearest other storage. Field repairs: right-click a damaged catapult or battering ram of yours with workers, and they mend it where it stands, even under fire, for a share of its cost in materials. Only the Settlers have these.",
     "cost": { "wood": 80, "stone": 40 }, "researchTime": 40, "requires": [ "tools" ],
-    "effects": [ { "type": "salvage" } ] },
+    "effects": [ { "type": "salvage" }, { "type": "field_repairs" } ] },
   { "id": "settler_drill", "icon": "shield", "name": "Drilled ranks", "faction": "settlers", "description": "Line infantry can lock shields into a wall: it cannot move, but arrows and charges from the front do little. Weak from the sides unless the wall is a line.",
     "cost": { "food": 50, "iron": 5 }, "researchTime": 40, "requires": [ "smelting" ],
     "effects": [ { "type": "shield_wall", "role": "line_infantry" } ] },

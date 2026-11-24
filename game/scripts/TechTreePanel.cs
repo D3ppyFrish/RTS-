@@ -206,6 +206,7 @@ public partial class TechTreePanel : PanelContainer
         TechEffectType.UnitHp => e.Percent > 0 ? $"{Who(e)} have {e.Percent}% more hit points" : $"{Who(e)} have {e.Amount} more hit points",
         TechEffectType.Roads => "Roads can be laid (L)",
         TechEffectType.Salvage => "Workers take down your own buildings for half their cost back",
+        TechEffectType.FieldRepairs => "Workers mend your catapults and rams in the field (right-click)",
         TechEffectType.Reveal => e.Reveal switch
         {
             MapFeature.Ruins => "Shows every old ruin on the map",

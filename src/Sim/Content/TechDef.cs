@@ -205,6 +205,11 @@ public enum TechEffectType : byte
     /// </summary>
     Salvage,
     /// <summary>
+    /// The player's workers can mend their damaged siege machines (catapults, battering rams: units with
+    /// <see cref="Units.UnitDef.Machine"/> that do not sail) in the field, even mid-fight (see <see cref="MendCommand"/>).
+    /// </summary>
+    FieldRepairs,
+    /// <summary>
     /// Matching units can molt when badly hurt (see <see cref="MoltCommand"/>): they stop, shed their shells and heal
     /// back to full, then stay soft for a while. The numbers are in the role table (<see cref="CombatRules.Molt"/>).
     /// </summary>

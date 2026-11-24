@@ -628,6 +628,13 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   (rounded down), and every good it held go to the player's nearest other storage (with no other storage, they are
   lost). A building that is captured loses the mark. It moves a town, strips a far storehouse before raiders take it,
   or clears an outgrown wall; a building taken down is not put back by rebuild orders. Computer players do not salvage.
+- **Field repairs** (Craft guilds too; a `field_repairs` effect in `data/techs.json`, `MendCommand`, `UnitJob.Mend`,
+  `EconomySystem.FieldRepairs.cs`, `FieldRepairTests`): a Settler player with Craft guilds right-clicks one of their
+  damaged siege machines (a catapult or a battering ram: a `machine` that does not sail) with workers selected. They
+  walk up to it (within 2 columns, following it if it moves) and give back 5% of its hit points for each second of
+  work at the usual work speed, under fire or not, so a ram can be kept going at the gate. Each step costs its share
+  of half the machine's cost in materials (not food), rounded up, taken from storage; with nothing to pay with, the
+  workers stop. Ships are not mended this way. Automatic workers and computer players do not mend machines.
 - **Breaking through** (`Breach`, `BreachFor`): units sent at a building they cannot get to (it is walled
   in) go for a wall, gate or facing of its owner within 16 columns instead: one they can get at from where
   they are, with the shortest way from them through it to the building (ties to the one nearer the
