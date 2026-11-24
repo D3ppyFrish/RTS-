@@ -39,7 +39,7 @@ public class ContentTests
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs", "deepfolk" }, db.Factions.Select(f => f.Id));
         Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "orchard", "barracks", "great_barracks", "siege_workshop", "dock", "smelter", "foundry", "sawmill", "mason_yard", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "hunting_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "listening_post", "torch", "campfire", "wolf_lodge", "boar_pen", "crab_pots", "hall_of_legends", "beast_throne", "queens_chamber", "goblin_totem", "ogre_idol", "kobold_crystal", "troll_stone", "centaur_standard", "merfolk_conch", "bridge", "brood_chamber" }, db.Buildings.Select(b => b.Id));
-        Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "catapult", "battering_ram", "healer", "skitterling", "spitter", "burrower" }, db.BaseUnits.Select(u => u.Id));
+        Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "catapult", "battering_ram", "healer", "war_drummer", "skitterling", "spitter", "burrower" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "master_builder", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
             "bowmaster", "ranger", "lancer", "horselord", "outrider", "tunneller", "demolisher", "breachmaster", "battle_mage", "archmage", "seer", "wolfheart" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
@@ -53,7 +53,7 @@ public class ContentTests
 
         // What the loader works out.
         Assert.Equal(new[] { "worker", "caravan", "cart", "pack_pony" }, db.Building("town_hall").Trains);
-        Assert.Equal(new[] { "spearman", "archer", "rider", "sapper", "mage", "healer" }, db.Building("barracks").Trains);
+        Assert.Equal(new[] { "spearman", "archer", "rider", "sapper", "mage", "healer", "war_drummer" }, db.Building("barracks").Trains);
         Assert.True(db.RoadsNeedTech);
         Assert.Equal(2, db.Tech("smelting").Depth);
         Assert.Equal(new[] { "Farm" }, db.UnlockedBy(db.Tech("farming")));
@@ -526,7 +526,9 @@ public class ContentTests
         // Better tools gives Orc workers felling and prospecting.
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 2: \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 6: \"faction\" is \"orcs\", which is not a faction"));
-        Assert.Equal(20, e.Errors.Count);
+        // And the war drummer.
+        Assert.Contains(e.Errors, m => m.StartsWith("units.json: unit 'war_drummer': \"faction\" is \"orcs\", which is not a faction"));
+        Assert.Equal(21, e.Errors.Count);
     }
 
     [Fact]
@@ -572,7 +574,9 @@ public class ContentTests
     public void EffectsAreChecked()
     {
         var files = Files();
-        Edit(files, "techs.json", "{ \"type\": \"unit_speed\", \"percent\": 15 }", "{ \"type\": \"unit_speed\", \"amount\": 15 }");
+        // War drums has no effects of its own any more (it trains the war drummer): give it a broken one.
+        Edit(files, "techs.json", "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40 },",
+            "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40, \"effects\": [ { \"type\": \"unit_speed\", \"amount\": 15 } ] },");
         Edit(files, "techs.json", "\"role\": \"cavalry\", \"amount\": 30", "\"role\": \"cavalry\", \"unit\": \"rider\", \"amount\": 30");
         Edit(files, "techs.json", "\"building\": \"brood_chamber\", \"amount\": 6", "\"building\": \"brood_chamber\", \"amount\": 0");
         var e = Fails(files);

@@ -412,6 +412,14 @@ public static class UnitModels
             .Box(-4, 6, -1, -4, 9, 1, Hide).Box(-4, 10, 0, -4, 10, 0, Leaf)              // pouch of herbs
             .Box(3, 0, 1, 3, 16, 1, Wood).Box(2, 17, 0, 4, 18, 2, Leaf).Box(3, 19, 1, 3, 19, 1, Toxic), // branch staff
 
+        // The Orcs' war drummer (War drums): a great hide drum slung on its belly, bone sticks raised, a crest of feathers.
+        "war_drummer" => new Builder().Orc()
+            .Box(-2, 15, -1, 1, 15, 2, TeamDark).Box(-1, 16, 0, 0, 18, 0, Team)           // band and feathers
+            .Box(-3, 4, 3, 2, 10, 6, Wood).Box(-3, 5, 7, 2, 9, 7, Cloth)                // drum shell and its head
+            .Box(-3, 4, 3, 2, 4, 6, Bone).Box(-3, 10, 3, 2, 10, 6, Bone)                // bone hoops
+            .Box(-4, 6, 0, -4, 12, 0, Bone).Box(3, 6, 0, 3, 12, 0, Bone)                // drumsticks
+            .Box(-4, 13, 0, -4, 13, 0, Hide).Box(3, 13, 0, 3, 13, 0, Hide),
+
         // Settler forms.
         "foreman" => new Builder().Humanoid().Rank()
             .Box(-2, 13, -2, 1, 14, 1, Leather).Box(-2, 13, 2, 1, 13, 2, Leather)        // cap with a brim

@@ -111,7 +111,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _fellButton = null!, _prospectButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _fellButton = null!, _prospectButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -710,6 +710,16 @@ public partial class Hud : CanvasLayer
         _shieldWallButton.Visible = false;
         column.AddChild(_shieldWallButton);
 
+        _chargeButton = MakeToolButton("Beat the charge  [Ctrl+C]");
+        _chargeButton.Name = "beat_charge";
+        _chargeButton.ToggleMode = false;
+        _chargeButton.Icon = UiIcons.Get("drum");
+        _chargeButton.TooltipText = "The selected war drummers beat the charge: for a few seconds every unit of yours in earshot runs faster " +
+                                    "and its first blow lands harder. Then the drum needs a while. While it drums, rivals nearby see the drummer through the fog.";
+        _chargeButton.Pressed += () => _control.BeatCharge();
+        _chargeButton.Visible = false;
+        column.AddChild(_chargeButton);
+
         _fellButton = MakeToolButton("Fell tree  [Ctrl+X]");
         _fellButton.Name = "fell_tree";
         _fellButton.Icon = UiIcons.Get("pick");
@@ -1216,6 +1226,24 @@ public partial class Hud : CanvasLayer
         return sb.ToString();
     }
 
+    /// <summary>The Beat the charge button: shown with war drummers selected, greyed out with the seconds left until one is ready.</summary>
+    private void RefreshCharge()
+    {
+        var drummers = _control.OwnDrummers();
+        _chargeButton.Visible = drummers.Count > 0;
+        if (drummers.Count == 0) return;
+        var u = _sim.Units;
+        int wait = int.MaxValue;
+        foreach (int id in drummers)
+        {
+            int i = u.IndexOf(id);
+            wait = Math.Min(wait, _sim.Combat.CanCharge(i) ? 0 : Math.Max(1, u.DrumWait[i]));
+        }
+        _chargeButton.Disabled = wait > 0;
+        _chargeButton.Text = wait == 0 ? "Beat the charge  [Ctrl+C]"
+            : $"Drum ready in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s";
+    }
+
     private void RefreshButtons()
     {
         var econ = _sim.Economy;
@@ -1293,6 +1321,7 @@ public partial class Hud : CanvasLayer
         var walls = _control.OwnShieldWallers();
         _shieldWallButton.Visible = walls.Count > 0;
         _shieldWallButton.SetPressedNoSignal(walls.Count > 0 && walls.TrueForAll(id => _sim.Units.ShieldWall[_sim.Units.IndexOf(id)]));
+        RefreshCharge();
         _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
         _fellButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Fell);
         _prospectButton.Visible = _control.OwnProspectors().Count > 0 || _control.Tool == PlayerControl.ToolMode.Prospect;
@@ -2150,7 +2179,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
         }
     }
 
@@ -2182,6 +2211,7 @@ public partial class Hud : CanvasLayer
             string rule = def.Role == UnitRole.Worker
                 ? (u.Auto[i] ? (u.Held[i] ? "    automatic, waiting for orders" : "    automatic") : "")
                 : u.ShieldWall[i] ? "    in a shield wall"
+                : _sim.Combat.IsDrumming(i) ? (u.DrumLeft[i] > 0 ? "    beating the charge" : "    drumming the rally")
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
             string heals = !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) is { } camp

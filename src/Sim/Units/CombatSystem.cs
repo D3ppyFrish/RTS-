@@ -261,6 +261,7 @@ public sealed partial class CombatSystem
         StepWalls();
         BuildGrid();
         Rally();
+        StepDrums();
         if (tick % Tps == 0) RecoverMorale();
         for (int i = 0; i < u.Count; i++) StepUnit(i);
         for (int i = 0; i < u.Count; i++)
@@ -899,6 +900,7 @@ public sealed partial class CombatSystem
             _sim.Evolution.Damaged(i, damage);
             HitBuilding(b, damage, i, def.Role == UnitRole.Sapper || def.Ram, def.Blast);
             if (def.Crater > 0) CraterBeside(i, def, b);
+            u.ChargeLeft[i] = 0; // the charge's first blow is struck
             return true;
         }
         if (_pending[t] >= u.Hp[t])
@@ -916,6 +918,7 @@ public sealed partial class CombatSystem
             AddShot(i, def, u.X[t] + side, u.Y[t], u.Z[t] + side / 2);
             Crater(u.X[t] + side, u.Y[t], u.Z[t] + side / 2, def.Crater);
             Misses++;
+            u.ChargeLeft[i] = 0;
             return true;
         }
         var (part, dealt, blocked) = Wound(i, def, t, splash: false);
@@ -928,6 +931,7 @@ public sealed partial class CombatSystem
         _shots.Add(new Shot(_sim.Tick, u.Id[i], u.X[i], u.Y[i], u.Z[i], u.X[t], u.Y[t], u.Z[t], def.IsRanged, def.Splash > Fix64.Zero,
             part, dealt, blocked));
         Crater(u.X[t], u.Y[t], u.Z[t], def.Crater);
+        u.ChargeLeft[i] = 0;
         return true;
     }
 
@@ -999,12 +1003,14 @@ public sealed partial class CombatSystem
     /// <summary>
     /// Unit i's attack: its type's damage and its relic's if it bears one, and for a ranged unit near a hero
     /// that calls the volleys this tick, that many percent more (see <see cref="Rally"/>); and for a unit that has
-    /// just burst out of the ground (see <see cref="StepBurst"/>), its <see cref="UnitDef.Burst"/> percent more.
+    /// just burst out of the ground (see <see cref="StepBurst"/>), its <see cref="UnitDef.Burst"/> percent more; and for
+    /// its first blow in a charge a war drummer beat (see <see cref="Charged"/>), that charge's blow percent more.
     /// </summary>
     public int AttackOf(int i, UnitDef def)
     {
         int attack = def.Damage + (_sim.RelicOf(i)?.Damage ?? 0);
         if (_anyRally && i < _volley.Length && _volley[i] > 0) attack = attack * (100 + _volley[i]) / 100;
+        if (U.ChargeLeft[i] > 0) attack = attack * (100 + U.ChargeBlow[i]) / 100;
         return U.BurstLeft[i] > 0 ? attack * (100 + def.Burst) / 100 : attack;
     }
 

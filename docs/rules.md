@@ -442,6 +442,18 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   and gives each enemy near it a share of 60. At 25 a unit breaks: it runs to its town hall, or away from
   the enemy, for 8 seconds, ignoring orders, then rallies. Morale comes back a point a second, up
   to 100. Units near a hero hold longer (see [Evolution](#evolution), "Heroes").
+- **War drummer** (issue #151; `CombatSystem.Drums.cs`, `drums` in `data/units.json`): the Orcs' barracks trains it
+  once they know War drums (40 food, 30 wood, 15 seconds; a poor fighter: 60 hit points, 3 damage). Its earshot is
+  14 columns (`"rally": 14`, with 4 levels). **Rally**: a broken Orc within earshot runs to the drummer instead of
+  home (to the nearest drummer, if several), and once within 2 columns of it stops running and rallies there, at 50
+  morale at least; near the drummer morale comes back 2 a second (`"inspire": 2`). **Charge**: the drummer beats the
+  charge (Ctrl+C, the Beat the charge button; `ChargeCommand`): for 6 seconds every Orc in earshot walks 40% faster,
+  and the first blow each strikes in that time deals half as much again; then the drum needs a minute (counted from
+  the start of the charge) before the next. **The enemy hears it**: while it drums (beating the charge, or rallying
+  a broken Orc), every rival with a unit or building within 40 columns of it sees the drummer through the fog of
+  war, so it gives away where the army is. A drummer that is broken itself, beaten or aboard a ship does not drum.
+  Computer players train one drummer, send it with each wave, and beat the charge once the wave is near its target.
+  All numbers are first guesses for playtesting (`"drums": { "speed", "blow", "time", "wait", "heard" }`).
 - **Healing**: a unit that has not hit anything or been hit for 10 seconds gets back a quarter of a
   percent of its hit points a second (from half health, full in 3 minutes 20 seconds), or 2% a second
   within 12 columns of a town hall or house of its own, or near a goblin town it holds (full in 25 seconds), so a wounded army is

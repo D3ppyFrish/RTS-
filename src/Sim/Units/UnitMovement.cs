@@ -138,7 +138,7 @@ public sealed class UnitMovement
     private void Steer(UnitStore u, int i, ref Fix64 vx, ref Fix64 vz)
     {
         var full = _sim.Economy.SpeedPerTick(u.Owner[i], _sim.Content.Units[u.Def[i]]);
-        int spur = _sim.Combat.SpurOf(i); // a hero leading the charge near it
+        int spur = Math.Max(_sim.Combat.SpurOf(i), _sim.Combat.ChargeOf(i)); // a hero leading the charge, or a drummer beating one, near it
         if (spur > 0) full = full * (100 + spur) / 100;
         var speed = full;
         bool formation = u.Formation[i] && u.Order[i] == UnitOrder.Move;
