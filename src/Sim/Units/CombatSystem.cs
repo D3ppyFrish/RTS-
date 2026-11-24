@@ -9,10 +9,11 @@ namespace Rts.Sim.Units;
 /// One hit, kept for a few ticks so the game can draw it: from the attacker's feet to the target's (or the
 /// building's nearest face), and whether it was shot from range or blasts what is around it. On a unit it
 /// also says the part it landed on (null for a miss or a building), the hit points it took off after armour,
-/// and whether a shield stopped it. Not part of the game state.
+/// and whether a shield stopped it. A stone dropped through a gate's murder holes falls straight down from it, by
+/// no unit (<see cref="Dropped"/>). Not part of the game state.
 /// </summary>
 public readonly record struct Shot(long Tick, int Attacker, Fix64 FromX, int FromY, Fix64 FromZ, Fix64 ToX, int ToY, Fix64 ToZ, bool Ranged, bool Splash,
-    BodyPart? Part = null, int Damage = 0, bool Blocked = false);
+    BodyPart? Part = null, int Damage = 0, bool Blocked = false, bool Dropped = false);
 
 /// <summary>
 /// Fighting, once per tick after the economy and before pathfinding and movement.
@@ -51,7 +52,8 @@ public readonly record struct Shot(long Tick, int Attacker, Fix64 FromX, int Fro
 /// it is not removed but changes sides and lies low. Beaten monsters do not fight, and nobody picks one as a
 /// target on their own.
 ///
-/// Buildings and their damage are in CombatSystem.Structures.cs, sapper tunnels in CombatSystem.Tunnels.cs.
+/// Buildings and their damage are in CombatSystem.Structures.cs, sapper tunnels in CombatSystem.Tunnels.cs, gates'
+/// murder holes in CombatSystem.MurderHoles.cs.
 /// All numbers are starting guesses to be tuned in playtests.
 /// </summary>
 public sealed partial class CombatSystem
@@ -263,6 +265,7 @@ public sealed partial class CombatSystem
         for (int i = 0; i < u.Count; i++) StepUnit(i);
         for (int i = 0; i < u.Count; i++)
             if (u.Job[i] == UnitJob.Tunnel && u.Rout[i] == 0) StepTunnel(i);
+        StepMurderHoles();
         if (Resolve()) BuildGrid();
         _smitten.Clear();
         StepHeals();

@@ -254,6 +254,12 @@ public sealed class BuildingDef
     /// </summary>
     public int Aim { get; init; }
     /// <summary>
+    /// The holes in a gate's roof over its gateway that drop stones on enemies below (see
+    /// <see cref="Units.CombatSystem"/>'s murder holes), for an owner with a <see cref="Content.TechEffectType.MurderHoles"/>
+    /// tech; null for a gate without them.
+    /// </summary>
+    public MurderHoles? MurderHoles { get; init; }
+    /// <summary>
     /// How fast it trains units and smelts, in percent of the usual pace (100 unless given): what makes a great
     /// hall or a foundry better at its work than the building it was upgraded from.
     /// </summary>
@@ -562,4 +568,18 @@ public sealed class BuildingDef
         if (total > 0 && total < target) _solid = (int)((long)target * target / total);
         return blocks;
     }
+}
+
+/// <summary>
+/// A gate's murder holes (<c>murderHoles</c> in <c>data/buildings.json</c>): while the gate is held, a stone of
+/// <see cref="Damage"/> (crushing, on the head) drops every <see cref="EverySeconds"/> on an enemy in the gateway
+/// or up to <see cref="Reach"/> columns out in front of it. The gate is held while a unit of its owner stands on
+/// a wall, gate or tower within <see cref="Held"/> columns of it.
+/// </summary>
+public sealed class MurderHoles
+{
+    public int Damage { get; init; }
+    public int EverySeconds { get; init; }
+    public int Reach { get; init; }
+    public int Held { get; init; }
 }

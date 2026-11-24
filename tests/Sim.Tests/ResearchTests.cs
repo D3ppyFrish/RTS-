@@ -197,8 +197,8 @@ public class ResearchTests
         Assert.Equal(8, econ.Capacity(0));
         Grant(sim, 0, "farming", "crop_rotation"); // 2 more food a harvest
         Assert.Equal(7, econ.FarmYieldOf(0));
-        Grant(sim, 0, "masonry");                // houses hold 2 more
-        Assert.Equal(32, econ.Housing(0));
+        Grant(sim, 0, "masonry");                // murder holes, not roomier houses (#147)
+        Assert.Equal(30, econ.Housing(0));
 
         // Nothing changed for the other player.
         Assert.Equal(25, econ.WorkTicks(1, BlockType.Stone));

@@ -328,8 +328,11 @@ public sealed partial class AiPlayer
         var gate = _gates[0];
         foreach (var g in _gates)
             if (Dist2(g.X, g.Z, enemy.X, enemy.Z) < Dist2(gate.X, gate.Z, enemy.X, enemy.Z)) gate = g;
-        var at = sim.Buildings.AtColumn(gate.X, gate.Z);
+        var holding = new List<int>();
+        HoldGates(sim, home, holding, issue);
+        home.RemoveAll(holding.Contains);
         var going = new List<int>();
+        var at = sim.Buildings.AtColumn(gate.X, gate.Z);
         if (at != null && at.Owner == Player && at.Active && at.Def.Walkway)
         {
             // As many as there are free columns to stand on along that side, within reach of the gate: the
@@ -351,6 +354,43 @@ public sealed partial class AiPlayer
             if (going.Count > 0) issue(new PostCommand(Player, going.ToArray(), at.Id));
         }
         home.RemoveAll(id => going.Contains(id) || (u.IndexOf(id) is >= 0 and var i && Posted(sim, i)));
+    }
+
+    /// <summary>
+    /// Hard: each of its gates that has murder holes (see <see cref="CombatSystem.Held"/>) gets a ranged soldier
+    /// from home posted by it, the nearest one free, unless one of its units already stands on the wall there or
+    /// is on its way up: an unheld gate drops no stones. Those sent are added to <paramref name="going"/>.
+    /// </summary>
+    private void HoldGates(Simulation sim, List<int> home, List<int> going, Action<Command> issue)
+    {
+        var u = sim.Units;
+        var econ = sim.Economy;
+        if (!econ.HasMurderHoles(Player)) return;
+        foreach (var g in _gates)
+        {
+            var at = sim.Buildings.AtColumn(g.X, g.Z);
+            if (at == null || at.Owner != Player || !at.Active || !at.Def.Walkway || at.Def.MurderHoles is not { } holes) continue;
+            bool held = false;
+            for (int i = 0; i < u.Count && !held; i++)
+            {
+                if (u.Owner[i] != Player) continue;
+                if (u.Job[i] == UnitJob.Post) held = at.ColumnDistance(u.JobX[i], u.JobZ[i]) <= holes.Held;
+                else if (econ.WallUnder(i) != null) held = at.ColumnDistance(u.X[i].FloorToInt(), u.Z[i].FloorToInt()) <= holes.Held;
+            }
+            if (held) continue;
+            int best = -1;
+            long bestD = long.MaxValue;
+            foreach (int id in home)
+            {
+                int i = u.IndexOf(id);
+                if (i < 0 || going.Contains(id) || Posted(sim, i) || !econ.CanPost(i) || u.Rout[i] != 0 || u.Target[i] != 0) continue;
+                long d = Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), g.X, g.Z);
+                if (d < bestD) (best, bestD) = (id, d);
+            }
+            if (best < 0) return; // nobody left at home to send
+            going.Add(best);
+            issue(new PostCommand(Player, new[] { best }, at.Id));
+        }
     }
 
     /// <summary>True if the column of its wall has nothing on it and could take a wall or gate now (goods aside).</summary>

@@ -151,7 +151,8 @@ replay made with different data says so instead of drifting apart.
   tree up to four deep. A tech unlocks the units and buildings that name it in `requires`, and can have
   effects: faster gathering, bigger loads, richer farms, more housing, more hit points (for units
   already alive too), faster walking, roads, showing the map's ruins, lairs or towns through the fog
-  (`reveal`), and wild monsters sparing workers (`spare_workers`).
+  (`reveal`), wild monsters sparing workers (`spare_workers`), the shield wall (`shield_wall`), aimed felling and
+  prospecting (`felling`, `prospecting`), and murder holes in stone gates (`murder_holes`, Masonry).
   Design principle for new techs: **research gives tools, not numbers**. A tech should give players a new
   ability, unit option, building or tactic to outsmart enemies and adapt, not just a higher number; stat
   buffs are mostly avoided. The stat effects above are to be replaced (see issue #80, on hold).
