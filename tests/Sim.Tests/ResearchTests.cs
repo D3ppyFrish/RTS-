@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Rts.Sim.Content;
 using Rts.Sim.Economy;
 using Rts.Sim.Replay;
@@ -236,8 +237,11 @@ public class ResearchTests
     [Fact]
     public void HitPointsGoUpForLivingAndNewUnits()
     {
-        // Hardened chitin (line infantry +10) is the hit point tech left since Beast pens became the pen (issue #152).
-        var sim = Flat();
+        // No tech in the data gives hit points since Hardened chitin became Molting (issue #153): give it one here.
+        var files = ContentLoader.Files.ToDictionary(f => f, f => ContentLoader.EmbeddedText(f)!);
+        files["techs.json"] = files["techs.json"].Replace("{ \"type\": \"molt\", \"role\": \"line_infantry\" }",
+            "{ \"type\": \"unit_hp\", \"role\": \"line_infantry\", \"amount\": 10 }");
+        var sim = new Simulation(new RegionMap(1, TestWorlds.Flat(64, 16, 64, Ground)), ContentLoader.Load(files));
         Hall(sim, 0, 4, 4);
         var barracks = sim.Economy.PlaceFinished(0, sim.Content.Building("barracks"), 20, 4)!;
         int spear = sim.SpawnUnit(0, "spearman", 30, 30);

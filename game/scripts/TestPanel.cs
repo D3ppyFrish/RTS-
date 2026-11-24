@@ -25,7 +25,7 @@ namespace Rts.Game;
 ///            replays it to the moment it was saved, paused.
 /// Its controls are named for scripted input: test_tab_place, test_cat_unit (and _building, _tree, _block,
 /// _lair, _blood, _erase), test_item, test_owner, test_size, test_height, test_place, test_heal, test_kill,
-/// test_remove, test_bleed, test_veteran, test_switch, test_weather_storm (and the others), test_time_6 (and
+/// test_remove, test_bleed, test_veteran, test_wound, test_switch, test_weather_storm (and the others), test_time_6 (and
 /// 12, 20, 0), test_goods_P, test_techs_P, test_cheat_NAME_P (instantbuild, instanttrain, instantresearch,
 /// invulnerable), test_step, test_save, test_scenarios, test_load.
 /// </summary>
@@ -335,7 +335,7 @@ public partial class TestPanel : CanvasLayer
         foreach (var (label, action) in new[]
                  {
                      ("Heal", SandboxAction.Heal), ("Kill", SandboxAction.Kill), ("Remove", SandboxAction.Remove),
-                     ("Bleed", SandboxAction.Bleed), ("Veteran", SandboxAction.Veteran),
+                     ("Bleed", SandboxAction.Bleed), ("Veteran", SandboxAction.Veteran), ("Wound", SandboxAction.Wound),
                  })
         {
             var a = action;

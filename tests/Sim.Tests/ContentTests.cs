@@ -387,7 +387,7 @@ public class ContentTests
     [InlineData("techs.json", "\"requires\": [ \"tools\" ]", "\"requires\": [ \"tool\" ]", "tech 'masonry': \"requires\" names \"tool\", which is not a tech")]
     [InlineData("techs.json", "\"name\": \"War drums\", \"faction\": \"orcs\"", "\"name\": \"War drums\", \"faction\": \"orks\"", "tech 'orc_war_drums': \"faction\" is \"orks\", which is not a faction")]
     [InlineData("techs.json", "\"building\": \"brood_chamber\"", "\"building\": \"hut\"", "tech 'deep_warrens', effect 1: \"building\" is \"hut\", which is not a building")]
-    [InlineData("techs.json", "\"role\": \"ranged\", \"amount\": 8", "\"role\": \"horse\", \"amount\": 8", "tech 'deep_chitin', effect 2: \"role\" is \"horse\", which is not one of: worker, line_infantry")]
+    [InlineData("techs.json", "\"type\": \"molt\", \"role\": \"ranged\"", "\"type\": \"molt\", \"role\": \"horse\"", "tech 'deep_chitin', effect 2: \"role\" is \"horse\", which is not one of: worker, line_infantry")]
     [InlineData("techs.json", "\"type\": \"repair\"", "\"type\": \"repairing\"", "tech 'settler_guilds', effect 1: \"type\" is \"repairing\", which is not an effect")]
     [InlineData("units.json", "\"cost\": { \"food\": 30 }", "\"cost\": { \"bread\": 30 }", "unit 'worker': \"cost\" has \"bread\", which is not a good")]
     [InlineData("buildings.json", "\"kind\": \"barracks\"", "\"kind\": \"fort\"", "building 'barracks': \"kind\" is \"fort\", which is not one of: town_hall")]
@@ -578,13 +578,13 @@ public class ContentTests
         // War drums has no effects of its own any more (it trains the war drummer): give it a broken one.
         Edit(files, "techs.json", "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40 },",
             "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40, \"effects\": [ { \"type\": \"unit_speed\", \"amount\": 15 } ] },");
-        Edit(files, "techs.json", "\"role\": \"ranged\", \"amount\": 8", "\"role\": \"ranged\", \"unit\": \"spitter\", \"amount\": 8");
-        Edit(files, "techs.json", "\"building\": \"brood_chamber\", \"amount\": 6", "\"building\": \"brood_chamber\", \"amount\": 0");
+        Edit(files, "techs.json", "\"type\": \"molt\", \"role\": \"ranged\"", "\"type\": \"molt\", \"role\": \"ranged\", \"unit\": \"spitter\"");
+        Edit(files, "techs.json", "\"building\": \"brood_chamber\", \"percent\": 100", "\"building\": \"brood_chamber\", \"percent\": 0");
         var e = Fails(files);
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'orc_war_drums', effect 1: unknown field \"amount\""));
         Assert.Contains("techs.json: tech 'orc_war_drums', effect 1: needs \"percent\"", e.Errors);
         Assert.Contains("techs.json: tech 'deep_chitin', effect 2: give a \"role\" or a \"unit\", not both", e.Errors);
-        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'deep_warrens', effect 1: \"amount\" is 0"));
+        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'deep_warrens', effect 1: \"percent\" is 0"));
         Assert.Equal(4, e.Errors.Count);
     }
 

@@ -66,6 +66,9 @@ public sealed class CombatRules
     /// <summary>How a shield wall stands up to shots and charges (see <see cref="ShieldWallRules"/>).</summary>
     public ShieldWallRules Wall { get; internal set; } = new();
 
+    /// <summary>How molting heals a hive unit and leaves it soft (see <see cref="MoltRules"/>).</summary>
+    public MoltRules Molt { get; internal set; } = new();
+
     public bool StrongAgainst(UnitRole attacker, UnitRole target) => _strong[(int)attacker * RoleCount + (int)target];
 
     public bool StrongAgainstStructures(UnitRole role) => _structures[(int)role];
@@ -104,4 +107,22 @@ public sealed class ShieldWallRules
     public int DropTicks { get; internal set; } = Simulation.TicksPerSecond;
     /// <summary>A wall unit this close (blocks) beside another covers that side of it.</summary>
     public Fix64 Cover { get; internal set; } = Fix64.FromRatio(3, 2);
+}
+
+/// <summary>
+/// The numbers of molting (<c>molt</c> in <c>data/roles.json</c>; see <see cref="CombatSystem"/>): first guesses, for
+/// playtesting.
+/// </summary>
+public sealed class MoltRules
+{
+    /// <summary>A unit can molt only with at most this percent of its most hit points left.</summary>
+    public int Below { get; internal set; } = 25;
+    /// <summary>Ticks it takes to shed the shell, standing still and healing back to full.</summary>
+    public int Ticks { get; internal set; } = 15 * Simulation.TicksPerSecond;
+    /// <summary>Ticks it stays soft after: no armour, slower, hit harder.</summary>
+    public int SoftTicks { get; internal set; } = 30 * Simulation.TicksPerSecond;
+    /// <summary>Percent of its pace it walks at while soft.</summary>
+    public int Pace { get; internal set; } = 60;
+    /// <summary>Percent of a hit's damage (after armour, which it has none of) a molting or soft unit takes.</summary>
+    public int Tender { get; internal set; } = 150;
 }

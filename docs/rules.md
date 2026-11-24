@@ -333,6 +333,18 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   striking the back hits as hard as ever. Any order to go somewhere or fight lowers the wall, and the unit takes a
   second to lower it before it walks; a unit that routs or boards a ship drops it at once. The numbers are
   `shieldWall` in `data/roles.json`, first guesses for playtesting.
+- **Molting** (`MoltCommand`, Ctrl+M or the Molt button; `CombatSystem.Molt.cs`, `MoltTests`; issue #153): the
+  Deepfolk's **Molting** (`deep_chitin`, `molt` effects in `data/techs.json`) lets their skitterlings, spitters and
+  burrowers shed their shells when badly hurt (a quarter of their hit points or less). A molting unit stops where it
+  stands, drops whatever it was doing and does not fight; over 15 seconds it heals back to full, a little each tick,
+  and orders given meanwhile wait until it is done. Then it is soft for 30 seconds. While molting and soft it has no
+  armour, every hit on it deals half as much again, and (soft) it walks at 60% of its speed; it is drawn pale until
+  its new shell hardens. A hurt unit that can molt, standing idle and out of the fight for the recovery delay (10
+  seconds), molts by itself. A swarm that can pull back and cover its molting units can turn a near loss into a second
+  wave. The numbers are `molt` in `data/roles.json`, first guesses for playtesting. Computer players at every level
+  take a badly hurt unit that can molt out of their army: with a rival soldier they see within 10 columns of it they
+  walk it home to their town hall, and with none that close it molts; it rejoins the army once it has molted and
+  hardened again.
 - **Siege workshops and catapults** (`SiegeTests`; the design doc's siege role, "break walls at range", and its
   Resources table: planks and iron for siege): a **siege workshop** (kind `barracks` in `data/buildings.json`, 6 by 6,
   planks under thatch, 40 wood, 40 planks and 20 stone, needs Smelting, every faction) trains the **catapult** (60
@@ -1174,8 +1186,10 @@ have no magic and their units are weak one on one; they win by surprise and numb
   Settlers stays a mound; a Settler house taken by the Deepfolk stays a house), and grows in that shape when it is
   upgraded. Plans and building sites show the owner's shape.
 
-- **Techs** (`data/techs.json`): Hardened chitin (+10 hit points for their line infantry, +8 for their ranged
-  units), Brood warrens (each brood chamber houses 6 more; needs farming), and their final tech, The Queen's brood,
+- **Techs** (`data/techs.json`): Molting (badly hurt hive units shed their shells and heal to full, then stay soft a
+  while; see Molting under [Combat](#combat); it replaced Hardened chitin's +10 and +8 hit points, issue #153), Brood
+  warrens (each brood chamber houses twice as many, 24 in place of 12; a `housing` effect with a `percent`; needs
+  farming), and their final tech, The Queen's brood,
   which opens their great work, the **Queen's Chamber** (see [Ascendancy and great works](#ascendancy-and-great-works)).
 
 Computer players play the Deepfolk as they play any faction, going by what it can build and train (a brood
@@ -2255,8 +2269,8 @@ cannot change a normal match, a computer players' match or the determinism check
   into the open ground beside it, up to that level; higher up it stays where it is put, since water never
   runs out and would flood the land.
 - **Units**: heal (full health, wounds and bleeding gone, morale back), kill (as by falling ground: they
-  fall and bleed, and nobody gets the kill), remove, wound (bleeding from the legs for 12 seconds) or
-  season (the most experience there is) the selected units, anyone's; and play the other side (with fog
+  fall and bleed, and nobody gets the kill), remove, bleed (bleeding from the legs for 12 seconds), wound (down
+  to a fifth of their hit points, not bleeding) or season (the most experience there is) the selected units, anyone's; and play the other side (with fog
   of war off).
 - **World**: the weather (for four hours) and the time of day, with day and night on; 1000 more of every
   good, or every tech, for either side.

@@ -113,6 +113,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's units of this type can take up a shield wall (a <see cref="TechEffectType.ShieldWall"/> tech).</summary>
     public bool CanShieldWall(int player, UnitDef def) => Find(player)?.ShieldWall[def.Index] ?? false;
 
+    /// <summary>True if the player's units of this type can molt (a <see cref="TechEffectType.Molt"/> tech).</summary>
+    public bool CanMolt(int player, UnitDef def) => Find(player)?.Molt[def.Index] ?? false;
+
     /// <summary>The player's first finished town hall, where research happens; null if they have none.</summary>
     public Building? TownHall(int player)
     {
@@ -179,6 +182,7 @@ public sealed partial class EconomySystem
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
+        Array.Clear(p.Molt);
         Array.Clear(p.FellTicks);
         Array.Clear(p.ProspectTicks);
         p.FellCrush = p.ProspectRadius = 0;
@@ -193,7 +197,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.GatherSpeed: p.GatherPercent += e.Amount; break;
                     case TechEffectType.Carry: p.CarryBonus += e.Amount; break;
                     case TechEffectType.FarmYield: p.FarmBonus += e.Amount; break;
-                    case TechEffectType.Housing: p.HousingBonus[e.Building!.Index] += e.Amount; break;
+                    case TechEffectType.Housing: p.HousingBonus[e.Building!.Index] += e.Amount + e.Building.Housing * e.Percent / 100; break;
                     case TechEffectType.Roads: p.Roads = true; break;
                     case TechEffectType.SpareWorkers: p.SpareWorkers = true; break;
                     case TechEffectType.MurderHoles: p.MurderHoles = true; break;
@@ -205,6 +209,10 @@ public sealed partial class EconomySystem
                     case TechEffectType.ShieldWall:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.ShieldWall[d.Index] = true;
+                        break;
+                    case TechEffectType.Molt:
+                        foreach (var d in units)
+                            if (e.AppliesTo(d)) p.Molt[d.Index] = true;
                         break;
                     case TechEffectType.Felling:
                     case TechEffectType.Prospecting:

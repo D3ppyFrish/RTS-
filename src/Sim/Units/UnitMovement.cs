@@ -143,6 +143,7 @@ public sealed class UnitMovement
         int spur = Math.Max(_sim.Combat.SpurOf(i), _sim.Combat.ChargeOf(i)); // a hero leading the charge, or a drummer beating one, near it
         if (spur > 0) full = full * (100 + spur) / 100;
         if (u.Tired[i] > 0) full = full * _sim.Combat.PaceOf(i) / 100; // tired after a stampede
+        if (u.Soft[i] > 0) full = full * _sim.Combat.MoltPace(i) / 100; // soft after molting
         var speed = full;
         bool formation = u.Formation[i] && u.Order[i] == UnitOrder.Move;
         // A spurred formation keeps the slowest member's pace, a spurred one's faster (riders round the hero

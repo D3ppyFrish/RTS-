@@ -229,6 +229,7 @@ public sealed partial class AiPlayer
         if (Smart && (tick + Player * 7) % EconomyTicks == 0) Prospect(sim, issue);
         if ((tick + Player * 3) % ArmyTicks == 0)
         {
+            Molt(sim, hall, issue);
             if (Hard) HardArmy(sim, hall, issue);
             else if (Smart) SmartArmy(sim, hall, issue);
             else Army(sim, hall, issue);
@@ -1054,7 +1055,13 @@ public sealed partial class AiPlayer
     // --- What it sees ------------------------------------------------------------------------------
 
     /// <summary>Its soldiers (units that fight and are not workers, caravans, ships, beaten monsters or a city-state's guards), by id in index order.</summary>
-    private List<int> Soldiers(Simulation sim) => Soldiers(sim, Player);
+    /// <remarks>Units pulled back to molt (see <see cref="Molters"/>) are left out until they are ready again.</remarks>
+    private List<int> Soldiers(Simulation sim)
+    {
+        var list = Soldiers(sim, Player);
+        if (_molters.Count > 0) list.RemoveAll(_molters.Contains);
+        return list;
+    }
 
     /// <summary>A player's soldiers, by id in index order.</summary>
     private static List<int> Soldiers(Simulation sim, int player)

@@ -421,6 +421,17 @@ public sealed record ShieldWallCommand(int PlayerId, int[] Units, bool Raise) : 
 }
 
 /// <summary>
+/// The badly hurt units molt (see <see cref="Content.TechEffectType.Molt"/>, the Deepfolk's Molting): each stops,
+/// sheds its shell and heals back to full over a short time, then stays soft for a while, slower and with no armour
+/// (see <see cref="Units.CombatSystem"/>). Units that cannot molt, or are not hurt enough, ignore it.
+/// </summary>
+public sealed record MoltCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(MoltCommand? other) => base.Equals(other);
+    public override int GetHashCode() => base.GetHashCode();
+}
+
+/// <summary>
 /// The war drummers among the units (see <see cref="Units.UnitDef.Drums"/>) beat the charge, those that are ready to:
 /// for a few seconds their own side's units within earshot walk faster and the first blow each strikes deals more
 /// (see <c>Units.CombatSystem.Drums.cs</c>). Then each drummer needs a while before it can beat the next.
@@ -679,6 +690,8 @@ public enum SandboxAction : byte
     Bleed,
     /// <summary>The most experience a unit can have (enough to evolve).</summary>
     Veteran,
+    /// <summary>Down to a fifth of its most hit points (if it had more), not bleeding: badly hurt, as after a hard fight.</summary>
+    Wound,
 }
 
 /// <summary>Test mode: does the action to the units (by id), whoever owns them.</summary>

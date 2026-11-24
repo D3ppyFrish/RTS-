@@ -384,6 +384,7 @@ public partial class PlayerControl : Node
             case Key.Delete or Key.Backspace: CancelSelectedPlan(); break;
             case Key.V when key.CtrlPressed: ToggleShieldWall(); break;
             case Key.C when key.CtrlPressed: BeatCharge(); break;
+            case Key.M when key.CtrlPressed: Molt(); break;
             case Key.S when key.CtrlPressed: ToggleStampede(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
@@ -1334,6 +1335,24 @@ public partial class PlayerControl : Node
         ready.RemoveAll(id => !_sim.Combat.CanCharge(_sim.Units.IndexOf(id)));
         if (ready.Count == 0) return;
         _sim.Schedule(_sim.Tick, new ChargeCommand(LocalPlayer, ready.ToArray()));
+        Changed?.Invoke();
+    }
+
+    /// <summary>The selected units of yours that can molt (see <see cref="Rts.Sim.Content.TechEffectType.Molt"/>), hurt or not.</summary>
+    public List<int> OwnMolters()
+    {
+        var list = OwnSelected();
+        list.RemoveAll(id => !_sim.Combat.CanMolt(_sim.Units.IndexOf(id)));
+        return list;
+    }
+
+    /// <summary>The selected units that are hurt badly enough molt.</summary>
+    public void Molt()
+    {
+        var ready = OwnMolters();
+        ready.RemoveAll(id => !_sim.Combat.ReadyToMolt(_sim.Units.IndexOf(id)));
+        if (ready.Count == 0) return;
+        _sim.Schedule(_sim.Tick, new MoltCommand(LocalPlayer, ready.ToArray()));
         Changed?.Invoke();
     }
 
@@ -2598,7 +2617,7 @@ public partial class PlayerControl : Node
                $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
                $"faction={_sim.FactionOf(LocalPlayer).Id} batches={Batches()} bursting={Bursting()} " +
-               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} drumming={drumming} drums_heard={drumsHeard} penned={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Penned[i] != 0)} stampeding={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.RunStage[i] != 0)} trampled={_sim.Combat.Trampled} pens={OwnKind(BuildingKind.Pen)} tunnelling={tunnelling} " +
+               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} drumming={drumming} drums_heard={drumsHeard} molting={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Molting[i] > 0)} soft={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Soft[i] > 0)} penned={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Penned[i] != 0)} stampeding={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.RunStage[i] != 0)} trampled={_sim.Combat.Trampled} pens={OwnKind(BuildingKind.Pen)} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +

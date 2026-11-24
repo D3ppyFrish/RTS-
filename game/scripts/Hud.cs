@@ -111,7 +111,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _stampedeButton = null!, _letOutButton = null!, _fellButton = null!, _prospectButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _fellButton = null!, _prospectButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -720,6 +720,16 @@ public partial class Hud : CanvasLayer
         _chargeButton.Visible = false;
         column.AddChild(_chargeButton);
 
+        _moltButton = MakeToolButton("Molt  [Ctrl+M]");
+        _moltButton.Name = "molt";
+        _moltButton.ToggleMode = false;
+        _moltButton.Icon = UiIcons.Get("molt");
+        _moltButton.TooltipText = "The selected hive units hurt down to a quarter of their life or less shed their shells: each stands still and " +
+                                  "heals back to full over a few seconds, then stays soft for a while (no armour, hit harder, slower). Pull them back first.";
+        _moltButton.Pressed += () => _control.Molt();
+        _moltButton.Visible = false;
+        column.AddChild(_moltButton);
+
         _stampedeButton = MakeToolButton("Stampede  [Ctrl+S]");
         _stampedeButton.Name = "stampede";
         _stampedeButton.Icon = UiIcons.Get("paw");
@@ -1263,6 +1273,27 @@ public partial class Hud : CanvasLayer
             : $"Drum ready in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s";
     }
 
+    /// <summary>
+    /// The Molt button: shown with hive units that can molt selected, greyed out while none of them is hurt enough;
+    /// says how many are molting.
+    /// </summary>
+    private void RefreshMolt()
+    {
+        var molters = _control.OwnMolters();
+        _moltButton.Visible = molters.Count > 0;
+        if (molters.Count == 0) return;
+        var u = _sim.Units;
+        int ready = 0, molting = 0;
+        foreach (int id in molters)
+        {
+            int i = u.IndexOf(id);
+            if (_sim.Combat.ReadyToMolt(i)) ready++;
+            if (_sim.Combat.Molting(i)) molting++;
+        }
+        _moltButton.Disabled = ready == 0;
+        _moltButton.Text = ready > 0 ? $"Molt {ready}  [Ctrl+M]" : molting > 0 ? $"{molting} molting" : "Molt  [Ctrl+M]";
+    }
+
     /// <summary>The Stampede and Let out buttons: shown with your finished beast pen selected, greyed out while it keeps no beasts.</summary>
     private void RefreshPen()
     {
@@ -1355,6 +1386,7 @@ public partial class Hud : CanvasLayer
         _shieldWallButton.Visible = walls.Count > 0;
         _shieldWallButton.SetPressedNoSignal(walls.Count > 0 && walls.TrueForAll(id => _sim.Units.ShieldWall[_sim.Units.IndexOf(id)]));
         RefreshCharge();
+        RefreshMolt();
         RefreshPen();
         _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
         _fellButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Fell);

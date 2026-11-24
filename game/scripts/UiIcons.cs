@@ -421,6 +421,12 @@ public static class UiIcons
             ".kkkkkkkkkk.", ".knnnnnnnnk.", ".knnnyynnnk.", ".knnnyynnnk.", ".knyyyyyynk.", ".knyyyyyynk.",
             ".knnnyynnnk.", "..knnyynnk..", "..knnyynnk..", "...knnnnk...", "....knnk....", ".....kk.....",
         },
+        // Molting: a hive insect's pale new body coming out of its split shell.
+        ["molt"] = new[]
+        {
+            "....kkkk....", "...kpwwpk...", "..kppwwppk..", "..kpkppkpk..", "k.kppppppk.k", "kOkkppppkkOk",
+            "kObOkppkObOk", ".kObOkkObOk.", ".kOObOOObOk.", "..kOObbOOk..", "...kOOOOk...", "....kkkk....",
+        },
         ["drum"] = new[]
         {
             "k........k..", ".k......k...", "..kkkkkkkkk.", ".klllllllllk", ".kwwwwwwwwwk", ".kRkrrkrrkRk",

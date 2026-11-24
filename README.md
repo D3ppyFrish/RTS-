@@ -152,10 +152,11 @@ replay made with different data says so instead of drifting apart.
   Wardens' charts, Beast lore, Trail maps) opened only by exploring (see
   [Discovery techs](docs/rules.md#discovery-techs)). Prerequisites form a branching
   tree up to four deep. A tech unlocks the units and buildings that name it in `requires`, and can have
-  effects: faster gathering, bigger loads, richer farms, more housing, more hit points (for units
+  effects: faster gathering, bigger loads, richer farms, more housing (a number more, or a `percent` of the
+  building's own), more hit points (for units
   already alive too), faster walking, roads, showing the map's ruins, lairs or towns through the fog
   (`reveal`), wild monsters sparing workers (`spare_workers`), the shield wall (`shield_wall`), aimed felling and
-  prospecting (`felling`, `prospecting`), and murder holes in stone gates (`murder_holes`, Masonry). Crop rotation
+  prospecting (`felling`, `prospecting`), murder holes in stone gates (`murder_holes`, Masonry), and molting (`molt`, the Deepfolk's Molting). Crop rotation
   has no effect: it unlocks the orchard (see [Economy](docs/rules.md#economy)).
   Design principle for new techs: **research gives tools, not numbers**. A tech should give players a new
   ability, unit option, building or tactic to outsmart enemies and adapt, not just a higher number; stat

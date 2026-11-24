@@ -222,6 +222,8 @@ public class SandboxTests
         Assert.NotEqual(0, sim.Units.Bleeding[sim.Units.IndexOf(a)]);
         Do(sim, new SandboxUnitsCommand(0, new[] { a }, SandboxAction.Veteran));
         Assert.Equal(Units.EvolutionSystem.MaxXp, sim.Units.Xp[sim.Units.IndexOf(a)]);
+        Do(sim, new SandboxUnitsCommand(0, new[] { a }, SandboxAction.Wound));
+        Assert.Equal(full / 5, sim.Units.Hp[sim.Units.IndexOf(a)]);
         Do(sim, new SandboxUnitsCommand(0, new[] { b }, SandboxAction.Remove));
         Assert.False(sim.Units.Exists(b));
         Assert.True(sim.Units.Exists(a));

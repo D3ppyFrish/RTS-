@@ -260,6 +260,7 @@ public sealed partial class CombatSystem
         StepBleeding();
         StepBurst();
         StepWalls();
+        StepMolts();
         StepPens();
         BuildGrid();
         Rally();
@@ -276,7 +277,7 @@ public sealed partial class CombatSystem
         StepRecovery();
         DrainBlocks();
         for (int i = 0; i < u.Count; i++)
-            if (u.Rout[i] == 0 && u.Morale[i] <= BreakMorale && Def(i).Role != UnitRole.Monster && !Def(i).Hero && !Def(i).Machine) StartRout(i);
+            if (u.Rout[i] == 0 && u.Molting[i] == 0 && u.Morale[i] <= BreakMorale && Def(i).Role != UnitRole.Monster && !Def(i).Hero && !Def(i).Machine) StartRout(i);
     }
 
     /// <summary>
@@ -317,6 +318,7 @@ public sealed partial class CombatSystem
         var u = U;
         if (u.Subdued[i]) return; // beaten: it waits for its owner's choice
         if (u.Penned[i] != 0 || u.RunStage[i] != 0) return; // kept in a pen, or running in a stampede
+        if (u.Molting[i] > 0) return; // shedding its shell: it neither moves nor fights (see CombatSystem.Molt.cs)
         if (u.Rout[i] > 0)
         {
             // Running: it keeps going wherever it was running to, and rallies when the time is up.
@@ -1050,10 +1052,10 @@ public sealed partial class CombatSystem
 
     /// <summary>The damage of unit i's hit on unit t landing on the part, after the part's multiplier and t's armour there.</summary>
     public int HitDamage(int i, UnitDef def, int t, BodyPart part) =>
-        Body.Damage(Damage(i, def, t), Def(t).Body, part, def.Attack, Armour(t, part));
+        Tender(t, Body.Damage(Damage(i, def, t), Def(t).Body, part, def.Attack, Armour(t, part)));
 
-    /// <summary>Unit i's armour on the part: its type's, any it has of its own, and its relic's.</summary>
-    public int Armour(int i, BodyPart part) => Def(i).ArmourOn(part) + U.Extra(i, part) + (_sim.RelicOf(i)?.Armour ?? 0);
+    /// <summary>Unit i's armour on the part: its type's, any it has of its own, and its relic's; none while it molts or is soft.</summary>
+    public int Armour(int i, BodyPart part) => ShellArmour(i, part);
 
     /// <summary>How unit i stands against unit t for a hit: see <see cref="Body.Angle"/>.</summary>
     public Body.Angle AngleOf(int i, int t)
