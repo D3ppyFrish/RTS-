@@ -178,7 +178,6 @@ public sealed partial class EconomySystem
     private void UpdateBonuses(PlayerEconomy p)
     {
         var units = Content.Units;
-        p.GatherPercent = p.CarryBonus = p.FarmBonus = 0;
         p.Roads = p.SpareWorkers = p.MurderHoles = p.Repair = false;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
@@ -187,7 +186,6 @@ public sealed partial class EconomySystem
         Array.Clear(p.FellTicks);
         Array.Clear(p.ProspectTicks);
         p.FellCrush = p.ProspectRadius = 0;
-        var speedPercent = new int[units.Count];
         foreach (var t in Content.Techs)
         {
             if (!p.Researched[t.Index]) continue;
@@ -195,9 +193,6 @@ public sealed partial class EconomySystem
             {
                 switch (e.Type)
                 {
-                    case TechEffectType.GatherSpeed: p.GatherPercent += e.Amount; break;
-                    case TechEffectType.Carry: p.CarryBonus += e.Amount; break;
-                    case TechEffectType.FarmYield: p.FarmBonus += e.Amount; break;
                     case TechEffectType.Housing: p.HousingBonus[e.Building!.Index] += e.Amount + e.Building.Housing * e.Percent / 100; break;
                     case TechEffectType.Roads: p.Roads = true; break;
                     case TechEffectType.SpareWorkers: p.SpareWorkers = true; break;
@@ -226,15 +221,9 @@ public sealed partial class EconomySystem
                         else p.ProspectRadius = Math.Max(p.ProspectRadius, e.Amount);
                         break;
                     }
-                    case TechEffectType.UnitSpeed:
-                        foreach (var d in units)
-                            if (e.AppliesTo(d)) speedPercent[d.Index] += e.Amount;
-                        break;
                 }
             }
         }
-        foreach (var d in units)
-            p.SpeedPerTick[d.Index] = d.SpeedPerTick * (100 + speedPercent[d.Index]) / 100;
     }
 
     /// <summary>How far round each ruin, lair or town a reveal effect shows the ground, in columns.</summary>
@@ -262,7 +251,7 @@ public sealed partial class EconomySystem
     // --- Numbers that techs change -----------------------------------------------------------------
 
     /// <summary>Most goods one of the player's workers carries.</summary>
-    public int Capacity(int player) => CarryCapacity + (Find(player)?.CarryBonus ?? 0);
+    public int Capacity(int player) => CarryCapacity;
 
     /// <summary>
     /// Most goods unit i carries on a supply run: a cart's load (<see cref="Units.UnitDef.Carry"/>, which techs do
@@ -282,14 +271,14 @@ public sealed partial class EconomySystem
 
     /// <summary>Ticks of work for one of the player's workers to take one block of this kind.</summary>
     public int WorkTicks(int player, BlockType kind) =>
-        Math.Max(1, Harvest.WorkTicks(kind) * 100 / (100 + BaseGatherPercent + (Find(player)?.GatherPercent ?? 0)));
+        Math.Max(1, Harvest.WorkTicks(kind) * 100 / (100 + BaseGatherPercent));
 
     /// <summary>Ticks of one round of work at a quarry or mine of the player's, with their gathering techs.</summary>
     public int QuarryTicks(int player, BuildingDef def) =>
-        Math.Max(1, def.WorkTicks * 100 / (100 + BaseGatherPercent + (Find(player)?.GatherPercent ?? 0)));
+        Math.Max(1, def.WorkTicks * 100 / (100 + BaseGatherPercent));
 
     /// <summary>Food from one harvest at one of the player's farms.</summary>
-    public int FarmYieldOf(int player) => FarmYield + (Find(player)?.FarmBonus ?? 0);
+    public int FarmYieldOf(int player) => FarmYield;
 
     /// <summary>People the building houses, with its owner's techs.</summary>
     public int HousingOf(Building b) => b.Def.Housing + (Find(b.Owner)?.HousingBonus[b.Def.Index] ?? 0);
@@ -298,7 +287,7 @@ public sealed partial class EconomySystem
     public int MaxHp(int player, UnitDef def) => def.MaxHp + (Find(player)?.HpBonus[def.Index] ?? 0);
 
     /// <summary>Blocks per tick a unit of this type walks for the player (before roads).</summary>
-    public Fix64 SpeedPerTick(int player, UnitDef def) => Find(player)?.SpeedPerTick[def.Index] ?? def.SpeedPerTick;
+    public Fix64 SpeedPerTick(int player, UnitDef def) => def.SpeedPerTick;
 
     /// <summary>The player's state if it exists; queries use this so that asking never creates (and so hashes) a player.</summary>
     internal PlayerEconomy? Find(int player) => player >= 0 && player < _players.Count ? _players[player] : null;

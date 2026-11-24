@@ -68,7 +68,6 @@ public class RepairTests
     {
         var guilds = ContentDb.Default.Tech("settler_guilds");
         Assert.Equal("settlers", guilds.Faction?.Id);
-        Assert.DoesNotContain(guilds.Effects, e => e.Type == TechEffectType.GatherSpeed);
         Assert.Contains(guilds.Effects, e => e.Type == TechEffectType.Repair);
         // Only the Craft guilds give repair.
         Assert.All(ContentDb.Default.Techs.Where(t => t.Id != "settler_guilds"),

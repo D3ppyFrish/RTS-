@@ -421,4 +421,19 @@ public class AiTests
         PlayLogged(orcs, new[] { new AiPlayer(1, 1, AiLevel.Normal) }, orcLog, () => false, AiPlayer.WallTicks + 10 * Tps);
         Assert.Empty(orcLog.OfType<WallCommand>());
     }
+
+    [Fact]
+    public void EveryTechOrderHasEachFactionsTechs()
+    {
+        // The tech rework (#10) gave new tools: every computer player researches each tech its faction can have,
+        // except the discovery techs (researched once opened) and the final techs (the great works').
+        var db = Rts.Sim.Content.ContentLoader.LoadEmbedded();
+        foreach (var t in db.Techs)
+        {
+            if (t.Discovery != Rts.Sim.Content.Discovery.None) continue;
+            if (db.Buildings.Any(b => b.Kind == BuildingKind.GreatWork && b.Requires.Contains(t))) continue;
+            Assert.Contains(t.Id, AiPlayer.TechOrder);
+            Assert.Contains(t.Id, AiPlayer.HardTechOrder);
+        }
+    }
 }

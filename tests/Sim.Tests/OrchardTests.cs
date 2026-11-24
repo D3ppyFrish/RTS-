@@ -58,7 +58,6 @@ public class OrchardTests
         Assert.Equal(30 * Tps, orchard.YieldTicks);
         Assert.True(orchard.Raidable);
         Assert.True(orchard.Walkable);
-        Assert.DoesNotContain(db.Tech("crop_rotation").Effects, e => e.Type == TechEffectType.FarmYield);
     }
 
     [Fact]

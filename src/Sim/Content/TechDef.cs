@@ -151,15 +151,13 @@ public sealed class ExperienceRules
     }
 }
 
-/// <summary>What a researched tech changes for its player.</summary>
+/// <summary>
+/// What a researched tech changes for its player. Research gives tools, not small stat buffs (issue #10): the old
+/// small buffs (<see cref="ContentLoader.RetiredEffects"/>) are refused, and the two number effects left
+/// (<see cref="Housing"/>, <see cref="UnitHp"/>) are for the few large buffs the design allows.
+/// </summary>
 public enum TechEffectType : byte
 {
-    /// <summary>Workers dig, chop and pick <see cref="TechEffect.Amount"/> percent faster.</summary>
-    GatherSpeed,
-    /// <summary>Workers carry <see cref="TechEffect.Amount"/> more goods.</summary>
-    Carry,
-    /// <summary>Each farm harvest gives <see cref="TechEffect.Amount"/> more food.</summary>
-    FarmYield,
     /// <summary>
     /// Each of the player's <see cref="TechEffect.Building"/> houses <see cref="TechEffect.Amount"/> more people, or
     /// <see cref="TechEffect.Percent"/> percent more of its own number.
@@ -170,8 +168,6 @@ public enum TechEffectType : byte
     /// more of their own number, those already alive too.
     /// </summary>
     UnitHp,
-    /// <summary>Matching units walk <see cref="TechEffect.Amount"/> percent faster.</summary>
-    UnitSpeed,
     /// <summary>The player can lay roads. If no tech has this effect, roads need no tech.</summary>
     Roads,
     /// <summary>

@@ -146,21 +146,25 @@ replay made with different data says so instead of drifting apart.
   [The Deepfolk](docs/rules.md#the-deepfolk)). Player 0 plays the first
   faction, player 1 the second, and so on; picking a faction on the start screen picks the player who
   has it.
-- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 18
+- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 26
   in all: a shared core (farming, better tools, roads, archery, basic magic, masonry, crop rotation,
-  horse breeding, handcarts, smelting, sapping), two per faction, and three discovery techs (`"discovery"`:
-  Wardens' charts, Beast lore, Trail maps) opened only by exploring (see
-  [Discovery techs](docs/rules.md#discovery-techs)). Prerequisites form a branching
-  tree up to four deep. A tech unlocks the units and buildings that name it in `requires`, and can have
-  effects: faster gathering, bigger loads, richer farms, more housing (a number more, or a `percent` of the
-  building's own), more hit points (for units
-  already alive too), faster walking, roads, showing the map's ruins, lairs or towns through the fog
-  (`reveal`), wild monsters sparing workers (`spare_workers`), the shield wall (`shield_wall`), aimed felling and
-  prospecting (`felling`, `prospecting`), murder holes in stone gates (`murder_holes`, Masonry), and molting (`molt`, the Deepfolk's Molting). Crop rotation
-  has no effect: it unlocks the orchard (see [Economy](docs/rules.md#economy)).
-  Design principle for new techs: **research gives tools, not numbers**. A tech should give players a new
-  ability, unit option, building or tactic to outsmart enemies and adapt, not just a higher number; stat
-  buffs are mostly avoided. The stat effects above are to be replaced (see issue #80, on hold).
+  horse breeding, handcarts, smelting, sapping), two per faction plus each faction's final tech (its great work,
+  see [Ascendancy](docs/rules.md#ascendancy-and-great-works)), and six discovery techs (`"discovery"`) opened only by exploring:
+  Wardens' charts, Beast lore, Trail maps, and the rare Giant's marrow, Cave guides and Crystal lens (see
+  [Discovery techs](docs/rules.md#discovery-techs)). Prerequisites form a branching tree up to four deep. A tech
+  unlocks the units and buildings that name it in `requires`, and can have effects: roads, showing the map's
+  ruins, lairs or towns through the fog (`reveal`), wild monsters sparing workers (`spare_workers`), the shield
+  wall (`shield_wall`), aimed felling and prospecting (`felling`, `prospecting`), murder holes in stone gates
+  (`murder_holes`, Masonry), repair (`repair`, Craft guilds), molting (`molt`, the Deepfolk's Molting), and the
+  two large buffs: more housing (`housing`, a number more or a `percent` of the building's own: Brood warrens
+  doubles a brood chamber) and more hit points (`unit_hp`, for units already alive too: Giant's marrow, +30% for
+  fighters).
+  Design rule for techs (issue #10): **research gives tools, not numbers**. A tech gives players a new ability,
+  unit, building or tactic to outsmart enemies and adapt, not a higher number. The few stat buffs kept must be
+  noticeably large, and discovery techs are rare and powerful. The small buffs (`gather_speed`, `carry`,
+  `farm_yield`, `unit_speed`) are retired: a data file naming one fails to load and says so. Their pace went into
+  the base rates (everyone gathers 15% faster than the old base, `EconomySystem.BaseGatherPercent`). Every
+  computer player researches each faction tech (`AiPlayer.TechOrder`, `HardTechOrder`) and uses the new tools, all but aimed felling.
 - **Roles** (`roles.json`): the design doc's role table, saying which roles each role is strong and weak
   against and how much less damage the others deal to buildings, and how fast units out of the fight
   heal (see [Combat](docs/rules.md#combat)).

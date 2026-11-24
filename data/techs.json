@@ -1,16 +1,14 @@
 // Techs, researched one at a time at the town hall. requires lists the techs that must come first;
 // faction (optional) limits a tech to one faction. researchTime is in seconds, cost in goods. Units and
 // buildings name the tech that unlocks them in their own "requires". icon (optional, the id if not
-// given) names the picture the game shows for it (see game/scripts/UiIcons.cs). Effects:
-//   gather_speed  { percent }             workers dig, chop and pick that much faster
-//   carry         { amount }              workers carry that many more goods
-//   farm_yield    { amount }              each farm harvest gives that much more food
+// given) names the picture the game shows for it (see game/scripts/UiIcons.cs). Research gives tools, not numbers:
+// a tech opens a new ability, unit or building; the few stat buffs kept (housing, unit_hp) must be large, and the
+// old small ones (gather_speed, carry, farm_yield, unit_speed) are refused. Effects:
 //   housing       { building, amount or percent } each building of that type houses that many more, or that
 //                                         percent more of its own number
 //   unit_hp       { role or unit, fighters, amount or percent } more hit points, or that percent more of the
 //                                         unit's own, for units already alive too; fighters: true keeps it to
 //                                         units that fight (not workers, caravans, carts or transport ships)
-//   unit_speed    { role or unit, percent } faster walking (no role or unit: every unit)
 //   roads                                 roads can be laid (if no tech has this, roads need no tech)
 //   reveal        { what }                once researched, every ruin, lair or town (what: ruins, lairs or
 //                                         towns) on the map shows through the fog as seen ground

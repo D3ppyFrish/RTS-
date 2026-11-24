@@ -577,15 +577,42 @@ public class ContentTests
         var files = Files();
         // War drums has no effects of its own any more (it trains the war drummer): give it a broken one.
         Edit(files, "techs.json", "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40 },",
-            "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40, \"effects\": [ { \"type\": \"unit_speed\", \"amount\": 15 } ] },");
+            "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40, \"effects\": [ { \"type\": \"unit_hp\", \"speed\": 15 } ] },");
         Edit(files, "techs.json", "\"type\": \"molt\", \"role\": \"ranged\"", "\"type\": \"molt\", \"role\": \"ranged\", \"unit\": \"spitter\"");
         Edit(files, "techs.json", "\"building\": \"brood_chamber\", \"percent\": 100", "\"building\": \"brood_chamber\", \"percent\": 0");
         var e = Fails(files);
-        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'orc_war_drums', effect 1: unknown field \"amount\""));
-        Assert.Contains("techs.json: tech 'orc_war_drums', effect 1: needs \"percent\"", e.Errors);
+        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'orc_war_drums', effect 1: unknown field \"speed\""));
+        Assert.Contains("techs.json: tech 'orc_war_drums', effect 1: needs \"amount\"", e.Errors);
         Assert.Contains("techs.json: tech 'deep_chitin', effect 2: give a \"role\" or a \"unit\", not both", e.Errors);
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'deep_warrens', effect 1: \"percent\" is 0"));
         Assert.Equal(4, e.Errors.Count);
+    }
+
+    [Theory]
+    [InlineData("{ \"type\": \"gather_speed\", \"percent\": 15 }", "gather_speed")]
+    [InlineData("{ \"type\": \"carry\", \"amount\": 3 }", "carry")]
+    [InlineData("{ \"type\": \"farm_yield\", \"amount\": 2 }", "farm_yield")]
+    [InlineData("{ \"type\": \"unit_speed\", \"percent\": 15 }", "unit_speed")]
+    public void RetiredStatBuffsAreRefused(string effect, string type)
+    {
+        // The tech rework (#10) retired the small stat buffs: a data file naming one fails to load, saying why.
+        var files = Files();
+        Edit(files, "techs.json", "\"effects\": [ { \"type\": \"murder_holes\" } ]", $"\"effects\": [ {effect} ]");
+        var e = Fails(files);
+        Assert.Equal(new[] { $"techs.json: tech 'masonry', effect 1: \"type\" is \"{type}\", a small stat buff retired in the tech rework: research gives tools, not numbers (see Techs in README.md)" }, e.Errors);
+    }
+
+    [Fact]
+    public void NoTechHasASmallStatEffect()
+    {
+        // Research gives tools (#10). The number effects left are for the few large buffs: at least 30% (or 10 a building).
+        var db = ContentLoader.LoadEmbedded();
+        foreach (var t in db.Techs)
+            foreach (var e in t.Effects)
+            {
+                if (e.Type == TechEffectType.UnitHp) Assert.True(e.Percent >= 30, $"{t.Id}: {e.Percent}% hit points");
+                if (e.Type == TechEffectType.Housing) Assert.True(e.Percent >= 50 || e.Amount >= 10, $"{t.Id}: housing {e.Amount} / {e.Percent}%");
+            }
     }
 
     [Fact]
@@ -621,6 +648,6 @@ public class ContentTests
         Assert.Equal("line_infantry", ContentLoader.SnakeName(UnitRole.LineInfantry));
         Assert.Equal("iron_ore", ContentLoader.SnakeName(Good.IronOre));
         Assert.Equal("town_hall", ContentLoader.SnakeName(BuildingKind.TownHall));
-        Assert.Equal("gather_speed", ContentLoader.SnakeName(TechEffectType.GatherSpeed));
+        Assert.Equal("unit_hp", ContentLoader.SnakeName(TechEffectType.UnitHp));
     }
 }

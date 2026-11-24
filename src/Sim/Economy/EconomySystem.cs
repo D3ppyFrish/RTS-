@@ -41,8 +41,6 @@ public sealed class PlayerEconomy
         Molt = new bool[content.Units.Count];
         FellTicks = new int[content.Units.Count];
         ProspectTicks = new int[content.Units.Count];
-        SpeedPerTick = new Fix64[content.Units.Count];
-        foreach (var d in content.Units) SpeedPerTick[d.Index] = d.SpeedPerTick;
         AutoForm = new int[content.Units.Count];
         Array.Fill(AutoForm, -1);
     }
@@ -79,7 +77,6 @@ public sealed class PlayerEconomy
     internal int Researching = -1;
     internal int ResearchTicks;
     // Bonuses from the techs had, recomputed when one is added (see EconomySystem.UpdateBonuses).
-    internal int GatherPercent, CarryBonus, FarmBonus;
     internal bool Roads, SpareWorkers, MurderHoles, Repair;
     // The discoveries made (bit 1 << Discovery), which open discovery techs.
     internal byte Discoveries;
@@ -99,7 +96,6 @@ public sealed class PlayerEconomy
     internal int Soundings;
     /// <summary>The ore, coal, gold and crystal blocks the player's prospectors have found (keys x, y, z: see <see cref="EconomySystem.OreKey"/>).</summary>
     internal readonly SortedSet<long> Prospected = new();
-    internal readonly Fix64[] SpeedPerTick;
     // The form (unit index) each unit type (by index) takes on its own once it can, or -1 (see EvolutionSystem).
     internal readonly int[] AutoForm;
 }

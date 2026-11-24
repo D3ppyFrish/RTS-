@@ -41,7 +41,6 @@ public class ToolsTests
     {
         var db = ContentLoader.LoadEmbedded();
         var effects = db.Tech("tools").Effects;
-        Assert.DoesNotContain(effects, e => e.Type == TechEffectType.GatherSpeed);
         Assert.Contains(effects, e => e.Type == TechEffectType.Felling && e.Unit?.Id == "militia" && e.Ticks == 4 * Tps && e.Amount == 60);
         Assert.Contains(effects, e => e.Type == TechEffectType.Prospecting && e.Unit?.Id == "foreman" && e.Ticks == 8 * Tps && e.Amount == 12);
 
