@@ -28,8 +28,10 @@ public enum Sight : byte
 /// <para>
 /// Units underground (natural ground over their heads: in a tunnel or a cave, see <see cref="Covered"/>) are not seen
 /// from the surface. A player sees another's unit underground only where they hear it (<see cref="Hears"/>): within
-/// <see cref="HearClose"/> columns of one of their own units, within the sight of one of their own units that is
-/// underground too, or within a listening post's <see cref="Economy.BuildingDef.Hearing"/>. So sappers can dig under a
+/// <see cref="HearClose"/> columns of one of their own units (a unit's own <see cref="Units.UnitDef.Hearing"/> if
+/// more: the delver), within the sight of one of their own units that is underground too, or within a listening
+/// post's <see cref="Economy.BuildingDef.Hearing"/>. A crystal lens's gaze (see <see cref="Economy.EconomySystem.Gazes"/>)
+/// puts a wide circle anywhere on the map in its player's sight for a while. So sappers can dig under a
 /// wall unseen, unless its owner keeps a listening post near it.
 /// </para>
 /// </summary>
@@ -188,12 +190,16 @@ public sealed class VisionSystem
             bool under = owned && Covered(world, x, u.Y[i], z);
             _under[i] = under ? (byte)1 : (byte)0;
             if (!owned) continue;
-            var sight = defs[u.Def[i]].Sight;
-            int dark = c.SightPercent(x, z, false);
+            var def = defs[u.Def[i]];
+            var sight = def.Sight;
+            // A unit that sees in the dark (the delver) is not held back by night, weather or mist, and sees twice as
+            // far underground.
+            int dark = def.DarkSight ? (under ? 200 : 100) : c.SightPercent(x, z, false);
             var s = sight * dark / 100;
             _viewer = (x, z, u.Y[i]);
             Stamp(p, x, z, x, z, (s * s).FloorToInt());
-            Hear(p, x, z, x, z, under ? Math.Max((s * s).FloorToInt(), HearClose * HearClose) : HearClose * HearClose);
+            int hear = Math.Max(HearClose, def.Hearing);
+            Hear(p, x, z, x, z, under ? Math.Max((s * s).FloorToInt(), hear * hear) : hear * hear);
             if (!under) Fill(_close[p] ??= new byte[_sizeX * _sizeZ], x, z, x, z, SpotSubmerged * SpotSubmerged);
             int lit = lights ? c.SightPercent(x, z, true) : dark;
             if (lit > dark)
@@ -236,6 +242,9 @@ public sealed class VisionSystem
                 Stamp(town.Holder, town.X - r0, town.Z - r0, town.X + r0, town.Z + r0, s * s, litOnly: true);
             }
         }
+        // A crystal lens's gaze shows its player a wide circle wherever it was aimed, dark or not.
+        foreach (var g in _sim.Economy.Gazes)
+            if ((uint)g.Player < (uint)_grids.Length) Stamp(g.Player, g.X, g.Z, g.X, g.Z, g.Radius * g.Radius);
         HearDrums();
         Version++;
     }

@@ -12,7 +12,8 @@ namespace Rts.Sim.World;
 /// feet's level or the one below) loses <see cref="LavaDamage"/>, and every unit standing on quicksand
 /// (<see cref="BlockType.Quicksand"/>) loses <see cref="QuicksandDamage"/> and walks at a
 /// <see cref="QuicksandSlow"/>th of its speed while it is on it. Both land with the tick's hits, by no one, so
-/// no one gets the kill and armour does not help. Wild monsters are hurt the same. Digging the bog away (it is
+/// no one gets the kill and armour does not help. Wild monsters are hurt the same. A unit that knows the deep caves
+/// (<see cref="UnitDef.CaveWise"/>: the delver) takes no harm from lava's heat. Digging the bog away (it is
 /// gathered like mud) makes the ground safe. A unit left with its head under water by a flood, with no ground
 /// near enough to be swept out to (see <see cref="PhysicsSystem"/>), loses <see cref="DrownDamage"/> a second.
 ///
@@ -71,12 +72,19 @@ public sealed class HazardSystem
     public int DamageAt(int x, int y, int z) => DamageAt(_sim.World, x, y, z);
 
     /// <summary>Hit points a second a unit with its feet at block (x, y, z) of world <paramref name="w"/> loses to the ground around it.</summary>
-    public static int DamageAt(VoxelWorld w, int x, int y, int z)
+    public static int DamageAt(VoxelWorld w, int x, int y, int z) => DamageAt(w, x, y, z, lava: true);
+
+    /// <summary>
+    /// Hit points a second a unit with its feet at block (x, y, z) loses to the ground around it; without
+    /// <paramref name="lava"/>, lava's heat is left out (a unit that knows the deep caves, <see cref="UnitDef.CaveWise"/>).
+    /// </summary>
+    public static int DamageAt(VoxelWorld w, int x, int y, int z, bool lava)
     {
         int damage = w.Get(x, y + 1, z) == BlockType.Water ? DrownDamage : 0;
         var under = w.Get(x, y - 1, z);
         if (under == BlockType.Bog) damage += BogDamage;
         else if (under == BlockType.Quicksand) damage += QuicksandDamage;
+        if (!lava) return damage;
         for (int dz = -1; dz <= 1; dz++)
         for (int dx = -1; dx <= 1; dx++)
             if (w.Get(x + dx, y, z + dz) == BlockType.Lava || w.Get(x + dx, y - 1, z + dz) == BlockType.Lava)
@@ -110,7 +118,7 @@ public sealed class HazardSystem
         {
             if ((tick + u.Id[i]) % tps != 0 || u.Hp[i] <= 0) continue;
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
-            int damage = DamageAt(w, x, y, z);
+            int damage = DamageAt(w, x, y, z, lava: !_sim.Content.Units[u.Def[i]].CaveWise);
             if (damage <= 0) continue;
             _sim.Combat.Crush(i, damage);
             if (damage >= u.Hp[i]) Report(i, x, y, z);

@@ -111,7 +111,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _fellButton = null!, _prospectButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -522,6 +522,10 @@ public partial class Hud : CanvasLayer
                 b.TooltipText = $"A watchman listens at the ground: you see enemy units underground (sappers tunnelling, troops in " +
                                 $"caves) within {def.Hearing} columns of it. Otherwise nobody on the surface sees units under the ground " +
                                 $"unless one of theirs stands within {VisionSystem.HearClose} columns of them. Build one by your walls.";
+            if (def.Lens is { } lens)
+                b.TooltipText = $"A tower with a great crystal lens on top. Select it and press Gaze (Ctrl+G), then click anywhere on the map: " +
+                                $"for {lens.Mana} mana you see {lens.Radius} columns round that spot, through the fog of war, for " +
+                                $"{lens.Ticks / Simulation.TicksPerSecond} seconds. It can gaze once every {lens.EveryTicks / Simulation.TicksPerSecond / 60} minutes.";
             if (def.Kind == BuildingKind.Shrine)
                 b.TooltipText = $"Right click it with a worker: they bring it crystal from storage, and it channels each crystal " +
                                 $"into {def.Mana} mana in {def.ChannelTicks / Simulation.TicksPerSecond} seconds. Spells cost mana. " +
@@ -739,6 +743,13 @@ public partial class Hud : CanvasLayer
         _stampedeButton.Pressed += () => _control.ToggleStampede();
         _stampedeButton.Visible = false;
         column.AddChild(_stampedeButton);
+
+        _gazeButton = MakeToolButton("Gaze  [Ctrl+G]");
+        _gazeButton.Name = "gaze";
+        _gazeButton.Icon = UiIcons.Get("lens");
+        _gazeButton.Pressed += () => _control.ToggleGaze();
+        _gazeButton.Visible = false;
+        column.AddChild(_gazeButton);
 
         _letOutButton = MakeToolButton("Let the beasts out");
         _letOutButton.Name = "pen_let_out";
@@ -1308,6 +1319,29 @@ public partial class Hud : CanvasLayer
         _letOutButton.Disabled = kept == 0;
     }
 
+    /// <summary>The Gaze button: shown with your finished crystal lens selected, greyed out until it is ready and you have the mana.</summary>
+    private void RefreshLens()
+    {
+        var lens = _control.SelectedLens();
+        bool show = lens != null || _control.Tool == PlayerControl.ToolMode.Gaze;
+        _gazeButton.Visible = show;
+        _gazeButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Gaze);
+        if (lens == null) return;
+        var def = lens.Def.Lens!;
+        var why = _sim.Economy.CanGaze(PlayerControl.LocalPlayer, lens);
+        long wait = _sim.Economy.LensWait(lens);
+        _gazeButton.Disabled = why != GazeResult.Ok && _control.Tool != PlayerControl.ToolMode.Gaze;
+        _gazeButton.Text = why switch
+        {
+            GazeResult.NotReady => $"Gaze in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s",
+            GazeResult.NoMana => $"Gaze: needs {def.Mana} mana",
+            _ => "Gaze  [Ctrl+G]",
+        };
+        _gazeButton.TooltipText = $"Click anywhere on the map: for {def.Mana} mana you see {def.Radius} columns round that spot, through the " +
+                                  $"fog of war, for {def.Ticks / Simulation.TicksPerSecond} seconds. Then the lens needs " +
+                                  $"{def.EveryTicks / Simulation.TicksPerSecond / 60} minutes before it can gaze again.";
+    }
+
     private void RefreshButtons()
     {
         var econ = _sim.Economy;
@@ -1388,6 +1422,7 @@ public partial class Hud : CanvasLayer
         RefreshCharge();
         RefreshMolt();
         RefreshPen();
+        RefreshLens();
         _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
         _fellButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Fell);
         _prospectButton.Visible = _control.OwnProspectors().Count > 0 || _control.Tool == PlayerControl.ToolMode.Prospect;
@@ -2221,6 +2256,13 @@ public partial class Hud : CanvasLayer
                        (kept == 0 ? "   (no beasts in the pen)" : "") +
                        "\nRight click or Esc to stop";
             }
+            case PlayerControl.ToolMode.Gaze:
+            {
+                var lens = _control.SelectedLens();
+                return $"Gaze: click where the crystal lens looks" +
+                       (lens?.Def.Lens is { } ld ? $" ({ld.Radius} columns round it, for {ld.Ticks / Simulation.TicksPerSecond} seconds, {ld.Mana} mana)" : "") +
+                       "\nRight click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Prospect:
                 return $"Sound for ore: click where the selected foremen sound the ground (ore shows within {_sim.Economy.ProspectRadius(PlayerControl.LocalPlayer)} blocks, at any depth)" +
                        (_control.OwnProspectors().Count == 0 ? "   (select foremen first)" : "") +
@@ -2447,6 +2489,13 @@ public partial class Hud : CanvasLayer
             if (b.Def.Pen is { } penDef && b.Active)
                 parts.Add($"keeps {_sim.Combat.PenCount(b.Id)} of {penDef.Keeps} beasts" +
                           (b.Owner == PlayerControl.LocalPlayer ? " (right-click it with tamed wolves or boars selected to pen them; Ctrl+S: stampede)" : ""));
+            if (b.Def.Lens is { } lensDef && b.Active)
+            {
+                long wait = _sim.Economy.LensWait(b);
+                bool gazing = _sim.Economy.Gazes.Any(g => g.Building == b.Id);
+                parts.Add(gazing ? "gazing" : wait > 0 ? $"ready to gaze in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s"
+                    : $"ready to gaze ({lensDef.Mana} mana)" + (b.Owner == PlayerControl.LocalPlayer ? ": Ctrl+G" : ""));
+            }
             if (b.Def.Kind == BuildingKind.Shrine)
                 parts.Add(b.SmeltTicks > 0
                     ? $"channelling a crystal {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.ChannelTicks)}% ({b.Def.Mana} mana each)"

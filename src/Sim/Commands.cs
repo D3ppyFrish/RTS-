@@ -454,6 +454,12 @@ public sealed record PenCommand(int PlayerId, int[] Units, int Building) : Units
 /// </summary>
 public sealed record StampedeCommand(int PlayerId, int Building, int X1, int Z1, int X2, int Z2) : Command(PlayerId);
 
+/// <summary>
+/// The player's crystal lens <paramref name="Building"/> gazes at column (X, Z): the land round it is in their sight for a
+/// while (see <c>Economy/EconomySystem.Lens.cs</c>).
+/// </summary>
+public sealed record GazeCommand(int PlayerId, int Building, int X, int Z) : Command(PlayerId);
+
 /// <summary>The beasts kept in the player's beast pen <paramref name="Building"/> are let out, free to take orders again.</summary>
 public sealed record UnpenCommand(int PlayerId, int Building) : Command(PlayerId);
 

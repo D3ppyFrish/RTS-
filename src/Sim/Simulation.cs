@@ -533,6 +533,7 @@ public sealed class Simulation
             case ChargeCommand ch: Combat.Apply(ch); break;
             case PenCommand pn: ApplyPen(pn); break;
             case StampedeCommand sd: Combat.Apply(sd); break;
+            case GazeCommand gz: Economy.Apply(gz); break;
             case UnpenCommand up: Combat.Apply(up); break;
             case FellCommand fl: Economy.Apply(fl); break;
             case ProspectCommand pr: Economy.Apply(pr); break;

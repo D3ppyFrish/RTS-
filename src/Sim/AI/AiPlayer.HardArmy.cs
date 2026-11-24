@@ -257,7 +257,9 @@ public sealed partial class AiPlayer
                 // soldiers gather, or been chased off on the way, has seen more of them than one that has only
                 // just caught sight of the town.
                 bool looked = !sim.Fog || sim.Tick - _lookDone <= LookTicks;
-                if (!looked) _wantLook = true;
+                // Its crystal lens gives it that look at once: the wave sets out when it next thinks, with their town in sight.
+                if (!looked && GazeAt(sim, ex, ez, issue)) _lookDone = sim.Tick;
+                else if (!looked) _wantLook = true;
                 else
                 {
                     Note(sim, $"sends a wave of {wave.Count} (worth {mine / 1000}k; it has seen {seen / 1000}k of theirs and reckons with {theirs / 1000}k)"

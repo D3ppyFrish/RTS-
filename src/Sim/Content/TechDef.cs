@@ -165,7 +165,10 @@ public enum TechEffectType : byte
     /// <see cref="TechEffect.Percent"/> percent more of its own number.
     /// </summary>
     Housing,
-    /// <summary>Matching units have <see cref="TechEffect.Amount"/> more hit points, those already alive too.</summary>
+    /// <summary>
+    /// Matching units have <see cref="TechEffect.Amount"/> more hit points, or <see cref="TechEffect.Percent"/> percent
+    /// more of their own number, those already alive too.
+    /// </summary>
     UnitHp,
     /// <summary>Matching units walk <see cref="TechEffect.Amount"/> percent faster.</summary>
     UnitSpeed,
@@ -237,6 +240,12 @@ public enum Discovery : byte
     Lair,
     /// <summary>The player broke a city-state's totem and took the town.</summary>
     Town,
+    /// <summary>The player's units beat a stone giant guarding a mountain pass (a lair with <see cref="Units.LairDef.Pass"/>).</summary>
+    Giant,
+    /// <summary>One of the player's units set foot in the deep caves (see <see cref="Economy.EconomySystem.DeepGround"/>).</summary>
+    Deeps,
+    /// <summary>One of the player's units dug a block of crystal.</summary>
+    Crystal,
 }
 
 /// <summary>One effect of a tech.</summary>
@@ -245,8 +254,13 @@ public sealed class TechEffect
     public TechEffectType Type { get; init; }
     /// <summary>A percentage for the speed effects, otherwise a count.</summary>
     public int Amount { get; init; }
-    /// <summary>For a housing effect: percent more of the building's own number (besides <see cref="Amount"/>).</summary>
+    /// <summary>
+    /// For a housing effect: percent more of the building's own number (besides <see cref="Amount"/>); for a hit point
+    /// effect, percent more of the unit's own hit points.
+    /// </summary>
     public int Percent { get; init; }
+    /// <summary>For unit effects: only units that fight (<see cref="Fights"/>), within the role or unit if one is given.</summary>
+    public bool Fighters { get; init; }
     /// <summary>The building type a housing effect applies to.</summary>
     public BuildingDef? Building { get; init; }
     /// <summary>For unit effects: only units of this role.</summary>
@@ -261,7 +275,15 @@ public sealed class TechEffect
     public int Ticks { get; init; }
 
     /// <summary>True if a unit effect applies to units of this type.</summary>
-    public bool AppliesTo(UnitDef def) => Unit != null ? Unit == def : Role == null || Role == def.Role;
+    public bool AppliesTo(UnitDef def) =>
+        (Unit != null ? Unit == def : Role == null || Role == def.Role) && (!Fighters || Fights(def));
+
+    /// <summary>True for a unit that fights: one that can attack, and is no worker, caravan, cart or transport ship.</summary>
+    public static bool Fights(UnitDef def) =>
+        def.CanAttack && def.Role is not (UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler or UnitRole.Boat);
+
+    /// <summary>For a hit point effect: how many more hit points a unit of this type gets.</summary>
+    public int HpFor(UnitDef def) => Amount + def.MaxHp * Percent / 100;
 }
 
 /// <summary>

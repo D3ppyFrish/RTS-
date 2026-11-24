@@ -345,14 +345,15 @@ public static class ScriptedMatch
         }
         else if (roll < 70)
         {
-            // Two times in three at a building that trains soldiers, if the player has one.
+            // Two times in three at a building that trains soldiers the player can have, if the player has one.
             var trainers = new List<Building>();
             var barracks = new List<Building>();
             foreach (var b in sim.Buildings.All)
             {
                 if (b.Owner != owner || !b.Active || b.Def.Trains.Length == 0) continue;
                 trainers.Add(b);
-                if (Array.Exists(b.Def.Trains, id => sim.Content.Unit(id).Role is not (UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler or UnitRole.Boat))) barracks.Add(b);
+                if (Array.Exists(b.Def.Trains, id => sim.Content.Unit(id) is var d && d.Role is not (UnitRole.Worker or UnitRole.Trader or UnitRole.Hauler or UnitRole.Boat)
+                        && (d.Requires.Count == 0 || sim.Economy.Unlocked(owner, d)))) barracks.Add(b);
             }
             if (trainers.Count == 0) return;
             if (barracks.Count > 0 && rng.Range(0, 3) > 0) trainers = barracks;

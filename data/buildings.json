@@ -39,6 +39,9 @@
 // Kind listening_post is a listening post: hearing (required, and only for it) is how far (columns beyond its
 // walls) it hears units underground, so its owner sees them under fog of war, which nobody on the surface does
 // otherwise (see src/Sim/VisionSystem.cs).
+// Kind lens is a crystal lens: lens (needed, and only for it) says how often (every, seconds) its owner can aim it
+// anywhere on the map, how far round that spot it then shows through the fog (radius, columns), for how long (time,
+// seconds) and for how much mana (see "Discovery techs" in docs/rules.md).
 // Kind orchard is an orchard: a field whose fruit trees grow for grow seconds once it is finished (needed, and only
 // for it), then bear its yield every yieldTime seconds with nobody working it, waiting there in baskets (3 at most)
 // for workers or carts to carry to storage (up to workerSlots at once). Grown trees screen sight and shots, and units
@@ -180,6 +183,10 @@
   { "id": "listening_post", "name": "Listening post", "kind": "listening_post", "size": [2, 2], "wallHeight": 2,
     "wall": "planks", "footing": "stone_brick", "roof": "thatch", "icon": "ear",
     "cost": { "wood": 20, "stone": 10 }, "buildTime": 15, "sight": 3, "hearing": 20 },
+  { "id": "crystal_lens", "name": "Crystal lens", "kind": "lens", "size": [3, 3], "wallHeight": 6,
+    "wall": "stone_brick", "footing": "stone_brick", "roof": "roof_tile", "icon": "lens", "requires": "crystal_lens",
+    "cost": { "stone": 80, "wood": 30, "crystal": 10 }, "buildTime": 40, "sight": 8, "light": 4,
+    "lens": { "every": 180, "radius": 30, "time": 20, "mana": 25 } },
   { "id": "torch", "name": "Torch", "kind": "light", "size": [1, 1], "wallHeight": 2, "wall": "planks",
     "cost": { "wood": 1 }, "buildTime": 2, "sight": 2, "light": 7 },
   { "id": "campfire", "name": "Campfire", "kind": "light", "size": [1, 1], "wallHeight": 1, "wall": "stone_brick",

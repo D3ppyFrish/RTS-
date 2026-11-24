@@ -178,13 +178,21 @@ public sealed class MonsterSystem
 
     /// <summary>
     /// True if wild monster i leaves unit j alone: j is a worker whose player has a tech that spares workers (Beast
-    /// lore, see <see cref="Content.TechEffectType.SpareWorkers"/>). The monster does not pick it, track its blood or
+    /// lore, see <see cref="Content.TechEffectType.SpareWorkers"/>), or it knows the deep caves and is in them (the delver,
+    /// see <see cref="UnitDef.CaveWise"/>). The monster does not pick it, track its blood or
     /// go after it at the den, though it still answers a worker that hits it. A city-state's guards are not monsters.
     /// </summary>
     public bool Spares(int i, int j) => IsWild(i) && U.Town[i] == 0 && Spared(j);
 
-    /// <summary>True if unit j is a worker the wild monsters leave alone (see <see cref="Spares"/>).</summary>
-    private bool Spared(int j) => Def(j).Role == UnitRole.Worker && Economy.SparesWorkers(U.Owner[j]);
+    /// <summary>
+    /// True if the wild monsters leave unit j alone (see <see cref="Spares"/>): a worker of a player with Beast lore, or a
+    /// unit that knows the deep caves (<see cref="UnitDef.CaveWise"/>) while it is in them.
+    /// </summary>
+    private bool Spared(int j)
+    {
+        var def = Def(j);
+        return def.Role == UnitRole.Worker && Economy.SparesWorkers(U.Owner[j]) || def.CaveWise && Economy.DeepGround(U.Y[j]);
+    }
 
     /// <summary>Hash of the lairs (the monsters themselves are units and hash with them).</summary>
     public ulong ComputeHash()
@@ -760,6 +768,7 @@ public sealed class MonsterSystem
         lair.ClearedBy = lair.LastBeatenBy;
         int p = lair.ClearedBy;
         Economy.Discover(p, Rts.Sim.Content.Discovery.Lair);
+        if (lair.Monster.Lair!.Pass) Economy.Discover(p, Rts.Sim.Content.Discovery.Giant);
         if (p < 0 || p == Simulation.WildPlayer || Economy.Faction(p).TamesMonsters) return;
         var reward = lair.Monster.Lair!.Reward;
         if (reward.Length == 0 || Economy.NearestStorage(p, lair.X, lair.Z) is not { } store) return;

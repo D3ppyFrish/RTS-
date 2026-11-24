@@ -16,6 +16,9 @@
 // that many percent more damage, as in { "caster": 50 }. heal (optional) is the hit points it gives back
 // to the most hurt ally within healRange blocks every healTime seconds. earthWall, iceBridge, chasm and growForest (optional) let it cast
 // Earth Wall, Ice Bridge, Chasm and Grow Forest (see Terrain magic in docs/rules.md).
+// darkSight (optional): night, weather and mist do not shorten its sight, and underground it sees twice as far.
+// hearing (optional): columns round it in which it hears units underground, as a listening post does. caveWise
+// (optional): lava's heat does not hurt it, and in the deep caves wild monsters do not go after it (the delver).
 // Armour (see Combat in docs/rules.md): attack (optional, default slash) is the kind of the unit's attack:
 // slash (swords, axes, claws), pierce (spears, arrows, lances) or crush (hammers, clubs, stones, blasts).
 // Armour stops slash best and crush least, and slash and pierce wounds bleed. body (optional) is humanoid
@@ -323,6 +326,14 @@
     "rally": 14, "inspire": 2,
     "drums": { "speed": 40, "blow": 50, "time": 6, "wait": 60, "heard": 40 },
     "cost": { "food": 40, "wood": 30 }, "trainTime": 15, "trainedAt": "barracks", "requires": "orc_war_drums", "start": false },
+
+  // The delver (Cave guides, a discovery tech): a scout for the deep caves.
+  { "id": "delver", "name": "Delver", "role": "line_infantry",
+    "description": "A guide who has walked the deep caves. Sees in the dark and twice as far underground, hears units underground within 16 columns like a listening post, and walks past lava's heat and the deep caves' nests without being set upon. A light fighter: a scout, not a soldier.",
+    "speed": 5, "hp": 60, "model": "delver", "damage": 5, "attackTime": 1.2, "range": 1.25, "sight": 10,
+    "attack": "slash", "armor": { "head": 1 },
+    "darkSight": true, "hearing": 16, "caveWise": true,
+    "cost": { "food": 50, "wood": 20 }, "trainTime": 15, "trainedAt": "town_hall", "requires": "cave_guides", "start": false },
 
   // Trade with the city-states, and with rivals under a trade deal.
   { "id": "caravan", "name": "Caravan", "role": "trader",

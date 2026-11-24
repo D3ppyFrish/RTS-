@@ -206,7 +206,7 @@ public partial class TechTreePanel : PanelContainer
         TechEffectType.Carry => $"Workers carry {e.Amount} more on each trip",
         TechEffectType.FarmYield => $"Each farm harvest gives {e.Amount} more food",
         TechEffectType.Housing => $"Each {e.Building?.Name.ToLowerInvariant()} houses {e.Amount} more",
-        TechEffectType.UnitHp => $"{Who(e)} have {e.Amount} more hit points",
+        TechEffectType.UnitHp => e.Percent > 0 ? $"{Who(e)} have {e.Percent}% more hit points" : $"{Who(e)} have {e.Amount} more hit points",
         TechEffectType.UnitSpeed => $"{Who(e)} walk {e.Amount}% faster",
         TechEffectType.Roads => "Roads can be laid (L)",
         TechEffectType.Reveal => e.Reveal switch
@@ -226,13 +226,16 @@ public partial class TechTreePanel : PanelContainer
         Discovery.Ruin => "Search an old ruin",
         Discovery.Lair => "Clear a monster lair",
         Discovery.Town => "Take a city-state town",
+        Discovery.Giant => "Beat a stone giant in a mountain pass",
+        Discovery.Deeps => "Set foot in the deep caves",
+        Discovery.Crystal => "Dig a block of crystal",
         _ => "",
     };
 
     private static string Who(TechEffect e)
     {
         if (e.Unit != null) return e.Unit.Name + "s";
-        if (e.Role is not { } role) return "All units";
+        if (e.Role is not { } role) return e.Fighters ? "All fighting units" : "All units";
         string name = ContentLoader.SnakeName(role).Replace('_', ' ');
         return char.ToUpperInvariant(name[0]) + name[1..];
     }

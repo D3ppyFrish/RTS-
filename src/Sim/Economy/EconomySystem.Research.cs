@@ -89,7 +89,8 @@ public sealed partial class EconomySystem
         d == Discovery.None || ((Find(player)?.Discoveries ?? 0) & (1 << (int)d)) != 0;
 
     /// <summary>
-    /// The player made the discovery (searched a ruin, cleared a lair, took a town): the discovery techs it opens
+    /// The player made the discovery (searched a ruin, cleared a lair, took a town, beat a pass's giant, set foot in the
+    /// deep caves, dug crystal): the discovery techs it opens
     /// can be researched from now on, and the player hears of each one their faction can research. Once a match.
     /// </summary>
     public void Discover(int player, Discovery d)
@@ -169,7 +170,7 @@ public sealed partial class EconomySystem
         {
             if (e.Type != TechEffectType.UnitHp) continue;
             for (int i = 0; i < U.Count; i++)
-                if (U.Owner[i] == player && e.AppliesTo(Content.Units[U.Def[i]])) U.Hp[i] += e.Amount;
+                if (U.Owner[i] == player && e.AppliesTo(Content.Units[U.Def[i]])) U.Hp[i] += e.HpFor(Content.Units[U.Def[i]]);
         }
     }
 
@@ -204,7 +205,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.Repair: p.Repair = true; break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)
-                            if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.Amount;
+                            if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.HpFor(d);
                         break;
                     case TechEffectType.ShieldWall:
                         foreach (var d in units)

@@ -775,6 +775,7 @@ public sealed partial class AiPlayer
         _waveBest = int.MaxValue;
         _waves++;
         var (ex, ez) = goal;
+        GazeAt(sim, ex, ez, issue); // the crystal lens shows where it is going
         var (cx, cz) = Centroid(sim, _wave);
         var w = sim.World;
         long dx = cx - ex, dz = cz - ez;

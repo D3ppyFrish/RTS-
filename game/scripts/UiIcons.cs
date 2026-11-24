@@ -509,6 +509,18 @@ public static class UiIcons
             "............", "....kkkk....", "...kppppk...", "..kpPPPppk..", "..kpPkkPpk..", "..kpPk.kpk..",
             "...kPPkpk...", "....kkPpk...", "......kpk...", "...kk.kpk...", "...kpkppk...", "....kkkk....",
         },
+        // The crystal lens (Crystal lens): a great violet-rimmed lens of crystal on a stone stand.
+        ["lens"] = new[]
+        {
+            "....kkkk....", "..kkvvvvkk..", ".kvvttttvvk.", ".kvtwwtttvk.", ".kvtwttttvk.", ".kvttttttvk.",
+            ".kvvttttvvk.", "..kkvvvvkk..", "....kSSk....", ".....kk.....", "...kSSSSk...", "...kkkkkk...",
+        },
+        // The delver (Cave guides): a hooded guide with a lamp on its brow and a crystal-tipped staff.
+        ["delver"] = new[]
+        {
+            "....kkkk..kt", "...kCCCCk.kv", "..kCCyyCCkk.", "..kCkppkCkk.", "..kCpppPCk..", "...kppPPk...",
+            "..kkBBBBkk..", ".kBBBBBBBk..", ".kBBkBBkBBk.", "..kBBBBBBk..", "..kBBkkBBk..", "..kkk..kkk..",
+        },
         // The dark power: a black heart split with violet veins round a burning eye.
         ["dark_heart"] = new[]
         {
