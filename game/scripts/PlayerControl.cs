@@ -874,10 +874,21 @@ public partial class PlayerControl : Node
             StartPlan(b, own);
             return;
         }
+        // Workers sent to a damaged building of yours repair it, if you have Craft guilds.
+        var u = _sim.Units;
+        var menders = new List<int>();
+        if (b.Owner == LocalPlayer && !b.WantsBuilders && _sim.Economy.Repairable(b))
+        {
+            menders = OwnWorkers(own).FindAll(id => u.CarryAmount[u.IndexOf(id)] == 0 || !b.Def.Storage);
+            if (menders.Count > 0)
+            {
+                _sim.Schedule(_sim.Tick, new RepairCommand(LocalPlayer, menders.ToArray(), b.Id));
+                own.RemoveAll(menders.Contains);
+            }
+        }
+        var working = new List<int>();
         // Workers with something to do there: build the site, work the farm or smelter, unload at storage, or
         // go on supply duty at storage with supply rules (carts too).
-        var u = _sim.Units;
-        var working = new List<int>();
         if (b.Owner == LocalPlayer)
             foreach (int id in OwnWorkers(own))
                 if (b.WantsBuilders || b.Def.WorkerSlots > 0 || (b.Def.Storage && (u.CarryAmount[u.IndexOf(id)] > 0 || b.HasSupply && b.Active)))
@@ -908,7 +919,7 @@ public partial class PlayerControl : Node
         }
         if (own.Count > 0 && _sim.Economy.AccessSpot(b, out int ax, out int az, out int ay))
             _sim.Schedule(_sim.Tick, new MoveCommand(LocalPlayer, own.ToArray(), ax, az, ay));
-        _rings.ShowMarker(centre, working.Count > 0 ? SelectionRenderer.Work : SelectionRenderer.Own);
+        _rings.ShowMarker(centre, working.Count + menders.Count > 0 ? SelectionRenderer.Work : SelectionRenderer.Own);
     }
 
     /// <summary>
@@ -1842,6 +1853,9 @@ public partial class PlayerControl : Node
     }
 
     /// <summary>Your units doing this job (for the status line).</summary>
+    /// <summary>Your finished buildings that have lost hit points.</summary>
+    private int OwnDamaged() => _sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Damaged);
+
     private int Jobs(UnitJob job)
     {
         int n = 0;
@@ -2518,7 +2532,7 @@ public partial class PlayerControl : Node
                $"near_dam={NearDam()?.Id ?? 0} sluice_open={(NearDam()?.Open == true ? 1 : 0)} sluice_water={SluiceWater()} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
-               $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} stones_dropped={_sim.Combat.StonesDropped} " +
+               $"health={sel?.Health ?? 0} max_health={sel?.MaxHealth ?? 0} damaged={OwnDamaged()} repairing={Jobs(UnitJob.Repair)} enemy_buildings={EnemyBuildings()} stones_dropped={_sim.Combat.StonesDropped} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"fellers={OwnFellers().Count} prospectors={OwnProspectors().Count} soundings={_sim.Economy.Soundings(LocalPlayer)} " +
                $"prospected={_sim.Economy.ProspectedOre(LocalPlayer).Count} felling={Jobs(UnitJob.Fell)} prospecting={Jobs(UnitJob.Prospect)} " +

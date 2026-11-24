@@ -97,6 +97,7 @@ public sealed partial class CombatSystem
         bool topple = blast && !undermine && b.Def.Thick;
         if (_sim.Sandbox.Invulnerable(b.Owner)) return;
         b.Damage += damage;
+        if (by != b.Owner) b.LastHit = _sim.Tick;
         _sim.Events.BuildingAttacked(b, by);
         if (b.Def.Kind == BuildingKind.Totem) _sim.Cities.TotemHit(b, by);
         while (b.Damage >= BlockInfo.MinToughness)

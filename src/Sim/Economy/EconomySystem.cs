@@ -79,7 +79,7 @@ public sealed class PlayerEconomy
     internal int ResearchTicks;
     // Bonuses from the techs had, recomputed when one is added (see EconomySystem.UpdateBonuses).
     internal int GatherPercent, CarryBonus, FarmBonus;
-    internal bool Roads, SpareWorkers, MurderHoles;
+    internal bool Roads, SpareWorkers, MurderHoles, Repair;
     // The discoveries made (bit 1 << Discovery), which open discovery techs.
     internal byte Discoveries;
     internal readonly int[] HousingBonus, HpBonus;

@@ -151,6 +151,11 @@ public enum UnitJob : byte
     /// JobStore stays set while it carries goods for the site.
     /// </summary>
     Bring,
+    /// <summary>
+    /// Repair the damaged building <see cref="UnitStore.JobTarget"/> (see <see cref="RepairCommand"/>): mend it a block
+    /// at a time from beside it, paying a share of its cost for each, until it is whole.
+    /// </summary>
+    Repair,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

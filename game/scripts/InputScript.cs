@@ -222,6 +222,16 @@ public sealed class InputScript
                 sim.Schedule(sim.Tick, new SandboxBlocksCommand(PlayerControl.LocalPlayer, block, x1, y1, z1, x2, y2, z2));
                 return true;
             }
+            case "damage":
+            {
+                // damage x,z amount: test mode knocks blocks out of the building on that column, as a siege would.
+                var sim = main.Sim;
+                if (sim == null || parts.Length < 3) return true;
+                var xz = parts[1].Split(',');
+                sim.Schedule(sim.Tick, new SandboxDamageCommand(PlayerControl.LocalPlayer, int.Parse(xz[0], CultureInfo.InvariantCulture),
+                    int.Parse(xz[1], CultureInfo.InvariantCulture), int.Parse(parts[2], CultureInfo.InvariantCulture)));
+                return true;
+            }
             case "spawn":
             {
                 var sim = main.Sim;

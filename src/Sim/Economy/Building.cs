@@ -129,6 +129,18 @@ public sealed class Building
     public int Damage { get; internal set; }
     /// <summary>Which of its blocks (by index in the template) are counted in <see cref="Lost"/>; null while none are.</summary>
     internal bool[]? Gone;
+    /// <summary>True if block k (by index in the template) is counted in <see cref="Lost"/>: knocked out, and not put back.</summary>
+    public bool IsGone(int k) => Gone != null && k >= 0 && k < Gone.Length && Gone[k];
+
+    /// <summary>
+    /// Hit points put back by repairs since it was last whole (see <see cref="RepairCommand"/>): what has been paid for
+    /// so far, so each mend pays its exact share of the cost.
+    /// </summary>
+    public int Mended { get; internal set; }
+    /// <summary>The tick it was last hit by another side, or -1: for a while after, repairs to it go slowly.</summary>
+    public long LastHit { get; internal set; } = -1;
+    /// <summary>True if it is finished and has lost hit points: blocks knocked out, or damage toward the next.</summary>
+    public bool Damaged => State == BuildingState.Active && (Lost > 0 || Damage > 0);
 
     /// <summary>
     /// What it is being turned into, paid for and waiting for its builders, or null (see <see cref="UpgradeCommand"/>).
@@ -290,6 +302,7 @@ public sealed class BuildingStore
             Mix(b.RallyX); Mix(b.RallyZ); Mix(b.RallyY);
             Mix((int)b.Governor);
             Mix(b.Planted); Mix(b.Grown ? 1 : 0);
+            Mix(b.Mended); Mix(b.LastHit);
         }
         return h;
     }

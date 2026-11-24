@@ -197,6 +197,11 @@ public enum TechEffectType : byte
     /// in the gateway while they are held (see <see cref="Units.CombatSystem"/>).
     /// </summary>
     MurderHoles,
+    /// <summary>
+    /// The player's workers can repair their damaged buildings, walls, gates and towers (see <see cref="RepairCommand"/>):
+    /// they mend them a block at a time, for a share of the build cost.
+    /// </summary>
+    Repair,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

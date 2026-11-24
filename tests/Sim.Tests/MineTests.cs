@@ -78,11 +78,16 @@ public class MineTests
     [Fact]
     public void GatheringTechsSpeedUpTheRounds()
     {
-        var sim = Flat();
+        // No tech in the game's data gathers faster any more (Craft guilds gives repair: #150), so one is made up here.
+        var files = ContentTests.Files();
+        const string farming = "\"cost\": { \"wood\": 40 }, \"researchTime\": 20 }";
+        files["techs.json"] = files["techs.json"].Replace(farming,
+            "\"cost\": { \"wood\": 40 }, \"researchTime\": 20, \"effects\": [ { \"type\": \"gather_speed\", \"percent\": 15 } ] }");
+        var sim = new Simulation(new Rts.Sim.World.RegionMap(1, TestWorlds.Flat(64, 16, 64, 3)), Rts.Sim.Content.ContentLoader.Load(files));
         var def = sim.Content.Building("quarry");
         int before = sim.Economy.QuarryTicks(0, def);
-        Assert.Equal(def.WorkTicks, before);
-        sim.Economy.Grant(0, sim.Content.Tech("settler_guilds"));
+        Assert.Equal(def.WorkTicks * 100 / (100 + Rts.Sim.Economy.EconomySystem.BaseGatherPercent), before);
+        sim.Economy.Grant(0, sim.Content.Tech("farming"));
         Assert.True(sim.Economy.QuarryTicks(0, def) < before);
     }
 

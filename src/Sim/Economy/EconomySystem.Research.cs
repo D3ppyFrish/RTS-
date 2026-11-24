@@ -107,6 +107,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's gates with murder holes drop stones (a <see cref="TechEffectType.MurderHoles"/> tech).</summary>
     public bool HasMurderHoles(int player) => Find(player)?.MurderHoles ?? false;
 
+    /// <summary>True if the player's workers can repair their buildings (a <see cref="TechEffectType.Repair"/> tech).</summary>
+    public bool CanRepair(int player) => Find(player)?.Repair ?? false;
+
     /// <summary>True if the player's units of this type can take up a shield wall (a <see cref="TechEffectType.ShieldWall"/> tech).</summary>
     public bool CanShieldWall(int player, UnitDef def) => Find(player)?.ShieldWall[def.Index] ?? false;
 
@@ -172,7 +175,7 @@ public sealed partial class EconomySystem
     {
         var units = Content.Units;
         p.GatherPercent = p.CarryBonus = p.FarmBonus = 0;
-        p.Roads = p.SpareWorkers = p.MurderHoles = false;
+        p.Roads = p.SpareWorkers = p.MurderHoles = p.Repair = false;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
@@ -194,6 +197,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.Roads: p.Roads = true; break;
                     case TechEffectType.SpareWorkers: p.SpareWorkers = true; break;
                     case TechEffectType.MurderHoles: p.MurderHoles = true; break;
+                    case TechEffectType.Repair: p.Repair = true; break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.Amount;
@@ -261,13 +265,19 @@ public sealed partial class EconomySystem
         return carry > 0 ? carry : Capacity(U.Owner[i]);
     }
 
+    /// <summary>
+    /// How much faster than <see cref="Harvest.WorkTicks"/> (and a quarry's or mine's round) everyone gathers, in percent:
+    /// Craft guilds gives repair in place of 15% faster gathering (issue #150), and this keeps the economy's pace.
+    /// </summary>
+    public const int BaseGatherPercent = 15;
+
     /// <summary>Ticks of work for one of the player's workers to take one block of this kind.</summary>
     public int WorkTicks(int player, BlockType kind) =>
-        Math.Max(1, Harvest.WorkTicks(kind) * 100 / (100 + (Find(player)?.GatherPercent ?? 0)));
+        Math.Max(1, Harvest.WorkTicks(kind) * 100 / (100 + BaseGatherPercent + (Find(player)?.GatherPercent ?? 0)));
 
     /// <summary>Ticks of one round of work at a quarry or mine of the player's, with their gathering techs.</summary>
     public int QuarryTicks(int player, BuildingDef def) =>
-        Math.Max(1, def.WorkTicks * 100 / (100 + (Find(player)?.GatherPercent ?? 0)));
+        Math.Max(1, def.WorkTicks * 100 / (100 + BaseGatherPercent + (Find(player)?.GatherPercent ?? 0)));
 
     /// <summary>Food from one harvest at one of the player's farms.</summary>
     public int FarmYieldOf(int player) => FarmYield + (Find(player)?.FarmBonus ?? 0);

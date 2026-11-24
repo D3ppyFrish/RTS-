@@ -2272,6 +2272,15 @@ public partial class Hud : CanvasLayer
         var text = new StringBuilder($"{b.Def.Name}   ({PlayerName(b.Owner)})");
         if (b.MaxHealth > 0) text.Append($"   health {b.Health} / {b.MaxHealth}");
         text.Append('\n');
+        if (b.Owner == PlayerControl.LocalPlayer && _sim.Economy.Repairable(b))
+        {
+            int repairers = 0;
+            for (int i = 0; i < u.Count; i++)
+                if (u.Job[i] == UnitJob.Repair && u.JobTarget[i] == b.Id) repairers++;
+            text.Append(repairers > 0
+                ? $"Being repaired by {repairers} worker{(repairers == 1 ? "" : "s")}{(_sim.Economy.UnderFire(b) ? ", slowly under fire" : "")}\n"
+                : "Damaged: right click it with workers to repair it\n");
+        }
         if (b.Planned)
         {
             var result = _sim.Economy.CanStart(b);
