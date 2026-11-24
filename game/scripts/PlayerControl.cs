@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Fell, Prospect, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Fell, Prospect, Stampede, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -260,7 +260,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Stampede:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Test:
@@ -278,7 +278,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Stampede && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -384,6 +384,7 @@ public partial class PlayerControl : Node
             case Key.Delete or Key.Backspace: CancelSelectedPlan(); break;
             case Key.V when key.CtrlPressed: ToggleShieldWall(); break;
             case Key.C when key.CtrlPressed: BeatCharge(); break;
+            case Key.S when key.CtrlPressed: ToggleStampede(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
             case Key.K when key.ShiftPressed: ToggleLadder(); break;
@@ -875,8 +876,23 @@ public partial class PlayerControl : Node
             StartPlan(b, own);
             return;
         }
-        // Workers sent to a damaged building of yours repair it, if you have Craft guilds.
         var u = _sim.Units;
+        // Tamed beasts sent to your finished beast pen go into it and are kept there (see CombatSystem.Stampede.cs).
+        if (b.Owner == LocalPlayer && b.Active && b.Def.Pen != null)
+        {
+            var beasts = own.FindAll(id => _sim.Content.Units[u.Def[u.IndexOf(id)]].Pennable);
+            if (beasts.Count > 0)
+            {
+                _sim.Schedule(_sim.Tick, new PenCommand(LocalPlayer, beasts.ToArray(), b.Id));
+                own.RemoveAll(beasts.Contains);
+                if (own.Count == 0)
+                {
+                    _rings.ShowMarker(centre, SelectionRenderer.Work);
+                    return;
+                }
+            }
+        }
+        // Workers sent to a damaged building of yours repair it, if you have Craft guilds.
         var menders = new List<int>();
         if (b.Owner == LocalPlayer && !b.WantsBuilders && _sim.Economy.Repairable(b))
         {
@@ -1089,7 +1105,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Stampede)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1268,6 +1284,39 @@ public partial class PlayerControl : Node
             if (_sim.Units.ShieldWall[i] || _sim.Combat.CanShieldWall(i)) list.Add(id);
         }
         return list;
+    }
+
+    /// <summary>The selected building if it is a finished beast pen of yours (see <see cref="BuildingKind.Pen"/>), else null.</summary>
+    public Building? SelectedPen() =>
+        _sim.Buildings.Get(SelectedBuilding) is { Active: true, Def.Pen: not null } b && b.Owner == LocalPlayer ? b : null;
+
+    /// <summary>The Stampede button and key (Ctrl+S): with your beast pen selected, drag the line its beasts run along.</summary>
+    public void ToggleStampede()
+    {
+        if (Tool == ToolMode.Stampede) SetTool(ToolMode.Select);
+        else if (SelectedPen() is { } pen && _sim.Combat.PenCount(pen.Id) > 0) SetTool(ToolMode.Stampede);
+    }
+
+    /// <summary>The Let out button: the selected pen's beasts are let out, free to take orders.</summary>
+    public void LetOut()
+    {
+        if (SelectedPen() is not { } pen || _sim.Combat.PenCount(pen.Id) == 0) return;
+        _sim.Schedule(_sim.Tick, new UnpenCommand(LocalPlayer, pen.Id));
+        Changed?.Invoke();
+    }
+
+    /// <summary>The columns along the stampede's line being dragged (the beasts run from the pen to its start, then along it).</summary>
+    private void UpdateStampedePreview()
+    {
+        if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
+        int n = Math.Max(Math.Abs(x2 - _wallX), Math.Abs(z2 - _wallZ));
+        for (int k = 0; k <= n; k++)
+        {
+            int x = n == 0 ? _wallX : _wallX + (int)Math.Round((x2 - _wallX) * k / (double)n);
+            int z = n == 0 ? _wallZ : _wallZ + (int)Math.Round((z2 - _wallZ) * k / (double)n);
+            int y = Walk.GroundLevel(_sim.World, x, z);
+            if (y >= 1) _wallPreview.Add((x, y, z, true));
+        }
     }
 
     /// <summary>The selected war drummers of yours (see <see cref="UnitDef.Drums"/>).</summary>
@@ -2007,6 +2056,10 @@ public partial class PlayerControl : Node
             }
             else if (Tool == ToolMode.Prospect)
                 _sim.Schedule(_sim.Tick, new ProspectCommand(LocalPlayer, OwnProspectors().ToArray(), x2, z2));
+            else if (Tool == ToolMode.Stampede)
+            {
+                if (SelectedPen() is { } pen) _sim.Schedule(_sim.Tick, new StampedeCommand(LocalPlayer, pen.Id, _wallX, _wallZ, x2, z2));
+            }
             else _sim.Schedule(_sim.Tick, Tool == ToolMode.Bridge
                 ? new BridgeCommand(LocalPlayer, workers, BridgeBuilding, _wallX, _wallZ, x2, z2)
                 : new WallCommand(LocalPlayer, workers, WallBuilding, _wallX, _wallZ, x2, z2));
@@ -2050,6 +2103,11 @@ public partial class PlayerControl : Node
         if (Tool == ToolMode.Prospect)
         {
             UpdateProspectPreview();
+            return;
+        }
+        if (Tool == ToolMode.Stampede)
+        {
+            UpdateStampedePreview();
             return;
         }
         if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)
@@ -2540,7 +2598,7 @@ public partial class PlayerControl : Node
                $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
                $"faction={_sim.FactionOf(LocalPlayer).Id} batches={Batches()} bursting={Bursting()} " +
-               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} drumming={drumming} drums_heard={drumsHeard} tunnelling={tunnelling} " +
+               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} drumming={drumming} drums_heard={drumsHeard} penned={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Penned[i] != 0)} stampeding={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.RunStage[i] != 0)} trampled={_sim.Combat.Trampled} pens={OwnKind(BuildingKind.Pen)} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +

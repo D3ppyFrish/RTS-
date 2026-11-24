@@ -51,6 +51,9 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// 58 stance 0 hold 1,2,3            (hold, aggressive or retreat)
 /// 59 shieldwall 0 on 1,2,3          (a shield wall raised; off: lowered)
 /// 59 charge 1 7                     (player 1's war drummer 7 beats the charge)
+/// 59 pen 1 12 7,8                   (player 1's beasts 7 and 8 go into beast pen 12)
+/// 59 stampede 1 12 40 50 60 50      (player 1 looses beast pen 12's beasts along the line from 40,50 to 60,50)
+/// 59 unpen 1 12                     (player 1 lets beast pen 12's beasts out)
 /// 59 fell 0 40 52 1 0 7             (unit 7 fells the tree at 40,52 to fall towards +x)
 /// 59 prospect 0 40 52 8             (unit 8 sounds the ground at 40,52)
 /// 59 evolve 0 knight 1,2            (units 1 and 2 take the form "knight", if they can)
@@ -259,6 +262,9 @@ public sealed class CommandLog
                 FellCommand fl => string.Create(ci, $"{tick} fell {fl.PlayerId} {fl.X} {fl.Z} {fl.DirX} {fl.DirZ} {Ids(fl.Units)}"),
                 ProspectCommand pr => string.Create(ci, $"{tick} prospect {pr.PlayerId} {pr.X} {pr.Z} {Ids(pr.Units)}"),
                 RepairCommand rp => string.Create(ci, $"{tick} repair {rp.PlayerId} {rp.Building} {Ids(rp.Units)}"),
+                PenCommand pn => string.Create(ci, $"{tick} pen {pn.PlayerId} {pn.Building} {Ids(pn.Units)}"),
+                StampedeCommand sd => string.Create(ci, $"{tick} stampede {sd.PlayerId} {sd.Building} {sd.X1} {sd.Z1} {sd.X2} {sd.Z2}"),
+                UnpenCommand up => string.Create(ci, $"{tick} unpen {up.PlayerId} {up.Building}"),
                 AutomateCommand au => string.Create(ci, $"{tick} automate {au.PlayerId} {OnOff(au.On)} {Ids(au.Units)}"),
                 AutomateAllCommand aa => string.Create(ci, $"{tick} automate-all {aa.PlayerId} {OnOff(aa.On)}"),
                 GovernCommand gv => string.Create(ci, $"{tick} governor {gv.PlayerId} {gv.Building} {gv.Focus.ToString().ToLowerInvariant()}"),
@@ -415,6 +421,9 @@ public sealed class CommandLog
                             "fell" => new FellCommand(Int(f[2]), ParseIds(f[7]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6])),
                             "prospect" => new ProspectCommand(Int(f[2]), ParseIds(f[5]), Int(f[3]), Int(f[4])),
                             "repair" => new RepairCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
+                            "pen" => new PenCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),
+                            "stampede" => new StampedeCommand(Int(f[2]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6]), Int(f[7])),
+                            "unpen" => new UnpenCommand(Int(f[2]), Int(f[3])),
                             "automate" => new AutomateCommand(Int(f[2]), ParseIds(f[4]), ParseOnOff(f[3])),
                             "automate-all" => new AutomateAllCommand(Int(f[2]), ParseOnOff(f[3])),
                             "governor" => new GovernCommand(Int(f[2]), Int(f[3]), ParseFocus(f[4])),

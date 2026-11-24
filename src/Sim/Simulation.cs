@@ -466,6 +466,9 @@ public sealed class Simulation
         // An order to go somewhere or fight lowers a shield wall first (see CombatSystem.ShieldWall.cs).
         if (command is UnitsCommand lowered and not (ShieldWallCommand or ChargeCommand or StanceCommand or AutomateCommand or PriorityCommand or StopCommand or EvolveCommand))
             Combat.LowerWalls(lowered);
+        // Any other order to go somewhere calls off a beast's way into a pen (see CombatSystem.Stampede.cs).
+        if (command is UnitsCommand unpenned and not (PenCommand or StanceCommand or ShieldWallCommand or ChargeCommand or AutomateCommand or PriorityCommand))
+            Combat.CallOffPen(unpenned);
         switch (command)
         {
             case DigCommand d when BlockInfo.IsDiggable(World.Get(d.X, d.Y, d.Z)):
@@ -527,6 +530,9 @@ public sealed class Simulation
             case StanceCommand st: Combat.Apply(st); break;
             case ShieldWallCommand sw: Combat.Apply(sw); break;
             case ChargeCommand ch: Combat.Apply(ch); break;
+            case PenCommand pn: ApplyPen(pn); break;
+            case StampedeCommand sd: Combat.Apply(sd); break;
+            case UnpenCommand up: Combat.Apply(up); break;
             case FellCommand fl: Economy.Apply(fl); break;
             case ProspectCommand pr: Economy.Apply(pr); break;
             case RepairCommand rp: Economy.Apply(rp); break;
@@ -589,6 +595,29 @@ public sealed class Simulation
     /// walks back to where it stood when it gets there, and so on (a unit already within
     /// <see cref="CombatSystem.PatrolShortest"/> columns of the goal just attack-moves there).
     /// </summary>
+    /// <summary>
+    /// The tamed beasts among the units walk into the player's finished beast pen, as many as it has room for (those kept
+    /// there and those on their way count); each is kept there once it stands in the yard (see CombatSystem.Stampede.cs).
+    /// </summary>
+    private void ApplyPen(PenCommand c)
+    {
+        var pen = Buildings.Get(c.Building);
+        if (pen == null || pen.Owner != c.PlayerId || !pen.Active || pen.Def.Pen is not { } def) return;
+        int room = def.Keeps - Combat.PenCount(pen.Id, coming: true);
+        var go = new List<int>();
+        foreach (int i in OwnedUnits(c))
+        {
+            if (room <= 0) break;
+            if (!Content.Units[Units.Def[i]].Pennable || Units.PenFor[i] == pen.Id) continue;
+            go.Add(Units.Id[i]);
+            room--;
+        }
+        if (go.Count == 0) return;
+        var (mx, mz) = (pen.X + pen.Def.SizeX / 2, pen.Z + pen.Def.SizeZ / 2);
+        ApplyMove(new MoveCommand(c.PlayerId, go.ToArray(), mx, mz, pen.Y), mx, mz, pen.Y, attack: false);
+        foreach (int id in go) Units.PenFor[Units.IndexOf(id)] = pen.Id;
+    }
+
     private void ApplyMove(UnitsCommand m, int x, int z, int y, bool attack, bool patrol = false)
     {
         if (x < 0 || z < 0 || x >= World.SizeX || z >= World.SizeZ) return;
@@ -779,7 +808,8 @@ public sealed class Simulation
         foreach (int id in c.Units)
         {
             int i = Units.IndexOf(id);
-            if (i >= 0 && Units.Owner[i] == c.PlayerId && Units.Rout[i] == 0 && !Units.Subdued[i] && Units.Town[i] == 0 && Units.Aboard[i] == 0 && seen.Add(id)) result.Add(i);
+            if (i >= 0 && Units.Owner[i] == c.PlayerId && Units.Rout[i] == 0 && !Units.Subdued[i] && Units.Town[i] == 0 && Units.Aboard[i] == 0
+                && Units.Penned[i] == 0 && Units.RunStage[i] == 0 && seen.Add(id)) result.Add(i);
         }
         return result;
     }

@@ -551,7 +551,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime", "grow",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -573,6 +573,24 @@ public static class ContentLoader
                     Held = mh.Int("held", 0, 16, 4),
                 };
             }
+            PenDef? pen = null;
+            if (Part(o, "pen", "{ \"keeps\": 8, \"speed\": 14, \"trample\": 30, \"down\": 2, \"smash\": 60, \"run\": 60, \"tired\": 20, \"slow\": 50 }") is { } pn)
+            {
+                pn.Keys("keeps", "speed", "trample", "down", "smash", "run", "tired", "slow");
+                pen = new PenDef
+                {
+                    Keeps = pn.Int("keeps", 1, 32, 8),
+                    Speed = pn.Int("speed", 1, 40, 14),
+                    Trample = pn.Int("trample", 0, 1000, 30),
+                    DownTicks = pn.Int("down", 0, 30, 2) * Tps,
+                    Smash = pn.Int("smash", 0, 1000, 60),
+                    Run = pn.Int("run", 1, 256, 60),
+                    TiredTicks = pn.Int("tired", 0, MaxSeconds, 20) * Tps,
+                    Slow = pn.Int("slow", 1, 100, 50),
+                };
+            }
+            if ((kind == BuildingKind.Pen) != (pen != null))
+                o.Error(kind == BuildingKind.Pen ? "a pen needs \"pen\" (how many beasts it keeps, and its stampede's numbers)" : "only a pen has \"pen\"");
             int slots = o.Int("workerSlots", 0, 20, 0);
             if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop or BuildingKind.Orchard && slots == 0)
                 o.Error($"a {SnakeName(kind)} needs \"workerSlots\" of 1 or more, or nobody can work it");
@@ -627,6 +645,7 @@ public static class ContentLoader
                 Keep = o.Int("keep", 1, 10000, kind == BuildingKind.Workshop ? 50 : 0),
                 Hearing = o.Int("hearing", 1, 64, 0),
                 MurderHoles = holes,
+                Pen = pen,
             };
             if (kind == BuildingKind.ListeningPost && def.Hearing == 0)
                 o.Error("a listening post needs \"hearing\" (how many columns round it it hears units underground)");
@@ -724,7 +743,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -769,6 +788,7 @@ public static class ContentLoader
                 Shield = o.Int("shield", 0, 90, 0),
                 Bleeds = o.Has("bleeds") ? o.Bool("bleeds") : !o.Bool("machine"),
                 TracksBlood = o.Bool("tracksBlood"),
+                Pennable = o.Bool("pen"),
                 Blast = o.Bool("blast"),
                 EarthWall = o.Bool("earthWall"),
                 IceBridge = o.Bool("iceBridge"),
@@ -802,6 +822,8 @@ public static class ContentLoader
             };
             if (def.Drums != null && (def.Rally == Fix64.Zero || def.Hero || def.Machine || def.IsBoat || def.Role == UnitRole.Monster))
                 o.Error("a war drummer (\"drums\") needs \"rally\" (its earshot) and is no hero, machine, ship or monster");
+            if (def.Pennable && def.Role != UnitRole.Monster)
+                o.Error("only a monster (a beast a taming faction keeps) is kept in a pen (\"pen\")");
             if (def.MinRange > Fix64.Zero && def.MinRange >= def.Range)
                 o.Error("\"minRange\" must be less than \"range\"");
             if ((def.MinRange > Fix64.Zero || def.Lobs) && !def.IsRanged)
@@ -1618,6 +1640,11 @@ public static class ContentLoader
                 if (b.Hunts > 0) h.Add(b.Hunts);
                 h.Add(b.Mana);
                 h.Add(b.ChannelTicks);
+                if (b.Pen is { } pd)
+                {
+                    h.Add(pd.Keeps); h.Add(pd.Speed); h.Add(pd.Trample); h.Add(pd.DownTicks);
+                    h.Add(pd.Smash); h.Add(pd.Run); h.Add(pd.TiredTicks); h.Add(pd.Slow);
+                }
             }
             h.Add(db.Units.Count);
             foreach (var u in db.Units)
@@ -1668,6 +1695,7 @@ public static class ContentLoader
                 h.Add(u.InStart ? 1 : 0);
                 h.Add(u.Batch);
                 h.Add(u.Burst);
+                if (u.Pennable) h.Add(77);
                 if (u.Drums is { } drums)
                 {
                     h.Add(drums.Speed);

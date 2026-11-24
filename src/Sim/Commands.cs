@@ -428,6 +428,25 @@ public sealed record ShieldWallCommand(int PlayerId, int[] Units, bool Raise) : 
 public sealed record ChargeCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
 
 /// <summary>
+/// The player's tamed beasts among the units (<see cref="Units.UnitDef.Pennable"/>) walk into their beast pen
+/// <paramref name="Building"/> and are kept there, as many as it has room for (see <c>Units/CombatSystem.Stampede.cs</c>).
+/// </summary>
+public sealed record PenCommand(int PlayerId, int[] Units, int Building) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(PenCommand? other) => base.Equals(other) && Building == other!.Building;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building);
+}
+
+/// <summary>
+/// The beasts kept in the player's beast pen <paramref name="Building"/> burst out as a stampede: they run to column
+/// (X1, Z1) and on along the line to (X2, Z2), trampling the enemies in their way (see <c>Units/CombatSystem.Stampede.cs</c>).
+/// </summary>
+public sealed record StampedeCommand(int PlayerId, int Building, int X1, int Z1, int X2, int Z2) : Command(PlayerId);
+
+/// <summary>The beasts kept in the player's beast pen <paramref name="Building"/> are let out, free to take orders again.</summary>
+public sealed record UnpenCommand(int PlayerId, int Building) : Command(PlayerId);
+
+/// <summary>
 /// The units that can take the form (a unit type id that evolves from theirs) do, now. See
 /// <see cref="Units.EvolutionSystem"/>.
 /// </summary>

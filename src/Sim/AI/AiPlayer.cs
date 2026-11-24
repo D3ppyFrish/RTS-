@@ -1063,7 +1063,7 @@ public sealed partial class AiPlayer
         var list = new List<int>();
         for (int i = 0; i < u.Count; i++)
         {
-            if (u.Owner[i] != player || u.Subdued[i] || u.Town[i] != 0) continue;
+            if (u.Owner[i] != player || u.Subdued[i] || u.Town[i] != 0 || u.Penned[i] != 0 || u.RunStage[i] != 0) continue;
             var def = sim.Content.Units[u.Def[i]];
             if (def.CanAttack && !def.IsBoat && def.Role is not (UnitRole.Worker or UnitRole.Trader)) list.Add(u.Id[i]);
         }

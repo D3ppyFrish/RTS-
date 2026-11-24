@@ -93,6 +93,12 @@ public enum BuildingKind : byte
     /// grows again from saplings.
     /// </summary>
     Orchard,
+    /// <summary>
+    /// A beast pen (see <see cref="Units.CombatSystem"/>'s stampede): a yard of trodden earth that units walk onto, ringed
+    /// by a low stake fence (a look only). Its owner's tamed beasts (<see cref="Units.UnitDef.Pennable"/>) are sent into
+    /// it and kept there, up to <see cref="PenDef.Keeps"/>, and the player looses them from it as a stampede.
+    /// </summary>
+    Pen,
 }
 
 /// <summary>
@@ -269,6 +275,8 @@ public sealed class BuildingDef
     /// tech; null for a gate without them.
     /// </summary>
     public MurderHoles? MurderHoles { get; init; }
+    /// <summary>A beast pen's numbers (<c>pen</c> in the data; only for <see cref="BuildingKind.Pen"/>), else null.</summary>
+    public PenDef? Pen { get; init; }
     /// <summary>
     /// How fast it trains units and smelts, in percent of the usual pace (100 unless given): what makes a great
     /// hall or a foundry better at its work than the building it was upgraded from.
@@ -287,7 +295,7 @@ public sealed class BuildingDef
     }
 
     /// <summary>Units stand on it rather than next to it.</summary>
-    public bool Walkable => Kind is BuildingKind.Farm or BuildingKind.Orchard;
+    public bool Walkable => Kind is BuildingKind.Farm or BuildingKind.Orchard or BuildingKind.Pen;
 
     /// <summary>A wall or gate: laid in lines, and put right next to other walls and gates.</summary>
     public bool IsWall => Kind is BuildingKind.Wall or BuildingKind.Gate;
@@ -319,7 +327,7 @@ public sealed class BuildingDef
     public BuildingDef Shaped(BuildingLook look)
     {
         if (look == BuildingLook.Standard || _base != null || Mound
-            || Kind is BuildingKind.Farm or BuildingKind.Orchard or BuildingKind.Totem or BuildingKind.Light or BuildingKind.Bridge) return this;
+            || Kind is BuildingKind.Farm or BuildingKind.Orchard or BuildingKind.Pen or BuildingKind.Totem or BuildingKind.Light or BuildingKind.Bridge) return this;
         var mound = _mound;
         if (mound == null)
         {
@@ -416,9 +424,9 @@ public sealed class BuildingDef
     {
         if (_base != null) return HiveTemplate(_base);
         var list = new List<TemplateBlock>();
-        if (Kind is BuildingKind.Farm or BuildingKind.Orchard)
+        if (Kind is BuildingKind.Farm or BuildingKind.Orchard or BuildingKind.Pen)
         {
-            // The field replaces the ground surface, one level below where units stand.
+            // The field (a pen's yard of trodden earth) replaces the ground surface, one level below where units stand.
             for (int z = 0; z < SizeZ; z++)
             for (int x = 0; x < SizeX; x++)
                 list.Add(new TemplateBlock(x, -1, z, BlockType.Farmland));
@@ -592,4 +600,23 @@ public sealed class MurderHoles
     public int EverySeconds { get; init; }
     public int Reach { get; init; }
     public int Held { get; init; }
+}
+
+/// <summary>
+/// A beast pen's numbers (<c>pen</c> in <c>data/buildings.json</c>; see <c>Units/CombatSystem.Stampede.cs</c>): it keeps up
+/// to <see cref="Keeps"/> tamed beasts. Loosed as a stampede, they run at <see cref="Speed"/> columns a second for at most
+/// <see cref="Run"/> columns; each beast that runs into an enemy deals it <see cref="Trample"/> (crushing) and knocks it
+/// down for <see cref="DownTicks"/>; a beast running into an enemy's wooden building strikes it once for
+/// <see cref="Smash"/>. After the run the beasts walk <see cref="Slow"/> percent of their pace for <see cref="TiredTicks"/>.
+/// </summary>
+public sealed class PenDef
+{
+    public int Keeps { get; init; }
+    public int Speed { get; init; }
+    public int Trample { get; init; }
+    public int DownTicks { get; init; }
+    public int Smash { get; init; }
+    public int Run { get; init; }
+    public int TiredTicks { get; init; }
+    public int Slow { get; init; }
 }

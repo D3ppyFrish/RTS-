@@ -1069,6 +1069,36 @@ The den is gone from the map either way.
 (a spearman becomes a wolf rider); Settlers who clear one get its reward instead, as does whoever beats
 the last wolf. All the numbers are first guesses for playtesting.
 
+### Beast pens and the stampede
+
+`src/Sim/Units/CombatSystem.Stampede.cs` (issue #152, tests in `StampedeTests`): the Orcs' **Beast pens** tech (80 food, 40
+wood, needs Horse breeding) no longer gives cavalry 30 hit points. It lets them build the **beast pen** (`beast_pen`, kind
+`pen` in `buildings.json`; 40 wood, 15 seconds): a 6 by 6 yard of trodden earth ringed by a low stake fence, which units
+walk onto (the fence is a look only).
+
+- **Penning**: tamed beasts (units with `"pen": true` in `units.json`: wolves and boars an Orc player recruited) sent to
+  their owner's finished pen (`PenCommand`; in the game, right-click the pen with them selected) walk into the yard and are
+  kept there once they stand in it, up to 8 (`keeps`; those on their way count, the rest of the order is left out). A
+  penned beast stands at its place in rows across the yard, takes no orders and does not fight, though enemies can still
+  strike it. Another order on the way calls the penning off. If the pen is destroyed or lost, its beasts are free where
+  they stand; **Let the beasts out** (`UnpenCommand`) frees them too.
+- **The stampede** (`StampedeCommand`): with the pen selected, the player drags a line. Every beast kept in it bursts out,
+  runs straight to the start of the line and on along it to its end, at 14 columns a second (`speed`), for at most 60
+  columns (`run`), two abreast, half a column either side of the line. Each beast that comes within a column (and 2 levels)
+  of an enemy unit tramples it once in the run: 30 damage (`trample`), landing with the tick's blows, and the unit is
+  **knocked down** for 2 seconds (`down`): it neither walks nor strikes. Ships and machines are not knocked down. A running
+  beast steps up a level and drops any height. One that runs into an enemy's building of wood (palisade, planks, thatch or a
+  watchtower's timber) strikes it once for 60 (`smash`) and runs on if that clears its way, so a wooden barrier breaks;
+  stone, its own side's buildings and ground too high to climb stop it there. A running beast takes no orders and does not
+  fight, and beasts killed in the stampede are lost.
+- **Tired**: once its run is over a beast is tired for 20 seconds (`tired`) and walks at half its pace (`slow`), but takes
+  orders and fights as usual, and can be sent back into a pen.
+- **Computer players** (Hard, `AI/AiPlayer.Pens.cs`): once it can build a pen and has 2 tamed beasts it lays one out near its
+  town hall, and sends its free beasts (not out with a wave, not fighting) into it. When a pen keeps 2 or more and it sees 4
+  or more enemy soldiers within 4 columns of one of them, all within 36 columns of the pen, it looses the stampede at them,
+  from the pen's side through the bunch and 8 columns on.
+- All the numbers are in `pen` in `buildings.json` and are first guesses for playtesting.
+
 ### The dusk tree
 
 `src/Sim/Units/DuskTreeSystem.cs` (tests in `DuskTreeTests`): every map has exactly one dusk tree, a

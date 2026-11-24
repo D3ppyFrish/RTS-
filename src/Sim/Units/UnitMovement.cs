@@ -87,6 +87,8 @@ public sealed class UnitMovement
             if (u.Aboard[i] != 0 || units[u.Def[i]].IsBoat) continue;
             // In a shield wall, lowering one, or thrown back by one: it stands where it is, and is not shoved.
             if (_sim.Combat.Rooted(i)) continue;
+            // Kept in a beast pen, or running in a stampede: the stampede moves it (see CombatSystem.Stampede.cs).
+            if (u.Penned[i] != 0 || u.RunStage[i] != 0) continue;
             Fix64 vx = _pushX[i], vz = _pushZ[i];
             // A unit with no order is only ever nudged (by the crowd, or sliding on ice): that never drops it
             // more than a level, so a worker beside a hole is not shoved down into it.
@@ -140,6 +142,7 @@ public sealed class UnitMovement
         var full = _sim.Economy.SpeedPerTick(u.Owner[i], _sim.Content.Units[u.Def[i]]);
         int spur = Math.Max(_sim.Combat.SpurOf(i), _sim.Combat.ChargeOf(i)); // a hero leading the charge, or a drummer beating one, near it
         if (spur > 0) full = full * (100 + spur) / 100;
+        if (u.Tired[i] > 0) full = full * _sim.Combat.PaceOf(i) / 100; // tired after a stampede
         var speed = full;
         bool formation = u.Formation[i] && u.Order[i] == UnitOrder.Move;
         // A spurred formation keeps the slowest member's pace, a spurred one's faster (riders round the hero

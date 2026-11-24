@@ -111,7 +111,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _fellButton = null!, _prospectButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _stampedeButton = null!, _letOutButton = null!, _fellButton = null!, _prospectButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -720,6 +720,25 @@ public partial class Hud : CanvasLayer
         _chargeButton.Visible = false;
         column.AddChild(_chargeButton);
 
+        _stampedeButton = MakeToolButton("Stampede  [Ctrl+S]");
+        _stampedeButton.Name = "stampede";
+        _stampedeButton.Icon = UiIcons.Get("paw");
+        _stampedeButton.TooltipText = "Drag a line: the beasts in this pen burst out, run to its start and on along it. Every beast that runs into an enemy " +
+                                      "tramples it (damage, and it is knocked down for a moment); they smash palisades and wooden buildings in their way, " +
+                                      "and stone stops them. Afterwards they are tired and slow for a while.";
+        _stampedeButton.Pressed += () => _control.ToggleStampede();
+        _stampedeButton.Visible = false;
+        column.AddChild(_stampedeButton);
+
+        _letOutButton = MakeToolButton("Let the beasts out");
+        _letOutButton.Name = "pen_let_out";
+        _letOutButton.ToggleMode = false;
+        _letOutButton.Icon = UiIcons.Get("paw");
+        _letOutButton.TooltipText = "The beasts kept in this pen are let out, free to take orders and fight. Right-click the pen with beasts selected to send them back in.";
+        _letOutButton.Pressed += () => _control.LetOut();
+        _letOutButton.Visible = false;
+        column.AddChild(_letOutButton);
+
         _fellButton = MakeToolButton("Fell tree  [Ctrl+X]");
         _fellButton.Name = "fell_tree";
         _fellButton.Icon = UiIcons.Get("pick");
@@ -1244,6 +1263,20 @@ public partial class Hud : CanvasLayer
             : $"Drum ready in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s";
     }
 
+    /// <summary>The Stampede and Let out buttons: shown with your finished beast pen selected, greyed out while it keeps no beasts.</summary>
+    private void RefreshPen()
+    {
+        var pen = _control.SelectedPen();
+        bool show = pen != null || _control.Tool == PlayerControl.ToolMode.Stampede;
+        _stampedeButton.Visible = show;
+        _letOutButton.Visible = pen != null;
+        _stampedeButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Stampede);
+        if (pen == null) return;
+        int kept = _sim.Combat.PenCount(pen.Id);
+        _stampedeButton.Disabled = kept == 0 && _control.Tool != PlayerControl.ToolMode.Stampede;
+        _letOutButton.Disabled = kept == 0;
+    }
+
     private void RefreshButtons()
     {
         var econ = _sim.Economy;
@@ -1322,6 +1355,7 @@ public partial class Hud : CanvasLayer
         _shieldWallButton.Visible = walls.Count > 0;
         _shieldWallButton.SetPressedNoSignal(walls.Count > 0 && walls.TrueForAll(id => _sim.Units.ShieldWall[_sim.Units.IndexOf(id)]));
         RefreshCharge();
+        RefreshPen();
         _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
         _fellButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Fell);
         _prospectButton.Visible = _control.OwnProspectors().Count > 0 || _control.Tool == PlayerControl.ToolMode.Prospect;
@@ -2146,6 +2180,15 @@ public partial class Hud : CanvasLayer
                            : $"Fell tree: let go to bring it down that way ({_sim.Economy.FellCrush(PlayerControl.LocalPlayer)} damage to each unit under it)") +
                        (_control.OwnFellers().Count == 0 ? "   (select militia first)" : "") +
                        "\nShift: fell another   Right click or Esc to stop";
+            case PlayerControl.ToolMode.Stampede:
+            {
+                var pen = _control.SelectedPen();
+                int kept = pen == null ? 0 : _sim.Combat.PenCount(pen.Id);
+                return (!_control.WallStarted ? "Stampede: drag the line the pen's beasts run along: they burst out, run to its start and on to its end"
+                           : $"Stampede: let go to loose {kept} beast{(kept == 1 ? "" : "s")} along this line") +
+                       (kept == 0 ? "   (no beasts in the pen)" : "") +
+                       "\nRight click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Prospect:
                 return $"Sound for ore: click where the selected foremen sound the ground (ore shows within {_sim.Economy.ProspectRadius(PlayerControl.LocalPlayer)} blocks, at any depth)" +
                        (_control.OwnProspectors().Count == 0 ? "   (select foremen first)" : "") +
@@ -2212,6 +2255,10 @@ public partial class Hud : CanvasLayer
                 ? (u.Auto[i] ? (u.Held[i] ? "    automatic, waiting for orders" : "    automatic") : "")
                 : u.ShieldWall[i] ? "    in a shield wall"
                 : _sim.Combat.IsDrumming(i) ? (u.DrumLeft[i] > 0 ? "    beating the charge" : "    drumming the rally")
+                : u.Penned[i] != 0 ? "    kept in the beast pen"
+                : u.RunStage[i] != 0 ? "    stampeding"
+                : u.PenFor[i] != 0 ? "    going into the beast pen"
+                : u.Tired[i] > 0 ? $"    tired after the stampede ({(u.Tired[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)"
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
             string heals = !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) is { } camp
@@ -2365,6 +2412,9 @@ public partial class Hud : CanvasLayer
                     : !_sim.Economy.WorkshopWants(b)
                         ? $"enough {Goods.Name(b.Def.Makes).ToLowerInvariant()} in storage ({b.Def.Keep})"
                         : $"no {Goods.Name(b.Def.Takes).ToLowerInvariant()} to work");
+            if (b.Def.Pen is { } penDef && b.Active)
+                parts.Add($"keeps {_sim.Combat.PenCount(b.Id)} of {penDef.Keeps} beasts" +
+                          (b.Owner == PlayerControl.LocalPlayer ? " (right-click it with tamed wolves or boars selected to pen them; Ctrl+S: stampede)" : ""));
             if (b.Def.Kind == BuildingKind.Shrine)
                 parts.Add(b.SmeltTicks > 0
                     ? $"channelling a crystal {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.ChannelTicks)}% ({b.Def.Mana} mana each)"

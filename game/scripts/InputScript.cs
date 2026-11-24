@@ -35,6 +35,7 @@ namespace Rts.Game;
 ///   blocks X1,Y1,Z1 X2,Y2,Z2 BLOCK   test mode: set every block of the box to BLOCK (Air, Water, Stone, ...),
 ///                        as the test panel's blocks do (a Y of g+N counts from the highest solid block at X1, Z1)
 ///   spawn UNIT X,Z [N] [OWNER]   test mode: put down N (1) units of that kind for OWNER (you) at column (X, Z)
+///   building ID X,Z [OWNER]   test mode: put down that building, finished, for OWNER (you), its corner at column (X, Z)
 ///   camera X,Z [YAW PITCH DISTANCE]   move the camera focus to block column (X, Z)
 ///   shot PATH            save a screenshot (after the frame has been drawn)
 ///   print                print a "UI ..." line describing the selection, clock and slice
@@ -241,6 +242,17 @@ public sealed class InputScript
                 int owner = parts.Length > 4 ? int.Parse(parts[4], CultureInfo.InvariantCulture) : PlayerControl.LocalPlayer;
                 sim.Schedule(sim.Tick, new SandboxUnitCommand(PlayerControl.LocalPlayer, owner, parts[1],
                     int.Parse(xz[0], CultureInfo.InvariantCulture), int.Parse(xz[1], CultureInfo.InvariantCulture), n));
+                return true;
+            }
+            case "building":
+            {
+                // building id x,z [owner]: test mode puts the finished building down with its corner at that column.
+                var sim = main.Sim;
+                if (sim == null || parts.Length < 3) return true;
+                var xz = parts[2].Split(',');
+                int owner = parts.Length > 3 ? int.Parse(parts[3], CultureInfo.InvariantCulture) : PlayerControl.LocalPlayer;
+                sim.Schedule(sim.Tick, new SandboxBuildingCommand(PlayerControl.LocalPlayer, owner, parts[1],
+                    int.Parse(xz[0], CultureInfo.InvariantCulture), int.Parse(xz[1], CultureInfo.InvariantCulture)));
                 return true;
             }
             case "camera":

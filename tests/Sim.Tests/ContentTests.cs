@@ -38,7 +38,7 @@ public class ContentTests
     {
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs", "deepfolk" }, db.Factions.Select(f => f.Id));
-        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "orchard", "barracks", "great_barracks", "siege_workshop", "dock", "smelter", "foundry", "sawmill", "mason_yard", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "hunting_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "listening_post", "torch", "campfire", "wolf_lodge", "boar_pen", "crab_pots", "hall_of_legends", "beast_throne", "queens_chamber", "goblin_totem", "ogre_idol", "kobold_crystal", "troll_stone", "centaur_standard", "merfolk_conch", "bridge", "brood_chamber" }, db.Buildings.Select(b => b.Id));
+        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "orchard", "barracks", "great_barracks", "siege_workshop", "dock", "smelter", "foundry", "sawmill", "mason_yard", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "hunting_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "listening_post", "torch", "campfire", "wolf_lodge", "boar_pen", "beast_pen", "crab_pots", "hall_of_legends", "beast_throne", "queens_chamber", "goblin_totem", "ogre_idol", "kobold_crystal", "troll_stone", "centaur_standard", "merfolk_conch", "bridge", "brood_chamber" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "catapult", "battering_ram", "healer", "war_drummer", "skitterling", "spitter", "burrower" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "master_builder", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
@@ -387,7 +387,7 @@ public class ContentTests
     [InlineData("techs.json", "\"requires\": [ \"tools\" ]", "\"requires\": [ \"tool\" ]", "tech 'masonry': \"requires\" names \"tool\", which is not a tech")]
     [InlineData("techs.json", "\"name\": \"War drums\", \"faction\": \"orcs\"", "\"name\": \"War drums\", \"faction\": \"orks\"", "tech 'orc_war_drums': \"faction\" is \"orks\", which is not a faction")]
     [InlineData("techs.json", "\"building\": \"brood_chamber\"", "\"building\": \"hut\"", "tech 'deep_warrens', effect 1: \"building\" is \"hut\", which is not a building")]
-    [InlineData("techs.json", "\"role\": \"cavalry\"", "\"role\": \"horse\"", "tech 'orc_beast_pens', effect 1: \"role\" is \"horse\", which is not one of: worker, line_infantry")]
+    [InlineData("techs.json", "\"role\": \"ranged\", \"amount\": 8", "\"role\": \"horse\", \"amount\": 8", "tech 'deep_chitin', effect 2: \"role\" is \"horse\", which is not one of: worker, line_infantry")]
     [InlineData("techs.json", "\"type\": \"repair\"", "\"type\": \"repairing\"", "tech 'settler_guilds', effect 1: \"type\" is \"repairing\", which is not an effect")]
     [InlineData("units.json", "\"cost\": { \"food\": 30 }", "\"cost\": { \"bread\": 30 }", "unit 'worker': \"cost\" has \"bread\", which is not a good")]
     [InlineData("buildings.json", "\"kind\": \"barracks\"", "\"kind\": \"fort\"", "building 'barracks': \"kind\" is \"fort\", which is not one of: town_hall")]
@@ -519,6 +519,7 @@ public class ContentTests
         Assert.Contains("units.json: unit 'giant_crab', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains("units.json: unit 'shade_stalker', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'crab_pots': \"faction\" is \"orcs\", which is not a faction"));
+        Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'beast_pen': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains("units.json: unit 'cave_wyrm', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         // And the Orcs' final tech and great work.
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'orc_beast_king': \"faction\" is \"orcs\", which is not a faction"));
@@ -528,7 +529,7 @@ public class ContentTests
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 6: \"faction\" is \"orcs\", which is not a faction"));
         // And the war drummer.
         Assert.Contains(e.Errors, m => m.StartsWith("units.json: unit 'war_drummer': \"faction\" is \"orcs\", which is not a faction"));
-        Assert.Equal(21, e.Errors.Count);
+        Assert.Equal(22, e.Errors.Count);
     }
 
     [Fact]
@@ -577,12 +578,12 @@ public class ContentTests
         // War drums has no effects of its own any more (it trains the war drummer): give it a broken one.
         Edit(files, "techs.json", "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40 },",
             "\"cost\": { \"food\": 60, \"wood\": 40 }, \"researchTime\": 40, \"effects\": [ { \"type\": \"unit_speed\", \"amount\": 15 } ] },");
-        Edit(files, "techs.json", "\"role\": \"cavalry\", \"amount\": 30", "\"role\": \"cavalry\", \"unit\": \"rider\", \"amount\": 30");
+        Edit(files, "techs.json", "\"role\": \"ranged\", \"amount\": 8", "\"role\": \"ranged\", \"unit\": \"spitter\", \"amount\": 8");
         Edit(files, "techs.json", "\"building\": \"brood_chamber\", \"amount\": 6", "\"building\": \"brood_chamber\", \"amount\": 0");
         var e = Fails(files);
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'orc_war_drums', effect 1: unknown field \"amount\""));
         Assert.Contains("techs.json: tech 'orc_war_drums', effect 1: needs \"percent\"", e.Errors);
-        Assert.Contains("techs.json: tech 'orc_beast_pens', effect 1: give a \"role\" or a \"unit\", not both", e.Errors);
+        Assert.Contains("techs.json: tech 'deep_chitin', effect 2: give a \"role\" or a \"unit\", not both", e.Errors);
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'deep_warrens', effect 1: \"amount\" is 0"));
         Assert.Equal(4, e.Errors.Count);
     }
