@@ -45,6 +45,11 @@
 // work undermine percent faster: their blows on buildings land that much harder and they dig that much faster;
 // a spell cast by a caster among them is ready again quicken percent sooner (100 halves the wait), and the
 // workers among them work hasten percent faster: they gather, build, farm, quarry, dig and clean that much faster.
+// drums (optional, needs rally; the war drummer): its own side's broken units within its rally range (its earshot)
+// run to it instead of home and rally there, and it can beat the charge: for time seconds its side's units in earshot
+// walk speed percent faster and the first blow each strikes deals blow percent more; then it waits wait seconds
+// (from the start of the charge) before the next. While it drums, rivals with anything within heard columns see it
+// through the fog of war.
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -308,6 +313,14 @@
     "description": "An orc spearman on a wolf it beat: twice as fast.",
     "speed": 9, "hp": 110, "model": "wolf_rider", "damage": 11, "attackTime": 1, "range": 1.5, "sight": 11,
     "attack": "pierce", "armor": { "head": 1, "torso": 2, "legs": 1 } },
+  // The war drummer (War drums): rallies broken orcs in earshot ("rally") and beats the charge ("drums").
+  { "id": "war_drummer", "name": "War drummer", "faction": "orcs", "role": "line_infantry",
+    "description": "Beats a great war drum. Broken orcs within 14 columns run to it instead of home and rally there. Beat the charge (Ctrl+C): for 6 seconds every orc in earshot runs 40% faster and its first blow lands half as hard again, then the drum needs a minute. Rivals within 40 columns see it through the fog while it drums. A poor fighter: keep it behind the line.",
+    "speed": 4, "hp": 60, "model": "war_drummer", "damage": 3, "attackTime": 1.5, "range": 1.25, "sight": 9,
+    "attack": "crush", "armor": { "torso": 1 },
+    "rally": 14, "inspire": 2,
+    "drums": { "speed": 40, "blow": 50, "time": 6, "wait": 60, "heard": 40 },
+    "cost": { "food": 40, "wood": 30 }, "trainTime": 15, "trainedAt": "barracks", "requires": "orc_war_drums", "start": false },
 
   // Trade with the city-states, and with rivals under a trade deal.
   { "id": "caravan", "name": "Caravan", "role": "trader",

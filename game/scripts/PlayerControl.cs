@@ -383,6 +383,7 @@ public partial class PlayerControl : Node
             case Key.Tab: TogglePlanMode(); break;
             case Key.Delete or Key.Backspace: CancelSelectedPlan(); break;
             case Key.V when key.CtrlPressed: ToggleShieldWall(); break;
+            case Key.C when key.CtrlPressed: BeatCharge(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
             case Key.K when key.ShiftPressed: ToggleLadder(); break;
@@ -1267,6 +1268,24 @@ public partial class PlayerControl : Node
             if (_sim.Units.ShieldWall[i] || _sim.Combat.CanShieldWall(i)) list.Add(id);
         }
         return list;
+    }
+
+    /// <summary>The selected war drummers of yours (see <see cref="UnitDef.Drums"/>).</summary>
+    public List<int> OwnDrummers()
+    {
+        var list = OwnSelected();
+        list.RemoveAll(id => _sim.Content.Units[_sim.Units.Def[_sim.Units.IndexOf(id)]].Drums == null);
+        return list;
+    }
+
+    /// <summary>The selected war drummers that are ready beat the charge.</summary>
+    public void BeatCharge()
+    {
+        var ready = OwnDrummers();
+        ready.RemoveAll(id => !_sim.Combat.CanCharge(_sim.Units.IndexOf(id)));
+        if (ready.Count == 0) return;
+        _sim.Schedule(_sim.Tick, new ChargeCommand(LocalPlayer, ready.ToArray()));
+        Changed?.Invoke();
     }
 
     /// <summary>The selected line infantry raise their shield wall, or lower it if they all stand in one already.</summary>
@@ -2376,7 +2395,7 @@ public partial class PlayerControl : Node
         var sel = _sim.Buildings.Get(SelectedBuilding);
         string building = sel == null ? "none" : $"{sel.Def.Id}";
         var u = _sim.Units;
-        int units = 0, enemies = 0, enemiesShown = 0, fighting = 0, routing = 0, tunnelling = 0, digging = 0, cleaning = 0, patrolling = 0, guarding = 0;
+        int units = 0, enemies = 0, enemiesShown = 0, drumsHeard = 0, drumming = 0, fighting = 0, routing = 0, tunnelling = 0, digging = 0, cleaning = 0, patrolling = 0, guarding = 0;
         for (int i = 0; i < u.Count; i++)
         {
             if (u.Owner[i] != LocalPlayer)
@@ -2384,9 +2403,11 @@ public partial class PlayerControl : Node
                 if (u.Owner[i] == Simulation.WildPlayer) continue; // the monsters are counted as wild
                 enemies++;
                 if (Fog.Shows(i)) enemiesShown++;
+                if (_sim.Vision.HearsDrum(LocalPlayer, u.Id[i])) drumsHeard++;
                 continue;
             }
             units++;
+            if (_sim.Combat.IsDrumming(i)) drumming++;
             if (u.Rout[i] > 0) routing++;
             else if (u.Target[i] != 0 || u.TargetBuilding[i] != 0) fighting++;
             if (u.Job[i] == UnitJob.Tunnel) tunnelling++;
@@ -2519,7 +2540,7 @@ public partial class PlayerControl : Node
                $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
                $"faction={_sim.FactionOf(LocalPlayer).Id} batches={Batches()} bursting={Bursting()} " +
-               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} tunnelling={tunnelling} " +
+               $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} drumming={drumming} drums_heard={drumsHeard} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +

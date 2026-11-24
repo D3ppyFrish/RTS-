@@ -255,23 +255,18 @@ public class ResearchTests
     }
 
     [Fact]
-    public void WarDrumsSpeedUpTheOrcs()
+    public void WarDrumsTrainsTheDrummerAndNoLongerSpeedsUpTheOrcs()
     {
-        int TicksToWalk(bool drums)
-        {
-            var sim = Flat();
-            Hall(sim, 1, 4, 4);
-            if (drums) Grant(sim, 1, "orc_war_drums");
-            int u = sim.SpawnUnit(1, "spearman", 10, 40);
-            sim.Schedule(0, new MoveCommand(1, new[] { u }, 50, 40));
-            sim.Step();
-            return RunUntil(sim, () => sim.Units.Order[sim.Units.IndexOf(u)] == UnitOrder.Idle, 1000, "the walk");
-        }
-        var content = ContentDb.Default;
-        var econSpeed = Flat().Economy.SpeedPerTick(1, content.Unit("spearman"));
-        Assert.Equal(content.Unit("spearman").SpeedPerTick, econSpeed);
-        int plain = TicksToWalk(false), fast = TicksToWalk(true);
-        Assert.InRange(fast * 100 / plain, 84, 90); // 15% faster: about 87% of the time
+        // Issue #151: the flat 15% is gone; War drums unlocks the war drummer at the barracks (see DrumTests).
+        var sim = Flat();
+        Hall(sim, 1, 4, 4);
+        var spear = sim.Content.Unit("spearman");
+        Grant(sim, 1, "orc_war_drums");
+        Assert.Equal(spear.SpeedPerTick, sim.Economy.SpeedPerTick(1, spear));
+        var drummer = sim.Content.Unit("war_drummer");
+        Assert.Contains(sim.Content.Tech("orc_war_drums"), drummer.Requires);
+        Assert.Contains("war_drummer", sim.Content.Building("barracks").Trains);
+        Assert.Empty(sim.Content.Tech("orc_war_drums").Effects);
     }
 
     [Fact]

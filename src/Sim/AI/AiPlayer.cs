@@ -895,6 +895,7 @@ public sealed partial class AiPlayer
         }
         var (tx, tz) = (foe.AX, foe.AZ);
         int far = (int)IntMath.ISqrt(Dist2(cx, cz, tx, tz));
+        Drum(sim, far, tx, tz, issue); // its war drummer: along on the way, beating the charge at the target
         // Its catapults (smart levels) shoot from the last stretch on, with soldiers screening them.
         if (Smart && far <= SiegeReach)
         {
@@ -1006,14 +1007,20 @@ public sealed partial class AiPlayer
         foreach (var b in sim.Buildings.All)
         {
             if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2 || Docks(sim, b.Def)) continue;
+            // A war drummer first, if it can train one and has none (one goes with each wave).
+            if (Drummer(sim, b) is { } drummer)
+            {
+                if (Affordable(sim, drummer.Cost)) issue(new TrainCommand(Player, b.Id, drummer.Id));
+                continue;
+            }
             int total = 0;
             foreach (string id in b.Def.Trains)
-                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && !d.Ram) total += RoleWeight(d.Role);
+                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && !d.Ram && d.Drums == null) total += RoleWeight(d.Role);
             if (total == 0) continue;
             int roll = _rng.Range(0, total);
             foreach (string id in b.Def.Trains)
             {
-                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d) || d.Ram) continue;
+                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d) || d.Ram || d.Drums != null) continue;
                 roll -= RoleWeight(d.Role);
                 if (roll >= 0) continue;
                 if (Affordable(sim, d.Cost)) issue(new TrainCommand(Player, b.Id, d.Id));

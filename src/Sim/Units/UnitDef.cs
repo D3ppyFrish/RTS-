@@ -199,6 +199,13 @@ public sealed class UnitDef
     /// </summary>
     public int Hasten { get; init; }
 
+    /// <summary>
+    /// A war drummer (<c>"drums"</c> in the data; the Orcs'): its own side's broken units within its
+    /// <see cref="Rally"/> range (its earshot) run to it instead of home and rally there, and it can beat a charge
+    /// (see <see cref="ChargeCommand"/>, <see cref="DrumDef"/>, <c>CombatSystem.Drums.cs</c>). Null for every other unit.
+    /// </summary>
+    public DrumDef? Drums { get; init; }
+
     /// <summary>How fast it gathers, builds, farms and digs tunnels, in percent of the usual.</summary>
     public int WorkPercent { get; init; } = 100;
 
@@ -312,6 +319,26 @@ public sealed class UnitDef
 
     /// <summary>Blocks moved per simulation tick.</summary>
     public Fix64 SpeedPerTick => Speed / Simulation.TicksPerSecond;
+}
+
+/// <summary>
+/// A war drummer's drums (see <see cref="UnitDef.Drums"/>): the charge it beats, and how far off rivals hear it.
+/// </summary>
+public sealed class DrumDef
+{
+    /// <summary>Percent faster its own side's units within its earshot walk while it beats the charge.</summary>
+    public int Speed { get; init; } = 40;
+    /// <summary>Percent more damage the first blow deals that each unit in earshot strikes during the charge.</summary>
+    public int Blow { get; init; } = 50;
+    /// <summary>Ticks a charge lasts (<c>"time"</c> in the data, seconds).</summary>
+    public int ChargeTicks { get; init; } = 6 * Simulation.TicksPerSecond;
+    /// <summary>Ticks from beating a charge until it can beat the next (<c>"wait"</c> in the data, seconds).</summary>
+    public int WaitTicks { get; init; } = 60 * Simulation.TicksPerSecond;
+    /// <summary>
+    /// Columns (<c>"heard"</c>): while drumming (beating the charge or rallying broken units), it shows through the fog
+    /// of war to every rival with a unit or building this near it (see <see cref="VisionSystem.SeesUnit"/>).
+    /// </summary>
+    public int Heard { get; init; } = 40;
 }
 
 /// <summary>A monster's lairs: the pack that guards each, how far they guard and chase, and what clearing one gives.</summary>

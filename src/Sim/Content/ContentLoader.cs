@@ -408,6 +408,26 @@ public static class ContentLoader
             return armour;
         }
 
+        private DrumDef? Drums(Obj unit)
+        {
+            if (!unit.E.TryGetProperty("drums", out var e)) return null;
+            var o = new Obj(_errors, unit.File, "drums", $"{unit.Where}, drums", e);
+            if (e.ValueKind != JsonValueKind.Object)
+            {
+                o.Error("should be an object: { \"speed\": 40, \"blow\": 50, \"time\": 6, \"wait\": 60, \"heard\": 40 }");
+                return null;
+            }
+            o.Keys("speed", "blow", "time", "wait", "heard");
+            return new DrumDef
+            {
+                Speed = o.Int("speed", 0, 200, 40),
+                Blow = o.Int("blow", 0, 400, 50),
+                ChargeTicks = o.Int("time", 1, 60, 6) * Tps,
+                WaitTicks = o.Int("wait", 1, MaxSeconds, 60) * Tps,
+                Heard = o.Int("heard", 0, 128, 40),
+            };
+        }
+
         private LairDef? Lair(Obj unit)
         {
             if (!unit.E.TryGetProperty("lair", out var e)) return null;
@@ -704,7 +724,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -778,7 +798,10 @@ public static class ContentLoader
                 InStart = !o.Has("start") || o.Bool("start"),
                 Batch = o.Int("batch", 1, 20, 1),
                 Burst = o.Int("burst", 0, 500, 0),
+                Drums = Drums(o),
             };
+            if (def.Drums != null && (def.Rally == Fix64.Zero || def.Hero || def.Machine || def.IsBoat || def.Role == UnitRole.Monster))
+                o.Error("a war drummer (\"drums\") needs \"rally\" (its earshot) and is no hero, machine, ship or monster");
             if (def.MinRange > Fix64.Zero && def.MinRange >= def.Range)
                 o.Error("\"minRange\" must be less than \"range\"");
             if ((def.MinRange > Fix64.Zero || def.Lobs) && !def.IsRanged)
@@ -1645,6 +1668,14 @@ public static class ContentLoader
                 h.Add(u.InStart ? 1 : 0);
                 h.Add(u.Batch);
                 h.Add(u.Burst);
+                if (u.Drums is { } drums)
+                {
+                    h.Add(drums.Speed);
+                    h.Add(drums.Blow);
+                    h.Add(drums.ChargeTicks);
+                    h.Add(drums.WaitTicks);
+                    h.Add(drums.Heard);
+                }
                 if (u.Carry > 0) h.Add(u.Carry);
                 if (u.Seats > 0) h.Add(u.Seats + 1000);
                 if (u.IsGame) h.Add(u.Game);

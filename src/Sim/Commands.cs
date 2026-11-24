@@ -421,6 +421,13 @@ public sealed record ShieldWallCommand(int PlayerId, int[] Units, bool Raise) : 
 }
 
 /// <summary>
+/// The war drummers among the units (see <see cref="Units.UnitDef.Drums"/>) beat the charge, those that are ready to:
+/// for a few seconds their own side's units within earshot walk faster and the first blow each strikes deals more
+/// (see <c>Units.CombatSystem.Drums.cs</c>). Then each drummer needs a while before it can beat the next.
+/// </summary>
+public sealed record ChargeCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
+
+/// <summary>
 /// The units that can take the form (a unit type id that evolves from theirs) do, now. See
 /// <see cref="Units.EvolutionSystem"/>.
 /// </summary>

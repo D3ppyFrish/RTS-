@@ -86,7 +86,7 @@ Units live in the simulation core as flat arrays (`src/Sim/Units/UnitStore.cs`) 
 positions and stable ids. A move order sends a group to a point. Units step up one block (never two),
 drop up to three, wade through shallow water, fall when the ground under them is dug away, push each
 other apart so crowds spread out, and stop when they arrive or the crowd at the goal has settled. Unit
-types (worker, spearman, archer, rider, sapper, mage, healer, the caravan, the cart and the pack pony (Handcarts: a quick
+types (worker, spearman, archer, rider, sapper, mage, healer, the Orcs' war drummer, the caravan, the cart and the pack pony (Handcarts: a quick
 hauler running goods to far building sites and to and from workshops, quarries and mines; see
 [Economy](docs/rules.md#economy)), and the Settlers' forms they evolve into: see
 [Evolution](docs/rules.md#evolution)) come from `data/units.json` (see [Game data](#game-data)).
@@ -163,7 +163,8 @@ replay made with different data says so instead of drifting apart.
   against and how much less damage the others deal to buildings, and how fast units out of the fight
   heal (see [Combat](docs/rules.md#combat)).
 - **Buildings and units** name the techs they need; the barracks trains spearmen at once, and archers,
-  riders, sappers, mages and healers after their techs; the siege workshop trains catapults and battering rams after Smelting (`minRange`,
+  riders, sappers, mages and healers after their techs, and the Orcs' war drummer after War drums (`drums`: rallies
+  broken units in earshot and beats the charge, see [Combat](docs/rules.md#combat)); the siege workshop trains catapults and battering rams after Smelting (`minRange`,
   `lobs`, `machine`, `ram` and `gates`, see [Combat](docs/rules.md#combat)). `units.json` also holds the forms units evolve into and the
   monsters, with each monster's `prizes` per faction for clearing its lair (`relics.json` has the relics units
   take up as prizes, see [Monsters](docs/rules.md#monsters-and-taming)), and `factions.json` how a faction's units earn experience (see [Evolution](docs/rules.md#evolution)), whether it

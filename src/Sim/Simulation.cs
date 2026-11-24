@@ -457,14 +457,14 @@ public sealed class Simulation
     {
         if (Sandbox.Apply(command)) return;
         // Any other order stops units working on the dusk tree.
-        if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or ShieldWallCommand or AutomateCommand or PriorityCommand))
+        if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or ShieldWallCommand or ChargeCommand or AutomateCommand or PriorityCommand))
             DuskTree.Release(this, released);
-        if (command is UnitsCommand left and not (SearchRuinCommand or BloomCommand or StanceCommand or ShieldWallCommand or AutomateCommand or PriorityCommand))
+        if (command is UnitsCommand left and not (SearchRuinCommand or BloomCommand or StanceCommand or ShieldWallCommand or ChargeCommand or AutomateCommand or PriorityCommand))
             Ruins.Release(left);
-        if (command is UnitsCommand stopped and not (EarthWallCommand or IceBridgeCommand or ChasmCommand or GrowForestCommand or StanceCommand or ShieldWallCommand or AutomateCommand or PriorityCommand))
+        if (command is UnitsCommand stopped and not (EarthWallCommand or IceBridgeCommand or ChasmCommand or GrowForestCommand or StanceCommand or ShieldWallCommand or ChargeCommand or AutomateCommand or PriorityCommand))
             Spells.Release(stopped);
         // An order to go somewhere or fight lowers a shield wall first (see CombatSystem.ShieldWall.cs).
-        if (command is UnitsCommand lowered and not (ShieldWallCommand or StanceCommand or AutomateCommand or PriorityCommand or StopCommand or EvolveCommand))
+        if (command is UnitsCommand lowered and not (ShieldWallCommand or ChargeCommand or StanceCommand or AutomateCommand or PriorityCommand or StopCommand or EvolveCommand))
             Combat.LowerWalls(lowered);
         switch (command)
         {
@@ -526,6 +526,7 @@ public sealed class Simulation
             case SupplyCommand sp: Economy.Apply(sp); break;
             case StanceCommand st: Combat.Apply(st); break;
             case ShieldWallCommand sw: Combat.Apply(sw); break;
+            case ChargeCommand ch: Combat.Apply(ch); break;
             case FellCommand fl: Economy.Apply(fl); break;
             case ProspectCommand pr: Economy.Apply(pr); break;
             case RepairCommand rp: Economy.Apply(rp); break;

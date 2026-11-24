@@ -50,6 +50,7 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// 57 governor 0 1 army             (a governor runs town hall 1 for an army; none, growth, army or defence)
 /// 58 stance 0 hold 1,2,3            (hold, aggressive or retreat)
 /// 59 shieldwall 0 on 1,2,3          (a shield wall raised; off: lowered)
+/// 59 charge 1 7                     (player 1's war drummer 7 beats the charge)
 /// 59 fell 0 40 52 1 0 7             (unit 7 fells the tree at 40,52 to fall towards +x)
 /// 59 prospect 0 40 52 8             (unit 8 sounds the ground at 40,52)
 /// 59 evolve 0 knight 1,2            (units 1 and 2 take the form "knight", if they can)
@@ -254,6 +255,7 @@ public sealed class CommandLog
                 DigAreaCommand da => string.Create(ci, $"{tick} dig-area {da.PlayerId} {da.X1} {da.Z1} {da.X2} {da.Z2} {da.Y} {Ids(da.Units)}"),
                 TunnelCommand tn => string.Create(ci, $"{tick} tunnel {tn.PlayerId} {tn.X} {tn.Y} {tn.Z} {Ids(tn.Units)}"),
                 ShieldWallCommand sw => string.Create(ci, $"{tick} shieldwall {sw.PlayerId} {OnOff(sw.Raise)} {Ids(sw.Units)}"),
+                ChargeCommand ch => string.Create(ci, $"{tick} charge {ch.PlayerId} {Ids(ch.Units)}"),
                 FellCommand fl => string.Create(ci, $"{tick} fell {fl.PlayerId} {fl.X} {fl.Z} {fl.DirX} {fl.DirZ} {Ids(fl.Units)}"),
                 ProspectCommand pr => string.Create(ci, $"{tick} prospect {pr.PlayerId} {pr.X} {pr.Z} {Ids(pr.Units)}"),
                 RepairCommand rp => string.Create(ci, $"{tick} repair {rp.PlayerId} {rp.Building} {Ids(rp.Units)}"),
@@ -409,6 +411,7 @@ public sealed class CommandLog
                             "dig-area" => new DigAreaCommand(Int(f[2]), ParseIds(f[8]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6]), Int(f[7])),
                             "tunnel" => new TunnelCommand(Int(f[2]), ParseIds(f[6]), Int(f[3]), Int(f[4]), Int(f[5])),
                             "shieldwall" => new ShieldWallCommand(Int(f[2]), ParseIds(f[4]), ParseOnOff(f[3])),
+                            "charge" => new ChargeCommand(Int(f[2]), ParseIds(f[3])),
                             "fell" => new FellCommand(Int(f[2]), ParseIds(f[7]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6])),
                             "prospect" => new ProspectCommand(Int(f[2]), ParseIds(f[5]), Int(f[3]), Int(f[4])),
                             "repair" => new RepairCommand(Int(f[2]), ParseIds(f[4]), Int(f[3])),

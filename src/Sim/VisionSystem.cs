@@ -55,6 +55,8 @@ public sealed class VisionSystem
     private readonly byte[]?[] _heard = new byte[]?[Simulation.WildPlayer];
     // Per player, 1 for each column within SpotSubmerged of one of their units: where they spot monsters lying in the water.
     private readonly byte[]?[] _close = new byte[]?[Simulation.WildPlayer];
+    // Per player, the war drummers (unit ids) they hear drumming at the last look (see Units.DrumDef.Heard); null until any.
+    private readonly List<int>?[] _drums = new List<int>?[Simulation.WildPlayer];
     // Per unit slot, 1 if the unit was underground at the last look (only players' units, not wild monsters).
     private byte[] _under = Array.Empty<byte>();
     // Half-widths of the rows of a disc, by its squared radius.
@@ -89,6 +91,7 @@ public sealed class VisionSystem
     {
         var u = _sim.Units;
         if (u.Owner[i] == player || !_sim.Fog) return true;
+        if ((uint)player < (uint)_drums.Length && _drums[player] is { Count: > 0 } drums && drums.Contains(u.Id[i])) return true;
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
         if (Underground(i)) return Hears(player, x, z);
         if (_sim.Monsters.Submerged(i)) return Close(player, x, z);
@@ -233,8 +236,52 @@ public sealed class VisionSystem
                 Stamp(town.Holder, town.X - r0, town.Z - r0, town.X + r0, town.Z + r0, s * s, litOnly: true);
             }
         }
+        HearDrums();
         Version++;
     }
+
+    /// <summary>
+    /// Each player hears the war drummers drumming (see <see cref="Units.CombatSystem.Drumming"/>) with one of their
+    /// units or buildings within the drummer's <see cref="Units.DrumDef.Heard"/> columns: they see the drummer through
+    /// the fog of war (<see cref="SeesUnit"/>) until the next look.
+    /// </summary>
+    private void HearDrums()
+    {
+        foreach (var l in _drums) l?.Clear();
+        var drumming = _sim.Combat.Drumming;
+        if (drumming.Count == 0) return;
+        var u = _sim.Units;
+        var defs = _sim.Content.Units;
+        Span<bool> hears = stackalloc bool[Simulation.WildPlayer];
+        foreach (int id in drumming)
+        {
+            int d = u.IndexOf(id);
+            if (d < 0 || defs[u.Def[d]].Drums is not { } drums) continue;
+            int owner = u.Owner[d], dx = u.X[d].FloorToInt(), dz = u.Z[d].FloorToInt();
+            long r2 = (long)drums.Heard * drums.Heard;
+            hears.Clear();
+            for (int i = 0; i < u.Count; i++)
+            {
+                int p = u.Owner[i];
+                if ((uint)p >= (uint)hears.Length || p == owner || hears[p]) continue;
+                long ex = u.X[i].FloorToInt() - dx, ez = u.Z[i].FloorToInt() - dz;
+                if (ex * ex + ez * ez <= r2) hears[p] = true;
+            }
+            foreach (var b in _sim.Buildings.All)
+            {
+                int p = b.Owner;
+                if ((uint)p >= (uint)hears.Length || p == owner || hears[p] || b.Planned) continue;
+                long ex = Math.Clamp(dx, b.X, b.MaxX) - dx, ez = Math.Clamp(dz, b.Z, b.MaxZ) - dz;
+                if (ex * ex + ez * ez <= r2) hears[p] = true;
+            }
+            for (int p = 0; p < hears.Length; p++)
+                if (hears[p]) (_drums[p] ??= new List<int>()).Add(id);
+        }
+    }
+
+    /// <summary>True if the player hears war drummer <paramref name="id"/> (a unit id) drumming at the last look.</summary>
+    public bool HearsDrum(int player, int id) =>
+        _sim.Fog && (uint)player < (uint)_drums.Length && _drums[player] is { } l && l.Contains(id);
 
     /// <summary>
     /// Marks every column within <paramref name="r"/> of (x, z) that the player has never seen as seen (not in sight):
