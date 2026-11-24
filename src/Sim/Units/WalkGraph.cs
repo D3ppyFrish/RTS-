@@ -34,7 +34,7 @@ public sealed class WalkGraph
 
     /// <summary>
     /// Path cost of a step in each direction onto plain ground, into shallow water (double: wading is slow),
-    /// onto a road (half: units walk twice as fast there), onto rubble (double, like wading) and into a gate
+    /// onto a road (half: units walk twice as fast there), onto rubble or into an orchard's trees (double, like wading) and into a gate
     /// (as plain ground; only its owner's units go through, see <see cref="PathService"/>), and onto ground
     /// that hurts or traps whoever stands there (eight times plain ground, see <see cref="World.HazardSystem"/>):
     /// units walk up to seven blocks out of their way for each block of bog, lava heat or sinkhole crust they
@@ -250,7 +250,7 @@ public sealed class WalkGraph
             {
                 _level[first + s] = (short)y;
                 byte ground = at == BlockType.Gate || above == BlockType.Gate ? InGate : at == BlockType.Water ? Wading : below == BlockType.Road ? OnRoad
-                    : BlockInfo.IsRubble(below) ? Rough : Plain;
+                    : BlockInfo.IsRubble(below) || at == BlockType.Orchard || above == BlockType.Orchard ? Rough : Plain;
                 if (ground == InGate) _gated[column] = true;
                 _base[first + s] = ground;
                 _ground[first + s] = ground;

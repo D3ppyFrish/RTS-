@@ -312,6 +312,7 @@ public sealed partial class AiPlayer
         // Its wall (a faction it plays balanced), before it settles new ground.
         if (calm) HardWall(sim, hall, c, issue);
         if (calm) HardExpand(sim, hall, c, issue);
+        if (calm) Orchards(sim, hall, issue);
         if (calm) Hunting(sim, hall, issue);
         if (calm) PassMines(sim, hall, issue);
         if (calm) SiegeEconomy(sim, hall, c.Workers, issue);

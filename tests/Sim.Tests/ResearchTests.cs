@@ -186,7 +186,7 @@ public class ResearchTests
         var econ = sim.Economy;
         Assert.Equal(25, econ.WorkTicks(0, BlockType.Stone));
         Assert.Equal(5, econ.Capacity(0));
-        Assert.Equal(5, econ.FarmYieldOf(0));
+        Assert.Equal(6, econ.FarmYieldOf(0));
         Assert.Equal(30, econ.Housing(0));
 
         Grant(sim, 0, "tools");                  // tools, not faster gathering (#146)
@@ -195,8 +195,8 @@ public class ResearchTests
         Assert.Equal(25 * 100 / 115, econ.WorkTicks(0, BlockType.Stone));
         Grant(sim, 0, "roads", "carts");         // 3 more goods a load
         Assert.Equal(8, econ.Capacity(0));
-        Grant(sim, 0, "farming", "crop_rotation"); // 2 more food a harvest
-        Assert.Equal(7, econ.FarmYieldOf(0));
+        Grant(sim, 0, "farming", "crop_rotation"); // orchards, not richer harvests (#148)
+        Assert.Equal(6, econ.FarmYieldOf(0));
         Grant(sim, 0, "masonry");                // murder holes, not roomier houses (#147)
         Assert.Equal(30, econ.Housing(0));
 

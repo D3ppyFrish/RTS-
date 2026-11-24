@@ -512,6 +512,12 @@ public partial class Hud : CanvasLayer
                                 "seconds and shoots it, then carries its meat to storage. Hunters leave the last " +
                                 $"{EconomySystem.HerdKeep} of a herd to breed, so it grows back; build it near the deer on the grassland. " +
                                 "Automatic workers hunt when food is needed.";
+            if (def.Kind == BuildingKind.Orchard)
+                b.TooltipText = $"Fruit trees, planted as saplings, that grow for {def.GrowTicks / Simulation.TicksPerSecond / 60} minutes. Grown, they bear " +
+                                $"{CostText(def.Yield)} every {def.YieldTicks / Simulation.TicksPerSecond} seconds with nobody working them " +
+                                $"(up to {EconomySystem.OrchardBaskets} baskets wait there), which automatic workers and carts carry to storage. " +
+                                "Grown trees are too thick to see or shoot through: an orchard screens what is behind it, and units push " +
+                                "through it at half pace. Raiders can cut it down, and it grows again from saplings.";
             if (def.Kind == BuildingKind.ListeningPost)
                 b.TooltipText = $"A watchman listens at the ground: you see enemy units underground (sappers tunnelling, troops in " +
                                 $"caves) within {def.Hearing} columns of it. Otherwise nobody on the surface sees units under the ground " +
@@ -2299,6 +2305,10 @@ public partial class Hud : CanvasLayer
                 parts.Add($"{n} of {b.Def.WorkerSlots} workers (right click it with workers)");
             }
             if (b.Def.Plants > 0) parts.Add($"{_sim.Economy.SaplingsOf(b)} saplings growing");
+            if (b.Def.Kind == BuildingKind.Orchard && b.Active)
+                parts.Add(b.Grown
+                    ? $"grown: {EconomySystem.Baskets(b)} of {EconomySystem.OrchardBaskets} baskets of fruit waiting"
+                    : $"saplings growing {_sim.Economy.GrowthPercent(b)}%");
             if (b.Def.Hunts > 0) parts.Add(_sim.Economy.GameInReach(b) is var game and > 0 ? $"{game} deer within reach" : "no deer within reach");
             if (b.Def.Kind == BuildingKind.Smelter && b.SmeltTicks > 0)
                 parts.Add($"smelting {100 - 100L * b.SmeltTicks / EconomySystem.SmeltTicks}%");
@@ -2313,7 +2323,7 @@ public partial class Hud : CanvasLayer
                     ? $"channelling a crystal {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.ChannelTicks)}% ({b.Def.Mana} mana each)"
                     : $"no crystal to channel ({b.Def.Mana} mana each; dig crystal in the caverns)");
             text.Append(string.Join("    ", parts));
-            if (b.Def.Storage || b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine or BuildingKind.Workshop)
+            if (b.Def.Storage || b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine or BuildingKind.Workshop or BuildingKind.Orchard)
             {
                 var goods = new List<string>();
                 foreach (var g in Goods.All)
@@ -2567,6 +2577,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Haul => _sim.Buildings.Get(u.JobTarget[i])?.Def.Kind switch
         {
             BuildingKind.Shrine => "keeping the shrine",
+            BuildingKind.Orchard => "carrying fruit from the orchard",
             BuildingKind.Workshop => _sim.Buildings.Get(u.JobTarget[i]) is { } w ? $"{WorkshopVerb(w.Def).TrimEnd('s')}ing {Goods.Name(w.Def.Makes).ToLowerInvariant()}" : "working",
             _ => "supplying the smelter",
         },

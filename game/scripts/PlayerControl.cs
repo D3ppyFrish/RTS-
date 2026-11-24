@@ -82,7 +82,7 @@ public partial class PlayerControl : Node
     public static readonly (Key Key, string Building)[] BuildKeys =
     {
         (Key.H, "house"), (Key.G, "storehouse"), (Key.C, "farm"), (Key.B, "barracks"), (Key.M, "smelter"), (Key.N, "town_hall"),
-        (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "hunting_lodge"), (Key.None, "sawmill"), (Key.None, "mason_yard"), (Key.None, "siege_workshop"), (Key.None, "dock"), (Key.None, "shrine"),
+        (Key.None, "orchard"), (Key.None, "quarry"), (Key.None, "mine"), (Key.None, "fishing_hut"), (Key.None, "forester_lodge"), (Key.None, "hunting_lodge"), (Key.None, "sawmill"), (Key.None, "mason_yard"), (Key.None, "siege_workshop"), (Key.None, "dock"), (Key.None, "shrine"),
         (Key.O, "barrier_gate"), (Key.Slash, "watchtower"), (Key.Backslash, "stone_tower"), (Key.None, "listening_post"), (Key.I, "torch"), (Key.Semicolon, "campfire"),
     };
 
@@ -2513,6 +2513,8 @@ public partial class PlayerControl : Node
                $"quarrying={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Quarry)} " +
                $"fishing={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Quarry && _sim.Buildings.Get(u.JobTarget[i])?.Def.Shore == true)} " +
                $"saplings={_sim.Economy.Saplings.Count} trees_grown={_sim.Economy.TreesGrown} " +
+               $"orchards={OwnKind(BuildingKind.Orchard)} orchards_grown={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Active && b.Grown)} " +
+               $"baskets={_sim.Buildings.All.Where(b => b.Owner == LocalPlayer).Sum(b => EconomySystem.Baskets(b))} " +
                $"ruin_near={NearRuin()?.Index ?? -1} ruin_searching={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Ruins.Searching(u.Id[i]) >= 0)} " +
                $"ruins_found={_sim.Ruins.Ruins.Count(r => r.SearchedBy == LocalPlayer)} " +
                $"sites_active={(_sim.Sites.Active ? 1 : 0)} sites_held={_sim.Sites.Held(LocalPlayer)} sites_leader={_sim.Sites.Leader} " +

@@ -624,7 +624,7 @@ public sealed partial class CombatSystem
         v < Fix64.FromInt(lo) ? Fix64.FromInt(lo) - v : v > Fix64.FromInt(hi) ? v - Fix64.FromInt(hi) : Fix64.Zero;
 
     /// <summary>
-    /// True if nothing solid (leaves aside) lies between a unit's eyes at (x0, y0, z0) and the middle of a unit
+    /// True if nothing solid (leaves aside) and no orchard tree lies between a unit's eyes at (x0, y0, z0) and the middle of a unit
     /// standing at (x1, y1, z1). Walks the blocks along the line (Amanatides and Woo) in fixed point.
     /// </summary>
     public bool ClearLine(Fix64 x0, int y0, Fix64 z0, Fix64 x1, int y1, Fix64 z1)
@@ -643,7 +643,7 @@ public sealed partial class CombatSystem
             else { cy += sy; ty += dty; }
             if (cx == ex && cy == ey && cz == ez) return true;
             var block = World.Get(cx, cy, cz);
-            if (BlockInfo.IsSolid(block) && !BlockInfo.IsLeaves(block)) return false;
+            if (BlockInfo.IsSolid(block) && !BlockInfo.IsLeaves(block) || block == BlockType.Orchard) return false;
         }
         return true;
     }

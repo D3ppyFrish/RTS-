@@ -331,7 +331,8 @@ public sealed partial class EconomySystem
     /// A smelter's hauler: brings its iron to storage, and keeps it supplied with ore and coal from storage
     /// (enough for two ingots), one load at a time. A workshop's worker does the same with what it takes and
     /// makes (wood and planks at a sawmill, stone and cut stone at a mason's yard; <see cref="WorkshopStock"/> at a time). A shrine's keeper keeps it supplied with crystal the same
-    /// way (<see cref="ShrineCrystal"/> at a time); a shrine makes no goods to carry back.
+    /// way (<see cref="ShrineCrystal"/> at a time); a shrine makes no goods to carry back. At an orchard a worker or a cart
+    /// carries the baskets of fruit waiting there to storage, a load at a time, and is done once none are left.
     /// </summary>
     private void StepHaul(int i)
     {
@@ -369,7 +370,7 @@ public sealed partial class EconomySystem
         }
         else if (u.CarryAmount[i] == 0 && made is { } good && smelter.Stock[(int)good] > 0)
         {
-            int take = System.Math.Min(Capacity(u.Owner[i]), smelter.Stock[(int)good]);
+            int take = System.Math.Min(LoadOf(i), smelter.Stock[(int)good]);
             smelter.Stock[(int)good] -= take;
             u.Carry[i] = good;
             u.CarryAmount[i] = take;
@@ -394,6 +395,7 @@ public sealed partial class EconomySystem
     {
         BuildingKind.Shrine => g == Good.Crystal,
         BuildingKind.Workshop => g == b.Def.Takes,
+        BuildingKind.Orchard => false,
         _ => g is Good.IronOre or Good.Coal,
     };
 
@@ -402,6 +404,7 @@ public sealed partial class EconomySystem
     {
         BuildingKind.Smelter => Good.Iron,
         BuildingKind.Workshop => def.Makes,
+        BuildingKind.Orchard when def.Yield.Length > 0 => def.Yield[0].Good,
         _ => null,
     };
 
@@ -417,6 +420,12 @@ public sealed partial class EconomySystem
         if (Makes(smelter.Def) is { } made && smelter.Stock[(int)made] > 0)
         {
             SetPhase(i, JobPhase.ToWork);
+            return;
+        }
+        if (smelter.Def.Kind == BuildingKind.Orchard)
+        {
+            // An orchard's baskets are all carried away: on to other work (automation sends it back for the next).
+            EndJob(i);
             return;
         }
         int ux = u.X[i].FloorToInt(), uz = u.Z[i].FloorToInt();

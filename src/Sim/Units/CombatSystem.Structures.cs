@@ -230,6 +230,7 @@ public sealed partial class CombatSystem
     {
         _sim.Automation.Destroyed(b);
         _sim.Physics.Crumble(b);
+        _sim.Economy.ClearTrees(b);
         Buildings.Remove(b);
     }
 

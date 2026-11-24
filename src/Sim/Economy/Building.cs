@@ -105,6 +105,11 @@ public sealed class Building
     /// <summary>True if it has a rally point.</summary>
     public bool HasRally => RallyX >= 0;
 
+    /// <summary>An orchard: the tick its saplings were (last) planted, when it was finished or cut down.</summary>
+    public long Planted { get; internal set; }
+    /// <summary>An orchard whose trees have grown: they screen sight and shots, and bear fruit.</summary>
+    public bool Grown { get; internal set; }
+
     /// <summary>A town hall's governor and its focus, or <see cref="GovernorFocus.None"/> (see <see cref="GovernCommand"/>).</summary>
     public GovernorFocus Governor { get; internal set; }
 
@@ -276,6 +281,7 @@ public sealed class BuildingStore
             Mix(b.Upgrade?.Index ?? -1); Mix(b.UpgradeWork); Mix(b.UpgradeWait);
             Mix(b.RallyX); Mix(b.RallyZ); Mix(b.RallyY);
             Mix((int)b.Governor);
+            Mix(b.Planted); Mix(b.Grown ? 1 : 0);
         }
         return h;
     }
