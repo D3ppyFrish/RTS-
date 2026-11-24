@@ -139,6 +139,10 @@ public sealed class Building
     public int Mended { get; internal set; }
     /// <summary>The tick it was last hit by another side, or -1: for a while after, repairs to it go slowly.</summary>
     public long LastHit { get; internal set; } = -1;
+    /// <summary>True if its owner has marked it to be salvaged (see <see cref="SalvageCommand"/>): workers take it down.</summary>
+    public bool Salvaging { get; internal set; }
+    /// <summary>Work (ticks times work percent) put into taking it down so far; it is gone at <see cref="Economy.EconomySystem.SalvageWork"/>.</summary>
+    public int Salvaged { get; internal set; }
     /// <summary>True if it is finished and has lost hit points: blocks knocked out, or damage toward the next.</summary>
     public bool Damaged => State == BuildingState.Active && (Lost > 0 || Damage > 0);
 
@@ -303,6 +307,7 @@ public sealed class BuildingStore
             Mix((int)b.Governor);
             Mix(b.Planted); Mix(b.Grown ? 1 : 0);
             Mix(b.Mended); Mix(b.LastHit);
+            Mix(b.Salvaging ? 1 : 0); Mix(b.Salvaged);
         }
         return h;
     }

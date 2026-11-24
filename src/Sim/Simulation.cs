@@ -538,6 +538,7 @@ public sealed class Simulation
             case FellCommand fl: Economy.Apply(fl); break;
             case ProspectCommand pr: Economy.Apply(pr); break;
             case RepairCommand rp: Economy.Apply(rp); break;
+            case SalvageCommand sv: Economy.Apply(sv); break;
             case AutomateCommand a: Automation.Apply(a); break;
             case AutomateAllCommand a: Automation.Apply(a); break;
             case RebuildCommand rb: Automation.Apply(rb); break;

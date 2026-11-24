@@ -898,7 +898,17 @@ public partial class PlayerControl : Node
                 }
             }
         }
-        // Workers sent to a damaged building of yours repair it, if you have Craft guilds.
+        // Workers sent to a building of yours marked to take down take it down (Craft guilds).
+        if (b.Owner == LocalPlayer && b.Salvaging && b.Active)
+        {
+            var takers = OwnWorkers(own);
+            if (takers.Count > 0)
+            {
+                _sim.Schedule(_sim.Tick, new SalvageCommand(LocalPlayer, takers.ToArray(), b.Id));
+                own.RemoveAll(takers.Contains);
+            }
+        }
+        // Workers sent to a damaged building of yours repair it (every faction, no tech needed).
         var menders = new List<int>();
         if (b.Owner == LocalPlayer && !b.WantsBuilders && _sim.Economy.Repairable(b))
         {
@@ -2378,6 +2388,14 @@ public partial class PlayerControl : Node
     }
 
     /// <summary>Opens the sluice of the dam near your selected units, or shuts it if it is open (see <see cref="NearDam"/>).</summary>
+    /// <summary>Marks the selected building of yours to be taken down (Craft guilds' salvage), or takes the mark off.</summary>
+    public void ToggleSalvage()
+    {
+        if (_sim.Buildings.Get(SelectedBuilding) is not { } b || b.Owner != LocalPlayer) return;
+        _sim.Schedule(_sim.Tick, new SalvageCommand(LocalPlayer, System.Array.Empty<int>(), b.Id, Stop: b.Salvaging));
+        Changed?.Invoke();
+    }
+
     public void ToggleSluice()
     {
         if (NearDam() is not { } dam) return;
@@ -2657,7 +2675,7 @@ public partial class PlayerControl : Node
                $"near_dam={NearDam()?.Id ?? 0} sluice_open={(NearDam()?.Open == true ? 1 : 0)} sluice_water={SluiceWater()} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
-               $"health={sel?.Health ?? 0} max_health={sel?.MaxHealth ?? 0} damaged={OwnDamaged()} repairing={Jobs(UnitJob.Repair)} enemy_buildings={EnemyBuildings()} stones_dropped={_sim.Combat.StonesDropped} " +
+               $"health={sel?.Health ?? 0} max_health={sel?.MaxHealth ?? 0} damaged={OwnDamaged()} repairing={Jobs(UnitJob.Repair)} salvaging={Jobs(UnitJob.Salvage)} salvage_marked={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Salvaging)} enemy_buildings={EnemyBuildings()} stones_dropped={_sim.Combat.StonesDropped} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"fellers={OwnFellers().Count} prospectors={OwnProspectors().Count} soundings={_sim.Economy.Soundings(LocalPlayer)} " +
                $"prospected={_sim.Economy.ProspectedOre(LocalPlayer).Count} felling={Jobs(UnitJob.Fell)} prospecting={Jobs(UnitJob.Prospect)} " +

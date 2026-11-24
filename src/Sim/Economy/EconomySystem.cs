@@ -77,7 +77,7 @@ public sealed class PlayerEconomy
     internal int Researching = -1;
     internal int ResearchTicks;
     // Bonuses from the techs had, recomputed when one is added (see EconomySystem.UpdateBonuses).
-    internal bool Roads, SpareWorkers, MurderHoles, Repair;
+    internal bool Roads, SpareWorkers, MurderHoles, Salvage;
     // The discoveries made (bit 1 << Discovery), which open discovery techs.
     internal byte Discoveries;
     internal readonly int[] HousingBonus, HpBonus;
@@ -878,6 +878,8 @@ public sealed partial class EconomySystem
             b.Owed.Clear();
             Array.Clear(b.Supply); // the old owner's supply rules go with it
             b.Governor = GovernorFocus.None; // and so does their governor
+            b.Salvaging = false; // and their mark to take it down
+            b.Salvaged = 0;
             return false;
         }
         // Burned: the goods are lost and what is left of it crumbles.

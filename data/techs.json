@@ -22,8 +22,8 @@
 //   murder_holes                          stone gates drop stones on enemies at them while held (murderHoles in buildings.json)
 //   molt          { role or unit }        those units can molt when badly hurt: heal to full standing still, then stay
 //                                         soft a while (numbers: molt in roles.json)
-//   repair                                workers can repair the player's damaged buildings, walls, gates and towers, a block at
-//                                         a time, for half the cost over all its hit points (see "Repair" in docs/rules.md)
+//   salvage                               workers can take down the player's own finished buildings for half their cost back
+//                                         and the goods they held (see "Salvage" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
 // ruin (their units searched an old ruin), lair (their unit got the last of a monster lair's pack), town
 // (they broke a city-state's totem and took the town), giant (they beat a stone giant guarding a mountain
@@ -61,9 +61,9 @@
     "cost": { "stone": 40, "wood": 20 }, "researchTime": 30, "requires": [ "masonry" ] },
   { "id": "sapping", "icon": "shovel", "name": "Sapping", "description": "Tunnellers who bring down walls.",
     "cost": { "wood": 40, "stone": 40 }, "researchTime": 30, "requires": [ "masonry" ] },
-  { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades. Your workers can repair your damaged buildings, walls, gates and towers: right-click one with workers, and they put back its lost hit points and knocked-out blocks a block at a time, paying half the building's cost for all of its hit points from storage. Slow under fire. Automatic workers repair once no enemy is near. Only the Settlers have repair.",
+  { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades, taking down as well as putting up. Your workers can salvage your own finished buildings: mark one to take down, and workers (automatic ones too) take it apart in half the time it took to build, bringing back half its cost (less if it is damaged) and every good it held to your nearest other storage. Move your town, strip a far storehouse before raiders take it, or clear an outgrown wall. Only the Settlers can salvage.",
     "cost": { "wood": 80, "stone": 40 }, "researchTime": 40, "requires": [ "tools" ],
-    "effects": [ { "type": "repair" } ] },
+    "effects": [ { "type": "salvage" } ] },
   { "id": "settler_drill", "icon": "shield", "name": "Drilled ranks", "faction": "settlers", "description": "Line infantry can lock shields into a wall: it cannot move, but arrows and charges from the front do little. Weak from the sides unless the wall is a line.",
     "cost": { "food": 50, "iron": 5 }, "researchTime": 40, "requires": [ "smelting" ],
     "effects": [ { "type": "shield_wall", "role": "line_infantry" } ] },

@@ -1365,7 +1365,7 @@ public static class ContentLoader
                     case TechEffectType.Roads:
                     case TechEffectType.SpareWorkers:
                     case TechEffectType.MurderHoles:
-                    case TechEffectType.Repair:
+                    case TechEffectType.Salvage:
                         o.Keys("type");
                         effects.Add(new TechEffect { Type = type });
                         break;

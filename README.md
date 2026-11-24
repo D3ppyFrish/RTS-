@@ -155,7 +155,7 @@ replay made with different data says so instead of drifting apart.
   unlocks the units and buildings that name it in `requires`, and can have effects: roads, showing the map's
   ruins, lairs or towns through the fog (`reveal`), wild monsters sparing workers (`spare_workers`), the shield
   wall (`shield_wall`), aimed felling and prospecting (`felling`, `prospecting`), murder holes in stone gates
-  (`murder_holes`, Masonry), repair (`repair`, Craft guilds), molting (`molt`, the Deepfolk's Molting), and the
+  (`murder_holes`, Masonry), salvage (`salvage`, Craft guilds: take down your own buildings for half their cost back; repair itself needs no tech), molting (`molt`, the Deepfolk's Molting), and the
   two large buffs: more housing (`housing`, a number more or a `percent` of the building's own: Brood warrens
   doubles a brood chamber) and more hit points (`unit_hp`, for units already alive too: Giant's marrow, +30% for
   fighters).
