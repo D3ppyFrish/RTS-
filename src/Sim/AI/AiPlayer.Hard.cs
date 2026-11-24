@@ -66,8 +66,9 @@ public sealed partial class AiPlayer
     /// <summary>Techs in the order Hard researches them (those its faction cannot have are skipped).</summary>
     public static readonly string[] HardTechOrder =
     {
-        "farming", "tools", "crop_rotation", "horse_breeding", "roads", "carts", "archery", "masonry", "settler_guilds",
-        "orc_beast_pens", "orc_war_drums", "sapping", "basic_magic", "smelting", "settler_drill",
+        "farming", "tools", "crop_rotation", "deep_warrens", "horse_breeding", "roads", "carts", "archery", "masonry",
+        "settler_guilds", "orc_beast_pens", "orc_war_drums", "deep_chitin", "sapping", "basic_magic", "smelting",
+        "settler_drill",
     };
 
     /// <summary>What the player has, counted once each time Hard looks at its economy.</summary>

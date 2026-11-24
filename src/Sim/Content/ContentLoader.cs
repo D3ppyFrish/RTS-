@@ -40,6 +40,13 @@ public sealed class ContentException : Exception
 /// </summary>
 public static class ContentLoader
 {
+    /// <summary>
+    /// The tech effects retired in the tech rework (issue #10): small stat buffs, refused with a message saying so.
+    /// Research gives tools; the few buffs kept are large ones (<see cref="TechEffectType.Housing"/>,
+    /// <see cref="TechEffectType.UnitHp"/>).
+    /// </summary>
+    public static readonly IReadOnlyList<string> RetiredEffects = new string[] { "gather_speed", "carry", "farm_yield", "unit_speed" };
+
     /// <summary>The data files, in the order they are read.</summary>
     public static readonly IReadOnlyList<string> Files =
         new[] { "factions.json", "techs.json", "buildings.json", "units.json", "roles.json", "citystates.json", "relics.json", "ruins.json" };
@@ -1266,6 +1273,11 @@ public static class ContentLoader
                 }
                 var typeName = o.Str("type", true);
                 if (typeName == null) continue;
+                if (Array.IndexOf((string[])RetiredEffects, typeName) >= 0)
+                {
+                    o.Error($"\"type\" is \"{typeName}\", a small stat buff retired in the tech rework: research gives tools, not numbers (see Techs in README.md)");
+                    continue;
+                }
                 if (!TryEnum<TechEffectType>(typeName, out var type))
                 {
                     o.Error($"\"type\" is \"{typeName}\", which is not an effect (effects: {Names<TechEffectType>()})");
@@ -1273,15 +1285,6 @@ public static class ContentLoader
                 }
                 switch (type)
                 {
-                    case TechEffectType.GatherSpeed:
-                        o.Keys("type", "percent");
-                        effects.Add(new TechEffect { Type = type, Amount = o.Int("percent", 1, 1000, 0, required: true) });
-                        break;
-                    case TechEffectType.Carry:
-                    case TechEffectType.FarmYield:
-                        o.Keys("type", "amount");
-                        effects.Add(new TechEffect { Type = type, Amount = o.Int("amount", 1, 100, 0, required: true) });
-                        break;
                     case TechEffectType.Housing:
                     {
                         o.Keys("type", "building", "amount", "percent");
@@ -1298,13 +1301,10 @@ public static class ContentLoader
                         break;
                     }
                     case TechEffectType.UnitHp:
-                    case TechEffectType.UnitSpeed:
                     {
                         // Hit points: an "amount" more, or a "percent" more of the unit's own (one of the two). "fighters"
                         // (optional) keeps it to units that fight.
-                        bool hp = type == TechEffectType.UnitHp;
-                        if (hp) o.Keys("type", "role", "unit", "fighters", "amount", "percent");
-                        else o.Keys("type", "role", "unit", "fighters", "percent");
+                        o.Keys("type", "role", "unit", "fighters", "amount", "percent");
                         UnitRole? role = o.Has("role") ? o.Enum("role", UnitRole.Worker, required: true) : null;
                         var unitId = o.Str("unit", false);
                         UnitDef? unit = null;
@@ -1312,14 +1312,13 @@ public static class ContentLoader
                             o.Error($"\"unit\" is \"{unitId}\", which is not a unit");
                         if (role != null && unitId != null) o.Error("give a \"role\" or a \"unit\", not both");
                         bool fighters = o.Bool("fighters");
-                        if (hp && o.Has("percent"))
+                        if (o.Has("percent"))
                         {
                             if (o.Has("amount")) o.Error("give an \"amount\" or a \"percent\", not both");
                             effects.Add(new TechEffect { Type = type, Role = role, Unit = unit, Fighters = fighters, Percent = o.Int("percent", 1, 1000, 0, required: true) });
                             break;
                         }
-                        int amount = hp ? o.Int("amount", 1, 100000, 0, required: true)
-                            : o.Int("percent", 1, 1000, 0, required: true);
+                        int amount = o.Int("amount", 1, 100000, 0, required: true);
                         effects.Add(new TechEffect { Type = type, Role = role, Unit = unit, Fighters = fighters, Amount = amount });
                         break;
                     }

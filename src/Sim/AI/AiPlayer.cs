@@ -102,7 +102,8 @@ public sealed partial class AiPlayer
     public static readonly string[] TechOrder =
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
-        "orc_war_drums", "orc_beast_pens", "settler_guilds", "roads", "carts", "smelting", "settler_drill",
+        "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
+        "settler_drill",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>

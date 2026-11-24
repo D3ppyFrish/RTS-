@@ -202,12 +202,8 @@ public partial class TechTreePanel : PanelContainer
     /// <summary>One line saying what an effect does.</summary>
     public static string EffectText(TechEffect e) => e.Type switch
     {
-        TechEffectType.GatherSpeed => $"Workers gather {e.Amount}% faster",
-        TechEffectType.Carry => $"Workers carry {e.Amount} more on each trip",
-        TechEffectType.FarmYield => $"Each farm harvest gives {e.Amount} more food",
-        TechEffectType.Housing => $"Each {e.Building?.Name.ToLowerInvariant()} houses {e.Amount} more",
+        TechEffectType.Housing => e.Percent > 0 ? $"Each {e.Building?.Name.ToLowerInvariant()} houses {e.Percent}% more" : $"Each {e.Building?.Name.ToLowerInvariant()} houses {e.Amount} more",
         TechEffectType.UnitHp => e.Percent > 0 ? $"{Who(e)} have {e.Percent}% more hit points" : $"{Who(e)} have {e.Amount} more hit points",
-        TechEffectType.UnitSpeed => $"{Who(e)} walk {e.Amount}% faster",
         TechEffectType.Roads => "Roads can be laid (L)",
         TechEffectType.Reveal => e.Reveal switch
         {
