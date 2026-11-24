@@ -46,6 +46,9 @@
 // for it), then bear its yield every yieldTime seconds with nobody working it, waiting there in baskets (3 at most)
 // for workers or carts to carry to storage (up to workerSlots at once). Grown trees screen sight and shots, and units
 // push through them at half pace; raiders cut it down (raidable), and it grows again from saplings.
+// mends (optional, barracks only): a yard mending the machines it builds (a dock its ships, a siege workshop its
+// catapults and rams), with no worker and no tech: this percent of a machine's hit points each second it waits
+// out of the fight beside the yard, paid for with its share of half the machine's cost in materials from storage.
 // fromDen (optional): built only on a cleared monster den, by a faction whose prize there names it ("prizes" in units.json),
 // never from the build menu. yield and yieldTime (optional, together): goods it brings in on its own every
 // yieldTime seconds once finished, into its owner's storage nearest it.
@@ -115,10 +118,10 @@
     "cost": { "wood": 80, "stone": 60 }, "buildTime": 40, "light": 4, "sturdy": 2, "speed": 175 },
   { "id": "siege_workshop", "name": "Siege workshop", "kind": "barracks", "size": [6, 6], "wallHeight": 3,
     "wall": "planks", "footing": "stone_brick", "roof": "thatch", "icon": "catapult",
-    "cost": { "wood": 40, "planks": 40, "stone": 20 }, "buildTime": 35, "requires": "smelting", "light": 3 },
+    "cost": { "wood": 40, "planks": 40, "stone": 20 }, "buildTime": 35, "requires": "smelting", "light": 3, "mends": 3 },
   { "id": "dock", "name": "Dock", "kind": "barracks", "size": [5, 4], "wallHeight": 3, "shore": true,
     "wall": "planks", "footing": "stone_brick", "roof": "thatch", "icon": "ship",
-    "cost": { "wood": 60, "planks": 20 }, "buildTime": 30, "light": 3 },
+    "cost": { "wood": 60, "planks": 20 }, "buildTime": 30, "light": 3, "mends": 3 },
   { "id": "smelter", "name": "Smelter", "kind": "smelter", "size": [3, 3], "wallHeight": 3,
     "wall": "stone_brick", "roof": "stone_brick", "chimney": true,
     "cost": { "stone": 30, "wood": 10 }, "buildTime": 20, "workerSlots": 1, "requires": "smelting", "light": 3,

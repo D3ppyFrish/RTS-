@@ -100,4 +100,56 @@ public sealed partial class EconomySystem
         u.Hp[j] += h;
         _sim.Combat.Mend(j, h, u.Hp[j] >= max);
     }
+
+    // --- Yards: docks and siege workshops mending their own machines -------------------------------------
+
+    /// <summary>How near (columns beyond its footprint) a machine must wait to a yard (<see cref="BuildingDef.Mends"/>) to be mended there.</summary>
+    public const int YardReach = 4;
+
+    /// <summary>
+    /// The player's finished yard unit j waits beside to be mended now, or null: j is a hurt machine of a player's,
+    /// not aboard, out of the fight for the recovery delay, within <see cref="YardReach"/> of a finished building of
+    /// its owner's that builds its type and mends (<see cref="BuildingDef.Mends"/>). No worker and no tech is needed.
+    /// </summary>
+    public Building? YardFor(int j)
+    {
+        var u = U;
+        if (j < 0 || j >= u.Count || u.Hp[j] <= 0 || u.Aboard[j] != 0) return null;
+        int owner = u.Owner[j];
+        if (owner < 0 || owner >= Simulation.WildPlayer) return null;
+        var def = Content.Units[u.Def[j]];
+        if (!def.Machine || def.TrainedAt is not { Mends: > 0 } || u.Hp[j] >= MaxHp(owner, def)) return null;
+        if (_sim.Tick - u.LastFight[j] < Content.Combat.RecoveryDelayTicks) return null;
+        int x = u.X[j].FloorToInt(), z = u.Z[j].FloorToInt();
+        foreach (var b in Buildings.All)
+            if (b.Owner == owner && b.Active && b.Def == def.TrainedAt && b.ColumnDistance(x, z) <= YardReach
+                && Math.Abs(u.Y[j] - b.Y) <= YardReach)
+                return b;
+        return null;
+    }
+
+    /// <summary>
+    /// Once a second each (spread over units by id), a machine waiting beside its yard (<see cref="YardFor"/>) gets back
+    /// the yard's <see cref="BuildingDef.Mends"/> percent of its hit points, paid for like field repairs
+    /// (<see cref="FieldMendCost"/>) from storage; with nothing to pay with it waits.
+    /// </summary>
+    private void StepYards()
+    {
+        var u = U;
+        bool any = false;
+        foreach (var b in Buildings.All) any |= b.Active && b.Def.Mends > 0;
+        if (!any) return;
+        for (int j = 0; j < u.Count; j++)
+        {
+            if ((_sim.Tick + u.Id[j]) % Tps != 0) continue;
+            var yard = YardFor(j);
+            if (yard == null) continue;
+            var def = Content.Units[u.Def[j]];
+            int owner = u.Owner[j], max = MaxHp(owner, def);
+            int h = Math.Min(Math.Max(1, max * yard.Def.Mends / 100), max - u.Hp[j]);
+            if (!TrySpend(owner, FieldMendCost(owner, def, h), yard.X, yard.Z)) continue;
+            u.Hp[j] += h;
+            _sim.Combat.Mend(j, h, u.Hp[j] >= max);
+        }
+    }
 }

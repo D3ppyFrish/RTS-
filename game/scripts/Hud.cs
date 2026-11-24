@@ -2357,7 +2357,8 @@ public partial class Hud : CanvasLayer
                 : u.PenFor[i] != 0 ? "    going into the beast pen"
                 : u.Tired[i] > 0 ? $"    tired after the stampede ({(u.Tired[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)"
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
-            string heals = !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
+            string heals = _sim.Economy.YardFor(i) is { } yard ? $" (being mended at the {yard.Def.Name.ToLowerInvariant()})"
+                : !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) is { } camp
                     ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());

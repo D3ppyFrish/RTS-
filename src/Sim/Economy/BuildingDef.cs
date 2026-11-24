@@ -199,6 +199,12 @@ public sealed class BuildingDef
     /// </summary>
     public int Hunts { get; init; }
     /// <summary>
+    /// A yard that mends the machines it builds (a dock its ships, a siege workshop its catapults and rams): percent of
+    /// such a machine's hit points given back each second it waits out of the fight within
+    /// <see cref="Economy.EconomySystem.YardReach"/> of it, with no worker and no tech; 0 for every other building.
+    /// </summary>
+    public int Mends { get; init; }
+    /// <summary>
     /// How far (columns beyond its footprint) a listening post hears units underground, so its owner sees them under
     /// fog of war (see <see cref="BuildingKind.ListeningPost"/>, <see cref="VisionSystem"/>); 0 for other buildings.
     /// </summary>

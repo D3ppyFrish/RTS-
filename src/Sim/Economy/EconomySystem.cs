@@ -304,6 +304,7 @@ public sealed partial class EconomySystem
         StepLadders();
         StepSaplings();
         StepOrchards();
+        StepYards();
 
         var all = Buildings.All;
         for (int k = 0; k < all.Count; k++)

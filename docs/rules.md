@@ -635,6 +635,13 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   work at the usual work speed, under fire or not, so a ram can be kept going at the gate. Each step costs its share
   of half the machine's cost in materials (not food), rounded up, taken from storage; with nothing to pay with, the
   workers stop. Ships are not mended this way. Automatic workers and computer players do not mend machines.
+- **Yards** (every faction, no tech, no worker; `mends` on a building in `data/buildings.json`, `BuildingDef.Mends`,
+  `EconomySystem.YardFor`/`StepYards` in `EconomySystem.FieldRepairs.cs`, `YardRepairTests`): a dock mends its owner's
+  ships and bombard ships, and a siege workshop their catapults and battering rams, while the machine waits within 4
+  columns of it out of the fight (the same 10 seconds as healing on its own): 3% of its hit points each second, on top
+  of healing on its own, each step paid for like field repairs (its share of half the machine's cost in materials,
+  not food, from storage; with nothing to pay with it heals only on its own). Bring a battered ram home to the
+  workshop, or a holed ship into harbour. The unit panel says "being mended at the dock" (or workshop).
 - **Breaking through** (`Breach`, `BreachFor`): units sent at a building they cannot get to (it is walled
   in) go for a wall, gate or facing of its owner within 16 columns instead: one they can get at from where
   they are, with the shortest way from them through it to the building (ties to the one nearer the
