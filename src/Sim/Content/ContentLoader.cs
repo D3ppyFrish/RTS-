@@ -531,7 +531,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -540,6 +540,19 @@ public static class ContentLoader
             }
             var kind = o.Enum("kind", BuildingKind.House, required: true);
             var (sizeX, sizeZ) = o.Size("size");
+            MurderHoles? holes = null;
+            if (Part(o, "murderHoles", "{ \"damage\": 25, \"every\": 3, \"reach\": 3, \"held\": 4 }") is { } mh)
+            {
+                mh.Keys("damage", "every", "reach", "held");
+                if (kind != BuildingKind.Gate) o.Error("only a gate has \"murderHoles\"");
+                holes = new MurderHoles
+                {
+                    Damage = mh.Int("damage", 1, 1000, 25, required: true),
+                    EverySeconds = mh.Int("every", 1, 60, 3),
+                    Reach = mh.Int("reach", 0, 8, 3),
+                    Held = mh.Int("held", 0, 16, 4),
+                };
+            }
             int slots = o.Int("workerSlots", 0, 20, 0);
             if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop && slots == 0)
                 o.Error($"a {SnakeName(kind)} needs \"workerSlots\" of 1 or more, or nobody can work it");
@@ -592,6 +605,7 @@ public static class ContentLoader
                 Makes = o.Enum("makes", Good.Planks, required: kind == BuildingKind.Workshop),
                 Keep = o.Int("keep", 1, 10000, kind == BuildingKind.Workshop ? 50 : 0),
                 Hearing = o.Int("hearing", 1, 64, 0),
+                MurderHoles = holes,
             };
             if (kind == BuildingKind.ListeningPost && def.Hearing == 0)
                 o.Error("a listening post needs \"hearing\" (how many columns round it it hears units underground)");
@@ -1252,6 +1266,7 @@ public static class ContentLoader
                     }
                     case TechEffectType.Roads:
                     case TechEffectType.SpareWorkers:
+                    case TechEffectType.MurderHoles:
                         o.Keys("type");
                         effects.Add(new TechEffect { Type = type });
                         break;

@@ -2501,7 +2501,7 @@ public partial class PlayerControl : Node
                $"near_dam={NearDam()?.Id ?? 0} sluice_open={(NearDam()?.Open == true ? 1 : 0)} sluice_water={SluiceWater()} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
-               $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} " +
+               $"health={sel?.Health ?? 0} enemy_buildings={EnemyBuildings()} stones_dropped={_sim.Combat.StonesDropped} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"fellers={OwnFellers().Count} prospectors={OwnProspectors().Count} soundings={_sim.Economy.Soundings(LocalPlayer)} " +
                $"prospected={_sim.Economy.ProspectedOre(LocalPlayer).Count} felling={Jobs(UnitJob.Fell)} prospecting={Jobs(UnitJob.Prospect)} " +

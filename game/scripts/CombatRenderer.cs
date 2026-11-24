@@ -23,12 +23,15 @@ public partial class CombatRenderer : Node3D
     private static readonly Color Dying = new(0.95f, 0.25f, 0.2f);
     private static readonly Color Arrow = new(0.95f, 0.9f, 0.75f);
     private static readonly Color Blast = new(0.75f, 0.45f, 1f);
+    // A stone dropped through a gate's murder holes, and the dust where it lands.
+    private static readonly Color Stone = new(0.55f, 0.53f, 0.5f);
+    private static readonly Color Dust = new(0.72f, 0.66f, 0.56f, 0.8f);
     private static readonly Color Blow = new(1f, 1f, 0.8f);
     private static readonly Color Routing = new(0.95f, 0.95f, 0.95f);
     private static readonly Color Evolvable = new(1f, 0.78f, 0.2f);
 
     /// <summary>Ticks an arrow and a blast take to fly, and that a blast's burst and a blow's flash last.</summary>
-    private const float ArrowTicks = 4, BlastTicks = 6, BurstTicks = 3, FlashTicks = 2;
+    private const float ArrowTicks = 4, BlastTicks = 6, BurstTicks = 3, FlashTicks = 2, DropTicks = 5;
 
     private sealed class Batch
     {
@@ -147,6 +150,18 @@ public partial class CombatRenderer : Node3D
             float age = now - shot.Tick + alpha;
             var from = new Vector3(shot.FromX.ToFloat(), shot.FromY + 1.3f, shot.FromZ.ToFloat()) * bs;
             var to = new Vector3(shot.ToX.ToFloat(), shot.ToY + 1f, shot.ToZ.ToFloat()) * bs;
+            if (shot.Dropped)
+            {
+                // Straight down out of the gate's roof, faster as it falls, and a puff of dust where it lands.
+                if (age < DropTicks)
+                {
+                    float t = age / DropTicks;
+                    Cube(from.Lerp(to, t * t), 0.55f * bs, Stone);
+                }
+                else if (age < DropTicks + BurstTicks)
+                    Cube(to, Mathf.Lerp(0.6f, 1.6f, (age - DropTicks) / BurstTicks) * bs, Dust);
+                continue;
+            }
             if (!shot.Ranged)
             {
                 if (age < FlashTicks) Cube(from.Lerp(to, 0.7f), 0.45f * bs * (1 - age / FlashTicks / 2), Blow);

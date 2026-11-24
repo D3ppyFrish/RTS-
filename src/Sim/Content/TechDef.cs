@@ -192,6 +192,11 @@ public enum TechEffectType : byte
     /// then shows to their player through the ground.
     /// </summary>
     Prospecting,
+    /// <summary>
+    /// The player's gates with murder holes (<see cref="Economy.BuildingDef.MurderHoles"/>) drop stones on enemies
+    /// in the gateway while they are held (see <see cref="Units.CombatSystem"/>).
+    /// </summary>
+    MurderHoles,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

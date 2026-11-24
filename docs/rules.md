@@ -529,6 +529,17 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   tower come down to it. The game
   draws a deck half a block below the top of its blocks, between the battlements, and the units on it
   that much lower.
+- **Murder holes** (Masonry, issue #147; a `murder_holes` effect in `data/techs.json`, `"murderHoles"` on the
+  stone gate in `data/buildings.json`, `CombatSystem.MurderHoles.cs`): a stone gate of a player with Masonry has
+  holes in its roof over the gateway. While the gate is **held** (a unit of its owner stands on a wall, gate or
+  tower of theirs within 4 columns of it, posted or not), it drops a stone every 3 seconds on the enemy nearest
+  it in the gateway or on the ground right in front of it: the gate's own column and up to 3 columns straight
+  out from it on either side of the line, a column wide to each side of that, from a level under the gate's
+  foot to two over it. The stone does 25 crushing damage on the head (head armour counts, no shield stops it,
+  and nobody answers it). A battering ram at the gate is hit like a soldier, so a ram wants a fast push. An
+  unheld gate drops nothing, so the attacker's answer is to clear the walls first. Masonry no longer makes
+  houses hold more: that bonus is gone (the manor and castle keep it unlocks are the roomier houses).
+  Hard posts a ranged soldier from home by each of its gates that has murder holes, so they are held.
 - **Breaking through** (`Breach`, `BreachFor`): units sent at a building they cannot get to (it is walled
   in) go for a wall, gate or facing of its owner within 16 columns instead: one they can get at from where
   they are, with the shortest way from them through it to the building (ties to the one nearer the

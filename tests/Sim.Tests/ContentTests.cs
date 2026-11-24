@@ -386,7 +386,7 @@ public class ContentTests
     [InlineData("buildings.json", "\"requires\": \"farming\"", "\"requires\": \"farmin\"", "building 'farm': \"requires\" names \"farmin\", which is not a tech")]
     [InlineData("techs.json", "\"requires\": [ \"tools\" ]", "\"requires\": [ \"tool\" ]", "tech 'masonry': \"requires\" names \"tool\", which is not a tech")]
     [InlineData("techs.json", "\"name\": \"War drums\", \"faction\": \"orcs\"", "\"name\": \"War drums\", \"faction\": \"orks\"", "tech 'orc_war_drums': \"faction\" is \"orks\", which is not a faction")]
-    [InlineData("techs.json", "\"building\": \"house\"", "\"building\": \"hut\"", "tech 'masonry', effect 1: \"building\" is \"hut\", which is not a building")]
+    [InlineData("techs.json", "\"building\": \"brood_chamber\"", "\"building\": \"hut\"", "tech 'deep_warrens', effect 1: \"building\" is \"hut\", which is not a building")]
     [InlineData("techs.json", "\"role\": \"cavalry\"", "\"role\": \"horse\"", "tech 'orc_beast_pens', effect 1: \"role\" is \"horse\", which is not one of: worker, line_infantry")]
     [InlineData("techs.json", "\"type\": \"carry\"", "\"type\": \"carrying\"", "tech 'carts', effect 1: \"type\" is \"carrying\", which is not an effect")]
     [InlineData("units.json", "\"cost\": { \"food\": 30 }", "\"cost\": { \"bread\": 30 }", "unit 'worker': \"cost\" has \"bread\", which is not a good")]

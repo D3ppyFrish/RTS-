@@ -156,7 +156,7 @@
     "cost": { "wood": 5 }, "buildTime": 4, "sight": 2, "thick": true, "sturdy": 4, "walkway": true, "icon": "gate", "upgrade": "stone_gate" },
   { "id": "stone_gate", "name": "Stone gate", "kind": "gate", "size": [1, 1], "wallHeight": 6, "wall": "rampart",
     "cost": { "wood": 4, "stone": 12 }, "buildTime": 6, "sight": 2, "thick": true, "sturdy": 3, "walkway": true, "icon": "gate", "requires": "masonry",
-    "facing": "stone_gate_facing" },
+    "facing": "stone_gate_facing", "murderHoles": { "damage": 25, "every": 3, "reach": 3, "held": 4 } },
   { "id": "stone_gate_facing", "name": "Stone gatehouse", "kind": "gate", "size": [1, 1], "wallHeight": 6, "wall": "rampart",
     "cost": { "wood": 1, "stone": 3 }, "buildTime": 4, "sight": 2, "thick": true, "sturdy": 3, "walkway": true, "icon": "gate" },
   { "id": "watchtower", "name": "Watchtower", "kind": "tower", "size": [3, 3], "wallHeight": 7, "wall": "trestle",

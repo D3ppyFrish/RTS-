@@ -38,6 +38,7 @@ namespace Rts.Game;
 ///   camera X,Z [YAW PITCH DISTANCE]   move the camera focus to block column (X, Z)
 ///   shot PATH            save a screenshot (after the frame has been drawn)
 ///   print                print a "UI ..." line describing the selection, clock and slice
+///   untilstones N        wait (up to 3600 frames) until N stones in all have dropped through gates' murder holes
 ///   quit                 exit (also happens after the last step)
 /// Screen coordinates are viewport pixels (1600x900 by default).
 /// </summary>
@@ -48,6 +49,9 @@ public sealed class InputScript
     private long _waitUntilTick = -1;
     private int _tickTimeout;
     private int _waitForMatch;
+    // An "untilstones" step: the stones dropped it waits for (-1 for none), and the frames left to wait.
+    private long _untilStones = -1;
+    private int _untilFrames;
     private string? _pendingShot;
     private MouseButtonMask _held;
     private Vector2 _mouse;
@@ -84,6 +88,12 @@ public sealed class InputScript
             if ((main.Sim?.Tick ?? 0) < _waitUntilTick && !main.MatchEnded && _tickTimeout-- > 0) return;
             _waitUntilTick = -1;
         }
+        if (_untilStones >= 0)
+        {
+            if ((main.Sim?.Combat.StonesDropped ?? 0) < _untilStones && !main.MatchEnded && _untilFrames-- > 0) return;
+            if (_untilFrames < 0) GD.PrintErr($"Input script: {_untilStones} stones never dropped");
+            _untilStones = -1;
+        }
         if (_waitForMatch > 0)
         {
             if (main.Sim == null && --_waitForMatch > 0) return;
@@ -111,6 +121,10 @@ public sealed class InputScript
             case "ticks":
                 _waitUntilTick = (main.Sim?.Tick ?? 0) + Int(parts, 1, 1);
                 _tickTimeout = 600;
+                return false;
+            case "untilstones":
+                _untilStones = Int(parts, 1, 1);
+                _untilFrames = 3600;
                 return false;
             case "waitmatch":
                 _waitForMatch = 3600;

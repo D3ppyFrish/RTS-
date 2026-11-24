@@ -690,6 +690,27 @@ public class HardAiTests
     }
 
     [Fact]
+    public void WithMurderHolesHardPostsAnArcherByEveryGateSoItIsHeld()
+    {
+        var (sim, hall) = ATownToWall(0);
+        sim.Economy.Grant(0, sim.Content.Tech("masonry"));
+        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        var players = new[] { ai };
+        FinishWall(sim, hall, "stone");
+        Play(sim, players, () => false, 1);
+        AssertWalled(sim, ai);
+        var archers = Enumerable.Range(0, 8).Select(k => sim.SpawnUnit(0, "archer", hall.MaxX + 3 + k % 4, hall.MaxZ + 3 + k / 4)).ToArray();
+        Building GateAt((int X, int Z, bool AlongX) g) => sim.Buildings.AtColumn(g.X, g.Z)!;
+        bool AllHeld() => ai.TownGates.All(g => sim.Combat.Held(GateAt(g), GateAt(g).Def.MurderHoles!));
+        Assert.All(ai.TownGates, g => Assert.NotNull(GateAt(g).Def.MurderHoles));
+        var log = new List<Command>();
+        Assert.True(Play(sim, players, AllHeld, 150 * Tps, log),
+            $"every gate to be held; {ai.TownGates.Count(g => sim.Combat.Held(GateAt(g), GateAt(g).Def.MurderHoles!))} of {ai.TownGates.Count} are; gates "
+            + string.Join(" ", ai.TownGates.Select(g => $"{g.X},{g.Z}")) + "; archers " + string.Join(" ", archers.Select(id => sim.Units.IndexOf(id) is var i && i >= 0
+                ? $"{sim.Units.X[i].FloorToInt()},{sim.Units.Y[i]},{sim.Units.Z[i].FloorToInt()}:{sim.Units.Job[i]}/{sim.Units.Order[i]}" : "dead")));
+    }
+
+    [Fact]
     public void AWaveLeavesAQuarterOfTheSoldiersAtHomeForABalancedFactionAndFewerForOneItPlaysInWaves()
     {
         foreach (int player in new[] { 0, 1 })
