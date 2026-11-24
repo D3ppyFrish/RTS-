@@ -73,7 +73,7 @@ public sealed class SandboxSystem
             case SandboxGoodsCommand c: if (On) Goods(c); return true;
             case SandboxDamageCommand c:
                 if (On && c.Damage > 0 && _sim.Buildings.AtColumn(c.X, c.Z) is { } hit)
-                    _sim.Combat.HitByTree(hit, Math.Min(c.Damage, 100000), c.X, c.Z, hit.Owner);
+                    _sim.Combat.HitByTree(hit, Math.Min(c.Damage, 100000), c.X - 1, c.Z, hit.Owner); // as from the west, so what is knocked out flies off east
                 return true;
             case SandboxTechCommand c: if (On) Tech(c); return true;
             case SandboxCheatCommand c:

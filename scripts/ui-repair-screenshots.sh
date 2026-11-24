@@ -55,7 +55,7 @@ clickworld 169,g,401 shift
 wait 2
 print
 clickworld 166,g,400 right
-ticks 150
+ticks 30
 camera 167,400 250 40 18
 wait 3
 print
@@ -75,6 +75,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "$(field "${UI[0]}" damaged)" -ge 5 ] || fail "the wall was not knocked about: ${UI[0]}"
 [ "$(field "${UI[1]}" selected)" -ge 3 ] || fail "the workers were not selected: ${UI[1]}"
 [ "$(field "${UI[2]}" repairing)" -ge 1 ] || fail "nobody is repairing the wall: ${UI[2]}"
+[ "$(field "${UI[2]}" damaged)" -ge 1 ] || fail "the wall was whole before the shot: ${UI[2]}"
 [ "$(field "${UI[3]}" damaged)" -eq 0 ] || fail "the wall is still damaged: ${UI[3]}"
 [ "$(grep -c '^Saved screenshot' "$LOG")" -eq 2 ] || fail "missing screenshots"
 echo "UI repair screenshot test OK: $OUT"
