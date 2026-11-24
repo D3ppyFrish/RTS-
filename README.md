@@ -373,7 +373,7 @@ material; stones, planks, shingles and a shade per voxel are drawn by the shader
   texture has its shadows painted in. Add it as a rig with `ImportedRig("res://models/NAME.vox.gz")` in
   `Sculpted.cs`; it gets the same levels of detail but stands still (one part, no limbs). The knight
   (`game/models/knight.vox.gz`) was made this way, and so were the Settlers' worker, militia, spearman, pathfinder,
-  archer, rider (imported at 84) and mage (the Orcs keep their own sculpted or plain versions).
+  archer, rider (imported at 84), mage and healer (the Orcs keep their own sculpted or plain versions).
 - **Castle** (`DetailedKeep`): `--keeps=N` puts N stone castles (curtain wall, round towers, gatehouse,
   keep, banners in your colour) on flat ground round the camera focus. They are scenery, not buildings of
   the rules: units walk through them. Past 60 m each is drawn with a mesh a quarter as fine
