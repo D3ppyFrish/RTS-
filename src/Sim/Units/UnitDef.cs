@@ -274,6 +274,16 @@ public sealed class UnitDef
     public int Carry { get; init; }
 
     /// <summary>
+    /// A pack pony (<c>"runs"</c> in the data; only for role hauler): it runs goods to building sites and workshops and
+    /// carries what workshops, quarries and mines make back to storage (see <see cref="Economy.EconomySystem.StepBring"/>),
+    /// and takes no supply duty between storehouses, which is the cart's work.
+    /// </summary>
+    public bool Runs { get; init; }
+
+    /// <summary>A cart: a hauler on supply duty between storage (role <see cref="UnitRole.Hauler"/>, not a pack pony).</summary>
+    public bool IsCart => IsHauler && !Runs;
+
+    /// <summary>
     /// For a boat (role <see cref="UnitRole.Boat"/>, <c>"seats"</c> in the data): how many units it carries. It sails
     /// only on open water and never sets foot on land (see <see cref="BoatSystem"/>); 0 for every other unit.
     /// </summary>

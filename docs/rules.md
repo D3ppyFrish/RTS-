@@ -206,6 +206,25 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   your housing, is not a worker (houses, farms and the governor count workers; making all your workers automatic
   leaves it as it is), and enemies kill it like a caravan. Matches do not start with carts; computer players train them once they have a sawmill and
   storehouses out by their work (see Carts under Computer players). All numbers are first guesses for playtesting.
+- **Far sites and pack ponies** (`PonyTests`; `runs` and `carry` in `data/units.json`, `EconomySystem.Ponies.cs`; #149:
+  the designer's "a fast-moving unit to move materials from storehouses to work sites and vice versa"): a building
+  (not a wall or bridge stretch) whose nearest storage is more than 32 columns from its middle when it is started is a
+  **far site**. It is paid for as ever, but its goods are set aside at storage and have to be carried out to it, and its
+  work goes only as far as the share of its cost carried out so far (a house's 30 wood: 15 out, half the work). Its
+  builders fetch what is missing themselves, a worker's load (5) at a time, from the storage nearest the site, and leave
+  what they carried of their own there on the way. Storage built within 32 columns of it since brings its goods to hand
+  at once. The site's panel says what is still to be carried out. The **Handcarts** tech (`carts`) no longer makes
+  workers carry more: it lets the town hall train the **pack pony** (30 food, 10 wood, 12 seconds; speed 6 where a worker
+  has 4 and a cart 3; 8 goods a run; 60 hit points). A pony comes out automatic and finds its work on its own, nearest
+  first: the goods a far site still needs that nobody is bringing yet (it runs them out, again and again until none are
+  left); with none, goods made at a workshop or smelter, fruit at an orchard, or stone, ore or food piled at a quarry,
+  mine or fishing hut, to carry to the nearest storage, or what a workshop or smelter takes in (as its worker would,
+  up to the same amounts), one pony to a building. While a player has a pony, quarry, mine and fishing hut workers put
+  what each round gives on a pile at the building (up to 20) and start the next round, instead of walking it to
+  storage. A sawmill with a pony and no worker still saws. Right-click a site, workshop, smelter, quarry, mine or
+  orchard with ponies selected to send them there. A pony does not gather, build, take supply duty (the cart's work:
+  it moves bulk between storehouses, the pony does the short, quick runs) or fight, and enemies kill it like a cart.
+  All numbers are first guesses for playtesting.
 - **Raids** (`CaptureCommand`, `BurnCommand`): units at an enemy storehouse capture it with its goods
   in 10 seconds or burn it and its goods in 5, unless one of the owner's units is within 8 blocks (and
   a soldier among them will fight the raiders).
@@ -1821,6 +1840,10 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   home, where raiders reach it last and its workshops are. Its workers leave the supply duty to the carts: Easy and
   Normal take supply off their default work list then (Hard's lists never have it). The classic level never trains
   carts. All numbers are first guesses.
+- **Pack ponies** (Easy, Normal and Hard; `AiPlayer.Ponies` in `AI/AiPlayer.Carts.cs`, tests in `AiCartTests`): once
+  it has Handcarts and a finished sawmill it trains 2 pack ponies at the town hall while it has room and the goods
+  (Hard: only while no enemies are at its buildings). They find their work on their own. The classic level never
+  trains them.
 - **Listening posts** (Easy, Normal and Hard; `AI/AiPlayer.Listening.cs`, tests in `AiListeningTests`): sappers
   tunnel under walls unseen, so once it has a finished barracks it keeps one listening post 14 columns from its town
   hall towards the enemy (the nearest enemy town hall it knows of, else the last enemy building it saw; by the hall if

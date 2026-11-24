@@ -64,14 +64,43 @@ public class AiCartTests
                 sim.Step();
             }
             for (int i = 0; i < u.Count; i++)
-                hauled |= u.Owner[i] == 0 && sim.Content.Units[u.Def[i]].IsHauler && u.Job[i] == UnitJob.Supply
+                hauled |= u.Owner[i] == 0 && sim.Content.Units[u.Def[i]].IsCart && u.Job[i] == UnitJob.Supply
                     && u.JobTarget[i] == hall.Id && u.CarryAmount[i] > 0;
         }
         return hauled;
     }
 
     private static int Carts(Simulation sim) =>
-        Enumerable.Range(0, sim.Units.Count).Count(i => sim.Units.Owner[i] == 0 && sim.Content.Units[sim.Units.Def[i]].IsHauler);
+        Enumerable.Range(0, sim.Units.Count).Count(i => sim.Units.Owner[i] == 0 && sim.Content.Units[sim.Units.Def[i]].IsCart);
+
+    private static int Ponies(Simulation sim) =>
+        Enumerable.Range(0, sim.Units.Count).Count(i => sim.Units.Owner[i] == 0 && sim.Content.Units[sim.Units.Def[i]].Runs);
+
+    [Theory]
+    [InlineData(AiLevel.Easy)]
+    [InlineData(AiLevel.Hard)]
+    public void WithHandcartsAndASawmillASmartComputerTrainsTwoPackPonies(AiLevel level)
+    {
+        var (sim, hall, _) = Town();
+        foreach (var t in new[] { "roads", "carts" }) sim.Economy.Grant(0, sim.Content.Tech(t));
+        var ai = new AiPlayer(0, 1, level);
+        Play(sim, ai, 90, hall);
+        Assert.Equal(AiPlayer.MostPonies, Ponies(sim));
+        Play(sim, ai, 30, hall);
+        Assert.Equal(AiPlayer.MostPonies, Ponies(sim));
+    }
+
+    [Fact]
+    public void NoPackPoniesWithoutASawmillOrForTheClassicLevel()
+    {
+        foreach (var (level, sawmill) in new[] { (AiLevel.Classic, true), (AiLevel.Normal, false) })
+        {
+            var (sim, hall, _) = Town(sawmill);
+            foreach (var t in new[] { "roads", "carts" }) sim.Economy.Grant(0, sim.Content.Tech(t));
+            Play(sim, new AiPlayer(0, 1, level), 60, hall);
+            Assert.Equal(0, Ponies(sim));
+        }
+    }
 
     [Theory]
     [InlineData(AiLevel.Easy)]

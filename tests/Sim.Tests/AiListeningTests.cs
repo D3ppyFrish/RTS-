@@ -100,7 +100,8 @@ public class AiListeningTests
         Assert.True(ai.Diggers(sim));
         foreach (int id in sappers) sim.Units.Remove(id); // gone off again
 
-        Play(sim, ai, 60, hall);
+        // Out where the sappers were, far from storage: its builders carry the post's goods out (#149).
+        Play(sim, ai, 150, hall);
         var posts = Posts(sim);
         Assert.Equal(2, posts.Length); // the second hears where they were; that spot needs no third
         var second = posts.Single(p => p.Id != first.Id);

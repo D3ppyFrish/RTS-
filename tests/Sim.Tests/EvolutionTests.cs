@@ -184,7 +184,7 @@ public class EvolutionTests
     public void AForemanBuildsHalfAsFastAgain()
     {
         var sim = Flat();
-        var store = Place(sim, Settlers, "storehouse", 40, 40);
+        var store = Place(sim, Settlers, "storehouse", 24, 16);
         store.Stock[(int)Good.Wood] = 100;
         int worker = sim.SpawnUnit(Settlers, "worker", 10, 10);
         int foreman = sim.SpawnUnit(Settlers, "foreman", 10, 30);
@@ -260,7 +260,7 @@ public class EvolutionTests
     {
         var sim = Flat();
         foreach (int p in new[] { Settlers, Orcs })
-            Place(sim, p, "storehouse", 10 + 30 * p, 40).Stock[(int)Good.Wood] = 100;
+            Place(sim, p, "storehouse", 10 + 30 * p, 22).Stock[(int)Good.Wood] = 100;
         int settler = sim.SpawnUnit(Settlers, "worker", 10, 10);
         int orc = sim.SpawnUnit(Orcs, "worker", 40, 10);
         sim.Schedule(0, new BuildCommand(Settlers, new[] { settler }, "house", 12, 8));

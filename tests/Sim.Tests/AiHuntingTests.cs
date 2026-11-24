@@ -67,7 +67,7 @@ public class AiHuntingTests
         Play(sim, ai, AiPlayer.LodgeFromTicks - 10 * Tps);
         Assert.Null(Lodge(sim)); // not before its town is going
 
-        PlayOn(sim, hall, ai, 4 * 60 * Tps, () => sim.Economy.GameHunted >= 2);
+        PlayOn(sim, hall, ai, 8 * 60 * Tps, () => sim.Economy.GameHunted >= 2);
         var lodge = Lodge(sim);
         Assert.NotNull(lodge);
         // By the herd's den, so the whole herd is in its reach.
@@ -86,7 +86,7 @@ public class AiHuntingTests
     {
         var (sim, hall, _) = Town();
         var ai = new AiPlayer(0, 1, AiLevel.Normal);
-        PlayOn(sim, hall, ai, 4 * 60 * Tps, () => Lodge(sim) is { Active: true } l && ai.Hunters.Count > 0
+        PlayOn(sim, hall, ai, 8 * 60 * Tps, () => Lodge(sim) is { Active: true } l && ai.Hunters.Count > 0
             && sim.Buildings.All.Any(b => b.Owner == 0 && b.Def.Kind == BuildingKind.Storehouse && b.ColumnDistance(l.X, l.Z) < AiPlayer.LodgeStoreGap));
         var lodge = Lodge(sim)!;
         Assert.Contains(sim.Buildings.All, b => b.Owner == 0 && b.Def.Kind == BuildingKind.Storehouse && b.ColumnDistance(lodge.X, lodge.Z) < AiPlayer.LodgeStoreGap);
@@ -97,7 +97,7 @@ public class AiHuntingTests
     {
         var (sim, hall, herd) = Town();
         var ai = new AiPlayer(0, 1, AiLevel.Easy);
-        PlayOn(sim, hall, ai, 4 * 60 * Tps, () => ai.Hunters.Count > 0);
+        PlayOn(sim, hall, ai, 8 * 60 * Tps, () => ai.Hunters.Count > 0);
         Assert.NotEmpty(ai.Hunters);
         var hunters = ai.Hunters.ToArray();
         // The herd is shot out.

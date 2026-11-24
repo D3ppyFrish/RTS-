@@ -322,6 +322,14 @@
     "speed": 3, "hp": 90, "model": "cart", "carry": 20,
     "armor": { "torso": 1 },
     "cost": { "food": 20, "wood": 20, "planks": 15 }, "trainTime": 15, "trainedAt": "town_hall" },
+  // A pack pony (Handcarts, #149) does the short, quick runs where the cart moves bulk between storehouses: goods a
+  // building site still needs out to it from storage, what a workshop takes in, and what workshops, quarries and mines
+  // make back to storage. Fast, but it carries little. It does not fight, gather or build. First guesses for playtesting.
+  { "id": "pack_pony", "name": "Pack pony", "role": "hauler", "runs": true,
+    "description": "A quick pony with panniers. On its own it runs the goods a building site still needs out from storage, brings a sawmill, mason's yard or smelter what it works, and carries what workshops, quarries and mines make back to storage, 8 goods a run. It does not gather, build or fight.",
+    "speed": 6, "hp": 60, "model": "pack_pony", "carry": 8,
+    "armor": { "torso": 1 },
+    "cost": { "food": 30, "wood": 10 }, "trainTime": 12, "trainedAt": "town_hall", "requires": "carts" },
 
   // A ship sails open water and carries units across it (role boat, "seats" in the data; the harbor concept art). It is
   // built at a dock on the shore, never sets foot on land, and does not fight; those it carries go down with it.

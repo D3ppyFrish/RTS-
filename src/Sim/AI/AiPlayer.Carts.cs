@@ -30,7 +30,8 @@ public sealed partial class AiPlayer
     private void Carts(Simulation sim, Building hall, Action<Command> issue)
     {
         if (!Smart || !hall.Active) return;
-        var cart = FirstTrained(sim, hall, UnitRole.Hauler);
+        Ponies(sim, hall, issue);
+        var cart = Hauler(sim, hall, pony: false);
         if (cart == null) return;
         bool sawmill = false;
         int stores = 0, queued = 0;
@@ -40,12 +41,12 @@ public sealed partial class AiPlayer
             if (b.Def.Kind == BuildingKind.Workshop && b.Def.Makes == Good.Planks) sawmill = true;
             if (b.Def.Storage && b != hall) stores++;
             foreach (int q in b.Queue)
-                if (sim.Content.Units[q].IsHauler) queued++;
+                if (sim.Content.Units[q].IsCart) queued++;
         }
         int carts = 0;
         var u = sim.Units;
         for (int i = 0; i < u.Count; i++)
-            if (u.Owner[i] == Player && sim.Content.Units[u.Def[i]].IsHauler) carts++;
+            if (u.Owner[i] == Player && sim.Content.Units[u.Def[i]].IsCart) carts++;
 
         if (carts > 0) KeepHallStocked(sim, hall, issue);
         if (!sawmill || stores < CartStores || carts + queued >= MostCarts || queued > 0) return;
@@ -62,6 +63,44 @@ public sealed partial class AiPlayer
             if (hall.Supply[(int)g] != HallKeep) issue(new SupplyCommand(Player, hall.Id, g, HallKeep));
         if (!Hard && sim.Economy.Player(Player).DefaultPriorities == Automation.WorkPriorities.Standard)
             issue(new DefaultPriorityCommand(Player, NoSupply));
+    }
+
+    /// <summary>Pack ponies it keeps once it has Handcarts and a sawmill (#149).</summary>
+    public const int MostPonies = 2;
+
+    /// <summary>The first cart (or pack pony) the hall trains that the player has unlocked, or null.</summary>
+    private UnitDef? Hauler(Simulation sim, Building hall, bool pony)
+    {
+        foreach (string id in hall.Def.Trains)
+            if (sim.Content.TryGetUnit(id, out var d) && d.IsHauler && d.Runs == pony && sim.Economy.Unlocked(Player, d)) return d;
+        return null;
+    }
+
+    /// <summary>
+    /// Pack ponies: once it has Handcarts (a pony unlocked) and a finished sawmill, it trains up to <see cref="MostPonies"/>
+    /// at the hall to run goods to its far sites and its workshops' goods home. They find their work on their own.
+    /// </summary>
+    private void Ponies(Simulation sim, Building hall, Action<Command> issue)
+    {
+        var pony = Hauler(sim, hall, pony: true);
+        if (pony == null) return;
+        bool sawmill = false;
+        int ponies = 0;
+        foreach (var b in sim.Buildings.All)
+        {
+            if (b.Owner != Player) continue;
+            if (b.Active && b.Def.Kind == BuildingKind.Workshop && b.Def.Makes == Good.Planks) sawmill = true;
+            foreach (int q in b.Queue)
+                if (sim.Content.Units[q].Runs) ponies++;
+        }
+        var u = sim.Units;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == Player && sim.Content.Units[u.Def[i]].Runs) ponies++;
+        if (!sawmill || ponies >= MostPonies) return;
+        var econ = sim.Economy;
+        if (econ.Housing(Player) <= econ.Population(Player) + QueuedAll(sim) || !Affordable(sim, pony.Cost)) return;
+        issue(new TrainCommand(Player, hall.Id, pony.Id));
+        Note(sim, $"trains a {pony.Name.ToLowerInvariant()} to run goods to its sites and workshops");
     }
 
     /// <summary>Units waiting to be trained in all its buildings.</summary>

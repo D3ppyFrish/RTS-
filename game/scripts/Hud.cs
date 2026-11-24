@@ -2290,6 +2290,14 @@ public partial class Hud : CanvasLayer
                 if (u.Job[i] == UnitJob.Build && u.JobTarget[i] == b.Id) builders++;
             text.Append($"Being built: {100L * b.Work / b.Def.BuildTicks}%   {builders} builder{(builders == 1 ? "" : "s")}");
             if (builders == 0) text.Append(" (right click it with workers)");
+            if (b.HasDue)
+            {
+                // Far from storage: goods still to be carried out to it (by its builders, or pack ponies).
+                var due = new List<string>();
+                foreach (var g in Goods.All)
+                    if (b.Due[(int)g] > 0) due.Add($"{b.Due[(int)g]} {Goods.Name(g).ToLowerInvariant()}");
+                text.Append($"\nFar from storage, still to be carried out: {string.Join(", ", due)}");
+            }
         }
         else
         {

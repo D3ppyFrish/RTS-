@@ -891,6 +891,18 @@ public static class UnitModels
             .Box(-3, 5, -8, 2, 7, -2, Leather).Box(-3, 8, -7, 2, 8, -3, Team)            // the load under a cloth
             .Box(-5, 0, -7, -5, 4, -3, Dark).Box(4, 0, -7, 4, 4, -3, Dark)               // the wheels
             .Box(-5, 1, -8, -5, 3, -2, Dark).Box(4, 1, -8, 4, 3, -2, Dark),
+        // A pack pony (Handcarts): small and quick, with a mane, panniers on both flanks and a cloth in its owner's colour.
+        "pack_pony" => new Builder()
+            .Box(-2, 4, -4, 1, 6, 3, Horse)                                              // body
+            .Box(-2, 0, -4, -1, 3, -3, Horse).Box(0, 0, -4, 1, 3, -3, Horse)             // hind legs
+            .Box(-2, 0, 2, -1, 3, 3, Horse).Box(0, 0, 2, 1, 3, 3, Horse)                 // forelegs
+            .Box(-1, 6, 3, 0, 9, 4, Horse).Box(-1, 8, 5, 0, 9, 7, Horse)                 // neck and head
+            .Box(-1, 8, 7, 0, 8, 7, Dark)                                                // nose
+            .Box(-1, 10, 3, 0, 10, 4, Dark).Box(-1, 7, 2, 0, 9, 2, Dark)                 // mane
+            .Box(-1, 3, -5, 0, 5, -5, Dark)                                              // tail
+            .Box(-2, 7, -2, 1, 7, 1, Team)                                               // saddle cloth
+            .Box(-4, 3, -3, -3, 6, 1, Leather).Box(2, 3, -3, 3, 6, 1, Leather)           // panniers
+            .Box(-4, 6, -2, -3, 6, 0, Wood).Box(2, 6, -2, 3, 6, 0, Rock),                // planks and stone in them
         "goblin_cutthroat" => new Builder().Goblin()
             .Box(-2, 11, -2, 1, 11, 1, Dark)                                             // bandana
             .Box(3, 3, 1, 3, 4, 1, Dark).Box(3, 5, 1, 3, 8, 1, Steel)                    // long knife

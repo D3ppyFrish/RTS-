@@ -43,6 +43,7 @@ public sealed partial class EconomySystem
             case UnitJob.Ladder: StepLadder(i); break;
             case UnitJob.Fell: StepFell(i); break;
             case UnitJob.Prospect: StepProspect(i); break;
+            case UnitJob.Bring: StepBring(i); break;
         }
     }
 
@@ -226,7 +227,15 @@ public sealed partial class EconomySystem
         }
         if (b == null || b.Owner != U.Owner[i] || !b.WantsBuilders)
         {
-            EndJob(i);
+            // Goods it was bringing out to a site that is gone or up go back to storage.
+            if (U.JobStore[i] != 0) ToStorageOrEnd(i);
+            else EndJob(i);
+            return;
+        }
+        var u = U;
+        if (u.Phase[i] == JobPhase.Fetch)
+        {
+            StepFetchFor(i, b);
             return;
         }
         if (WalkToBuilding(i, b, out bool there)) return;
@@ -235,14 +244,26 @@ public sealed partial class EconomySystem
             SetPhase(i, JobPhase.ToWork);
             return;
         }
+        // A far site's goods (see EconomySystem.Ponies.cs): what it fetched goes in, and with no more work possible
+        // until more is carried out, it goes for some itself (unless all that is missing is on its way already).
+        int most = b.Def.BuildTicks;
+        if (b.Upgrade == null && b.HasDue)
+        {
+            HandOver(i, b);
+            most = MaxWork(b);
+            if (b.Work >= most)
+            {
+                StartFetch(i, b);
+                return;
+            }
+        }
         // A tick of work for each 100 of the unit's work speed (JobTimer keeps the rest): on the site, or on
         // the upgrade of a building that stands.
-        var u = U;
         u.JobTimer[i] += WorkOf(i);
         for (; u.JobTimer[i] >= 100; u.JobTimer[i] -= 100)
         {
             if (b.Upgrade != null) b.UpgradeWork = Math.Min(b.UpgradeWork + 1, b.Upgrade.BuildTicks);
-            else if (b.Work < b.Def.BuildTicks) b.Work++;
+            else if (b.Work < most) b.Work++;
         }
         if ((_sim.Tick + u.Id[i]) % Tps == 0) _sim.Evolution.Built(i);
     }
@@ -323,6 +344,14 @@ public sealed partial class EconomySystem
         int amount = next.Amount;
         // A fishing hut's catch is bigger while its owner holds the merfolk's cove (CityStateDef.FishingBonus).
         if (quarry.Def.Shore && next.Good == Good.Food) amount += amount * _sim.Cities.FishingBonusOf(u.Owner[i]) / 100;
+        if (PileOf(quarry) < QuarryPile && HasPony(u.Owner[i]))
+        {
+            // A pack pony carries it in: it goes on the pile at the building, and the next round begins.
+            quarry.Stock[(int)next.Good] += amount;
+            Player(u.Owner[i]).Gathered[(int)next.Good] += amount;
+            u.JobTimer[i] = 0;
+            return;
+        }
         AddCarry(i, next.Good, amount);
         GoToStorage(i);
     }
@@ -346,7 +375,8 @@ public sealed partial class EconomySystem
         switch (u.Phase[i])
         {
             case JobPhase.ToStore:
-                if (StepToStore(i)) DecideHaul(i, smelter);
+                // A pony is free again once it has unloaded: the next run may be to a site.
+                if (StepToStore(i)) { if (IsPony(i)) EndJob(i); else DecideHaul(i, smelter); }
                 return;
             case JobPhase.Wait:
                 if (--u.JobTimer[i] <= 0) DecideHaul(i, smelter);
@@ -362,13 +392,13 @@ public sealed partial class EconomySystem
             return;
         }
         // At the smelter: drop off ore or coal (wood at a sawmill), or pick up iron (planks).
-        var made = Makes(smelter.Def);
+        var made = Piled(smelter);
         if (u.CarryAmount[i] > 0 && Feeds(smelter, u.Carry[i]))
         {
             smelter.Stock[(int)u.Carry[i]] += u.CarryAmount[i];
             u.CarryAmount[i] = 0;
         }
-        else if (u.CarryAmount[i] == 0 && made is { } good && smelter.Stock[(int)good] > 0)
+        else if (u.CarryAmount[i] == 0 && made is { } good)
         {
             int take = System.Math.Min(LoadOf(i), smelter.Stock[(int)good]);
             smelter.Stock[(int)good] -= take;
@@ -395,7 +425,7 @@ public sealed partial class EconomySystem
     {
         BuildingKind.Shrine => g == Good.Crystal,
         BuildingKind.Workshop => g == b.Def.Takes,
-        BuildingKind.Orchard => false,
+        BuildingKind.Orchard or BuildingKind.Quarry => false,
         _ => g is Good.IronOre or Good.Coal,
     };
 
@@ -417,12 +447,12 @@ public sealed partial class EconomySystem
             else GoToStorage(i);
             return;
         }
-        if (Makes(smelter.Def) is { } made && smelter.Stock[(int)made] > 0)
+        if (Piled(smelter) != null)
         {
             SetPhase(i, JobPhase.ToWork);
             return;
         }
-        if (smelter.Def.Kind == BuildingKind.Orchard)
+        if (smelter.Def.Kind is BuildingKind.Orchard or BuildingKind.Quarry)
         {
             // An orchard's baskets are all carried away: on to other work (automation sends it back for the next).
             EndJob(i);
@@ -451,7 +481,9 @@ public sealed partial class EconomySystem
         }
         if (from == null)
         {
-            Wait(i);
+            // Nothing to fetch: a pony goes on to other work (it is sent back when there is some).
+            if (IsPony(i)) EndJob(i);
+            else Wait(i);
             return;
         }
         u.JobStore[i] = from.Id;
@@ -472,7 +504,7 @@ public sealed partial class EconomySystem
         switch (Approach(i, AtBuilding(i, s)))
         {
             case Travel.Arrived:
-                int take = System.Math.Min(Capacity(u.Owner[i]), s.Stock[(int)good]);
+                int take = System.Math.Min(LoadOf(i), s.Stock[(int)good]);
                 s.Stock[(int)good] -= take;
                 u.Carry[i] = good;
                 u.CarryAmount[i] = take;

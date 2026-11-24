@@ -211,8 +211,11 @@ public sealed partial class AutomationSystem
 
     private bool IsWorker(int i) => _sim.Content.Units[U.Def[i]].Role == UnitRole.Worker;
 
-    /// <summary>True for a cart (role <see cref="UnitRole.Hauler"/>), whose only work is supply duty.</summary>
-    private bool IsCart(int i) => _sim.Content.Units[U.Def[i]].IsHauler;
+    /// <summary>True for a cart (role <see cref="UnitRole.Hauler"/>, not a pack pony), whose only work is supply duty.</summary>
+    private bool IsCart(int i) => _sim.Content.Units[U.Def[i]].IsCart;
+
+    /// <summary>True for a cart or a pack pony (role <see cref="UnitRole.Hauler"/>): automatic or not, held or not, like a worker.</summary>
+    private bool IsHauler(int i) => _sim.Content.Units[U.Def[i]].IsHauler;
 
     /// <summary>A cart's priority list: supply duty and nothing else.</summary>
     private static readonly ulong CartPriorities = WorkPriorities.Pack(WorkKind.Supply);
@@ -228,7 +231,7 @@ public sealed partial class AutomationSystem
     {
         foreach (int i in _sim.OwnedUnits(c))
         {
-            if (!IsWorker(i) && !IsCart(i)) continue;
+            if (!IsWorker(i) && !IsHauler(i)) continue;
             U.Auto[i] = c.On;
             if (c.On) LetGo(i);
         }
@@ -311,7 +314,7 @@ public sealed partial class AutomationSystem
         }
         foreach (int i in _sim.OwnedUnits(c))
         {
-            if (!IsWorker(i) && !IsCart(i)) continue;
+            if (!IsWorker(i) && !IsHauler(i)) continue;
             U.Held[i] = held;
             _assigned.Remove(U.Id[i]);
             // Moved out of where it was stuck, maybe: it no longer waits longer and longer.
@@ -342,6 +345,7 @@ public sealed partial class AutomationSystem
             var store = Economy.NearestStorage(owner, x, z);
             return store != null ? new WorkCommand(owner, me, store.Id) : null;
         }
+        if (Economy.IsPony(i)) return PonyJob(i, me);
 
         // The nearest building of each kind that needs a worker: a site short of builders (rank 0), a farm
         // with room (1), a smelter with no hauler (2), storage short under its supply rules (3), an orchard with

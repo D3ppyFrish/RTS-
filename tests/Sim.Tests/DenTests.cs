@@ -60,7 +60,7 @@ public class DenTests
     public void OrcsClearALairAndTurnTheDenIntoAWolfLodge()
     {
         var sim = Flat();
-        var hall = Place(sim, Orcs, "town_hall", 10, 10);
+        var hall = Place(sim, Orcs, "town_hall", 30, 40);
         hall.Stock[(int)Good.Wood] = 100;
         var lair = PlaceLair(sim);
         var wolves = lair.Pack.ToArray();
@@ -281,7 +281,7 @@ public class DenTests
         for (int run = 0; run < 2; run++)
         {
             var sim = Flat();
-            Place(sim, Orcs, "town_hall", 10, 10).Stock[(int)Good.Wood] = 100;
+            Place(sim, Orcs, "town_hall", 30, 40).Stock[(int)Good.Wood] = 100;
             var lair = PlaceLair(sim);
             int worker = sim.SpawnUnit(Orcs, "worker", DenX + 1, DenZ);
             Clear(sim, lair);

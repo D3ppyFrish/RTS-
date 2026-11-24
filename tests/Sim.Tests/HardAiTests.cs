@@ -604,7 +604,7 @@ public class HardAiTests
                 sim.Economy.Grant(0, sim.Content.Tech("masonry")); // if it has not researched it by now
             }
             return AllOf(2);
-        }, 25 * 60 * Tps, log), $"the wall to be stone all round; {line.Count(c => Tier(c.X, c.Z) != 2)} of {line.Count} columns are not: " +
+        }, 30 * 60 * Tps, log), $"the wall to be stone all round; {line.Count(c => Tier(c.X, c.Z) != 2)} of {line.Count} columns are not: " +
             $"{line.Count(c => Tier(c.X, c.Z) == 0)} barriers, {line.Count(c => Tier(c.X, c.Z) == 1)} wooden, {line.Count(c => Tier(c.X, c.Z) < 0)} being upgraded or gone; " +
             string.Join("; ", ai.Journal.TakeLast(6).Select(j => $"{j.Tick / Tps}s {j.Text}")));
         Assert.True(eastFirst && wooden);

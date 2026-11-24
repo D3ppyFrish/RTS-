@@ -145,6 +145,12 @@ public enum UnitJob : byte
     Fell,
     /// <summary>Sound the ground at column (<see cref="UnitStore.JobX"/>, JobZ) (see <see cref="ProspectCommand"/>).</summary>
     Prospect,
+    /// <summary>
+    /// A pack pony brings goods out to the far site <see cref="UnitStore.JobTarget"/> (see <see cref="Economy.EconomySystem.StepBring"/>):
+    /// fetches the good in <see cref="UnitStore.JobX"/> from storage <see cref="UnitStore.JobStore"/>, then carries it out.
+    /// JobStore stays set while it carries goods for the site.
+    /// </summary>
+    Bring,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

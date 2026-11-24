@@ -882,6 +882,12 @@ public partial class PlayerControl : Node
             foreach (int id in OwnWorkers(own))
                 if (b.WantsBuilders || b.Def.WorkerSlots > 0 || (b.Def.Storage && (u.CarryAmount[u.IndexOf(id)] > 0 || b.HasSupply && b.Active)))
                     working.Add(id);
+        // Pack ponies run goods out to your sites, and to and from your workshops, smelters, quarries, mines and orchards.
+        if (b.Owner == LocalPlayer && (b.State == BuildingState.Site
+                || b.Active && (b.Def.Kind is BuildingKind.Workshop or BuildingKind.Smelter or BuildingKind.Orchard || b.Def.IsQuarry)))
+            foreach (int id in OwnWithRole(own, UnitRole.Hauler))
+                if (_sim.Content.Units[u.Def[u.IndexOf(id)]].Runs)
+                    working.Add(id);
         // Carts unload at your storage, or take supply duty at storage with supply rules.
         if (b.Owner == LocalPlayer && b.Def.Storage && b.Active)
             foreach (int id in OwnWithRole(own, UnitRole.Hauler))
@@ -2456,11 +2462,21 @@ public partial class PlayerControl : Node
         int bearer = dusk.StaffBearer != 0 ? u.IndexOf(dusk.StaffBearer) : -1;
         string staff = bearer < 0 ? "none" : u.Owner[bearer] == LocalPlayer ? "own" : "other";
         string staffAt = bearer < 0 ? "none" : $"{u.X[bearer].FloorToInt()},{u.Y[bearer]},{u.Z[bearer].FloorToInt()}";
-        int onSupply = 0, carts = 0, cartsOnSupply = 0, cartLoad = 0;
+        int onSupply = 0, carts = 0, cartsOnSupply = 0, cartLoad = 0, ponies = 0, poniesBringing = 0, ponyLoad = 0, due = 0;
+        foreach (var b in _sim.Buildings.All)
+            if (b.Owner == LocalPlayer && b.State == BuildingState.Site)
+                foreach (int d in b.Due) due += d;
         for (int i = 0; i < u.Count; i++)
         {
             if (u.Owner[i] != LocalPlayer) continue;
             if (u.Job[i] == UnitJob.Supply) onSupply++;
+            if (_sim.Content.Units[u.Def[i]].Runs)
+            {
+                ponies++;
+                if (u.Job[i] == UnitJob.Bring) poniesBringing++;
+                ponyLoad = Math.Max(ponyLoad, u.CarryAmount[i]);
+                continue;
+            }
             if (!_sim.Content.Units[u.Def[i]].IsHauler) continue;
             carts++;
             if (u.Job[i] == UnitJob.Supply) cartsOnSupply++;
@@ -2481,6 +2497,7 @@ public partial class PlayerControl : Node
                $"ghost={(Ghost.Visible ? Ghost.Result.ToString() : "none")} road={_roadPreview.Count} " +
                $"plans={plans} plans_ready={ready} plan_mode={(PlanMode ? 1 : 0)} " +
                $"supply={(supply.Count > 0 ? string.Join(',', supply) : "none")} on_supply={onSupply} carts={carts} carts_on_supply={cartsOnSupply} cart_load={cartLoad} " +
+               $"ponies={ponies} ponies_bringing={poniesBringing} pony_load={ponyLoad} due={due} " +
                $"food={stock[(int)Good.Food]} food_rate={_sim.Economy.FoodPerMinute(LocalPlayer)} wood={stock[(int)Good.Wood]} stone={stock[(int)Good.Stone]} iron={stock[(int)Good.Iron]} " +
                $"techtree={(TechTreeOpen ? 1 : 0)} priorities_menu={(PrioritiesOpen ? 1 : 0)} " +
                $"default_priorities={WorkPriorities.ToLog(_sim.Automation.DefaultPriorities(LocalPlayer))} " +
