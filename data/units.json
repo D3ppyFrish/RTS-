@@ -50,6 +50,8 @@
 // walk speed percent faster and the first blow each strikes deals blow percent more; then it waits wait seconds
 // (from the start of the charge) before the next. While it drums, rivals with anything within heard columns see it
 // through the fog of war.
+// pen (optional, a monster): a tamed beast its owner can keep in a beast pen and loose from it as a stampede (see the
+// pen in buildings.json).
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -235,7 +237,7 @@
   { "id": "wolf", "name": "Wolf", "role": "monster",
     "description": "Hunts in packs around its den. Orcs who beat one can ride it or keep it.",
     "speed": 7, "hp": 60, "model": "wolf", "damage": 7, "attackTime": 1, "range": 1.25, "sight": 9,
-    "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true,
+    "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true, "pen": true,
     "lair": { "pack": 4, "guard": 12, "leash": 20, "reward": { "food": 150, "iron": 20 },
       "biome": "grassland", "count": 1, "atStarts": true, "roam": 32,
       "prizes": { "orcs": { "building": "wolf_lodge" }, "settlers": { "form": "wolfheart" } } },
@@ -243,7 +245,7 @@
   { "id": "boar", "name": "Wild boar", "role": "monster",
     "description": "Roots in the forests in small herds and charges anyone who comes near. Orcs who beat one can ride it to war, and anyone who clears a herd can pen boars at its wallow.",
     "speed": 6, "hp": 80, "model": "boar", "damage": 9, "attackTime": 1.25, "range": 1.25, "sight": 8,
-    "attack": "pierce", "body": "beast", "armor": { "body": 2 },
+    "attack": "pierce", "body": "beast", "armor": { "body": 2 }, "pen": true,
     "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 200 }, "biome": "forest", "count": 2, "roam": 24,
       "prizes": { "orcs": { "building": "boar_pen" }, "settlers": { "building": "boar_pen" } } },
     "ride": { "rider": "spearman", "becomes": "rider" } },

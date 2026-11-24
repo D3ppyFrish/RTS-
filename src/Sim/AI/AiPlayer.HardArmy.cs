@@ -140,6 +140,7 @@ public sealed partial class AiPlayer
     {
         Look(sim);
         Tame(sim, issue);
+        Pens(sim, hall, issue);
 
         var u = sim.Units;
         var (hx, hz) = Middle(hall);

@@ -30,6 +30,7 @@ scripts/ui-ship-screenshots.sh        # scripted ships: a dock by the river buil
 scripts/ui-governor-screenshots.sh    # scripted town governor: a Defence governor runs the town, putting up a barracks and four watchtowers
 scripts/ui-evolution-screenshots.sh   # scripted evolution: evolve buttons, auto-evolve, a knight's panel
 scripts/ui-monsters-screenshots.sh    # scripted wolf lairs: Orcs beat a pack, ride one wolf and recruit one; Settlers get the reward
+scripts/ui-stampede-screenshots.sh    # scripted beast pen: Orc wolves penned, then loosed as a stampede through a knot of spearmen
 scripts/ui-citystate-screenshots.sh   # scripted city-state: break the goblins' totem, hire goblins, a caravan trades, the ogres' hold, the kobolds' warren, the troll bridge, the centaur camp, the merfolk cove
 scripts/ui-match-screenshots.sh       # scripted match flow: start screen, surrender, defeat and its replay, victory
 scripts/ui-dominion-screenshots.sh    # scripted ancient sites: soldiers walk into a ruin and take it; its banner, the sites button, the alert

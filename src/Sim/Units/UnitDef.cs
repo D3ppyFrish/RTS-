@@ -118,6 +118,11 @@ public sealed class UnitDef
     public bool Bleeds { get; init; } = true;
     /// <summary>A wild monster that picks up a fresh blood trail follows it to the bleeding unit (see <see cref="MonsterSystem"/>).</summary>
     public bool TracksBlood { get; init; }
+    /// <summary>
+    /// A tamed beast its owner can keep in a beast pen and loose from it as a stampede (<c>"pen": true</c>; a monster;
+    /// see <c>CombatSystem.Stampede.cs</c>).
+    /// </summary>
+    public bool Pennable { get; init; }
     /// <summary>It can raise earth walls (see <see cref="SpellSystem"/>).</summary>
     public bool EarthWall { get; init; }
     /// <summary>

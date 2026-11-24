@@ -209,6 +209,7 @@ public sealed partial class CombatSystem
         foreach (int n in _losses) Mix(n);
         Mix(_kills.Count);
         foreach (int n in _kills) Mix(n);
+        HashStampedes(Mix);
         return h;
     }
 
@@ -259,9 +260,11 @@ public sealed partial class CombatSystem
         StepBleeding();
         StepBurst();
         StepWalls();
+        StepPens();
         BuildGrid();
         Rally();
         StepDrums();
+        StepStampede();
         if (tick % Tps == 0) RecoverMorale();
         for (int i = 0; i < u.Count; i++) StepUnit(i);
         for (int i = 0; i < u.Count; i++)
@@ -313,6 +316,7 @@ public sealed partial class CombatSystem
     {
         var u = U;
         if (u.Subdued[i]) return; // beaten: it waits for its owner's choice
+        if (u.Penned[i] != 0 || u.RunStage[i] != 0) return; // kept in a pen, or running in a stampede
         if (u.Rout[i] > 0)
         {
             // Running: it keeps going wherever it was running to, and rallies when the time is up.

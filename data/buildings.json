@@ -46,6 +46,13 @@
 // fromDen (optional): built only on a cleared monster den, by a faction whose prize there names it ("prizes" in units.json),
 // never from the build menu. yield and yieldTime (optional, together): goods it brings in on its own every
 // yieldTime seconds once finished, into its owner's storage nearest it.
+// Kind pen is a beast pen: a yard of trodden earth that units walk onto, ringed by a low stake fence (a look only). Its
+// owner's tamed beasts (units with "pen" in units.json) are sent into it and kept there, and loosed from it as a
+// stampede along a line the player drags. pen (needed, and only for it): keeps is how many beasts it holds; a stampede's
+// beasts run at speed columns a second for at most run columns (out of the pen to the line's start and on along it);
+// each beast that runs into an enemy deals it trample (crushing) and knocks it down for down seconds; one that runs into
+// an enemy's wooden building (palisade, planks or a watchtower's timber) strikes it once for smash and runs on if that
+// clears its way, and stone stops it. After the run the beasts walk at slow percent of their pace for tired seconds.
 // Kind quarry is a quarry or mine: workers work it like a farm (up to workerSlots at once) and never run it dry.
 // works is what a round of work gives and workTime the seconds a round takes (both needed, and only for a
 // quarry); with several goods, each worker's rounds give them in turn (iron_ore 4 then coal 2, and again), so
@@ -183,6 +190,9 @@
   { "id": "boar_pen", "name": "Boar pen", "kind": "house", "size": [4, 4], "wallHeight": 2,
     "wall": "palisade", "footing": "stone_brick", "roof": "thatch", "icon": "tusk", "fromDen": true,
     "cost": { "wood": 25 }, "buildTime": 12, "housing": 2, "yield": { "food": 8 }, "yieldTime": 15 },
+  { "id": "beast_pen", "name": "Beast pen", "kind": "pen", "size": [6, 6], "wallHeight": 1, "wall": "palisade",
+    "icon": "paw", "faction": "orcs", "requires": "orc_beast_pens", "cost": { "wood": 40 }, "buildTime": 15, "sight": 4,
+    "pen": { "keeps": 8, "speed": 14, "trample": 30, "down": 2, "smash": 60, "run": 60, "tired": 20, "slow": 50 } },
   { "id": "crab_pots", "name": "Crab pots", "kind": "house", "size": [3, 3], "wallHeight": 2,
     "wall": "palisade", "footing": "stone_brick", "roof": "thatch", "icon": "crab_shell", "faction": "orcs", "fromDen": true,
     "cost": { "wood": 20 }, "buildTime": 10, "housing": 2, "yield": { "food": 6 }, "yieldTime": 15 },

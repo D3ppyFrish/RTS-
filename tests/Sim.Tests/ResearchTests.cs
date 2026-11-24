@@ -236,22 +236,36 @@ public class ResearchTests
     [Fact]
     public void HitPointsGoUpForLivingAndNewUnits()
     {
+        // Hardened chitin (line infantry +10) is the hit point tech left since Beast pens became the pen (issue #152).
         var sim = Flat();
         Hall(sim, 0, 4, 4);
         var barracks = sim.Economy.PlaceFinished(0, sim.Content.Building("barracks"), 20, 4)!;
-        int rider = sim.SpawnUnit(0, "rider", 30, 30);
+        int spear = sim.SpawnUnit(0, "spearman", 30, 30);
         int worker = sim.SpawnUnit(0, "worker", 31, 30);
-        int enemy = sim.SpawnUnit(1, "rider", 40, 40);
-        Grant(sim, 0, "horse_breeding", "orc_beast_pens"); // cavalry +30
+        int enemy = sim.SpawnUnit(1, "spearman", 40, 40);
+        Grant(sim, 0, "deep_chitin"); // line infantry +10
         var u = sim.Units;
-        Assert.Equal(150, u.Hp[u.IndexOf(rider)]);
+        Assert.Equal(90, u.Hp[u.IndexOf(spear)]);
         Assert.Equal(40, u.Hp[u.IndexOf(worker)]);
-        Assert.Equal(120, u.Hp[u.IndexOf(enemy)]);
-        Assert.Equal(150, sim.Economy.MaxHp(0, sim.Content.Unit("rider")));
-        Assert.Equal(150, u.Hp[u.IndexOf(sim.SpawnUnit(0, "rider", 32, 30))]);
-        sim.Schedule(0, new TrainCommand(0, barracks.Id, "rider"));
-        RunUntil(sim, () => u.Count == 5, 600, "the trained rider");
-        Assert.Equal(150, u.Hp[4]);
+        Assert.Equal(80, u.Hp[u.IndexOf(enemy)]);
+        Assert.Equal(90, sim.Economy.MaxHp(0, sim.Content.Unit("spearman")));
+        Assert.Equal(90, u.Hp[u.IndexOf(sim.SpawnUnit(0, "spearman", 32, 30))]);
+        sim.Schedule(0, new TrainCommand(0, barracks.Id, "spearman"));
+        RunUntil(sim, () => u.Count == 5, 600, "the trained spearman");
+        Assert.Equal(90, u.Hp[4]);
+    }
+
+    [Fact]
+    public void BeastPensNoLongerToughensMounts()
+    {
+        // Issue #152: the flat +30 for cavalry is gone; Beast pens builds the beast pen (see StampedeTests).
+        var sim = Flat();
+        Hall(sim, 1, 4, 4);
+        var rider = sim.Content.Unit("wolf_rider");
+        int before = sim.Economy.MaxHp(1, rider);
+        Grant(sim, 1, "horse_breeding", "orc_beast_pens");
+        Assert.Equal(before, sim.Economy.MaxHp(1, rider));
+        Assert.True(sim.Economy.Unlocked(1, sim.Content.Building("beast_pen")));
     }
 
     [Fact]
