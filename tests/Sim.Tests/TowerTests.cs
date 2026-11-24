@@ -45,7 +45,7 @@ public class TowerTests
 
     private static Building Store(Simulation sim, int owner, int stone, int wood)
     {
-        var store = Place(sim, owner, "storehouse", 60, 60);
+        var store = Place(sim, owner, "storehouse", 40, 10);
         store.Stock[(int)Good.Stone] = stone;
         store.Stock[(int)Good.Wood] = wood;
         return store;

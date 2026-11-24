@@ -52,7 +52,7 @@ public class ContentTests
         foreach (var f in db.Factions) Assert.InRange(db.Techs.Count(t => t.Faction == f), 2, 4);
 
         // What the loader works out.
-        Assert.Equal(new[] { "worker", "caravan", "cart" }, db.Building("town_hall").Trains);
+        Assert.Equal(new[] { "worker", "caravan", "cart", "pack_pony" }, db.Building("town_hall").Trains);
         Assert.Equal(new[] { "spearman", "archer", "rider", "sapper", "mage", "healer" }, db.Building("barracks").Trains);
         Assert.True(db.RoadsNeedTech);
         Assert.Equal(2, db.Tech("smelting").Depth);
@@ -388,7 +388,7 @@ public class ContentTests
     [InlineData("techs.json", "\"name\": \"War drums\", \"faction\": \"orcs\"", "\"name\": \"War drums\", \"faction\": \"orks\"", "tech 'orc_war_drums': \"faction\" is \"orks\", which is not a faction")]
     [InlineData("techs.json", "\"building\": \"brood_chamber\"", "\"building\": \"hut\"", "tech 'deep_warrens', effect 1: \"building\" is \"hut\", which is not a building")]
     [InlineData("techs.json", "\"role\": \"cavalry\"", "\"role\": \"horse\"", "tech 'orc_beast_pens', effect 1: \"role\" is \"horse\", which is not one of: worker, line_infantry")]
-    [InlineData("techs.json", "\"type\": \"carry\"", "\"type\": \"carrying\"", "tech 'carts', effect 1: \"type\" is \"carrying\", which is not an effect")]
+    [InlineData("techs.json", "\"type\": \"gather_speed\"", "\"type\": \"gathering\"", "tech 'settler_guilds', effect 1: \"type\" is \"gathering\", which is not an effect")]
     [InlineData("units.json", "\"cost\": { \"food\": 30 }", "\"cost\": { \"bread\": 30 }", "unit 'worker': \"cost\" has \"bread\", which is not a good")]
     [InlineData("buildings.json", "\"kind\": \"barracks\"", "\"kind\": \"fort\"", "building 'barracks': \"kind\" is \"fort\", which is not one of: town_hall")]
     [InlineData("buildings.json", "\"roof\": \"thatch\"", "\"roof\": \"straw\"", "building 'house': \"roof\" is \"straw\", which is not a building material")]
@@ -574,12 +574,12 @@ public class ContentTests
         var files = Files();
         Edit(files, "techs.json", "{ \"type\": \"gather_speed\", \"percent\": 15 }", "{ \"type\": \"gather_speed\", \"amount\": 15 }");
         Edit(files, "techs.json", "\"role\": \"cavalry\", \"amount\": 30", "\"role\": \"cavalry\", \"unit\": \"rider\", \"amount\": 30");
-        Edit(files, "techs.json", "{ \"type\": \"carry\", \"amount\": 3 }", "{ \"type\": \"carry\", \"amount\": 0 }");
+        Edit(files, "techs.json", "\"building\": \"brood_chamber\", \"amount\": 6", "\"building\": \"brood_chamber\", \"amount\": 0");
         var e = Fails(files);
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'settler_guilds', effect 1: unknown field \"amount\""));
         Assert.Contains("techs.json: tech 'settler_guilds', effect 1: needs \"percent\"", e.Errors);
         Assert.Contains("techs.json: tech 'orc_beast_pens', effect 1: give a \"role\" or a \"unit\", not both", e.Errors);
-        Assert.Contains("techs.json: tech 'carts', effect 1: \"amount\" is 0; it should be from 1 to 100", e.Errors);
+        Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'deep_warrens', effect 1: \"amount\" is 0"));
         Assert.Equal(4, e.Errors.Count);
     }
 

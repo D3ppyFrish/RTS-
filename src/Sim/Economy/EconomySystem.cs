@@ -311,6 +311,7 @@ public sealed partial class EconomySystem
             var b = all[k];
             if (b.State == BuildingState.Site)
             {
+                StepDue(b);
                 StepSite(b);
             }
             else if (b.Active)
@@ -974,6 +975,7 @@ public sealed partial class EconomySystem
         if (CanPlace(c.PlayerId, def, c.X, c.Z, out int baseY, level: c.Y) != PlaceResult.Ok) return;
         if (!TrySpend(c.PlayerId, def.Cost, c.X + def.SizeX / 2, c.Z + def.SizeZ / 2)) return;
         var b = Prepare(c.PlayerId, def, c.X, c.Z, baseY);
+        SetAside(b);
         foreach (int i in Workers(c))
             StartJob(i, UnitJob.Build, b.Id);
     }
@@ -1021,6 +1023,7 @@ public sealed partial class EconomySystem
         Level(b.Owner, b.Shape, b.X, b.Z, baseY);
         b.Y = baseY;
         b.State = BuildingState.Site;
+        SetAside(b);
         return true;
     }
 
@@ -1044,6 +1047,7 @@ public sealed partial class EconomySystem
             if (CanPlace(player, def, cx + dx, cz + dz, out int baseY, checkPlayer: false) != PlaceResult.Ok) continue;
             if (!TrySpend(player, def.Cost, x, z)) return null;
             var b = Prepare(player, def, cx + dx, cz + dz, baseY);
+            SetAside(b);
             foreach (int i in Workers(c))
                 StartJob(i, UnitJob.Build, b.Id);
             return b;
@@ -1096,7 +1100,9 @@ public sealed partial class EconomySystem
         // Carts only haul: they unload at storage, or take supply duty at storage with supply rules.
         foreach (int i in OwnedUnits(c))
         {
-            if (!_sim.Content.Units[U.Def[i]].IsHauler || !b.Active) continue;
+            if (!_sim.Content.Units[U.Def[i]].IsHauler) continue;
+            if (IsPony(i) && PonyTo(i, b)) continue;
+            if (!b.Active) continue;
             if (b.Def.Kind == BuildingKind.Orchard)
             {
                 // A cart takes an orchard's baskets to storage (once it has unloaded what it carries).
@@ -1112,7 +1118,7 @@ public sealed partial class EconomySystem
                 U.JobStore[i] = b.Id;
                 SetPhase(i, JobPhase.ToStore);
             }
-            else if (b.HasSupply && !(U.Job[i] == UnitJob.Supply && U.JobTarget[i] == b.Id))
+            else if (b.HasSupply && !IsPony(i) && !(U.Job[i] == UnitJob.Supply && U.JobTarget[i] == b.Id))
             {
                 StartJob(i, UnitJob.Supply, b.Id);
                 DecideSupply(i, b);
@@ -1240,6 +1246,29 @@ public sealed partial class EconomySystem
         var result = OwnedUnits(c);
         result.RemoveAll(i => _sim.Content.Units[U.Def[i]].Role != UnitRole.Worker);
         return result;
+    }
+
+    /// <summary>
+    /// Pack pony i sent to building b (by the player or automation): out to a site with goods due, or to a workshop,
+    /// smelter, quarry, mine or orchard to run its goods. False if b is neither (storage is handled as for a cart).
+    /// </summary>
+    private bool PonyTo(int i, Building b)
+    {
+        if (b.State == BuildingState.Site)
+        {
+            if (U.Job[i] == UnitJob.Bring && U.JobTarget[i] == b.Id) return true;
+            if (U.CarryAmount[i] > 0) { ToStorageOrEnd(i); return true; }
+            StartJob(i, UnitJob.Bring, b.Id);
+            DecideBring(i, b);
+            return true;
+        }
+        if (!b.Active || b.Def.Storage) return false;
+        if (b.Def.Kind is not (BuildingKind.Workshop or BuildingKind.Smelter or BuildingKind.Orchard) && !(b.Def.IsQuarry && b.Def.Hunts == 0 && b.Def.Plants == 0))
+            return true;
+        if (U.Job[i] == UnitJob.Haul && U.JobTarget[i] == b.Id) return true;
+        StartJob(i, UnitJob.Haul, b.Id);
+        DecideHaul(i, b);
+        return true;
     }
 
     /// <summary>The job of a worker working a building of this kind: farming, hauling for a smelter, shrine or workshop, or quarrying.</summary>

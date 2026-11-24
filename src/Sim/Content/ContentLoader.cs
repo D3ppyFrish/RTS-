@@ -704,7 +704,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -741,6 +741,7 @@ public static class ContentLoader
                 Carry = o.Int("carry", 1, 100, 0),
                 Seats = o.Int("seats", 1, 50, 0),
                 Sails = o.Bool("sails"),
+                Runs = o.Bool("runs"),
                 WeakTo = o.RolePercents("weakTo", 1, 1000),
                 Attack = o.Enum("attack", AttackKind.Slash, required: false),
                 Body = body,
@@ -827,6 +828,8 @@ public static class ContentLoader
                 o.Error("sails (\"sails\"): it is a ship of a role other than boat, a machine, and cannot have \"evolvesFrom\", \"lair\", \"hiredFrom\" or \"ram\"");
             if (def.Role != UnitRole.Boat && def.Seats > 0)
                 o.Error("only a boat (role boat) has \"seats\"");
+            if (def.Runs && def.Role != UnitRole.Hauler)
+                o.Error("only a hauler (role hauler) \"runs\" goods as a pack pony");
             if (def.Role != UnitRole.Hauler && def.Carry > 0)
                 o.Error("only a cart (role hauler) has a \"carry\"");
             var ride = Ride(o);

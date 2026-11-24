@@ -128,7 +128,7 @@ public class PrizeTests
         foreach (int player in new[] { Settlers, Orcs })
         {
             var sim = Flat();
-            var hall = sim.Economy.PlaceFinished(player, sim.Content.Building("town_hall"), 10, 10)!;
+            var hall = sim.Economy.PlaceFinished(player, sim.Content.Building("town_hall"), 30, 40)!;
             hall.Stock[(int)Good.Wood] = 100;
             var lair = ClearedLair(sim, "boar");
             int worker = sim.SpawnUnit(player, "worker", DenX + 1, DenZ);
@@ -197,7 +197,7 @@ public class PrizeTests
         Assert.Equal(armour + shell.Armour, sim.Combat.Armour(Index(sim, archer), BodyPart.Head));
 
         sim = Flat();
-        var hall = sim.Economy.PlaceFinished(Orcs, sim.Content.Building("town_hall"), 10, 10)!;
+        var hall = sim.Economy.PlaceFinished(Orcs, sim.Content.Building("town_hall"), 30, 40)!;
         hall.Stock[(int)Good.Wood] = 100;
         lair = ClearedLair(sim, "giant_crab");
         int worker = sim.SpawnUnit(Orcs, "worker", DenX + 1, DenZ);

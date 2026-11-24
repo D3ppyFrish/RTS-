@@ -73,6 +73,13 @@ public sealed class Building
     /// Workers on supply duty fill it from the owner's other storage (see <see cref="SupplyCommand"/>).
     /// </summary>
     public int[] Supply { get; } = new int[Goods.Count];
+    /// <summary>
+    /// A site far from storage: goods of its cost, by <see cref="Good"/>, paid and set aside at storage but not yet carried
+    /// out to it. Its work goes only as far as the goods carried out so far allow (see <see cref="Economy.EconomySystem.MaxWork"/>).
+    /// </summary>
+    public int[] Due { get; } = new int[Goods.Count];
+    /// <summary>True if goods of its cost still have to be carried out to it.</summary>
+    public bool HasDue => Array.Exists(Due, a => a > 0);
     /// <summary>True if it has a supply rule for any good.</summary>
     public bool HasSupply => Array.Exists(Supply, a => a > 0);
 
@@ -270,6 +277,7 @@ public sealed class BuildingStore
             Mix((int)b.State); Mix(b.Work); Mix(b.Placed);
             foreach (int s in b.Stock) Mix(s);
             foreach (int s in b.Supply) Mix(s);
+            foreach (int s in b.Due) Mix(s);
             Mix(b.RaidPlayer); Mix((int)b.Raid); Mix(b.RaidTicks); Mix(b.SmeltTicks);
             Mix(b.Queue.Count);
             foreach (int q in b.Queue) Mix(q);

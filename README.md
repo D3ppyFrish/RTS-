@@ -86,11 +86,13 @@ Units live in the simulation core as flat arrays (`src/Sim/Units/UnitStore.cs`) 
 positions and stable ids. A move order sends a group to a point. Units step up one block (never two),
 drop up to three, wade through shallow water, fall when the ground under them is dug away, push each
 other apart so crowds spread out, and stop when they arrive or the crowd at the goal has settled. Unit
-types (worker, spearman, archer, rider, sapper, mage, healer, and the Settlers' forms they evolve into: see
+types (worker, spearman, archer, rider, sapper, mage, healer, the caravan, the cart and the pack pony (Handcarts: a quick
+hauler running goods to far building sites and to and from workshops, quarries and mines; see
+[Economy](docs/rules.md#economy)), and the Settlers' forms they evolve into: see
 [Evolution](docs/rules.md#evolution)) come from `data/units.json` (see [Game data](#game-data)).
 Godot draws them with one MultiMesh per model; the placeholder models are built from voxels an eighth
 of a terrain block across, tinted in the owner's colour. Each player starts with a town hall at their
-start area and four of every unit type that is trained in front of it (except caravans and carts), a wolf lair
+start area and four of every unit type that is trained in front of it (except caravans, carts and pack ponies), a wolf lair
 lies on the way to the map centre (see [Monsters and taming](docs/rules.md#monsters-and-taming)) and each city-state has a town (see
 [City-states](docs/rules.md#city-states)); `--goods=N` gives every town hall N more of every good (and its player N more mana), and `--houses=N` puts N houses
 behind yours, since the start has more people than room; `--raid=N` sends N enemy sappers at the one of

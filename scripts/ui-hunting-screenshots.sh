@@ -12,6 +12,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it. The start's herd
 # grazes round 116,305; the lodge goes at 120,330 with the mouse on its middle, within its reach of the herd.
+# That is more than 32 columns from the town hall, a far site: its builders carry its wood out first (issue #149).
 STEPS="
 wait 20
 camera 131,389 45 55 22
@@ -34,7 +35,7 @@ print
 clickworld 120,g,330
 ticks 4
 key plus*2
-ticks 900
+ticks 2400
 print
 clickworld 120,g,330 right
 ticks 900

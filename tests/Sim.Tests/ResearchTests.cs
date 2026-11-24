@@ -193,8 +193,8 @@ public class ResearchTests
         Assert.Equal(25, econ.WorkTicks(0, BlockType.Stone));
         Grant(sim, 0, "settler_guilds");         // 15% faster gathering
         Assert.Equal(25 * 100 / 115, econ.WorkTicks(0, BlockType.Stone));
-        Grant(sim, 0, "roads", "carts");         // 3 more goods a load
-        Assert.Equal(8, econ.Capacity(0));
+        Grant(sim, 0, "roads", "carts");         // pack ponies, not bigger loads (#149)
+        Assert.Equal(5, econ.Capacity(0));
         Grant(sim, 0, "farming", "crop_rotation"); // orchards, not richer harvests (#148)
         Assert.Equal(6, econ.FarmYieldOf(0));
         Grant(sim, 0, "masonry");                // murder holes, not roomier houses (#147)
