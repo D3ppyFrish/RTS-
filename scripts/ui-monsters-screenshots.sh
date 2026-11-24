@@ -19,6 +19,8 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # its 24 starting units in rows from 5 columns west and 4 rows south of the start, and a wolf lair 40
 # blocks towards the map centre: dens at 171,384 and 615,384, four wolves each. A third pack keeps the
 # lair by the goblin town (den at 395,266), far from both.
+# The dens are more than 32 columns from the town halls: a lodge put up on one is a far site, whose builders carry its
+# goods out first (issue #149), so it is given longer.
 ORC_STEPS="
 wait 20
 camera 655,389 45 55 22
@@ -65,7 +67,7 @@ shot $OUT/ui-den-button.png
 clickui den_use
 ticks 2
 print
-ticks 500
+ticks 3200
 camera 617,385 30 45 20
 wait 5
 print
