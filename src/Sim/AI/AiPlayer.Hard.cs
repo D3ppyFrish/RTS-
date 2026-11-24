@@ -319,6 +319,7 @@ public sealed partial class AiPlayer
         if (calm) Shipyard(sim, hall, c.Workers, issue);
         if (calm) Carts(sim, hall, issue);
         ListeningPosts(sim, hall, issue);
+        if (calm) CrystalLens(sim, hall, issue);
         if (!armyFirst) SmartTrain(sim, issue, anyAffordable: false);
         if (sim.Tick >= _assignAt)
         {

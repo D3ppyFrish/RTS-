@@ -131,6 +131,7 @@ public sealed partial class EconomySystem
             return;
         }
         World.Set(x, y, z, BlockType.Air);
+        if (kind == BlockType.Crystal) Discover(u.Owner[i], Rts.Sim.Content.Discovery.Crystal);
         if (!sapper && Harvest.Yields(kind, out var good)) AddCarry(i, good, Harvest.Amount(kind));
         if (u.CarryAmount[i] > 0 && (u.CarryAmount[i] >= Capacity(u.Owner[i]) || Harvest.Bulk(kind))) GoToStorage(i);
         else PickDig(i, area);

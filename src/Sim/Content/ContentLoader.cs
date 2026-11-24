@@ -551,7 +551,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime", "grow",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen", "lens");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -589,6 +589,20 @@ public static class ContentLoader
                     Slow = pn.Int("slow", 1, 100, 50),
                 };
             }
+            LensDef? lens = null;
+            if (Part(o, "lens", "{ \"every\": 180, \"radius\": 30, \"time\": 20, \"mana\": 25 }") is { } ln)
+            {
+                ln.Keys("every", "radius", "time", "mana");
+                lens = new LensDef
+                {
+                    EveryTicks = ln.Int("every", 1, MaxSeconds, 180, required: true) * Tps,
+                    Radius = ln.Int("radius", 1, 128, 30, required: true),
+                    Ticks = ln.Int("time", 1, MaxSeconds, 20, required: true) * Tps,
+                    Mana = ln.Int("mana", 0, 1000, 0, required: true),
+                };
+            }
+            if ((kind == BuildingKind.Lens) != (lens != null))
+                o.Error(kind == BuildingKind.Lens ? "a lens needs \"lens\" (how often it gazes, how far round, for how long and for how much mana)" : "only a lens has \"lens\"");
             if ((kind == BuildingKind.Pen) != (pen != null))
                 o.Error(kind == BuildingKind.Pen ? "a pen needs \"pen\" (how many beasts it keeps, and its stampede's numbers)" : "only a pen has \"pen\"");
             int slots = o.Int("workerSlots", 0, 20, 0);
@@ -646,6 +660,7 @@ public static class ContentLoader
                 Hearing = o.Int("hearing", 1, 64, 0),
                 MurderHoles = holes,
                 Pen = pen,
+                Lens = lens,
             };
             if (kind == BuildingKind.ListeningPost && def.Hearing == 0)
                 o.Error("a listening post needs \"hearing\" (how many columns round it it hears units underground)");
@@ -743,7 +758,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -781,6 +796,9 @@ public static class ContentLoader
                 Seats = o.Int("seats", 1, 50, 0),
                 Sails = o.Bool("sails"),
                 Runs = o.Bool("runs"),
+                DarkSight = o.Bool("darkSight"),
+                Hearing = o.Int("hearing", 0, 64, 0),
+                CaveWise = o.Bool("caveWise"),
                 WeakTo = o.RolePercents("weakTo", 1, 1000),
                 Attack = o.Enum("attack", AttackKind.Slash, required: false),
                 Body = body,
@@ -1282,17 +1300,27 @@ public static class ContentLoader
                     case TechEffectType.UnitHp:
                     case TechEffectType.UnitSpeed:
                     {
-                        string amountKey = type == TechEffectType.UnitHp ? "amount" : "percent";
-                        o.Keys("type", "role", "unit", amountKey);
+                        // Hit points: an "amount" more, or a "percent" more of the unit's own (one of the two). "fighters"
+                        // (optional) keeps it to units that fight.
+                        bool hp = type == TechEffectType.UnitHp;
+                        if (hp) o.Keys("type", "role", "unit", "fighters", "amount", "percent");
+                        else o.Keys("type", "role", "unit", "fighters", "percent");
                         UnitRole? role = o.Has("role") ? o.Enum("role", UnitRole.Worker, required: true) : null;
                         var unitId = o.Str("unit", false);
                         UnitDef? unit = null;
                         if (unitId != null && !_db.TryGetUnit(unitId, out unit))
                             o.Error($"\"unit\" is \"{unitId}\", which is not a unit");
                         if (role != null && unitId != null) o.Error("give a \"role\" or a \"unit\", not both");
-                        int amount = type == TechEffectType.UnitHp ? o.Int("amount", 1, 100000, 0, required: true)
+                        bool fighters = o.Bool("fighters");
+                        if (hp && o.Has("percent"))
+                        {
+                            if (o.Has("amount")) o.Error("give an \"amount\" or a \"percent\", not both");
+                            effects.Add(new TechEffect { Type = type, Role = role, Unit = unit, Fighters = fighters, Percent = o.Int("percent", 1, 1000, 0, required: true) });
+                            break;
+                        }
+                        int amount = hp ? o.Int("amount", 1, 100000, 0, required: true)
                             : o.Int("percent", 1, 1000, 0, required: true);
-                        effects.Add(new TechEffect { Type = type, Role = role, Unit = unit, Amount = amount });
+                        effects.Add(new TechEffect { Type = type, Role = role, Unit = unit, Fighters = fighters, Amount = amount });
                         break;
                     }
                     case TechEffectType.ShieldWall:
@@ -1616,6 +1644,8 @@ public static class ContentLoader
                     h.Add(e.Role is { } role ? (int)role : -1);
                     h.Add(e.Unit?.Index ?? -1);
                     h.Add((int)e.Reveal);
+                    if (e.Percent != 0) h.Add(e.Percent);
+                    if (e.Fighters) h.Add(91);
                 }
             }
             h.Add(db.Buildings.Count);
@@ -1663,6 +1693,10 @@ public static class ContentLoader
                 {
                     h.Add(pd.Keeps); h.Add(pd.Speed); h.Add(pd.Trample); h.Add(pd.DownTicks);
                     h.Add(pd.Smash); h.Add(pd.Run); h.Add(pd.TiredTicks); h.Add(pd.Slow);
+                }
+                if (b.Lens is { } ld)
+                {
+                    h.Add(ld.EveryTicks); h.Add(ld.Radius); h.Add(ld.Ticks); h.Add(ld.Mana);
                 }
             }
             h.Add(db.Units.Count);
@@ -1715,6 +1749,9 @@ public static class ContentLoader
                 h.Add(u.Batch);
                 h.Add(u.Burst);
                 if (u.Pennable) h.Add(77);
+                if (u.DarkSight) h.Add(78);
+                if (u.Hearing > 0) h.Add(1000 + u.Hearing);
+                if (u.CaveWise) h.Add(79);
                 if (u.Drums is { } drums)
                 {
                     h.Add(drums.Speed);

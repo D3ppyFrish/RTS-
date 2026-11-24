@@ -7,7 +7,9 @@
 //   farm_yield    { amount }              each farm harvest gives that much more food
 //   housing       { building, amount or percent } each building of that type houses that many more, or that
 //                                         percent more of its own number
-//   unit_hp       { role or unit, amount } more hit points, for units already alive too
+//   unit_hp       { role or unit, fighters, amount or percent } more hit points, or that percent more of the
+//                                         unit's own, for units already alive too; fighters: true keeps it to
+//                                         units that fight (not workers, caravans, carts or transport ships)
 //   unit_speed    { role or unit, percent } faster walking (no role or unit: every unit)
 //   roads                                 roads can be laid (if no tech has this, roads need no tech)
 //   reveal        { what }                once researched, every ruin, lair or town (what: ruins, lairs or
@@ -25,8 +27,9 @@
 //   repair                                workers can repair the player's damaged buildings, walls, gates and towers, a block at
 //                                         a time, for half the cost over all its hit points (see "Repair" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
-// ruin (their units searched an old ruin), lair (their unit got the last of a monster lair's pack) or town
-// (they broke a city-state's totem and took the town).
+// ruin (their units searched an old ruin), lair (their unit got the last of a monster lair's pack), town
+// (they broke a city-state's totem and took the town), giant (they beat a stone giant guarding a mountain
+// pass), deeps (one of their units set foot in the deep caves) or crystal (one of their units dug crystal).
 [
   { "id": "farming", "icon": "farm", "name": "Farming", "description": "Fields of grain.",
     "cost": { "wood": 40 }, "researchTime": 20 },
@@ -101,5 +104,16 @@
   { "id": "trail_maps", "icon": "trail_map", "name": "Trail maps", "discovery": "town",
     "description": "The town's traders share their scrawled maps of the land: every beast's lair and every town on it.",
     "cost": { "food": 40, "iron": 10 }, "researchTime": 20,
-    "effects": [ { "type": "reveal", "what": "lairs" }, { "type": "reveal", "what": "towns" } ] }
+    "effects": [ { "type": "reveal", "what": "lairs" }, { "type": "reveal", "what": "towns" } ] },
+  // The rare finds (issue #154): a hard fight, a long way down, a dig into crystal. Each gives something big.
+  { "id": "giants_marrow", "icon": "giant_heart", "name": "Giant's marrow", "discovery": "giant",
+    "description": "The marrow of a stone giant beaten in a mountain pass, ground into the soldiers' bread: every one of your fighting units has 30% more hit points, those already in the field too.",
+    "cost": { "food": 150, "iron": 40 }, "researchTime": 60,
+    "effects": [ { "type": "unit_hp", "fighters": true, "percent": 30 } ] },
+  { "id": "cave_guides", "icon": "delver", "name": "Cave guides", "discovery": "deeps",
+    "description": "Your people have walked the deep caves and come back. The town hall trains the delver: it sees in the dark and twice as far underground, hears units underground near it like a listening post, and walks past lava's heat and the deep nests unharmed.",
+    "cost": { "food": 80, "wood": 40 }, "researchTime": 40, "effects": [] },
+  { "id": "crystal_lens", "icon": "lens", "name": "Crystal lens", "discovery": "crystal",
+    "description": "Crystal dug from the cavern walls, ground into a great lens. Unlocks the crystal lens: once every 3 minutes, for 25 mana, aim it anywhere on the map to see 30 columns round that spot through the fog for 20 seconds.",
+    "cost": { "stone": 60, "wood": 40 }, "researchTime": 45, "effects": [] }
 ]

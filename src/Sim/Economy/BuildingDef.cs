@@ -99,6 +99,13 @@ public enum BuildingKind : byte
     /// it and kept there, up to <see cref="PenDef.Keeps"/>, and the player looses them from it as a stampede.
     /// </summary>
     Pen,
+    /// <summary>
+    /// A crystal lens (Crystal lens, a discovery tech; see <see cref="EconomySystem.Gazes"/>): a tower with a great crystal
+    /// on top that its owner aims anywhere on the map (see <see cref="GazeCommand"/>), once every <see cref="LensDef.EveryTicks"/>,
+    /// for <see cref="LensDef.Mana"/> mana: a circle of <see cref="LensDef.Radius"/> columns there is in their sight,
+    /// through the fog of war, for <see cref="LensDef.Ticks"/>.
+    /// </summary>
+    Lens,
 }
 
 /// <summary>
@@ -277,6 +284,8 @@ public sealed class BuildingDef
     public MurderHoles? MurderHoles { get; init; }
     /// <summary>A beast pen's numbers (<c>pen</c> in the data; only for <see cref="BuildingKind.Pen"/>), else null.</summary>
     public PenDef? Pen { get; init; }
+    /// <summary>A crystal lens's numbers (<c>lens</c> in the data; only for <see cref="BuildingKind.Lens"/>), else null.</summary>
+    public LensDef? Lens { get; init; }
     /// <summary>
     /// How fast it trains units and smelts, in percent of the usual pace (100 unless given): what makes a great
     /// hall or a foundry better at its work than the building it was upgraded from.
@@ -608,6 +617,21 @@ public sealed class MurderHoles
 /// <see cref="Run"/> columns; each beast that runs into an enemy deals it <see cref="Trample"/> (crushing) and knocks it
 /// down for <see cref="DownTicks"/>; a beast running into an enemy's wooden building strikes it once for
 /// <see cref="Smash"/>. After the run the beasts walk <see cref="Slow"/> percent of their pace for <see cref="TiredTicks"/>.
+/// </summary>
+public sealed class LensDef
+{
+    /// <summary>Ticks from one gaze to the next (<c>every</c>, in seconds, in the data).</summary>
+    public int EveryTicks { get; init; }
+    /// <summary>Columns round the spot aimed at that the gaze shows.</summary>
+    public int Radius { get; init; }
+    /// <summary>Ticks the gaze lasts (<c>time</c>, in seconds, in the data).</summary>
+    public int Ticks { get; init; }
+    /// <summary>Mana each gaze costs.</summary>
+    public int Mana { get; init; }
+}
+
+/// <summary>
+/// A beast pen's numbers (see <see cref="BuildingKind.Pen"/>).
 /// </summary>
 public sealed class PenDef
 {

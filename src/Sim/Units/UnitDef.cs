@@ -291,6 +291,22 @@ public sealed class UnitDef
     /// and takes no supply duty between storehouses, which is the cart's work.
     /// </summary>
     public bool Runs { get; init; }
+    /// <summary>
+    /// It sees in the dark (<c>"darkSight"</c> in the data; the delver): night, weather and mist do not shorten its sight,
+    /// and underground (see <see cref="VisionSystem.Covered"/>) it sees twice as far (see <see cref="VisionSystem"/>).
+    /// </summary>
+    public bool DarkSight { get; init; }
+    /// <summary>
+    /// Columns round it in which it hears units underground, as a listening post does (<c>"hearing"</c> in the data;
+    /// see <see cref="VisionSystem.Hears"/>); 0 for only <see cref="VisionSystem.HearClose"/>, as every unit does.
+    /// </summary>
+    public int Hearing { get; init; }
+    /// <summary>
+    /// It knows the deep caves (<c>"caveWise"</c> in the data; the delver): lava's heat does not hurt it (see
+    /// <see cref="World.HazardSystem"/>), and in the deep caves (see <see cref="Economy.EconomySystem.DeepGround"/>) wild
+    /// monsters do not go after it, though they still answer it if it hits them (see <see cref="MonsterSystem.Spares"/>).
+    /// </summary>
+    public bool CaveWise { get; init; }
 
     /// <summary>A cart: a hauler on supply duty between storage (role <see cref="UnitRole.Hauler"/>, not a pack pony).</summary>
     public bool IsCart => IsHauler && !Runs;

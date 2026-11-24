@@ -1263,18 +1263,44 @@ A discovery is the player's for the rest of the match (`PlayerEconomy.Discoverie
 - **Town**: the player breaks a city-state's totem and takes the town (see [City-states](#city-states)). It opens **Trail
   maps** (40 food, 10 iron, 20 seconds): every monster lair (the caverns' and the deeps' too, but not dens already used up)
   and every city-state town on the map come out of the player's fog.
+- **The rare finds** (issue #154, tests in `RareDiscoveryTests`): three discoveries that are hard to make, each opening a
+  tech that gives something big: a large stat boost, a unit or a building.
+  - **Giant**: the player's units beat a stone giant guarding a mountain pass (a lair with `pass`; `MonsterSystem.Clear`,
+    Orcs taming it count too). It opens **Giant's marrow** (150 food, 40 iron, 60 seconds): every one of the player's
+    fighting units (any that can attack and is no worker, caravan, cart or transport ship: `TechEffect.Fighters`,
+    `fighters` in the data) has 30% more hit points (`unit_hp` with `percent`), those already in the field too.
+  - **Deeps**: one of the player's units sets foot in the deep caves (stands on ground in the deep rock,
+    `EconomySystem.DeepGround`; checked every tick, `StepDeepFinds`). A map with no deep rock has no such find. It opens
+    **Cave guides** (80 food, 40 wood, 40 seconds): the town hall trains the **delver** (50 food, 20 wood; trained at
+    the town hall rather than the barracks so the Deepfolk, whose brood chamber stands in for the barracks, can have it
+    too). A light fighter (60 hit points) and a scout: it sees in the dark (night, weather and mist do not shorten its
+    sight; underground it sees twice as far: `darkSight`), hears units underground within 16 columns as a listening
+    post does (`hearing`), takes no harm from lava's heat, and in the deep caves wild monsters, the deep nests' crawlers
+    among them, do not go after it, though they answer it if it hits one (`caveWise`, `MonsterSystem.Spares`).
+  - **Crystal**: one of the player's units digs a block of crystal (a worker gathering or a dig area; the cavern walls,
+    the deep caves and the wilds' outcrops all hold it). It opens **Crystal lens** (60 stone, 40 wood, 45 seconds): the
+    player can build the **crystal lens** (80 stone, 30 wood, 10 crystal), a stone tower. Once every 3 minutes, for 25
+    mana, the player aims it anywhere on the map (`GazeCommand`, `EconomySystem.Lens.cs`): the circle of 30 columns
+    round that spot is in their sight, through the fog of war and whatever the dark, for 20 seconds, then it is only
+    seen ground again. Units underground there are still heard, not seen. A lens that is destroyed or taken ends its
+    gaze. Its numbers are `lens` in `data/buildings.json`.
 - **Out of the fog** (`reveal` in the data, `VisionSystem.Reveal`): the columns within 8 of each one
   (`EconomySystem.RevealRadius`) that the player has never seen become seen, not in sight: they show on the map as the
   ground was when the match began, with nothing on it, until the player's own units see them. With fog of war off it
   does nothing.
 - **In the game**: the player hears of each discovery tech they can now research ("Discovery: Wardens' charts
   can be researched"). In the tech tree (K) a discovery tech not yet discovered says what to do for it ("Search an
-  old ruin", "Clear a monster lair", "Take a city-state town"), and its tooltip says so too. All numbers are first
-  guesses for playtesting.
+  old ruin", "Clear a monster lair", "Take a city-state town", "Beat a stone giant in a mountain pass", "Set foot in
+  the deep caves", "Dig a block of crystal"), and its tooltip says so too. With a crystal lens selected, Gaze (Ctrl+G)
+  aims it: click where to look. All numbers are first guesses for playtesting.
 - **Computer players** (`AiPlayer.InLine`, tests in `AiDiscoveryTests`): every level but Classic researches the discovery
   techs it has opened, in the data's order, as soon as it has its first two techs (Farming and Better tools); Hard saves
   up for them at once. What they reveal is then known to it like anything it has seen, so its ruin and hunting parties
   go for the ruins and lairs they show. With Beast lore it no longer keeps its workers off the trees near a lair.
+  The smart levels (`AiPlayer.Lens.cs`): with Crystal lens they keep one crystal lens by the town hall and aim it at where
+  a wave is going as it sets out (Hard takes the gaze as its look at their town before a wave); with Cave guides, once a
+  rival's great work stands, they keep a delver and send it on ahead of the strike force to the great work. Computer
+  players build no shrines, so their mana is what they start with: enough for two gazes.
 
 ## Ancient sites and dominion
 

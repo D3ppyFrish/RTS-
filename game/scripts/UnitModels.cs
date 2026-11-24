@@ -420,6 +420,14 @@ public static class UnitModels
             .Box(-4, 6, 0, -4, 12, 0, Bone).Box(3, 6, 0, 3, 12, 0, Bone)                // drumsticks
             .Box(-4, 13, 0, -4, 13, 0, Hide).Box(3, 13, 0, 3, 13, 0, Hide),
 
+        // The delver (Cave guides): a hooded guide with a lamp on its brow, a pack with a coil of rope and a crystal-tipped staff.
+        "delver" => new Builder().Humanoid()
+            .Box(-2, 13, -3, 1, 14, 1, DarkRock).Box(-2, 15, -2, 1, 15, 0, DarkRock)      // a dark hood
+            .Box(-1, 14, 2, 0, 14, 2, Lamp)                                              // a lamp on its brow
+            .Box(-2, 6, 1, 1, 9, 1, TeamDark)                                            // jerkin
+            .Box(-2, 5, -3, 1, 10, -3, Leather).Box(-2, 8, -4, 1, 9, -4, Rock)           // pack with a coil of rope
+            .Box(3, 1, 1, 3, 15, 1, Wood).Box(3, 16, 0, 3, 17, 2, Crystal),              // staff tipped with crystal
+
         // Settler forms.
         "foreman" => new Builder().Humanoid().Rank()
             .Box(-2, 13, -2, 1, 14, 1, Leather).Box(-2, 13, 2, 1, 13, 2, Leather)        // cap with a brim

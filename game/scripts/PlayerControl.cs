@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Fell, Prospect, Stampede, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Fell, Prospect, Stampede, Gaze, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -263,6 +263,10 @@ public partial class PlayerControl : Node
                         case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Stampede:
                             WallStart(mb.Position);
                             return;
+                        case ToolMode.Gaze:
+                            GazeAt(mb.Position);
+                            GetViewport().SetInputAsHandled();
+                            return;
                         case ToolMode.Test:
                             if (GroundUnder(mb.Position, out int tx, out int ty, out int tz)) TestPlace?.Invoke(tx, ty - 1, tz);
                             GetViewport().SetInputAsHandled();
@@ -386,6 +390,7 @@ public partial class PlayerControl : Node
             case Key.C when key.CtrlPressed: BeatCharge(); break;
             case Key.M when key.CtrlPressed: Molt(); break;
             case Key.S when key.CtrlPressed: ToggleStampede(); break;
+            case Key.G when key.CtrlPressed: ToggleGaze(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
             case Key.K when key.ShiftPressed: ToggleLadder(); break;
@@ -1296,6 +1301,28 @@ public partial class PlayerControl : Node
     {
         if (Tool == ToolMode.Stampede) SetTool(ToolMode.Select);
         else if (SelectedPen() is { } pen && _sim.Combat.PenCount(pen.Id) > 0) SetTool(ToolMode.Stampede);
+    }
+
+    /// <summary>The selected building if it is a finished crystal lens of yours (see <see cref="BuildingKind.Lens"/>), else null.</summary>
+    public Building? SelectedLens() =>
+        _sim.Buildings.Get(SelectedBuilding) is { Active: true, Def.Lens: not null } b && b.Owner == LocalPlayer ? b : null;
+
+    /// <summary>The Gaze button and key (Ctrl+G): with your crystal lens selected and ready, click where it looks.</summary>
+    public void ToggleGaze()
+    {
+        if (Tool == ToolMode.Gaze) SetTool(ToolMode.Select);
+        else if (SelectedLens() is { } lens && _sim.Economy.CanGaze(LocalPlayer, lens) == GazeResult.Ok) SetTool(ToolMode.Gaze);
+    }
+
+    /// <summary>The selected crystal lens gazes at the ground under the mouse; then the tool is put away.</summary>
+    private void GazeAt(Vector2 screen)
+    {
+        if (SelectedLens() is { } lens && GroundUnder(screen, out int x, out _, out int z))
+        {
+            _sim.Schedule(_sim.Tick, new GazeCommand(LocalPlayer, lens.Id, x, z));
+            Changed?.Invoke();
+        }
+        SetTool(ToolMode.Select);
     }
 
     /// <summary>The Let out button: the selected pen's beasts are let out, free to take orders.</summary>
@@ -2615,7 +2642,7 @@ public partial class PlayerControl : Node
                $"default_priorities={WorkPriorities.ToLog(_sim.Automation.DefaultPriorities(LocalPlayer))} " +
                $"priorities={(first >= 0 && _sim.Content.Units[u.Def[first]].Role == UnitRole.Worker ? WorkPriorities.ToLog(u.Priorities[first]) : "none")} " +
                $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
-               $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} " +
+               $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} gazes={_sim.Economy.Gazes.Count(g => g.Player == LocalPlayer)} lens_selected={(SelectedLens() != null ? 1 : 0)} " +
                $"faction={_sim.FactionOf(LocalPlayer).Id} batches={Batches()} bursting={Bursting()} " +
                $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} drumming={drumming} drums_heard={drumsHeard} molting={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Molting[i] > 0)} soft={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Soft[i] > 0)} penned={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Penned[i] != 0)} stampeding={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.RunStage[i] != 0)} trampled={_sim.Combat.Trampled} pens={OwnKind(BuildingKind.Pen)} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +

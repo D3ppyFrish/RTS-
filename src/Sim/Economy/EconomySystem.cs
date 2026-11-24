@@ -290,6 +290,7 @@ public sealed partial class EconomySystem
         MixLadders(ref h);
         MixTools(ref h);
         MixSaplings(ref h);
+        MixLenses(ref h);
         return h;
     }
 
@@ -334,6 +335,8 @@ public sealed partial class EconomySystem
         }
 
         StepResearch();
+        StepLenses();
+        StepDeepFinds();
         if (_sim.Tick % Tps == 0) SampleFood();
     }
 

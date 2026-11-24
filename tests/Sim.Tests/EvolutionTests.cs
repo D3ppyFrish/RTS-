@@ -112,8 +112,10 @@ public class EvolutionTests
         // The healer (issue #42) has no forms yet: it is a later addition, and its forms are a follow-up.
         // Machines (the catapult) are built, not raised, so they have no forms either.
         // A faction's own units (the Deepfolk's hive) evolve only if that faction earns experience, which they do not.
-        foreach (var b in db.BaseUnits.Where(b => b.Id != "healer" && !b.Machine && b.Faction == null)) Assert.True(b.Forms.Count >= 2, $"{b.Id} has {b.Forms.Count} forms");
+        // The delver (Cave guides, a rare discovery tech) is a scout that stays as it is.
+        foreach (var b in db.BaseUnits.Where(b => b.Id is not ("healer" or "delver") && !b.Machine && b.Faction == null)) Assert.True(b.Forms.Count >= 2, $"{b.Id} has {b.Forms.Count} forms");
         Assert.Empty(db.Unit("healer").Forms);
+        Assert.Empty(db.Unit("delver").Forms);
         Assert.Empty(db.Unit("catapult").Forms);
         Assert.Empty(db.Unit("battering_ram").Forms);
         Assert.Empty(db.Unit("skitterling").Forms);

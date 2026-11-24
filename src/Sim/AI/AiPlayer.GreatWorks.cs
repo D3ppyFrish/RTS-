@@ -10,7 +10,8 @@ namespace Rts.Sim.AI;
 /// work, which wins that rival the match if it stands long enough. Every soldier it can spare beyond the guard (and,
 /// once nothing threatens home, the guard's share above <see cref="LeastGuard"/> too) goes to bring down the one
 /// finished first, at once and whatever it sees on the way, and those that strayed are sent at it again until it is
-/// down. Everyone is told where a finished great work stands, so it needs no sight of it. Computer players do not
+/// down. Everyone is told where a finished great work stands, so it needs no sight of it. With Cave guides its delvers
+/// go on ahead (see <see cref="SendDelvers"/>). Computer players do not
 /// build great works of their own yet. The classic level leaves them be.
 /// </summary>
 public sealed partial class AiPlayer
@@ -46,6 +47,7 @@ public sealed partial class AiPlayer
             if (target == null) return;
         }
         home.RemoveAll(_strike.Contains);
+        SendDelvers(sim, hall, home, target.X, target.Z, issue);
 
         var (hx, hz) = Middle(hall);
         bool attacked = NearestEnemy(sim, hx, hz, 2 * DefendRadius, soldiersOnly: true) >= 0;
