@@ -121,16 +121,20 @@ uniform float slice_y = 100000.0;
 varying vec3 v_team;
 varying vec4 v_col;
 varying float v_world_y;
+// A hive unit molting or soft after it is drawn paler: its new shell not yet hardened (custom alpha 2 + paleness).
+varying float v_pale;
 // Colours are picked as on screen (sRGB) and turned linear for lighting, like the terrain's.
 vec3 linear_of(vec3 c) { return mix(c, c * (c * (c * 0.305306011 + 0.682171111) + 0.012522878), 0.85); }
 void vertex() {
     v_team = INSTANCE_CUSTOM.rgb;
     v_col = COLOR;
+    v_pale = INSTANCE_CUSTOM.a > 1.5 ? clamp(INSTANCE_CUSTOM.a - 2.0, 0.0, 1.0) : 0.0;
     v_world_y = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y;
 }
 void fragment() {
     if (v_world_y > slice_y) discard;
-    ALBEDO = linear_of(v_col.a < 0.5 ? v_team * v_col.r : v_col.rgb);
+    vec3 albedo = v_col.a < 0.5 ? v_team * v_col.r : v_col.rgb;
+    ALBEDO = linear_of(mix(albedo, vec3(0.93, 0.86, 0.74), v_pale));
     ROUGHNESS = 0.9;
 }
 ";
@@ -312,6 +316,15 @@ void fragment() {
                 _yawById[id] = Mathf.LerpAngle(_yawById[id], Mathf.Atan2(u.FaceX[i].ToFloat(), u.FaceZ[i].ToFloat()), turn * 0.5f);
             }
             float yaw = _yawById[id];
+            // Molting: it shudders where it stands, its shell splitting, and is drawn pale until the new one hardens.
+            float pale = 0f;
+            if (u.Molting[i] > 0)
+            {
+                yaw += Mathf.Sin(_time * 30f + id) * 0.15f;
+                y -= 0.08f;
+                pale = 0.75f;
+            }
+            else if (u.Soft[i] > 0) pale = 0.6f;
             float s = Mathf.Sin(yaw), c = Mathf.Cos(yaw);
             var team = TeamColors[u.Owner[i] & 7];
 
@@ -319,7 +332,7 @@ void fragment() {
             var at = new Vector3(x * bs, y * bs, z * bs);
             string model = _modelByOwnerDef[u.Owner[i] & 7][u.Def[i]];
             float d2 = at.DistanceSquaredTo(eye);
-            if (detailed && camera != null && !_sim.DuskTree.HasStaff(i) && _detail.Covers(model, d2))
+            if (detailed && camera != null && pale == 0f && !_sim.DuskTree.HasStaff(i) && _detail.Covers(model, d2))
             {
                 if (id >= _phaseById.Length)
                 {
@@ -336,7 +349,7 @@ void fragment() {
                 if (_detail.Add(model, at, d2, yaw, team, _phaseById[id], _strideById[id], strike, _time, id))
                     continue;
             }
-            Write(b, c, s, x * bs, y * bs, z * bs, team);
+            Write(b, c, s, x * bs, y * bs, z * bs, team, pale);
         }
         foreach (var town in _sim.Cities.Towns)
             if (_fog.HasSeen(town.X, town.Z)) WriteTotem(town, bs);
@@ -364,7 +377,7 @@ void fragment() {
         _sim.DuskTree.HasStaff(i) ? _staff : _batchByOwnerDef[_sim.Units.Owner[i] & 7][_sim.Units.Def[i]];
 
     /// <summary>Adds an instance turned by yaw (sine s, cosine c) at (x, y, z) metres, tinted <paramref name="tint"/>.</summary>
-    private static void Write(Batch b, float c, float s, float x, float y, float z, Color tint)
+    private static void Write(Batch b, float c, float s, float x, float y, float z, Color tint, float pale = 0f)
     {
         int o = b.Count++ * FloatsPerInstance;
         var buf = b.Buffer;
@@ -372,6 +385,6 @@ void fragment() {
         buf[o + 4] = 0; buf[o + 5] = 1; buf[o + 6] = 0; buf[o + 7] = y;
         buf[o + 8] = -s; buf[o + 9] = 0; buf[o + 10] = c; buf[o + 11] = z;
         buf[o + 12] = 1; buf[o + 13] = 1; buf[o + 14] = 1; buf[o + 15] = 1;
-        buf[o + 16] = tint.R; buf[o + 17] = tint.G; buf[o + 18] = tint.B; buf[o + 19] = 1;
+        buf[o + 16] = tint.R; buf[o + 17] = tint.G; buf[o + 18] = tint.B; buf[o + 19] = pale > 0f ? 2f + pale : 1f;
     }
 }

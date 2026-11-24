@@ -160,7 +160,10 @@ public enum TechEffectType : byte
     Carry,
     /// <summary>Each farm harvest gives <see cref="TechEffect.Amount"/> more food.</summary>
     FarmYield,
-    /// <summary>Each of the player's <see cref="TechEffect.Building"/> houses <see cref="TechEffect.Amount"/> more people.</summary>
+    /// <summary>
+    /// Each of the player's <see cref="TechEffect.Building"/> houses <see cref="TechEffect.Amount"/> more people, or
+    /// <see cref="TechEffect.Percent"/> percent more of its own number.
+    /// </summary>
     Housing,
     /// <summary>Matching units have <see cref="TechEffect.Amount"/> more hit points, those already alive too.</summary>
     UnitHp,
@@ -202,6 +205,11 @@ public enum TechEffectType : byte
     /// they mend them a block at a time, for a share of the build cost.
     /// </summary>
     Repair,
+    /// <summary>
+    /// Matching units can molt when badly hurt (see <see cref="MoltCommand"/>): they stop, shed their shells and heal
+    /// back to full, then stay soft for a while. The numbers are in the role table (<see cref="CombatRules.Molt"/>).
+    /// </summary>
+    Molt,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>
@@ -237,6 +245,8 @@ public sealed class TechEffect
     public TechEffectType Type { get; init; }
     /// <summary>A percentage for the speed effects, otherwise a count.</summary>
     public int Amount { get; init; }
+    /// <summary>For a housing effect: percent more of the building's own number (besides <see cref="Amount"/>).</summary>
+    public int Percent { get; init; }
     /// <summary>The building type a housing effect applies to.</summary>
     public BuildingDef? Building { get; init; }
     /// <summary>For unit effects: only units of this role.</summary>

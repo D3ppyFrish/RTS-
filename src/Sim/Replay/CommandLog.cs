@@ -50,6 +50,7 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// 57 governor 0 1 army             (a governor runs town hall 1 for an army; none, growth, army or defence)
 /// 58 stance 0 hold 1,2,3            (hold, aggressive or retreat)
 /// 59 shieldwall 0 on 1,2,3          (a shield wall raised; off: lowered)
+/// 59 molt 0 1,2,3                    (badly hurt units molt)
 /// 59 charge 1 7                     (player 1's war drummer 7 beats the charge)
 /// 59 pen 1 12 7,8                   (player 1's beasts 7 and 8 go into beast pen 12)
 /// 59 stampede 1 12 40 50 60 50      (player 1 looses beast pen 12's beasts along the line from 40,50 to 60,50)
@@ -78,7 +79,7 @@ public readonly record struct LoggedCommand(long Tick, Command Command);
 /// 78 sandbox-goods 0 0 500                (500 more of every good for player 0)
 /// 79 sandbox-tech 0 0 all                 (every tech, or one by id)
 /// 80 sandbox-cheat 0 0 Invulnerable on    (InstantBuild, InstantTrain, InstantResearch or Invulnerable)
-/// 81 sandbox-units 0 Heal 5,6             (Heal, Kill, Remove, Bleed or Veteran)
+/// 81 sandbox-units 0 Heal 5,6             (Heal, Kill, Remove, Bleed, Veteran or Wound)
 /// 82 sandbox-clear 0 100 100 4            (remove the units and buildings within 4 columns)
 /// </code>
 /// "start-units" (optional, default 0) spawns that many units per start area before the first tick,
@@ -258,6 +259,7 @@ public sealed class CommandLog
                 DigAreaCommand da => string.Create(ci, $"{tick} dig-area {da.PlayerId} {da.X1} {da.Z1} {da.X2} {da.Z2} {da.Y} {Ids(da.Units)}"),
                 TunnelCommand tn => string.Create(ci, $"{tick} tunnel {tn.PlayerId} {tn.X} {tn.Y} {tn.Z} {Ids(tn.Units)}"),
                 ShieldWallCommand sw => string.Create(ci, $"{tick} shieldwall {sw.PlayerId} {OnOff(sw.Raise)} {Ids(sw.Units)}"),
+                MoltCommand mo => string.Create(ci, $"{tick} molt {mo.PlayerId} {Ids(mo.Units)}"),
                 ChargeCommand ch => string.Create(ci, $"{tick} charge {ch.PlayerId} {Ids(ch.Units)}"),
                 FellCommand fl => string.Create(ci, $"{tick} fell {fl.PlayerId} {fl.X} {fl.Z} {fl.DirX} {fl.DirZ} {Ids(fl.Units)}"),
                 ProspectCommand pr => string.Create(ci, $"{tick} prospect {pr.PlayerId} {pr.X} {pr.Z} {Ids(pr.Units)}"),
@@ -417,6 +419,7 @@ public sealed class CommandLog
                             "dig-area" => new DigAreaCommand(Int(f[2]), ParseIds(f[8]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6]), Int(f[7])),
                             "tunnel" => new TunnelCommand(Int(f[2]), ParseIds(f[6]), Int(f[3]), Int(f[4]), Int(f[5])),
                             "shieldwall" => new ShieldWallCommand(Int(f[2]), ParseIds(f[4]), ParseOnOff(f[3])),
+                            "molt" => new MoltCommand(Int(f[2]), ParseIds(f[3])),
                             "charge" => new ChargeCommand(Int(f[2]), ParseIds(f[3])),
                             "fell" => new FellCommand(Int(f[2]), ParseIds(f[7]), Int(f[3]), Int(f[4]), Int(f[5]), Int(f[6])),
                             "prospect" => new ProspectCommand(Int(f[2]), ParseIds(f[5]), Int(f[3]), Int(f[4])),

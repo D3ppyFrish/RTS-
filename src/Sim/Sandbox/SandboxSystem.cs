@@ -251,6 +251,9 @@ public sealed class SandboxSystem
                 case SandboxAction.Veteran:
                     u.Xp[i] = EvolutionSystem.MaxXp;
                     break;
+                case SandboxAction.Wound:
+                    u.Hp[i] = Math.Max(1, Math.Min(u.Hp[i], _sim.MaxHpOf(i) / 5));
+                    break;
             }
         }
     }

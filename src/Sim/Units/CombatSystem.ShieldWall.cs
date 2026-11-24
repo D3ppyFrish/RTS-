@@ -70,7 +70,7 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>True if unit i cannot walk this tick: it stands in a shield wall, or is lowering one or thrown back by one.</summary>
-    public bool Rooted(int i) => U.ShieldWall[i] || U.Stunned[i] > 0;
+    public bool Rooted(int i) => U.ShieldWall[i] || U.Stunned[i] > 0 || U.Molting[i] > 0;
 
     /// <summary>
     /// Counts down the units' stunned ticks, and has a unit in a shield wall that routs, boards a ship, is beaten

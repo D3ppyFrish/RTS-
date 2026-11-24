@@ -529,6 +529,7 @@ public sealed class Simulation
             case SupplyCommand sp: Economy.Apply(sp); break;
             case StanceCommand st: Combat.Apply(st); break;
             case ShieldWallCommand sw: Combat.Apply(sw); break;
+            case MoltCommand mo: Combat.Apply(mo); break;
             case ChargeCommand ch: Combat.Apply(ch); break;
             case PenCommand pn: ApplyPen(pn); break;
             case StampedeCommand sd: Combat.Apply(sd); break;

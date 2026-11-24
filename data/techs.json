@@ -5,7 +5,8 @@
 //   gather_speed  { percent }             workers dig, chop and pick that much faster
 //   carry         { amount }              workers carry that many more goods
 //   farm_yield    { amount }              each farm harvest gives that much more food
-//   housing       { building, amount }    each building of that type houses that many more
+//   housing       { building, amount or percent } each building of that type houses that many more, or that
+//                                         percent more of its own number
 //   unit_hp       { role or unit, amount } more hit points, for units already alive too
 //   unit_speed    { role or unit, percent } faster walking (no role or unit: every unit)
 //   roads                                 roads can be laid (if no tech has this, roads need no tech)
@@ -19,6 +20,8 @@
 //   prospecting   { role or unit, faction, time, radius } those units can sound the ground, in time seconds: every ore,
 //                                         coal, gold and crystal block within radius columns, at any depth, shows to the player
 //   murder_holes                          stone gates drop stones on enemies at them while held (murderHoles in buildings.json)
+//   molt          { role or unit }        those units can molt when badly hurt: heal to full standing still, then stay
+//                                         soft a while (numbers: molt in roles.json)
 //   repair                                workers can repair the player's damaged buildings, walls, gates and towers, a block at
 //                                         a time, for half the cost over all its hit points (see "Repair" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
@@ -67,12 +70,12 @@
     "cost": { "food": 60, "wood": 40 }, "researchTime": 40 },
   { "id": "orc_beast_pens", "icon": "paw", "name": "Beast pens", "faction": "orcs", "description": "Build the beast pen and keep up to 8 tamed wolves and boars in it. Drag a line from the pen and they burst out as a stampede: every beast that runs into an enemy deals it 30 and knocks it down, and they smash palisades and wooden buildings in their way (stone stops them). After the run they are tired and slow for 20 seconds.",
     "cost": { "food": 80, "wood": 40 }, "researchTime": 40, "requires": [ "horse_breeding" ] },
-  { "id": "deep_chitin", "icon": "shield", "name": "Hardened chitin", "faction": "deepfolk", "description": "Thicker shells for the swarm.",
+  { "id": "deep_chitin", "icon": "molt", "name": "Molting", "faction": "deepfolk", "description": "A badly hurt hive insect (a quarter of its life or less) can shed its shell: it stands still and heals back to full over 15 seconds, but while molting and for 30 seconds after it has no armour, takes half as much again from every hit and walks slower. One left idle out of the fight molts by itself. Pull a beaten swarm back, cover it, and send it in again.",
     "cost": { "food": 60, "wood": 40 }, "researchTime": 40,
-    "effects": [ { "type": "unit_hp", "role": "line_infantry", "amount": 10 }, { "type": "unit_hp", "role": "ranged", "amount": 8 } ] },
-  { "id": "deep_warrens", "icon": "brood_chamber", "name": "Brood warrens", "faction": "deepfolk", "description": "Deeper nests under every brood chamber.",
+    "effects": [ { "type": "molt", "role": "line_infantry" }, { "type": "molt", "role": "ranged" }, { "type": "molt", "role": "sapper" } ] },
+  { "id": "deep_warrens", "icon": "brood_chamber", "name": "Brood warrens", "faction": "deepfolk", "description": "Deeper nests under every brood chamber: each houses twice as many.",
     "cost": { "food": 50, "wood": 50 }, "researchTime": 40, "requires": [ "farming" ],
-    "effects": [ { "type": "housing", "building": "brood_chamber", "amount": 6 } ] },
+    "effects": [ { "type": "housing", "building": "brood_chamber", "percent": 100 } ] },
 
   // Each faction's final tech: it opens the faction's great work, which wins the match by Ascendancy once it has
   // stood finished in the deep caves long enough (see "Ascendancy" in docs/rules.md).

@@ -38,6 +38,7 @@ public sealed class PlayerEconomy
         HousingBonus = new int[content.Buildings.Count];
         HpBonus = new int[content.Units.Count];
         ShieldWall = new bool[content.Units.Count];
+        Molt = new bool[content.Units.Count];
         FellTicks = new int[content.Units.Count];
         ProspectTicks = new int[content.Units.Count];
         SpeedPerTick = new Fix64[content.Units.Count];
@@ -85,6 +86,8 @@ public sealed class PlayerEconomy
     internal readonly int[] HousingBonus, HpBonus;
     /// <summary>Which unit types (by index) can take up a shield wall (see <see cref="TechEffectType.ShieldWall"/>).</summary>
     internal readonly bool[] ShieldWall;
+    /// <summary>Which unit types (by index) can molt (see <see cref="TechEffectType.Molt"/>).</summary>
+    internal readonly bool[] Molt;
     /// <summary>
     /// Ticks of work for each unit type (by index) to fell a tree the way it chooses, or to sound the ground; 0 if it
     /// cannot (see <see cref="TechEffectType.Felling"/>, <see cref="TechEffectType.Prospecting"/>).
