@@ -86,7 +86,7 @@ public class MineTests
         var sim = new Simulation(new Rts.Sim.World.RegionMap(1, TestWorlds.Flat(64, 16, 64, 3)), Rts.Sim.Content.ContentLoader.Load(files));
         var def = sim.Content.Building("quarry");
         int before = sim.Economy.QuarryTicks(0, def);
-        Assert.Equal(def.WorkTicks, before);
+        Assert.Equal(def.WorkTicks * 100 / (100 + Rts.Sim.Economy.EconomySystem.BaseGatherPercent), before);
         sim.Economy.Grant(0, sim.Content.Tech("farming"));
         Assert.True(sim.Economy.QuarryTicks(0, def) < before);
     }

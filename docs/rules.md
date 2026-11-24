@@ -579,7 +579,9 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   Hard posts a ranged soldier from home by each of its gates that has murder holes, so they are held.
 - **Repair** (Craft guilds, issue #150; a `repair` effect in `data/techs.json`, `RepairCommand`, `UnitJob.Repair`,
   `EconomySystem.Repair.cs`, `RepairTests`): Craft guilds no longer makes workers gather 15% faster; with it, a Settler
-  player's workers repair their own damaged buildings, walls, gates and towers. Right-click one with workers selected
+  player's workers repair their own damaged buildings, walls, gates and towers. To keep the economy's pace, everyone
+  gathers and works quarries and mines 15% faster than the base numbers (`EconomySystem.BaseGatherPercent`; sappers
+  digging an area too, still twice a worker's pace). Right-click one with workers selected
   (or automatic workers take it as building work): they stand beside it and mend it a step at a time. Each step puts
   back one knocked-out block where it stood (bottom up, once its place is clear of units and solid ground or blocks
   are under it; rubble lying there is cleared away), or once every block is back, the damage dealt toward its next

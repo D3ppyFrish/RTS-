@@ -185,15 +185,17 @@ public class ResearchTests
         Hall(sim, 0, 4, 4);
         sim.Economy.PlaceFinished(0, sim.Content.Building("house"), 20, 4);
         var econ = sim.Economy;
-        Assert.Equal(25, econ.WorkTicks(0, BlockType.Stone));
+        // Stone takes 25 ticks, everyone a seventh-or-so quicker (#150: Craft guilds' 15% went to everyone).
+        int stone = 25 * 100 / (100 + EconomySystem.BaseGatherPercent);
+        Assert.Equal(stone, econ.WorkTicks(0, BlockType.Stone));
         Assert.Equal(5, econ.Capacity(0));
         Assert.Equal(6, econ.FarmYieldOf(0));
         Assert.Equal(30, econ.Housing(0));
 
         Grant(sim, 0, "tools");                  // tools, not faster gathering (#146)
-        Assert.Equal(25, econ.WorkTicks(0, BlockType.Stone));
+        Assert.Equal(stone, econ.WorkTicks(0, BlockType.Stone));
         Grant(sim, 0, "settler_guilds");         // repair, not faster gathering (#150)
-        Assert.Equal(25, econ.WorkTicks(0, BlockType.Stone));
+        Assert.Equal(stone, econ.WorkTicks(0, BlockType.Stone));
         Assert.True(econ.CanRepair(0));
         Grant(sim, 0, "roads", "carts");         // pack ponies, not bigger loads (#149)
         Assert.Equal(5, econ.Capacity(0));
@@ -203,7 +205,7 @@ public class ResearchTests
         Assert.Equal(30, econ.Housing(0));
 
         // Nothing changed for the other player.
-        Assert.Equal(25, econ.WorkTicks(1, BlockType.Stone));
+        Assert.Equal(stone, econ.WorkTicks(1, BlockType.Stone));
         Assert.Equal(5, econ.Capacity(1));
     }
 
@@ -227,7 +229,8 @@ public class ResearchTests
             sim.Schedule(0, new GatherCommand(0, new[] { w }, 30, Ground + 1, 30));
             return RunUntil(sim, () => sim.World.Get(30, Ground + 1, 30) == BlockType.Air, 400, "the dig");
         }
-        Assert.Equal(25 - 25 * 100 / 115, TicksToDig(false) - TicksToDig(true));
+        int b = EconomySystem.BaseGatherPercent;
+        Assert.Equal(25 * 100 / (100 + b) - 25 * 100 / (115 + b), TicksToDig(false) - TicksToDig(true));
     }
 
     [Fact]

@@ -265,13 +265,19 @@ public sealed partial class EconomySystem
         return carry > 0 ? carry : Capacity(U.Owner[i]);
     }
 
+    /// <summary>
+    /// How much faster than <see cref="Harvest.WorkTicks"/> (and a quarry's or mine's round) everyone gathers, in percent:
+    /// Craft guilds gives repair in place of 15% faster gathering (issue #150), and this keeps the economy's pace.
+    /// </summary>
+    public const int BaseGatherPercent = 15;
+
     /// <summary>Ticks of work for one of the player's workers to take one block of this kind.</summary>
     public int WorkTicks(int player, BlockType kind) =>
-        Math.Max(1, Harvest.WorkTicks(kind) * 100 / (100 + (Find(player)?.GatherPercent ?? 0)));
+        Math.Max(1, Harvest.WorkTicks(kind) * 100 / (100 + BaseGatherPercent + (Find(player)?.GatherPercent ?? 0)));
 
     /// <summary>Ticks of one round of work at a quarry or mine of the player's, with their gathering techs.</summary>
     public int QuarryTicks(int player, BuildingDef def) =>
-        Math.Max(1, def.WorkTicks * 100 / (100 + (Find(player)?.GatherPercent ?? 0)));
+        Math.Max(1, def.WorkTicks * 100 / (100 + BaseGatherPercent + (Find(player)?.GatherPercent ?? 0)));
 
     /// <summary>Food from one harvest at one of the player's farms.</summary>
     public int FarmYieldOf(int player) => FarmYield + (Find(player)?.FarmBonus ?? 0);
