@@ -558,7 +558,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime", "grow",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen", "lens");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mends", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen", "lens");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -658,6 +658,7 @@ public static class ContentLoader
                 Shore = o.Bool("shore"),
                 Plants = o.Int("plants", 0, 32, 0),
                 Hunts = o.Int("hunts", 0, 64, 0),
+                Mends = o.Int("mends", 0, 100, 0),
                 Mana = o.Int("mana", 0, 1000, 0),
                 ChannelTicks = o.Int("channelTime", 1, MaxSeconds, 0) * Tps,
                 MakeTicks = o.Int("makeTime", 1, MaxSeconds, 0) * Tps,
@@ -688,6 +689,7 @@ public static class ContentLoader
             if (def.Plants > 0 && kind != BuildingKind.Quarry) o.Error("only a quarry \"plants\" trees");
             if (def.Plants > 0 && def.Works.Length > 0) o.Error("a quarry that \"plants\" trees gives no \"works\"");
             if (def.Hunts > 0 && kind != BuildingKind.Quarry) o.Error("only a quarry \"hunts\"");
+            if (def.Mends > 0 && kind != BuildingKind.Barracks) o.Error("only a building that trains units \"mends\" them");
             if (def.Hunts > 0 && (def.Works.Length > 0 || def.Plants > 0)) o.Error("a quarry that \"hunts\" gives no \"works\" and \"plants\" nothing: its hunters bring home the game they shoot");
             if (kind == BuildingKind.Quarry && def.WorkTicks == 0 || kind == BuildingKind.Quarry && def.Works.Length == 0 && def.Plants == 0 && def.Hunts == 0)
                 o.Error("a quarry needs \"works\" (the goods a round of work gives), \"plants\" or \"hunts\", and \"workTime\" (the seconds a round takes)");
@@ -1365,7 +1367,8 @@ public static class ContentLoader
                     case TechEffectType.Roads:
                     case TechEffectType.SpareWorkers:
                     case TechEffectType.MurderHoles:
-                    case TechEffectType.Repair:
+                    case TechEffectType.Salvage:
+                    case TechEffectType.FieldRepairs:
                         o.Keys("type");
                         effects.Add(new TechEffect { Type = type });
                         break;
@@ -1686,6 +1689,7 @@ public static class ContentLoader
                 h.Add(b.Shore ? 1 : 0);
                 h.Add(b.Plants);
                 if (b.Hunts > 0) h.Add(b.Hunts);
+                if (b.Mends > 0) h.Add(5000 + b.Mends);
                 h.Add(b.Mana);
                 h.Add(b.ChannelTicks);
                 if (b.Pen is { } pd)

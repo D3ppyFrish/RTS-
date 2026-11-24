@@ -10,9 +10,9 @@ using Xunit;
 namespace Rts.Sim.Tests;
 
 /// <summary>
-/// Craft guilds' repair (issue #150): Settler workers mend their damaged buildings, walls, gates and towers a block at a
+/// Repair (issue #150): every player's workers mend their damaged buildings, walls, gates and towers a block at a
 /// time, putting back lost hit points and knocked-out blocks for half the cost over all of the hit points, slowly under
-/// fire. Without the tech, and for the Orcs, the order does nothing.
+/// fire. No tech is needed, for any faction.
 /// </summary>
 public class RepairTests
 {
@@ -64,14 +64,10 @@ public class RepairTests
     private static int Stone(Simulation sim, int player) => sim.Economy.Stockpile(player)[(int)Good.Stone];
 
     [Fact]
-    public void CraftGuildsGivesRepairNotFasterGathering()
+    public void NoTechGivesRepair()
     {
-        var guilds = ContentDb.Default.Tech("settler_guilds");
-        Assert.Equal("settlers", guilds.Faction?.Id);
-        Assert.Contains(guilds.Effects, e => e.Type == TechEffectType.Repair);
-        // Only the Craft guilds give repair.
-        Assert.All(ContentDb.Default.Techs.Where(t => t.Id != "settler_guilds"),
-            t => Assert.DoesNotContain(t.Effects, e => e.Type == TechEffectType.Repair));
+        // Repair is open to everyone: no tech has a repair effect, and "repair" is no longer an effect at all.
+        Assert.DoesNotContain("Repair", Enum.GetNames<TechEffectType>());
     }
 
     [Fact]
@@ -79,7 +75,7 @@ public class RepairTests
     {
         var sim = Flat();
         Hall(sim, 0, 4, 4);
-        Grant(sim, 0, "tools", "settler_guilds");
+        Grant(sim, 0, "tools");
         var wall = DamagedWall(sim);
         int top = wall.Y + wall.Shape.Height - 1;
         int lost = wall.MaxHealth - wall.Health;
@@ -108,7 +104,7 @@ public class RepairTests
     {
         var sim = Flat();
         Hall(sim, 0, 4, 4);
-        Grant(sim, 0, "tools", "settler_guilds");
+        Grant(sim, 0, "tools");
         var walls = Enumerable.Range(0, 5).Select(k => DamagedWall(sim, knocked: 1 + k % 2, z: WallZ + k)).ToArray();
         var worker = sim.SpawnUnit(0, "worker", WallX + 2, WallZ);
         sim.Schedule(sim.Tick, new RepairCommand(0, new[] { worker }, walls[0].Id));
@@ -116,39 +112,23 @@ public class RepairTests
         Assert.All(walls, w => Assert.Equal(w.MaxHealth, w.Health));
     }
 
-    [Fact]
-    public void WithoutCraftGuildsTheOrderIsRefused()
+    [Theory]
+    [InlineData("settlers")]
+    [InlineData("orcs")]
+    [InlineData("deepfolk")]
+    public void EveryFactionRepairsWithNoTech(string faction)
     {
         var sim = Flat();
+        sim.SetFaction(0, faction);
         Hall(sim, 0, 4, 4);
         var wall = DamagedWall(sim);
-        int health = wall.Health, stone = Stone(sim, 0);
+        Assert.True(sim.Economy.Repairable(wall));
+        int stone = Stone(sim, 0);
         int worker = sim.SpawnUnit(0, "worker", WallX + 2, WallZ);
         sim.Schedule(sim.Tick, new RepairCommand(0, new[] { worker }, wall.Id));
-        for (int t = 0; t < 20 * Tps; t++) sim.Step();
-        Assert.Equal(UnitJob.None, sim.Units.Job[sim.Units.IndexOf(worker)]);
-        Assert.Equal(health, wall.Health);
-        Assert.Equal(stone, Stone(sim, 0));
-        Assert.False(sim.Economy.Repairable(wall));
-    }
-
-    [Fact]
-    public void AnOrcPlayerCannotRepair()
-    {
-        var sim = Flat();
-        sim.SetFaction(0, "orcs");
-        Hall(sim, 0, 4, 4);
-        Grant(sim, 0, "tools");
-        Assert.Equal(ResearchResult.OtherFaction, sim.Economy.CanResearch(0, sim.Content.Tech("settler_guilds")));
-        Assert.DoesNotContain(sim.Content.Techs, t => (t.Faction == null || t.Faction.Id == "orcs") && t.Effects.Any(e => e.Type == TechEffectType.Repair));
-        var wall = DamagedWall(sim);
-        int health = wall.Health;
-        int worker = sim.SpawnUnit(0, "worker", WallX + 2, WallZ);
-        sim.Schedule(sim.Tick, new RepairCommand(0, new[] { worker }, wall.Id));
-        for (int t = 0; t < 20 * Tps; t++) sim.Step();
-        Assert.False(sim.Economy.CanRepair(0));
-        Assert.Equal(UnitJob.None, sim.Units.Job[sim.Units.IndexOf(worker)]);
-        Assert.Equal(health, wall.Health);
+        Run(sim, () => !wall.Damaged, 60 * Tps, "the wall to be repaired");
+        Assert.Equal(wall.MaxHealth, wall.Health);
+        Assert.True(Stone(sim, 0) < stone);
     }
 
     [Fact]
@@ -156,7 +136,7 @@ public class RepairTests
     {
         var sim = Flat();
         Hall(sim, 0, 4, 4, amount: 0);
-        Grant(sim, 0, "tools", "settler_guilds");
+        Grant(sim, 0, "tools");
         var wall = DamagedWall(sim);
         int health = wall.Health;
         int worker = sim.SpawnUnit(0, "worker", WallX + 2, WallZ);
@@ -175,7 +155,7 @@ public class RepairTests
         {
             var sim = Flat();
             Hall(sim, 0, 4, 4);
-            Grant(sim, 0, "tools", "settler_guilds");
+            Grant(sim, 0, "tools");
             var wall = DamagedWall(sim, knocked: 1);
             int top = wall.Y + wall.Shape.Height - 1;
             if (underFire)
@@ -197,7 +177,7 @@ public class RepairTests
     {
         var sim = Flat();
         Hall(sim, 0, 4, 4);
-        Grant(sim, 0, "tools", "settler_guilds");
+        Grant(sim, 0, "tools");
         var wall = DamagedWall(sim);
         // An enemy soldier standing near it, doing nothing: nobody goes to repair it.
         int enemy = sim.SpawnUnit(1, "spearman", WallX + 6, WallZ + 6);
@@ -223,7 +203,7 @@ public class RepairTests
         var sim = AiTests.WithStarts(96, (30, 48));
         var hall = sim.Economy.TownHall(0)!;
         foreach (var g in new[] { Good.Food, Good.Wood, Good.Stone }) hall.Stock[(int)g] = 500;
-        Grant(sim, 0, "tools", "settler_guilds");
+        Grant(sim, 0, "tools");
         var wall = DamagedWall(sim, x: hall.MaxX + 6, z: hall.Z);
         for (int k = 0; k < 3; k++) sim.SpawnUnit(0, "worker", hall.MaxX + 2, hall.MaxZ + 2 + k);
         var players = new[] { new AiPlayer(0, 1) };
@@ -245,7 +225,7 @@ public class RepairTests
         {
             var sim = Flat();
             Hall(sim, 0, 4, 4);
-            Grant(sim, 0, "tools", "settler_guilds");
+            Grant(sim, 0, "tools");
             var wall = DamagedWall(sim);
             int worker = sim.SpawnUnit(0, "worker", WallX + 2, WallZ);
             sim.Schedule(sim.Tick, new RepairCommand(0, new[] { worker }, wall.Id));

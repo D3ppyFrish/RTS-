@@ -56,7 +56,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
 - **Buildings** (`BuildCommand`, from `data/buildings.json`): town hall, storehouse, house, farm, barracks,
   smelter, quarry and mine. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
   A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column
-  gap from other buildings, and its cost; its voxel blocks go up layer by layer as workers build it.
+  gap from other buildings, and its cost; its voxel blocks go up layer by layer as workers build it (rubble lying where a block goes, such as a felled tree's logs, is cleared away for it).
 - **Building upgrades** (`UpgradeCommand`, `"upgrade"` and `"speed"` in `data/buildings.json`, #47): a
   finished building is upgraded where it stands into a bigger one of its kind, for that building's cost and
   build time. A house (4 by 4, houses 5) becomes a large house (6 by 6, houses 12; 45 wood, 10 stone) and then a
@@ -136,7 +136,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   bringing 5 stone every 10 seconds of work; a mine (5 by 5, 60 wood and 40 stone, needs Smelting) takes two, each
   round of 12 seconds giving 4 iron ore and then 2 coal, in turn, which is what a smelter uses. Each load goes to
   the nearest storage, like any gathered goods. Gathering techs make the rounds quicker (none in the game's data
-  does any more: Craft guilds gives repair instead, #150), and a worker's work speed counts. Automatic workers work one when the good it gives is the one the player needs most
+  does any more: the tech rework, #150), and a worker's work speed counts. Automatic workers work one when the good it gives is the one the player needs most
   and it has a free place (a mine's ore and coal, like dug ore and coal, only once there is a smelter); otherwise
   they gather block by block as before.
 - **Fishing huts** (kind `quarry` with `"shore": true` in `data/buildings.json`): a 4 by 4 hut of planks and thatch
@@ -601,10 +601,10 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   unheld gate drops nothing, so the attacker's answer is to clear the walls first. Masonry no longer makes
   houses hold more: that bonus is gone (the manor and castle keep it unlocks are the roomier houses).
   Hard posts a ranged soldier from home by each of its gates that has murder holes, so they are held.
-- **Repair** (Craft guilds, issue #150; a `repair` effect in `data/techs.json`, `RepairCommand`, `UnitJob.Repair`,
-  `EconomySystem.Repair.cs`, `RepairTests`): Craft guilds no longer makes workers gather 15% faster; with it, a Settler
-  player's workers repair their own damaged buildings, walls, gates and towers. To keep the economy's pace, everyone
-  gathers and works quarries and mines 15% faster than the base numbers (`EconomySystem.BaseGatherPercent`; sappers
+- **Repair** (issue #150; `RepairCommand`, `UnitJob.Repair`, `EconomySystem.Repair.cs`, `RepairTests`): every
+  player's workers, of every faction, repair their own damaged buildings, walls, gates and towers, with no tech
+  needed. (It was first the Settlers' Craft guilds tech; Craft guilds gives salvage now, below.) Everyone gathers and
+  works quarries and mines 15% faster than the base numbers (`EconomySystem.BaseGatherPercent`; sappers
   digging an area too, still twice a worker's pace). Right-click one with workers selected
   (or automatic workers take it as building work): they stand beside it and mend it a step at a time. Each step puts
   back one knocked-out block where it stood (bottom up, once its place is clear of units and solid ground or blocks
@@ -616,9 +616,32 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   pay with, the workers stop. Sent to a wall, gate or tower, they go on along it to the next damaged stretch within
   8 columns (the one fewest are mending, then the nearest) until it is all whole. Automatic workers repair, up to 2
   at a building, only while no enemy (wild game aside) is within 16 columns of it and the next step can be paid for;
-  computer players' workers are automatic, so Settler computer players repair the same way once no enemy is near.
-  The Orcs and the Deepfolk have no repair: it is the Settlers' builder edge. Rebuilding a ruin from scratch (rebuild
-  orders, under Automation) stays open to everyone. All numbers are first guesses for playtesting.
+  computer players' workers are automatic, so every computer player repairs the same way once no enemy is near.
+  Rebuilding a ruin from scratch (rebuild orders, under Automation) is open to everyone too. All numbers are first
+  guesses for playtesting.
+- **Salvage** (Craft guilds, the Settlers' tech; a `salvage` effect in `data/techs.json`, `SalvageCommand`,
+  `UnitJob.Salvage`, `Building.Salvaging`/`Salvaged`, `EconomySystem.Salvage.cs`, `SalvageTests`): a Settler player
+  with Craft guilds marks one of their own finished buildings to take down (the **Take down** button on its panel;
+  pressed again, the mark comes off and the work done so far is kept). Workers right-clicked onto it, and automatic
+  workers as building work (as many as would build it), take it apart from beside it in half the time it took to
+  build. Then it is gone at once, with no rubble, and half its cost, in proportion to the hit points it has left
+  (rounded down), and every good it held go to the player's nearest other storage (with no other storage, they are
+  lost). A building that is captured loses the mark. It moves a town, strips a far storehouse before raiders take it,
+  or clears an outgrown wall; a building taken down is not put back by rebuild orders. Computer players do not salvage.
+- **Field repairs** (Craft guilds too; a `field_repairs` effect in `data/techs.json`, `MendCommand`, `UnitJob.Mend`,
+  `EconomySystem.FieldRepairs.cs`, `FieldRepairTests`): a Settler player with Craft guilds right-clicks one of their
+  damaged siege machines (a catapult or a battering ram: a `machine` that does not sail) with workers selected. They
+  walk up to it (within 2 columns, following it if it moves) and give back 5% of its hit points for each second of
+  work at the usual work speed, under fire or not, so a ram can be kept going at the gate. Each step costs its share
+  of half the machine's cost in materials (not food), rounded up, taken from storage; with nothing to pay with, the
+  workers stop. Ships are not mended this way. Automatic workers and computer players do not mend machines.
+- **Yards** (every faction, no tech, no worker; `mends` on a building in `data/buildings.json`, `BuildingDef.Mends`,
+  `EconomySystem.YardFor`/`StepYards` in `EconomySystem.FieldRepairs.cs`, `YardRepairTests`): a dock mends its owner's
+  ships and bombard ships, and a siege workshop their catapults and battering rams, while the machine waits within 4
+  columns of it out of the fight (the same 10 seconds as healing on its own): 3% of its hit points each second, on top
+  of healing on its own, each step paid for like field repairs (its share of half the machine's cost in materials,
+  not food, from storage; with nothing to pay with it heals only on its own). Bring a battered ram home to the
+  workshop, or a holed ship into harbour. The unit panel says "being mended at the dock" (or workshop).
 - **Breaking through** (`Breach`, `BreachFor`): units sent at a building they cannot get to (it is walled
   in) go for a wall, gate or facing of its owner within 16 columns instead: one they can get at from where
   they are, with the shortest way from them through it to the building (ties to the one nearer the

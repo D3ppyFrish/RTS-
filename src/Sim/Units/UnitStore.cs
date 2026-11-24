@@ -156,6 +156,16 @@ public enum UnitJob : byte
     /// at a time from beside it, paying a share of its cost for each, until it is whole.
     /// </summary>
     Repair,
+    /// <summary>
+    /// Take down the player's own building <see cref="UnitStore.JobTarget"/>, marked for salvage (see
+    /// <see cref="SalvageCommand"/>): work beside it until it is gone and half its cost is back in storage.
+    /// </summary>
+    Salvage,
+    /// <summary>
+    /// Mend the player's damaged siege machine, the unit <see cref="UnitStore.JobTarget"/> (an id; see
+    /// <see cref="MendCommand"/>): walk up to it and give back its hit points a step at a time, paying a share of its cost.
+    /// </summary>
+    Mend,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

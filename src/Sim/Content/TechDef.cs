@@ -200,10 +200,15 @@ public enum TechEffectType : byte
     /// </summary>
     MurderHoles,
     /// <summary>
-    /// The player's workers can repair their damaged buildings, walls, gates and towers (see <see cref="RepairCommand"/>):
-    /// they mend them a block at a time, for a share of the build cost.
+    /// The player's workers can salvage their own finished buildings (see <see cref="SalvageCommand"/>): take one down
+    /// and bring back half its cost (less for a damaged one), and the goods it held.
     /// </summary>
-    Repair,
+    Salvage,
+    /// <summary>
+    /// The player's workers can mend their damaged siege machines (catapults, battering rams: units with
+    /// <see cref="Units.UnitDef.Machine"/> that do not sail) in the field, even mid-fight (see <see cref="MendCommand"/>).
+    /// </summary>
+    FieldRepairs,
     /// <summary>
     /// Matching units can molt when badly hurt (see <see cref="MoltCommand"/>): they stop, shed their shells and heal
     /// back to full, then stay soft for a while. The numbers are in the role table (<see cref="CombatRules.Molt"/>).

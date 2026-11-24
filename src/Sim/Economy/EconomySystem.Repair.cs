@@ -5,7 +5,7 @@ using Rts.Sim.Units;
 namespace Rts.Sim.Economy;
 
 /// <summary>
-/// Repair (Craft guilds, issue #150): a player with the <see cref="Content.TechEffectType.Repair"/> tech sends workers
+/// Repair (issue #150; open to every player with no tech since the Craft guilds rework): a player sends workers
 /// to their own damaged building, wall, gate or tower (see <see cref="RepairCommand"/>), and they mend it a step at a
 /// time from beside it: each knocked-out block put back where it stood (bottom up, once nothing is in its way), then
 /// the damage dealt toward the next block. A step takes as long as building that much of it did, four times as long
@@ -28,11 +28,11 @@ public sealed partial class EconomySystem
     public const int RepairSafeRadius = 16;
 
     /// <summary>
-    /// True if the building is damaged and its owner's workers can repair it: the owner has the tech for it, and it is
-    /// a building of theirs (not a city-state's totem).
+    /// True if the building is damaged and its owner's workers can repair it: it is a player's building (not a city-state's
+    /// totem). Every player can repair; no tech is needed.
     /// </summary>
     public bool Repairable(Building b) =>
-        b.Damaged && b.Def.Kind != BuildingKind.Totem && b.Owner >= 0 && b.Owner < Simulation.WildPlayer && CanRepair(b.Owner);
+        b.Damaged && b.Def.Kind != BuildingKind.Totem && b.Owner >= 0 && b.Owner < Simulation.WildPlayer;
 
     /// <summary>True if the building was hit by another side less than <see cref="UnderFireTicks"/> ago: repairs to it go slowly.</summary>
     public bool UnderFire(Building b) => b.LastHit >= 0 && _sim.Tick - b.LastHit < UnderFireTicks;
@@ -119,7 +119,7 @@ public sealed partial class EconomySystem
     public int MendTicks(Building b, int h) =>
         Math.Max(MinMendTicks, (int)((long)b.Def.BuildTicks * h / Math.Max(1, b.Built)));
 
-    /// <summary>Sends the command's workers to repair the building, if its owner can repair it.</summary>
+    /// <summary>Sends the command's workers to repair the building, if it is the player's and damaged.</summary>
     internal void Apply(RepairCommand c)
     {
         var b = Buildings.Get(c.Building);

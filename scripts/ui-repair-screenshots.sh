@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Scripted-input screenshot test for repair (Craft guilds, issue #150), in test mode: you get every tech (Craft guilds
-# among them) and goods; the test panel puts up a short stone wall of yours running north and south, the top levels of
+# Scripted-input screenshot test for repair (issue #150; no tech needed, every faction), in test mode: you get every
+# tech and goods; the test panel puts up a short stone wall of yours running north and south, the top levels of
 # its middle are knocked out (test mode's damage, as a siege would), three of your workers are put down beside it, selected and
 # right-clicked onto the gap: they repair it, putting the blocks back a block at a time, and go on along the wall.
 # Saves PNGs to OUT_DIR and fails if the UI state is not as expected.

@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using Rts.Sim.Economy;
@@ -427,6 +428,28 @@ public class EconomyTests
         int gained = p.Gathered[(int)Good.Food] - before;
         Assert.True(gained > 0, "the farm brings food in");
         Assert.Equal(gained, sim.Economy.FoodPerMinute(0));
+    }
+
+    [Fact]
+    public void RubbleOnASiteIsClearedAsItIsBuilt()
+    {
+        // A felled tree's logs that came down on a site used to stay in its wall: a gap that counted as whole until
+        // someone gathered the logs, and then as damage to repair. Now the builders clear the rubble and build there.
+        var sim = Flat();
+        var hall = Place(sim, 0, "town_hall", 10, 10);
+        hall.Stock[(int)Good.Wood] = 100;
+        var ids = new[] { Worker(sim, 0, 20, 20), Worker(sim, 0, 21, 20) };
+        var house = sim.Content.Building("house");
+        sim.Schedule(0, new BuildCommand(0, ids, "house", 30, 30));
+        sim.Step();
+        var site = Assert.Single(sim.Buildings.All, b => b.Def == house);
+        var wallBlock = house.Blocks.First(t => t.Y == 1);
+        int rx = 30 + wallBlock.X, ry = site.Y + wallBlock.Y, rz = 30 + wallBlock.Z;
+        sim.World.Set(rx, ry, rz, BlockType.TreeRubble);
+        RunUntil(sim, () => site.Active, 1000, "the house to be finished");
+        sim.Step();
+        Assert.Equal(wallBlock.Block, sim.World.Get(rx, ry, rz));
+        Assert.False(site.Damaged);
     }
 
     [Fact]

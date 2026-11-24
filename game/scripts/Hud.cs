@@ -80,6 +80,7 @@ public partial class Hud : CanvasLayer
     private Button _ladderButton = null!;
     private Button _damButton = null!;
     private Button _sluiceButton = null!;
+    private Button _salvageButton = null!;
     private Button _unloadButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
@@ -822,6 +823,13 @@ public partial class Hud : CanvasLayer
         _sluiceButton.Visible = false;
         _sluiceButton.Pressed += () => _control.ToggleSluice();
         column.AddChild(_sluiceButton);
+        _salvageButton = MakeToolButton("Take down");
+        _salvageButton.Name = "salvage";
+        _salvageButton.Icon = UiIcons.Get("hammer");
+        _salvageButton.ToggleMode = false;
+        _salvageButton.Visible = false;
+        _salvageButton.Pressed += () => _control.ToggleSalvage();
+        column.AddChild(_salvageButton);
 
         _unloadButton = MakeToolButton("Put ashore");
         _unloadButton.Name = "ship_unload";
@@ -1432,6 +1440,7 @@ public partial class Hud : CanvasLayer
         RefreshDen();
         RefreshRuin();
         RefreshSluice();
+        RefreshSalvage();
         RefreshShips();
         RefreshBloom();
         RefreshEarthWall();
@@ -1955,6 +1964,20 @@ public partial class Hud : CanvasLayer
         button.Disabled = true;
     }
 
+    /// <summary>The Take down button (Craft guilds' salvage), for a finished building of yours that is selected.</summary>
+    private void RefreshSalvage()
+    {
+        var b = _sim.Buildings.Get(_control.SelectedBuilding);
+        bool show = b != null && b.Owner == PlayerControl.LocalPlayer && (b.Salvaging || _sim.Economy.Salvageable(PlayerControl.LocalPlayer, b));
+        _salvageButton.Visible = show;
+        if (!show) return;
+        _salvageButton.Text = b!.Salvaging ? "Stop taking it down" : "Take down (salvage)";
+        _salvageButton.TooltipText = b.Salvaging
+            ? "Workers stop taking it down; the work done so far is kept."
+            : "Workers (automatic ones too, or right click it with workers) take it down in half the time it took to build. " +
+              "Half its cost, less if it is damaged, and every good it holds go to your nearest other storage.";
+    }
+
     private void RefreshSluice()
     {
         var dam = _control.NearDam();
@@ -2334,7 +2357,8 @@ public partial class Hud : CanvasLayer
                 : u.PenFor[i] != 0 ? "    going into the beast pen"
                 : u.Tired[i] > 0 ? $"    tired after the stampede ({(u.Tired[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)"
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
-            string heals = !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
+            string heals = _sim.Economy.YardFor(i) is { } yard ? $" (being mended at the {yard.Def.Name.ToLowerInvariant()})"
+                : !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) is { } camp
                     ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
@@ -2431,6 +2455,15 @@ public partial class Hud : CanvasLayer
             text.Append(repairers > 0
                 ? $"Being repaired by {repairers} worker{(repairers == 1 ? "" : "s")}{(_sim.Economy.UnderFire(b) ? ", slowly under fire" : "")}\n"
                 : "Damaged: right click it with workers to repair it\n");
+        }
+        if (b.Owner == PlayerControl.LocalPlayer && b.Salvaging)
+        {
+            int takers = 0;
+            for (int i = 0; i < u.Count; i++)
+                if (u.Job[i] == UnitJob.Salvage && u.JobTarget[i] == b.Id) takers++;
+            text.Append(takers > 0
+                ? $"Being taken down by {takers} worker{(takers == 1 ? "" : "s")}: {EconomySystem.SalvagePercent(b)}%\n"
+                : $"Marked to take down ({EconomySystem.SalvagePercent(b)}%): right click it with workers\n");
         }
         if (b.Planned)
         {

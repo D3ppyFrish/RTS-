@@ -388,7 +388,12 @@ public sealed partial class AutomationSystem
                 }
                 var best = all[nearest[rank]];
                 var job = rank switch { 0 => UnitJob.Build, 1 => UnitJob.Farm, 2 or 4 => UnitJob.Haul, _ => UnitJob.Supply };
-                // Building work on a building that stands is repairing it (Craft guilds).
+                // Building work on a building that stands is taking it down (marked for salvage), or repairing it.
+                if (rank == 0 && best.Salvaging && !best.WantsBuilders)
+                {
+                    assignment = new Assignment(tick, UnitJob.Salvage, best.Id, 0, 0, 0, BlockType.Air);
+                    return new SalvageCommand(owner, me, best.Id);
+                }
                 if (rank == 0 && !best.WantsBuilders)
                 {
                     assignment = new Assignment(tick, UnitJob.Repair, best.Id, 0, 0, 0, BlockType.Air);
@@ -437,6 +442,8 @@ public sealed partial class AutomationSystem
         int working = _working.GetValueOrDefault(b.Id);
         // A bridge's deck is built from beside it: not before there is ground or deck to stand on there.
         if (b.WantsBuilders) return working < MaxBuilders(b.Upgrade ?? b.Def) && (!b.Def.IsBridge || Economy.BridgeAccess(b, out _, out _, out _)) ? 0 : -1;
+        // A building its owner marked for salvage is building work: taking it down.
+        if (b.Salvaging && b.Active) return working < MaxBuilders(b.Def) ? 0 : -1;
         // A damaged building its owner can repair, with nobody hostile near it, is building work too.
         if (b.Damaged && working < MaxRepairers && Economy.WantsRepair(b)) return 0;
         if (b.Def.Storage) return b.HasSupply && working < SupplyWorkers && Economy.WantsSupply(b) ? 3 : -1;
@@ -625,6 +632,7 @@ public sealed partial class AutomationSystem
             {
                 UnitJob.Build => b.WantsBuilders,
                 UnitJob.Repair => b.Damaged,
+                UnitJob.Salvage => b.Salvaging,
                 UnitJob.Supply => Economy.WantsSupply(b), // it left while there was still supply work there
                 _ => b.Active,
             };
@@ -876,7 +884,7 @@ public sealed partial class AutomationSystem
                 foreach (var w in q.Def.Works) s.Gatherers[(int)w.Good]++;
                 if (q.Def.Hunts > 0) s.Gatherers[(int)Good.Food]++;
             }
-            if (u.Job[i] is UnitJob.Build or UnitJob.Farm or UnitJob.Haul or UnitJob.Supply or UnitJob.Quarry or UnitJob.Repair)
+            if (u.Job[i] is UnitJob.Build or UnitJob.Farm or UnitJob.Haul or UnitJob.Supply or UnitJob.Quarry or UnitJob.Repair or UnitJob.Salvage)
                 _working[u.JobTarget[i]] = _working.GetValueOrDefault(u.JobTarget[i]) + 1;
         }
         foreach (var b in Buildings.All)

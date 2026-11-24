@@ -387,9 +387,33 @@ public sealed record FellCommand(int PlayerId, int[] Units, int X, int Z, int Di
 }
 
 /// <summary>
+/// The player marks their finished building <paramref name="Building"/> for salvage and sends the command's workers (if
+/// any) to take it down; automatic workers take it as building work. Once it is down, half its cost (in proportion to
+/// the hit points it has left) and the goods it held go to the player's nearest other storage. With
+/// <paramref name="Stop"/>, the mark is taken off instead and the work done so far is kept. Only for a player with the
+/// tech for it (see <see cref="Content.TechEffectType.Salvage"/>, Craft guilds).
+/// </summary>
+public sealed record SalvageCommand(int PlayerId, int[] Units, int Building, bool Stop = false) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(SalvageCommand? other) => base.Equals(other) && Building == other!.Building && Stop == other.Stop;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building, Stop);
+}
+
+/// <summary>
+/// The command's workers mend the player's damaged siege machine <paramref name="Target"/> (a unit id: a catapult or a
+/// battering ram) in the field, for a share of its cost in materials. Only for a player with the tech for it (see
+/// <see cref="Content.TechEffectType.FieldRepairs"/>, Craft guilds).
+/// </summary>
+public sealed record MendCommand(int PlayerId, int[] Units, int Target) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(MendCommand? other) => base.Equals(other) && Target == other!.Target;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Target);
+}
+
+/// <summary>
 /// The command's workers repair the player's damaged building <paramref name="Building"/>: they mend it a block at a time,
 /// putting back lost hit points and knocked-out blocks, for half its cost over all of its hit points, taken from storage.
-/// Only for a player with the tech for it (see <see cref="Content.TechEffectType.Repair"/>).
+/// Every player can repair; no tech is needed.
 /// </summary>
 public sealed record RepairCommand(int PlayerId, int[] Units, int Building) : UnitsCommand(PlayerId, Units)
 {

@@ -205,6 +205,8 @@ public partial class TechTreePanel : PanelContainer
         TechEffectType.Housing => e.Percent > 0 ? $"Each {e.Building?.Name.ToLowerInvariant()} houses {e.Percent}% more" : $"Each {e.Building?.Name.ToLowerInvariant()} houses {e.Amount} more",
         TechEffectType.UnitHp => e.Percent > 0 ? $"{Who(e)} have {e.Percent}% more hit points" : $"{Who(e)} have {e.Amount} more hit points",
         TechEffectType.Roads => "Roads can be laid (L)",
+        TechEffectType.Salvage => "Workers take down your own buildings for half their cost back",
+        TechEffectType.FieldRepairs => "Workers mend your catapults and rams in the field (right-click)",
         TechEffectType.Reveal => e.Reveal switch
         {
             MapFeature.Ruins => "Shows every old ruin on the map",
@@ -212,7 +214,6 @@ public partial class TechTreePanel : PanelContainer
             _ => "Shows every city-state town on the map",
         },
         TechEffectType.SpareWorkers => "Wild monsters leave your workers alone",
-        TechEffectType.Repair => "Workers repair damaged buildings and walls (right-click)",
         _ => e.Type.ToString(),
     };
 

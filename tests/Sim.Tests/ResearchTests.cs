@@ -195,9 +195,8 @@ public class ResearchTests
 
         Grant(sim, 0, "tools");                  // tools, not faster gathering (#146)
         Assert.Equal(stone, econ.WorkTicks(0, BlockType.Stone));
-        Grant(sim, 0, "settler_guilds");         // repair, not faster gathering (#150)
+        Grant(sim, 0, "settler_guilds");         // salvage, not faster gathering (#150)
         Assert.Equal(stone, econ.WorkTicks(0, BlockType.Stone));
-        Assert.True(econ.CanRepair(0));
         Grant(sim, 0, "roads", "carts");         // pack ponies, not bigger loads (#149)
         Assert.Equal(5, econ.Capacity(0));
         Grant(sim, 0, "farming", "crop_rotation"); // orchards, not richer harvests (#148)
