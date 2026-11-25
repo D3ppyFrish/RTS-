@@ -226,6 +226,7 @@ public sealed partial class AiPlayer
             _started = true;
             Start(sim, issue);
         }
+        if (Smart) SeeItems(sim); // dropped items lying where it sees (AiPlayer.Items.cs)
         long tick = sim.Tick;
         // Players look on different ticks, so that two of them do not both work on the same tick.
         if ((tick + Player * 7) % EconomyTicks == 0) Economy(sim, hall, issue);

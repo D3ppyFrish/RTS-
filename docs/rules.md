@@ -1252,7 +1252,13 @@ Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the bl
   handing an item over on purpose. A mount that is ridden off drops its relic where it stood, so a rider
   without one picks it up. Units taken off the map in test mode (Remove, Clear) take their items with them.
 - **In the game**: the item stands over the ground as its pixel icon (the relic's, or Dusk Bloom's for the
-  staff), bobbing in a soft light, where you can see. Computer players do not go after dropped items yet.
+  staff), bobbing in a soft light, where you can see.
+- **Computer players** (Easy and up; `AI/AiPlayer.Items.cs`, tests in `AiItemTests`) fetch the items they have seen
+  lying within 200 columns of their town hall, off the corrupted ground, while no rival soldier they see stands within
+  12 columns of it: one unit that can take it up (a fighting unit without a relic, or a healer for the staff) walks
+  onto it, their nearest at home that is not hurt or one of their wave within 24 columns that is not fighting (it goes
+  back to the wave after). One is out at a time; one that is killed, or has not got there in 2 minutes, gives up, and
+  that item is left alone for 10 minutes. All numbers are first guesses for playtesting.
 
 ## Old ruins and what they hold
 
