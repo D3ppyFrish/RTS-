@@ -910,7 +910,8 @@ public sealed partial class AiPlayer
         if (Smart && far <= SiegeReach)
         {
             Bombard(sim, foe, issue);
-            Escalade(sim, foe, cx, cz, far, issue);
+            // A wave of burrowers tunnels under a wall; a ladder goes up only where no tunnel will do.
+            if (!Undermine(sim, foe, cx, cz, issue)) Escalade(sim, foe, cx, cz, far, issue);
         }
         if (far > SiegeRadius && !MostAt(sim, tx, tz))
         {
@@ -937,7 +938,7 @@ public sealed partial class AiPlayer
                 _waveCheck = sim.Tick;
             }
             else if (sim.Tick % (5 * ArmyTicks) < ArmyTicks) again = Unordered(sim, _wave, tx, tz);
-            again?.RemoveAll(id => _engines.Contains(id) || _shield.Contains(id) || _ladderCrew.Contains(id));
+            again?.RemoveAll(id => _engines.Contains(id) || _shield.Contains(id) || Crewed(id));
             if (again is { Count: > 0 }) issue(new AttackMoveCommand(Player, again.ToArray(), tx, tz));
             return;
         }
@@ -949,7 +950,7 @@ public sealed partial class AiPlayer
         {
             // Gone, though it has not seen that yet: a closer look.
             var look = Unordered(sim, _wave, foe.X, foe.Z);
-            look.RemoveAll(_ladderCrew.Contains);
+            look.RemoveAll(Crewed);
             if (look.Count > 0) issue(new AttackMoveCommand(Player, look.ToArray(), foe.X, foe.Z));
             return;
         }
@@ -961,7 +962,7 @@ public sealed partial class AiPlayer
         foreach (int id in _wave)
         {
             int i = u.IndexOf(id);
-            if (u.Rout[i] > 0 || _engines.Contains(id) || _shield.Contains(id) || _ladderCrew.Contains(id)) continue;
+            if (u.Rout[i] > 0 || _engines.Contains(id) || _shield.Contains(id) || Crewed(id)) continue;
             bool onBuilding = u.Combat[i] == CombatOrder.Attack && u.TargetBuilding[i] == target.Id;
             // Sappers (smart levels) go for the building whatever else is going on: they deal it full damage.
             if (Smart && sim.Content.Units[u.Def[i]].Role == UnitRole.Sapper)
@@ -1007,6 +1008,7 @@ public sealed partial class AiPlayer
         _waveBest = int.MaxValue;
         _siegeDefenders = int.MaxValue;
         ResetLadders();
+        ResetTunnels();
         ResetFerry();
         ResetIce();
     }

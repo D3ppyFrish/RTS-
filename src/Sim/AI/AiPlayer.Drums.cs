@@ -67,7 +67,7 @@ public sealed partial class AiPlayer
             if (u.Owner[i] != Player || sim.Content.Units[u.Def[i]].Drums == null) continue;
             if (u.Rout[i] > 0 || u.Subdued[i] || u.Aboard[i] != 0 || u.Town[i] != 0 || u.Job[i] != UnitJob.None) continue;
             int id = u.Id[i];
-            if (_joining.Contains(id) || _engines.Contains(id) || _shield.Contains(id) || _ladderCrew.Contains(id)) continue;
+            if (_joining.Contains(id) || _engines.Contains(id) || _shield.Contains(id) || Crewed(id)) continue;
             _wave.Add(id);
             issue(new AttackMoveCommand(Player, new[] { id }, tx, tz));
             Note(sim, "sends a war drummer after its wave");
