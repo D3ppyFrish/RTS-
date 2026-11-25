@@ -52,7 +52,10 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   own colour until it is dug out, and the ground round the spot comes out of the fog as seen. An alert says how
   many blocks were found. Other players learn nothing. Computer players (Easy and up) sound the ground once by
   each storage building of theirs (town hall and storehouses) once they have the tech, with the nearest unit
-  that can; they leave felling to players.
+  that can. They fell trees onto their rivals too (Easy and up): when a unit of theirs that can fell stands within
+  8 columns of a tree that would come down on at least two rival units they see (a rival building counting as
+  one), and on nothing of their own nor of anyone they are not fighting, it brings the tree down that way, the
+  one with the most under it first. One feller at a time; their army leaves it to the job until the tree is down.
 - **Buildings** (`BuildCommand`, from `data/buildings.json`): town hall, storehouse, house, farm, barracks,
   smelter, quarry and mine. Farms and smelters need a tech first (see [Game data](../README.md#game-data)).
   A site needs fairly level ground (columns may differ by one block, which is levelled), a one-column

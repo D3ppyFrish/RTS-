@@ -359,25 +359,37 @@ public sealed class PhysicsSystem
     }
 
     /// <summary>Most columns past its stump an aimed tree comes down on: its trunk and the crown at its end.</summary>
-    public static int FallReach(FallingTree t, int scale) => Math.Max(1, t.Logs / Math.Max(1, scale * scale)) + 2 * Math.Max(1, scale);
+    public static int FallReach(FallingTree t, int scale) => FallReach(t.Logs, scale);
+
+    /// <summary>Most columns past its stump a tree of that many logs and that scale comes down on.</summary>
+    public static int FallReach(int logs, int scale) => Math.Max(1, logs / Math.Max(1, scale * scale)) + 2 * Math.Max(1, scale);
 
     /// <summary>
     /// The columns an aimed tree comes down on, from its stump out: <see cref="FallReach"/> along the way it falls,
     /// as wide as its trunk, and a column more to each side for the crown over the last three.
     /// </summary>
-    public List<(int X, int Z)> FallColumns(FallingTree t)
+    public List<(int X, int Z)> FallColumns(FallingTree t) => FallColumns(t.X, t.Z, t.Logs, t.DirX, t.DirZ);
+
+    /// <summary>
+    /// The columns a standing tree would come down on if felled along (dirX, dirZ), before it is (for the computer
+    /// players' aim): <paramref name="x"/>, <paramref name="z"/> a trunk column, its trunk from baseY to topY.
+    /// </summary>
+    public List<(int X, int Z)> FallColumnsOf(int x, int baseY, int topY, int z, int dirX, int dirZ) =>
+        FallColumns(x, z, Harvest.TrunkBlocks(_w, x, baseY, topY, z), dirX, dirZ);
+
+    private List<(int X, int Z)> FallColumns(int tx, int tz, int logs, int dirX, int dirZ)
     {
         var cols = new List<(int X, int Z)>();
-        var (x0, z0, s) = Trees.Footprint(_w, t.X, t.Z);
-        if (s == 1) (x0, z0) = (t.X, t.Z);
-        int reach = FallReach(t, s);
+        var (x0, z0, s) = Trees.Footprint(_w, tx, tz);
+        if (s == 1) (x0, z0) = (tx, tz);
+        int reach = FallReach(logs, s);
         // The trunk's square, then stepping out from its far edge.
-        int sideX = t.DirZ != 0 ? 1 : 0, sideZ = t.DirX != 0 ? 1 : 0;
-        int startX = t.DirX > 0 ? x0 + s - 1 : t.DirX < 0 ? x0 : x0;
-        int startZ = t.DirZ > 0 ? z0 + s - 1 : t.DirZ < 0 ? z0 : z0;
+        int sideX = dirZ != 0 ? 1 : 0, sideZ = dirX != 0 ? 1 : 0;
+        int startX = dirX > 0 ? x0 + s - 1 : x0;
+        int startZ = dirZ > 0 ? z0 + s - 1 : z0;
         for (int k = 1; k <= reach; k++)
         {
-            int cx = startX + t.DirX * k, cz = startZ + t.DirZ * k;
+            int cx = startX + dirX * k, cz = startZ + dirZ * k;
             int wide = k > reach - 3 ? 1 : 0;
             for (int w = -wide; w < s + wide; w++)
             {

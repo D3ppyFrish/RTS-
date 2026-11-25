@@ -139,6 +139,19 @@ public static class Harvest
     /// and so do the leaves of its crown that no other trunk holds up. Returns the trunk blocks taken. With
     /// <paramref name="taken"/>, every block taken is added to it (for drawing the tree as it falls).
     /// </summary>
+    /// <summary>The trunk blocks <see cref="FellTree"/> would take (its logs), leaving the tree standing.</summary>
+    public static int TrunkBlocks(VoxelWorld w, int x, int baseY, int topY, int z)
+    {
+        var (x0, z0, s) = Trees.Footprint(w, x, z);
+        if (s == 1) (x0, z0) = (x, z);
+        int low = s == 1 ? baseY : Math.Max(0, baseY - 4 * s), n = 0;
+        for (int cz = z0; cz < z0 + s; cz++)
+        for (int cx = x0; cx < x0 + s; cx++)
+        for (int y = low; y <= topY; y++)
+            if (BlockInfo.IsTrunk(w.Get(cx, y, cz))) n++;
+        return n;
+    }
+
     public static int FellTree(VoxelWorld w, int x, int baseY, int topY, int z, List<SectionBlock>? taken = null)
     {
         int wood = 0;
