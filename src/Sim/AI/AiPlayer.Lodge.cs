@@ -86,6 +86,12 @@ public sealed partial class AiPlayer
             return;
         }
 
+        // Workers of its own hunting from the lodge are its hunters, whoever sent them: one that was between jobs
+        // when it last looked (and so was dropped from the list above) and has gone back to the lodge counts again.
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == Player && u.Job[i] == UnitJob.Quarry && u.JobTarget[i] == lodge.Id && !_hunters.Contains(u.Id[i]))
+                _hunters.Add(u.Id[i]);
+
         // Hunters while there is game to spare in reach; none (back to other work) while there is not, until the herd
         // has grown back to LodgeHuntFrom.
         int game = sim.Economy.GameInReach(lodge);

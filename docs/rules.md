@@ -2153,7 +2153,16 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   44 to 160 columns were wooden at the end (96 on average), and one had the whole ring wooden (at 28
   minutes) and had started on stone. A barrier holds a group up for a few blows; a wooden wall takes
   four times as much, a stone wall eleven times for each of its three columns, and archers shoot from the
-  top of both. The computer players do not build towers yet. Hard does not
+  top of both. Once the ring is laid whole, Hard puts **watchtowers** onto it (`AI/AiPlayer.Towers.cs`; tests in
+  `HardAiTests`), out of the same spare wood (30 each, 100 left in hand), one site at a
+  time: first one on each side of the gate nearest the enemy, just past the gate's columns, then one on each
+  corner, the corner nearest the enemy first, six in all. Each goes over finished columns of the line
+  that are not being upgraded (sliding up to 2 columns along the wall when something is in the way), and the
+  wall under it is not upgraded while it goes up. Its archers and mages by that gate are posted on a tower
+  there first (8 to a watchtower), and those already standing on the wall within reach climb up it while
+  it has room (not those holding a gate with murder holes): from up there they aim better and the tower
+  sees 14 columns through the fog. A tower knocked down leaves a gap in the line that is laid again as
+  barriers, and the tower is put back on them. Hard does not
   fight from behind its wall yet, though: all but its posted archers still go out to meet whoever comes
   near the town, so the wall is worth less to it than it would be to a player who waits behind it.
 - `scripts/ai-versus.sh` plays two levels against each other over 20 seeds with fog of war, the first
