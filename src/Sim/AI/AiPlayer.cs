@@ -442,6 +442,7 @@ public sealed partial class AiPlayer
         if (Smart) ListeningPosts(sim, hall, issue);
         if (Smart) CrystalLens(sim, hall, issue);
         if (Smart) Shrine(sim, hall, issue);
+        if (Smart) Fishing(sim, hall, issue);
         if (Smart) Hunting(sim, hall, issue);
         if (Smart) PassMines(sim, hall, issue);
         if (Smart) SmartEconomy(sim, hall, issue);
