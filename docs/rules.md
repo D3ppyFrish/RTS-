@@ -1106,7 +1106,8 @@ The den is gone from the map either way.
 - **In the game**: with your units selected near a cleared den, the selection panel has a button for
   it ("Make the wolf den a wolf lodge", greyed out while you cannot pay, "Make a spearman a
   wolfheart at the wolf den", or "Take up the giant's heart at the stone giant den"). A bearer's panel
-  names its relic ("Spearman with the Giant's heart"). Computer players leave dens be.
+  names its relic ("Spearman with the Giant's heart"). Computer players from Easy up take their prize at the
+  cleared dens they know of (see "Cleared dens" under Winning and computer players).
 
 `MonsterTests` has the issue's check: Orcs clear a wolf lair, recruit one beaten wolf and ride another
 (a spearman becomes a wolf rider); Settlers who clear one get its reward instead, as does whoever beats
@@ -1899,6 +1900,15 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   party is worth less than what is left of the pack it breaks off and comes home, and that lair is left
   alone for 10 minutes; it also comes home after 4 minutes. After a hunt the next may set out a minute
   later. Its hurt go home to heal.
+- **Cleared dens** (Easy, Normal and Hard; `AI/AiPlayer.Dens.cs`, tests in `AiDenTests`): once a lair it has seen
+  within 200 columns of its town hall is cleared (by its hunting party or anyone) and the den is unused, it takes its
+  faction's prize there (see "Cleared dens" under Monsters and taming). It sends one unit, its nearest that can use
+  the den: a worker for a building (the wolf lodge, a boar pen, crab pots; only once it can pay for it, and the worker
+  builds it), a soldier at home that can take the form (a spearman becomes a Wolfheart), or a fighting unit at home,
+  not hurt and bearing no relic, for a relic (its hunting party is nearest a den it has just cleared). The unit is
+  left out of the army while it is on its way, and uses the den once in reach. One unit is out at a time; one killed on
+  the way, or not there within 3 minutes, gives up and that den is left alone for 10 minutes. The classic level leaves
+  dens be. All numbers are first guesses.
 - **The dusk tree** (Easy, Normal and Hard; `AI/AiPlayer.DuskTree.cs`, tests in `AiDuskTreeTests`): the Settlers
   heal it and bloom with the staff, the Orcs and the Deepfolk hack it down while a rival could heal it (see
   "The dusk tree" under Monsters and taming).

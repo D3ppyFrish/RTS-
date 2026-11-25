@@ -149,6 +149,7 @@ public sealed partial class AiPlayer
         var home = Able(sim);
         home.RemoveAll(_wave.Contains);
         home.RemoveAll(_joining.Contains);
+        home.Remove(_denRunner); // on its way to a den (AiPlayer.Dens.cs)
         var engines = HoldEngines(sim, home); // not sent on parties: they wait for a wave
         TotemStep(sim, home, issue);
         home.RemoveAll(_totemParty.Contains);
@@ -158,6 +159,7 @@ public sealed partial class AiPlayer
         ScoutStep(sim, hall, home, issue);
         Explore(sim, hall, home, issue);
         HuntStep(sim, hall, home, HomeGuardPercent(sim), issue);
+        DenStep(sim, hall, home, issue);
         DuskTreeStep(sim, hall, home, HomeGuardPercent(sim), issue);
         SiteStep(sim, hall, home, HomeGuardPercent(sim), issue);
         GreatWorkStep(sim, hall, home, HomeGuardPercent(sim), issue);
