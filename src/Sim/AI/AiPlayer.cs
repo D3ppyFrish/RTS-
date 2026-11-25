@@ -212,6 +212,8 @@ public sealed partial class AiPlayer
         if (sim.Match.Over) return;
         var hall = sim.Economy.TownHall(Player);
         if (hall == null) return;
+        var raw = issue;
+        if (Smart) issue = c => { if (SpareRaiders(c) is { } kept) raw(kept); }; // raiders left to it (AiPlayer.Raids.cs)
         for (int p = 0; p < Simulation.WildPlayer; p++) _peace[p] = sim.Truces.AtPeace(Player, p);
         if ((sim.Tick + Player * 5) % ArmyTicks == 0)
         {
@@ -231,6 +233,7 @@ public sealed partial class AiPlayer
         if ((tick + Player * 3) % ArmyTicks == 0)
         {
             if (Smart) Fell(sim, issue);
+            if (Smart) Raid(sim, raw);
             Molt(sim, hall, issue);
             Bloom(sim, issue);
             if (Hard) HardArmy(sim, hall, issue);

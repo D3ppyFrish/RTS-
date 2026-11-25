@@ -230,7 +230,12 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   All numbers are first guesses for playtesting.
 - **Raids** (`CaptureCommand`, `BurnCommand`): units at an enemy storehouse capture it with its goods
   in 10 seconds or burn it and its goods in 5, unless one of the owner's units is within 8 blocks (and
-  a soldier among them will fight the raiders).
+  a soldier among them will fight the raiders). Computer players (Easy and up, `AI/AiPlayer.Raids.cs`) raid from
+  their waves: a wave out against a rival that comes within 20 blocks of a rival storehouse it sees, with none of
+  the owner's units it sees within 10 blocks of it, sends its 2 soldiers nearest to it (keeping at least 2 in the
+  wave) to capture it if it holds 30 goods or more or stands nearer their own town hall than its owner's, and to
+  burn it otherwise. The wave's orders leave the raiders alone until the storehouse is taken or burned, a rival
+  soldier comes within 10 blocks of it, or 30 seconds pass; then they are the wave's again. One raid at a time.
 
 ## Moving
 
