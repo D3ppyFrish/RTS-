@@ -592,6 +592,7 @@ public sealed partial class AiPlayer
         _wave.RemoveAll(id => !u.Exists(id));
         var home = Soldiers(sim);
         home.RemoveAll(_wave.Contains);
+        home.Remove(_denRunner); // on its way to a den (AiPlayer.Dens.cs)
         var engines = HoldEngines(sim, home); // not sent on parties: they wait for a wave
         TotemStep(sim, home, issue);
         home.RemoveAll(_totemParty.Contains);
@@ -601,6 +602,7 @@ public sealed partial class AiPlayer
         if (_waveLair == 0) ScoutStep(sim, hall, home, issue);
         else home.Remove(_scout);
         HuntStep(sim, hall, home, GuardPercent, issue);
+        DenStep(sim, hall, home, issue);
         DuskTreeStep(sim, hall, home, GuardPercent, issue);
         SiteStep(sim, hall, home, GuardPercent, issue);
         GreatWorkStep(sim, hall, home, GuardPercent, issue);
