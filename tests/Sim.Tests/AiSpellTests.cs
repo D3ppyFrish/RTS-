@@ -95,4 +95,96 @@ public class AiSpellTests
         hall.Stock[(int)Good.Crystal] += AiPlayer.ShrineCrystal;
         Assert.True(AiTests.PlayLogged(sim, new[] { ai }, new List<Command>(), Shrine, 60 * Tps), $"{level}: a shrine for its crystal");
     }
+
+    /// <summary>
+    /// A computer player's town with two mages and two archers before it, and enemy soldiers 15 columns ahead
+    /// marching on them: too few, and too spread out, for a chasm.
+    /// </summary>
+    private static (Simulation Sim, int[] Mages, int[] Enemies) Charge(string enemy, int count)
+    {
+        var sim = AiTests.WithStarts(96, (30, 48));
+        var hall = sim.Economy.TownHall(0)!;
+        int x = hall.X + 3, z = hall.MaxZ + 4;
+        var mages = new[] { sim.SpawnUnit(0, "mage", x - 1, z), sim.SpawnUnit(0, "mage", x + 1, z) };
+        sim.SpawnUnit(0, "archer", x - 3, z);
+        sim.SpawnUnit(0, "archer", x + 3, z);
+        var foes = Enumerable.Range(0, count).Select(k => sim.SpawnUnit(1, enemy, x - 3 + 6 * k, z + 15 + k)).ToArray();
+        sim.Schedule(0, new AttackMoveCommand(1, foes, x, z));
+        sim.Step(); // on their way
+        return (sim, mages, foes);
+    }
+
+    [Theory]
+    [InlineData(AiLevel.Normal)]
+    [InlineData(AiLevel.Hard)]
+    public void MagesRaiseAnEarthWallBeforeACharge(AiLevel level)
+    {
+        var (sim, mages, _) = Charge("spearman", 2);
+        var ai = new AiPlayer(0, 1, level);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => sim.Spells.Walls.Count > 0, 10 * Tps);
+        var cast = log.OfType<EarthWallCommand>().FirstOrDefault();
+        Assert.True(cast != null, $"{level}: an earth wall before the charge");
+        Assert.All(cast!.Units, id => Assert.Contains(id, mages));
+        Assert.DoesNotContain(log, c => c is ChasmCommand);
+        Assert.Equal(1, ai.WallsRaised);
+        // Square to the way they come (along z): a line along x, between the mages and the chargers.
+        Assert.Equal(cast.Z1, cast.Z2);
+        var hall = sim.Economy.TownHall(0)!;
+        int z = hall.MaxZ + 4;
+        Assert.InRange(cast.Z1, z + 1, z + 14);
+        Assert.True(sim.Spells.Walls.Count > 0, $"{level}: the wall rose");
+        Assert.True(sim.Economy.Player(0).Mana < EconomySystem.StartingMana, "it paid mana");
+    }
+
+    [Fact]
+    public void NoEarthWallForALoneCharger()
+    {
+        var (sim, _, _) = Charge("spearman", AiPlayer.WallLeast - 1);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is EarthWallCommand);
+    }
+
+    [Fact]
+    public void NoEarthWallBeforeEnemiesStandingStill()
+    {
+        var (sim, _, _) = Field(AiPlayer.ChasmLeast - 1);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is EarthWallCommand);
+    }
+
+    [Fact]
+    public void NoEarthWallAgainstArchers()
+    {
+        var (sim, _, _) = Charge("archer", 3);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is EarthWallCommand);
+    }
+
+    [Fact]
+    public void NoEarthWallWithoutTheMana()
+    {
+        var (sim, _, _) = Charge("spearman", 2);
+        sim.Economy.Player(0).Mana = SpellSystem.ManaCost(Spell.EarthWall) - 1;
+        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is EarthWallCommand);
+    }
+
+    [Fact]
+    public void EasyMagesRaiseNoEarthWall()
+    {
+        var (sim, _, _) = Charge("spearman", 2);
+        var ai = new AiPlayer(0, 1, AiLevel.Easy);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is EarthWallCommand);
+    }
 }
