@@ -120,7 +120,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   a shrine when there is crystal in storage, but do not dig crystal on their own: the caverns are dangerous, so
   sending workers there is the player's call. Test mode's goods cheat and `--goods` also give mana; both sides
   of a `--battle` have 500. From Easy up, computer players lay out one shrine by their town hall once they can build one and have 10
-  crystal in storage, and their automatic workers keep it; from Normal up their mages cast chasms (see Computer players). All numbers are
+  crystal in storage, and their automatic workers keep it; from Normal up their mages cast chasms and earth walls (see Computer players). All numbers are
   first guesses for playtesting.
 - **Gold** (`GoldTests`; the design doc's Resources table: gold from mountain and cavern veins, not processed, for
   hiring mercenaries): gold ore (`BlockType.GoldOre`, bright yellow seams) lies in **lodes in the hills**, four in
@@ -1875,7 +1875,11 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   mages open a chasm under enemy soldiers bunched near them (`AiPlayer.Spells.cs`): of the lines through each enemy it
   sees, across and along, as long as the mages in range (within 11 columns of the line's middle, so none walks into the
   fight to cast) open together with the mana it has, it takes the one catching the most enemies, at least 3, and no
-  unit of anyone else (its own, an ally's, a monster's); up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
+  unit of anyone else (its own, an ally's, a monster's); when no chasm goes off, its ready mages raise an earth wall
+  across the way of enemy melee soldiers on the move at its archers and mages: at least 2 of them between 4 and 16
+  columns from the nearest (none closer, where a wall would only wall in the fight), the wall halfway between its
+  shooters and the chargers, square to the way they come, cast by the mages within 11 columns of its middle with the
+  mana it has, if earth rises on at least 5 of its columns; up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
   second town hall where its workers gather far from storage; and after 9 minutes, with the wood, a
   wall of barriers round the town hall 4 columns out with two gates three wide, for a faction it plays
   balanced (the Settlers; see the styles below). Once a minute after that it looks whether it can pay

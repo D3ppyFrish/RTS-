@@ -1011,7 +1011,9 @@ public sealed partial class AiPlayer
         var walled = new List<int>();
         ShieldWalls(sim, ids, enemies, walled, issue);
         if (enemies.Count == 0) return;
+        int before = walled.Count;
         Chasms(sim, ids, enemies, walled, issue); // mages that open a chasm are left to it, like a shield wall
+        if (walled.Count == before) EarthWalls(sim, ids, enemies, walled, issue); // or raise a wall before a charge
         var orders = new SortedDictionary<int, List<int>>();
         foreach (int id in ids)
         {
