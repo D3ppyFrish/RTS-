@@ -163,6 +163,7 @@ public sealed partial class AiPlayer
         DenStep(sim, hall, home, issue);
         ItemStep(sim, hall, home, issue);
         DuskTreeStep(sim, hall, home, HomeGuardPercent(sim), issue);
+        Groves(sim, hall, home, issue);
         SiteStep(sim, hall, home, HomeGuardPercent(sim), issue);
         GreatWorkStep(sim, hall, home, HomeGuardPercent(sim), issue);
         home.AddRange(engines);
