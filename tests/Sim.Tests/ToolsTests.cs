@@ -261,4 +261,75 @@ public class ToolsTests
             Assert.Single(log.OfType<ProspectCommand>()); // once
         }
     }
+
+    /// <summary>A computer player's town far off, a tree with a militia of its beside it, and rival spearmen where it falls east.</summary>
+    private static (Simulation Sim, int Militia, int[] Rivals) FellScene()
+    {
+        var sim = TestWorlds.Sim(TestWorlds.Flat(96, 16, 96, Ground));
+        sim.Map.Starts.Add(new StartArea(0, 20, Ground + 1, 48));
+        sim.PlaceStartingBuildings();
+        TestWorlds.Tree(sim.World, 60, 70, 5);
+        int militia = sim.SpawnUnit(0, "militia", 57, 70);
+        var rivals = new[] { sim.SpawnUnit(1, "spearman", 63, 70), sim.SpawnUnit(1, "spearman", 65, 70) };
+        sim.Schedule(0, new StanceCommand(1, rivals, UnitStance.Hold));
+        sim.Run(5); // its units' sight
+        return (sim, militia, rivals);
+    }
+
+    private static List<Command> Play(Simulation sim, AiPlayer ai, int ticks, Func<bool>? until = null)
+    {
+        var log = new List<Command>();
+        for (int t = 0; t < ticks && !(until?.Invoke() ?? false); t++)
+        {
+            ai.Think(sim, c => { log.Add(c); sim.Schedule(sim.Tick, c); });
+            sim.Step();
+        }
+        return log;
+    }
+
+    [Fact]
+    public void ComputerPlayersFellTreesOntoRivalsTheySee()
+    {
+        foreach (var level in new[] { AiLevel.Easy, AiLevel.Normal, AiLevel.Hard })
+        {
+            var (sim, militia, rivals) = FellScene();
+            var ai = new AiPlayer(0, 1, level);
+            Assert.Empty(Play(sim, ai, 3 * Tps).OfType<FellCommand>()); // no tech yet
+
+            Tools(sim, 0);
+            int[] hp = rivals.Select(id => Hp(sim, id)).ToArray();
+            var log = Play(sim, ai, 3 * Tps);
+            var fell = Assert.Single(log.OfType<FellCommand>());
+            Assert.Equal(new[] { militia }, fell.Units);
+            Assert.Equal((60, 70, 1, 0), (fell.X, fell.Z, fell.DirX, fell.DirZ));
+            Assert.Equal(militia, ai.Feller);
+            Play(sim, ai, 15 * Tps, () => !Standing(sim, 60, 70) && sim.Physics.FallingTrees.Count == 0);
+            Assert.False(Standing(sim, 60, 70), $"{level}: the tree came down");
+            sim.Run(2);
+            for (int k = 0; k < rivals.Length; k++)
+                Assert.True(hp[k] - Hp(sim, rivals[k]) >= 50, $"{level}: rival {k} took {hp[k] - Hp(sim, rivals[k])}");
+            Assert.Equal(1, ai.Fellings);
+        }
+    }
+
+    [Fact]
+    public void ComputerPlayersFellNothingOntoTheirOwnOrForTooFewOrAtClassic()
+    {
+        // One of its own among the rivals: not that way.
+        var (sim, _, rivals) = FellScene();
+        Tools(sim, 0);
+        sim.SpawnUnit(0, "worker", 64, 70);
+        Assert.DoesNotContain(Play(sim, new AiPlayer(0, 1, AiLevel.Normal), 5 * Tps).OfType<FellCommand>(), c => c.DirX == 1);
+
+        // Only one rival there: not worth it.
+        (sim, _, rivals) = FellScene();
+        Tools(sim, 0);
+        sim.Units.Remove(rivals[1]);
+        Assert.Empty(Play(sim, new AiPlayer(0, 1, AiLevel.Normal), 5 * Tps).OfType<FellCommand>());
+
+        // Classic leaves felling alone.
+        (sim, _, _) = FellScene();
+        Tools(sim, 0);
+        Assert.Empty(Play(sim, new AiPlayer(0, 1, AiLevel.Classic), 5 * Tps).OfType<FellCommand>());
+    }
 }

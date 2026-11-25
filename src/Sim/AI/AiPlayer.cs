@@ -230,6 +230,7 @@ public sealed partial class AiPlayer
         if (Smart && (tick + Player * 7) % EconomyTicks == 0) Prospect(sim, issue);
         if ((tick + Player * 3) % ArmyTicks == 0)
         {
+            if (Smart) Fell(sim, issue);
             Molt(sim, hall, issue);
             if (Hard) HardArmy(sim, hall, issue);
             else if (Smart) SmartArmy(sim, hall, issue);
@@ -1062,6 +1063,7 @@ public sealed partial class AiPlayer
     {
         var list = Soldiers(sim, Player);
         if (_molters.Count > 0) list.RemoveAll(_molters.Contains);
+        if (_feller != 0) list.Remove(_feller); // felling a tree onto rivals (see AiPlayer.Fell.cs)
         return list;
     }
 

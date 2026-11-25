@@ -7,8 +7,8 @@ namespace Rts.Sim.AI;
 
 // Prospecting (issue #146), at the smart levels (Easy and up). Once it has Better tools, it sounds the ground once by each storage
 // building it has (its town hall and storehouses), as each is finished: the nearest unit of its that can (a
-// Settler foreman, an Orc or Deepfolk worker) that is not busy building goes there and sounds it. Felling is
-// left to players.
+// Settler foreman, an Orc or Deepfolk worker) that is not busy building goes there and sounds it. Felling trees onto
+// rivals: see AiPlayer.Fell.cs.
 public sealed partial class AiPlayer
 {
     // Storage buildings it has sounded the ground by (or sent a prospector to), by id.
