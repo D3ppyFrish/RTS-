@@ -120,7 +120,7 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   a shrine when there is crystal in storage, but do not dig crystal on their own: the caverns are dangerous, so
   sending workers there is the player's call. Test mode's goods cheat and `--goods` also give mana; both sides
   of a `--battle` have 500. From Easy up, computer players lay out one shrine by their town hall once they can build one and have 10
-  crystal in storage, and their automatic workers keep it; from Normal up their mages cast chasms and earth walls (see Computer players). All numbers are
+  crystal in storage, and their automatic workers keep it; from Normal up their mages cast chasms and earth walls, and grow the woods back by their town (see Computer players). All numbers are
   first guesses for playtesting.
 - **Gold** (`GoldTests`; the design doc's Resources table: gold from mountain and cavern veins, not processed, for
   hiring mercenaries): gold ore (`BlockType.GoldOre`, bright yellow seams) lies in **lodes in the hills**, four in
@@ -1886,6 +1886,12 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   the enemy, that makes the whole way shortest; the wave gathers on the near bank (up to 40 seconds), the mage (two for
   a wave of more than 12) freezes the water, the wave walks over, and those not yet on the ice when it cracks wait on
   the near bank; it looks 3 times a wave, 30 seconds apart, and a wave that cannot cross on ice may still be ferried;
+  and while no enemy is near its town (for Hard, none for 20 seconds), once its workers have cut down every tree
+  within 28 columns of its town hall and it has less than 400 wood, a free mage at home (within 32 columns, in no wave
+  or party) grows the woods back with Grow Forest (`AiPlayer.Groves.cs`): one mage's line of trees 14 to 24 columns
+  from the hall's middle, on the side away from the enemy town it knows of, clear of Hard's wall line and gates, its
+  quarry, lairs and the Heartscar, with room for at least 3 trees; only with mana left for a chasm after (50), and no
+  sooner than 2 minutes after its last grove;
   up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
   second town hall where its workers gather far from storage; and after 9 minutes, with the wood, a
   wall of barriers round the town hall 4 columns out with two gates three wide, for a faction it plays
