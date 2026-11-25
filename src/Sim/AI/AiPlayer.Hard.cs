@@ -321,6 +321,7 @@ public sealed partial class AiPlayer
         if (calm) Carts(sim, hall, issue);
         ListeningPosts(sim, hall, issue);
         if (calm) CrystalLens(sim, hall, issue);
+        if (calm) Shrine(sim, hall, issue);
         if (!armyFirst) SmartTrain(sim, issue, anyAffordable: false);
         if (sim.Tick >= _assignAt)
         {
