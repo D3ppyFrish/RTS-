@@ -110,6 +110,16 @@ public class AiFishingTests
         PlayOn(sim, hall, ai, 90 * Tps);
         Assert.Null(Hut(sim));
 
+        // Hard fishes only inside its town: not from a pond 50 columns off, which Normal fishes from.
+        (sim, hall) = Town(pondX: 90);
+        ai = new AiPlayer(0, 1, AiLevel.Hard);
+        PlayOn(sim, hall, ai, 90 * Tps);
+        Assert.Null(Hut(sim));
+        (sim, hall) = Town(pondX: 90);
+        ai = new AiPlayer(0, 1, AiLevel.Normal);
+        PlayOn(sim, hall, ai, 90 * Tps, () => Hut(sim) != null);
+        Assert.NotNull(Hut(sim));
+
         // Food piling up.
         (sim, hall) = Town();
         ai = new AiPlayer(0, 1, AiLevel.Normal);

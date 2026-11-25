@@ -9,7 +9,8 @@ namespace Rts.Sim.AI;
 /// Fishing (see <see cref="EconomySystem"/>'s fishing hut, a quarry for food at the water's edge). The smart levels
 /// (Easy and up) put up one fishing hut on the shore they have seen nearest their town hall, once their town is going
 /// and while food is short, keep its places filled with fishers while food stays short (once food piles up the fishers
-/// go back to other work), and put a storehouse by it when the walk home with the fish is long. The classic level never fishes. The numbers are first guesses for playtesting.
+/// go back to other work), and put a storehouse by it when the walk home with the fish is long. Hard fishes only
+/// inside its town and leaves the fishing to its automatic workers. The classic level never fishes. The numbers are first guesses for playtesting.
 /// </summary>
 public sealed partial class AiPlayer
 {
@@ -25,7 +26,7 @@ public sealed partial class AiPlayer
     /// <summary>Food in hand below which it sends fishers out again after letting them go (so they are not sent and let go every few seconds).</summary>
     public const int FishFoodShort = 200;
 
-    /// <summary>How far (columns) from its town hall it looks for a shore to fish from (the usual map's starts are 40 to 50 from the water).</summary>
+    /// <summary>How far (columns) from its town hall Easy and Normal look for a shore to fish from (the usual map's starts are 40 to 50 from the water; Hard looks only within <see cref="HardTownRadius"/>).</summary>
     public const int FishRadius = 64;
 
     /// <summary>Ticks between its looks for a shore when the last one found none: a minute.</summary>
@@ -62,16 +63,15 @@ public sealed partial class AiPlayer
         {
             if (site || sim.Tick < FishFromTicks || sim.Tick < _fishLook) return;
             if (food >= FishFoodPlenty || Workers(sim) < FishWorkers) return;
-            if (!Affordable(sim, def.Cost))
-            {
-                if (Hard) Save(def.Cost);
-                return;
-            }
+            // A hut is a help, not a need: it is not saved up for (on Hard that would hold back the goods its town
+            // and army want), only built when the goods are there.
+            if (!Affordable(sim, def.Cost)) return;
             var (hx, hz) = Middle(hall);
-            // Only shore it has looked at (its corner and the far one).
+            // Only shore it has looked at (its corner and the far one); Hard only inside the town it walls in, not out
+            // where the hut and its fishers would need a storehouse and guarding of their own.
             bool Seen(int bx, int bz) => sim.Vision.At(Player, bx, bz) != Sight.Unseen
                 && sim.Vision.At(Player, bx + def.SizeX - 1, bz + def.SizeZ - 1) != Sight.Unseen;
-            if (!sim.Automation.FindRoom(Player, def, hx, hz, FishRadius, out int x, out int z, (bx, bz) => ShoreGround(sim, def, bx, bz) && Seen(bx, bz)))
+            if (!sim.Automation.FindRoom(Player, def, hx, hz, Hard ? HardTownRadius : FishRadius, out int x, out int z, (bx, bz) => ShoreGround(sim, def, bx, bz) && Seen(bx, bz)))
             {
                 _fishLook = sim.Tick + FishLookTicks;
                 return;
@@ -88,7 +88,10 @@ public sealed partial class AiPlayer
             if (u.Owner[i] == Player && u.Job[i] == UnitJob.Quarry && u.JobTarget[i] == hut.Id && !_fishers.Contains(u.Id[i]))
                 _fishers.Add(u.Id[i]);
 
-        if (food >= FishFoodPlenty)
+        // Hard sends no fishers of its own: it keeps its food spent on soldiers, so food in hand is always short, and
+        // two workers kept fishing would be two fewer on wood all match. Its automatic workers fish there when food
+        // is the good it needs most (they count as its fishers).
+        if (!Hard && food >= FishFoodPlenty)
         {
             if (_fishers.Count > 0)
             {
@@ -98,7 +101,7 @@ public sealed partial class AiPlayer
                 _fishers.Clear();
             }
         }
-        else if (_fishers.Count < hut.Def.WorkerSlots && (_fishers.Count > 0 || food < FishFoodShort))
+        else if (!Hard && _fishers.Count < hut.Def.WorkerSlots && (_fishers.Count > 0 || food < FishFoodShort))
         {
             var more = SpareWorkers(sim, hut.Def.WorkerSlots - _fishers.Count);
             if (more.Count > 0)

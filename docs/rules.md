@@ -1950,11 +1950,14 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
 - **Fishing** (Easy, Normal and Hard; `AI/AiPlayer.Fishing.cs`, tests in `AiFishingTests`): from 2 minutes on,
   with at least 6 workers and less than 300 food in hand, it lays out one fishing hut at the water's edge nearest its
   town hall, within 64 columns of it (the usual map's starts are 40 to 50 from the water), on shore it has seen, with
-  no hazard under the hut, off ground it keeps off and (Hard) clear of its pits and wall (Hard: only while no enemies
-  are at its buildings). With no such shore in reach it looks again a minute later. Once the hut stands it sends two
+  no hazard under the hut and off ground it keeps off. It does not save up for the hut: it builds it only when the
+  wood is there. With no such shore in reach it looks again a minute later. Once the hut stands it sends two
   workers to fish there while food is under 200 (idle ones first, then wood cutters, then other gatherers not on
   food), keeps them there until food reaches 300, then lets them go back to other work. Workers that went to fish
-  there on their own count as its fishers. When the hut is 24 columns or more from its nearest storage it puts a
+  there on their own count as its fishers. Hard fishes only inside its town (within 34 columns of the town hall,
+  clear of its pits and wall, and only while no enemies are at its buildings) and sends no fishers of its own: it
+  keeps its food spent on soldiers, so two workers held at the hut would be two fewer on wood all match, and its
+  automatic workers fish there when food is the good it needs most. When the hut is 24 columns or more from its nearest storage it puts a
   storehouse by it, as by a hunter's lodge. The classic level never fishes. All numbers are first guesses.
 - **Hunting deer** (Easy, Normal and Hard; `AI/AiPlayer.Lodge.cs`, tests in `AiHuntingTests`): from 3 minutes on,
   with at least 8 workers and less than 300 food in hand, it lays out one hunter's lodge within 12 columns of the den
