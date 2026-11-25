@@ -217,6 +217,7 @@ public sealed partial class AiPlayer
             LayNext(sim, wall, gate, issue);
             return;
         }
+        Towers(sim, enemy, issue);
         StrengthenWall(sim, WallSides(x0, z0, x1, z1, enemy.Item1, enemy.Item2), issue);
     }
 
@@ -246,6 +247,7 @@ public sealed partial class AiPlayer
                 var b = sim.Buildings.AtColumn(x, z);
                 if (b == null || b.Owner != Player || !b.Def.IsWall || b.Def.Tier != tier) continue;
                 if (b.Def.Upgrade is not { } to) continue;
+                if (TowerOn(sim, x, z) is { Active: false }) continue; // a tower is going up over it: it is the tower's now
                 if (b.State != BuildingState.Active || b.Upgrade != null)
                 {
                     left = true; // still going up, or being upgraded now
@@ -332,11 +334,17 @@ public sealed partial class AiPlayer
         HoldGates(sim, home, holding, issue);
         home.RemoveAll(holding.Contains);
         var going = new List<int>();
+        // A finished tower of its own by that gate is named first: its posts are the nearest, and those on it aim
+        // better (see Towers). Else the gate, once it can be stood on.
         var at = sim.Buildings.AtColumn(gate.X, gate.Z);
+        var towers = GateTowers(sim, gate.X, gate.Z);
+        UpTheTowers(sim, towers, issue);
+        foreach (var t in towers)
+            if (econ.PostFree(t)) { at = t; break; }
         if (at != null && at.Owner == Player && at.Active && at.Def.Walkway)
         {
             // As many as there are free columns to stand on along that side, within reach of the gate: the
-            // line's own, or where it is faced with stone the facing's on either side of it.
+            // line's own, or where it is faced with stone (or a tower stands) the columns on either side of it.
             int free = 0;
             for (int k = -EconomySystem.PostReach; k <= EconomySystem.PostReach; k++)
             for (int d = -1; d <= 1; d++)
