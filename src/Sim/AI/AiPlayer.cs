@@ -1008,6 +1008,7 @@ public sealed partial class AiPlayer
         _siegeDefenders = int.MaxValue;
         ResetLadders();
         ResetFerry();
+        ResetIce();
     }
 
     /// <summary>Keeps each barracks training: a unit picked by <see cref="RoleWeight"/> from what it can train, when affordable.</summary>

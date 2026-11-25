@@ -1879,7 +1879,14 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   across the way of enemy melee soldiers on the move at its archers and mages: at least 2 of them between 4 and 16
   columns from the nearest (none closer, where a wall would only wall in the fight), the wall halfway between its
   shooters and the chargers, square to the way they come, cast by the mages within 11 columns of its middle with the
-  mana it has, if earth rises on at least 5 of its columns; up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
+  mana it has, if earth rises on at least 5 of its columns; a wave whose way by land to the enemy is cut off by water,
+  or at least 24 steps longer than a way over the ice, and that has a mage with Ice Bridge ready and 25 mana, crosses
+  on ice (`AiPlayer.Ice.cs`): of the banks it can walk to within 48 steps, it takes the straight line across or along
+  over the water, short enough to freeze and with room for ice on every column, to ground from which it can walk to
+  the enemy, that makes the whole way shortest; the wave gathers on the near bank (up to 40 seconds), the mage (two for
+  a wave of more than 12) freezes the water, the wave walks over, and those not yet on the ice when it cracks wait on
+  the near bank; it looks 3 times a wave, 30 seconds apart, and a wave that cannot cross on ice may still be ferried;
+  up to 36 workers; a third barracks after 15 minutes when rich; after 10 minutes a
   second town hall where its workers gather far from storage; and after 9 minutes, with the wood, a
   wall of barriers round the town hall 4 columns out with two gates three wide, for a faction it plays
   balanced (the Settlers; see the styles below). Once a minute after that it looks whether it can pay
