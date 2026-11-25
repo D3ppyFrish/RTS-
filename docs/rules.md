@@ -149,7 +149,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   Elsewhere it does not fit (`PlaceResult.NoWater`; the ghost is red and says it must stand right beside water).
   Two workers fish there, each bringing 4 food every 15 seconds of work, like a quarry that gives food: it never runs
   out, gathering techs make the rounds quicker, and automatic workers fish there when food is the good needed most.
-  It gives a town by a lake or the sea food before Farming, a little slower than a farm.
+  It gives a town by a lake or the sea food before Farming, a little slower than a farm. Computer players build one too (see
+  "Fishing" under computer players).
 - **Forester's lodges** (kind `quarry` with `"plants"` in `data/buildings.json`; `EconomySystem.Forest.cs`): a 4 by 4
   lodge (30 wood, 10 stone, no tech) whose two foresters grow the woods back. Each round of 20 seconds of work plants a
   sapling, a single leaf block, on open grass or soil within 10 columns of the lodge: the free spot nearest to it,
@@ -1946,6 +1947,15 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
 - **The dusk tree** (Easy, Normal and Hard; `AI/AiPlayer.DuskTree.cs`, tests in `AiDuskTreeTests`): the Settlers
   heal it and bloom with the staff, the Orcs and the Deepfolk hack it down while a rival could heal it (see
   "The dusk tree" under Monsters and taming).
+- **Fishing** (Easy, Normal and Hard; `AI/AiPlayer.Fishing.cs`, tests in `AiFishingTests`): from 2 minutes on,
+  with at least 6 workers and less than 300 food in hand, it lays out one fishing hut at the water's edge nearest its
+  town hall, within 64 columns of it (the usual map's starts are 40 to 50 from the water), on shore it has seen, with
+  no hazard under the hut, off ground it keeps off and (Hard) clear of its pits and wall (Hard: only while no enemies
+  are at its buildings). With no such shore in reach it looks again a minute later. Once the hut stands it sends two
+  workers to fish there while food is under 200 (idle ones first, then wood cutters, then other gatherers not on
+  food), keeps them there until food reaches 300, then lets them go back to other work. Workers that went to fish
+  there on their own count as its fishers. When the hut is 24 columns or more from its nearest storage it puts a
+  storehouse by it, as by a hunter's lodge. The classic level never fishes. All numbers are first guesses.
 - **Hunting deer** (Easy, Normal and Hard; `AI/AiPlayer.Lodge.cs`, tests in `AiHuntingTests`): from 3 minutes on,
   with at least 8 workers and less than 300 food in hand, it lays out one hunter's lodge within 12 columns of the den
   of the nearest herd of deer it has seen (the den's ground or one of the herd) within 100 columns of its town hall,

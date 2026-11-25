@@ -181,12 +181,7 @@ public sealed partial class AiPlayer
     private void LayOutDock(Simulation sim, Building hall, BuildingDef dockDef, bool sawmill, Action<Command> issue)
     {
         var at = Middle(hall);
-        // Safe ground under the dock itself: the water beside it, which a unit would drown in, is what it is for.
-        bool Fits(int bx, int bz) =>
-            !World.HazardSystem.HazardNear(sim.World, bx + 1, bz + 1, dockDef.SizeX - 2, dockDef.SizeZ - 2)
-            && !KeepsOff(sim, bx - 1, bz - 1, bx + dockDef.SizeX, bz + dockDef.SizeZ)
-            && (!Hard || ClearOfPits(dockDef, bx, bz) && ClearOfWall(dockDef, bx, bz));
-        if (!sim.Automation.FindRoom(Player, dockDef, at.X, at.Z, DockRadius, out int x, out int z, Fits)) return;
+        if (!sim.Automation.FindRoom(Player, dockDef, at.X, at.Z, DockRadius, out int x, out int z, (bx, bz) => ShoreGround(sim, dockDef, bx, bz))) return;
         // Water a ship can get out onto from there: not a pond.
         Chart(sim);
         if (!Launch(sim, x, z, x + dockDef.SizeX - 1, z + dockDef.SizeZ - 1, out int wx, out int wz) || SailFrom(sim, wx, wz) < OpenWater)

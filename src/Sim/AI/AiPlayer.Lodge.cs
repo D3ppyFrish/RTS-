@@ -116,9 +116,18 @@ public sealed partial class AiPlayer
         }
 
         // A storehouse by the lodge when the meat has far to go.
+        if (_hunters.Count > 0) StoreBy(sim, lodge, "its hunter's lodge", issue);
+    }
+
+    /// <summary>
+    /// A storehouse by one of its buildings (a lodge, a fishing hut) whose goods have far to go: when the nearest
+    /// storage is <see cref="LodgeStoreGap"/> columns or more from it and none is on its way nearer.
+    /// </summary>
+    private void StoreBy(Simulation sim, Building by, string what, Action<Command> issue)
+    {
         var store = FirstBuilding(sim, BuildingKind.Storehouse);
-        if (store == null || _hunters.Count == 0) return;
-        var (lx, lz) = Middle(lodge);
+        if (store == null) return;
+        var (lx, lz) = Middle(by);
         if (sim.Economy.NearestStorage(Player, lx, lz) is { } near && near.ColumnDistance(lx, lz) < LodgeStoreGap) return;
         foreach (var b in sim.Buildings.All)
             if (b.Owner == Player && !b.Active && b.Def.Storage && b.ColumnDistance(lx, lz) < LodgeStoreGap) return; // one on its way
@@ -127,7 +136,7 @@ public sealed partial class AiPlayer
         {
             issue(new BuildCommand(Player, Array.Empty<int>(), store.Id, sx, sz));
             if (Hard) Spend(store.Cost);
-            Note(sim, $"lays out a storehouse by its hunter's lodge at {sx},{sz}");
+            Note(sim, $"lays out a storehouse by {what} at {sx},{sz}");
         }
     }
 
