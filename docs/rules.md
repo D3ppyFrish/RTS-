@@ -1239,7 +1239,8 @@ have no magic and their units are weak one on one; they win by surprise and numb
   which opens their great work, the **Queen's Chamber** (see [Ascendancy and great works](#ascendancy-and-great-works)).
 
 Computer players play the Deepfolk as they play any faction, going by what it can build and train (a brood
-chamber, skitterlings, spitters and burrowers), but do not yet use the hive's tricks: tunnelling a swarm under a wall.
+chamber, skitterlings, spitters and burrowers), and from Easy up a wave of theirs tunnels its swarm under an enemy wall
+rather than raising a ladder against it (see Tunnels under walls under [Winning and computer players](#winning-and-computer-players)).
 
 ## Dropped relics and the Dusk Staff
 
@@ -1988,6 +1989,19 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   so an enemy up there cannot throw it down unopposed, and the rest go on at the target. Those not up within 45
   seconds go back to the wave. A ladder thrown down or lost is raised again after 20 seconds, up to 3 a wave. The
   classic level never raises them. All numbers are first guesses.
+- **Tunnels under walls** (Easy, Normal and Hard; `AI/AiPlayer.Tunnels.cs`, tests in `AiTunnelTests`): a wave whose
+  sappers burst out of the ground (the Deepfolk's burrowers) tunnels under an enemy wall rather than raising a ladder.
+  Within 28 columns of its target, knowing of an enemy wall, gate or tower within 32 columns, it takes the crossing
+  whose mouth is nearest the wave: a straight line square across the wall (at most 5 columns thick), from a mouth 5
+  columns out on its side to an exit 4 columns past the far face, with no other building and no water on the way and
+  the ground at both ends within a level of the wall's foot. Its burrower nearest the wave's middle walks to the mouth
+  and digs down to 3 levels under the wall's foot by the column before it, on under the wall at that depth, so the
+  wall keeps its footing and stands, and up to the surface at the exit. Once it is out, up to 16 of the wave's
+  soldiers nearest the mouth go through after it, unseen underground, and each goes on at the target as it comes up
+  at the exit, bursting out of the ground; those not through within 60 seconds go back to the wave. A leg that stops
+  short (water, bedrock, a building in the way) or a digger lost gives that tunnel up, and another is tried after 20
+  seconds, up to 3 a wave. With no burrower, or no crossing, a ladder goes up as before. The classic level never digs
+  them. All numbers are first guesses.
 - **Ships** (Easy, Normal and Hard; `AI/AiPlayer.Ships.cs`, tests in `AiShipTests`): with a finished barracks and 14
   workers it lays out a dock on the shore within 48 columns of its town hall, where the water by the dock opens onto
   at least 300 columns a ship can sail (not a pond); with no sawmill yet it lays that out first, for the planks
