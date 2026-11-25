@@ -232,6 +232,7 @@ public sealed partial class AiPlayer
         {
             if (Smart) Fell(sim, issue);
             Molt(sim, hall, issue);
+            Bloom(sim, issue);
             if (Hard) HardArmy(sim, hall, issue);
             else if (Smart) SmartArmy(sim, hall, issue);
             else Army(sim, hall, issue);
@@ -1064,6 +1065,7 @@ public sealed partial class AiPlayer
         var list = Soldiers(sim, Player);
         if (_molters.Count > 0) list.RemoveAll(_molters.Contains);
         if (_feller != 0) list.Remove(_feller); // felling a tree onto rivals (see AiPlayer.Fell.cs)
+        if (_treeParty.Count > 0) list.RemoveAll(_treeParty.Contains); // at the dusk tree (see AiPlayer.DuskTree.cs)
         return list;
     }
 

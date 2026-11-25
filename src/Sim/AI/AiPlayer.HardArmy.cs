@@ -158,6 +158,7 @@ public sealed partial class AiPlayer
         ScoutStep(sim, hall, home, issue);
         Explore(sim, hall, home, issue);
         HuntStep(sim, hall, home, HomeGuardPercent(sim), issue);
+        DuskTreeStep(sim, hall, home, HomeGuardPercent(sim), issue);
         SiteStep(sim, hall, home, HomeGuardPercent(sim), issue);
         GreatWorkStep(sim, hall, home, HomeGuardPercent(sim), issue);
         home.AddRange(engines);

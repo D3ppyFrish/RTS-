@@ -49,11 +49,15 @@ public sealed partial class AiPlayer
     /// <summary>True if soldiers worth <paramref name="force"/> are enough to send at the lair's pack (see <see cref="LairOddsPercent"/>).</summary>
     private static bool Outweighs(Simulation sim, long force, Lair lair) => force * 100 >= PackWorth(sim, lair) * LairOddsPercent;
 
-    /// <summary>A lair a hunting party may go for: on open ground (not the cavern or the dusk tree), with monsters still about, and not shunned.</summary>
+    /// <summary>
+    /// A lair a hunting party may go for: on open ground (not the cavern; the dusk tree's only while it wants the tree,
+    /// see <see cref="WantsDuskTree"/>), with monsters still about, and not shunned.
+    /// </summary>
     private bool Huntable(Simulation sim, Lair lair)
     {
         if (lair.Cleared || lair.Pack.Count == 0) return false;
-        if (lair.Monster.Lair is not { DuskTree: false, Cavern: CavernSpot.None }) return false;
+        if (lair.Monster.Lair is not { Cavern: CavernSpot.None } def) return false;
+        if (def.DuskTree && !WantsDuskTree(sim)) return false; // the warden only for a player that wants the tree
         foreach (var s in _shunned)
             if (s.Lair == lair.Id && sim.Tick < s.Until) return false;
         if (KeepsOff(sim, lair.X, lair.Z)) return false; // on the corrupted ground

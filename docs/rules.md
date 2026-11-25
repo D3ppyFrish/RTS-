@@ -1164,7 +1164,15 @@ large bare tree in the hills about halfway between the starts, and a monster gua
 - **In the game**: the tree stands in purple mist with a cold cyan glow at night. A priest tending it
   shows "(healing the dusk tree, X%)", an Orc "(hacking at the dusk tree, X%)". The bearer is drawn
   holding the staff, its panel says "with the Dusk Staff", and the Dusk Bloom button (or the `,` key)
-  uses it. The computer players leave the tree alone for now.
+  uses it.
+- **Computer players** (Easy and up; `AI/AiPlayer.DuskTree.cs`, tests in `AiDuskTreeTests`) want the tree while it
+  stands unhealed: the Settlers if they have a unit that heals or a barracks that can train one, the Orcs and the
+  Deepfolk only while a rival in the match could heal it, so that nobody gets the staff. While they want it, their
+  hunting parties may go for the warden like any other lair, weighed the same way (sent only when they outweigh it
+  twice over). Once the warden is gone and they have seen the tree, the Settlers send their free healer nearest it
+  and the others up to 4 soldiers from home beyond the guard; those at the tree are left out of the army, and if
+  they stop short (beaten off, killed) they try again a minute later. Whoever bears the staff for them uses Dusk
+  Bloom once the allies round it are owed 75 hit points or more, all together.
 
 ## The Deepfolk
 
@@ -1876,7 +1884,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   soldiers.
 - **Hunting parties** (Easy, Normal and Hard, issue #78; `AI/AiPlayer.Hunt.cs`, tests in `HuntTests`):
   from 4 minutes on, with no wave out, it clears the lairs spread across the map (boar, stone giants, bog
-  horrors, crabs, wolves; not the cavern's or the dusk tree's) for their rewards and prizes, but weighs each
+  horrors, crabs, wolves; not the cavern's, nor the dusk tree's warden unless it wants the tree: see "The dusk
+  tree") for their rewards and prizes, but weighs each
   pack first. A pack is worth its monsters' hit points times their damage a second, as the computer weighs
   soldiers. It goes for the nearest lair it has seen within 200 columns of its town hall that the soldiers it
   can spare (all at home but the guard and the hurt) outweigh two to one, and sends just enough of them,
@@ -1885,6 +1894,9 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   party is worth less than what is left of the pack it breaks off and comes home, and that lair is left
   alone for 10 minutes; it also comes home after 4 minutes. After a hunt the next may set out a minute
   later. Its hurt go home to heal.
+- **The dusk tree** (Easy, Normal and Hard; `AI/AiPlayer.DuskTree.cs`, tests in `AiDuskTreeTests`): the Settlers
+  heal it and bloom with the staff, the Orcs and the Deepfolk hack it down while a rival could heal it (see
+  "The dusk tree" under Monsters and taming).
 - **Hunting deer** (Easy, Normal and Hard; `AI/AiPlayer.Lodge.cs`, tests in `AiHuntingTests`): from 3 minutes on,
   with at least 8 workers and less than 300 food in hand, it lays out one hunter's lodge within 12 columns of the den
   of the nearest herd of deer it has seen (the den's ground or one of the herd) within 100 columns of its town hall,
