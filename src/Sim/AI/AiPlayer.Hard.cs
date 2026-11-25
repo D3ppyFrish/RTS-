@@ -320,6 +320,7 @@ public sealed partial class AiPlayer
         if (calm) SiegeEconomy(sim, hall, c.Workers, issue);
         if (calm) Shipyard(sim, hall, c.Workers, issue);
         if (calm) Carts(sim, hall, issue);
+        if (calm) Roads(sim, hall, issue);
         ListeningPosts(sim, hall, issue);
         if (calm) CrystalLens(sim, hall, issue);
         if (calm) Shrine(sim, hall, issue);
