@@ -651,6 +651,11 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   of healing on its own, each step paid for like field repairs (its share of half the machine's cost in materials,
   not food, from storage; with nothing to pay with it heals only on its own). Bring a battered ram home to the
   workshop, or a holed ship into harbour. The unit panel says "being mended at the dock" (or workshop).
+  Computer players (Easy and up; `AI/AiPlayer.Yards.cs`, tests in `AiYardTests`) do this with their catapults and
+  rams: one standing idle at home below 95% of its hit points (back from a wave, or pulled out of one below 35% like a
+  wounded soldier) is taken out of the army and waits beside its nearest siege workshop until it is whole, then
+  rejoins. With no siege workshop standing it goes to the town hall door like anyone hurt. Their ships already sail
+  home to the dock.
 - **Breaking through** (`Breach`, `BreachFor`): units sent at a building they cannot get to (it is walled
   in) go for a wall, gate or facing of its owner within 16 columns instead: one they can get at from where
   they are, with the shortest way from them through it to the building (ties to the one nearer the
