@@ -601,6 +601,7 @@ public sealed partial class AiPlayer
         if (_waveLair == 0) ScoutStep(sim, hall, home, issue);
         else home.Remove(_scout);
         HuntStep(sim, hall, home, GuardPercent, issue);
+        DuskTreeStep(sim, hall, home, GuardPercent, issue);
         SiteStep(sim, hall, home, GuardPercent, issue);
         GreatWorkStep(sim, hall, home, GuardPercent, issue);
         home.AddRange(engines);
