@@ -939,23 +939,27 @@ public sealed partial class AiPlayer
 
     /// <summary>
     /// Soldiers home to heal: the healed (and the dead) are let go; the rest who are standing about away from
-    /// the town hall are sent to its door, where they heal fastest.
+    /// the town hall are sent to its door, where they heal fastest. Battered machines at home join them, and wait
+    /// by their yard instead, until whole (see AiPlayer.Yards.cs).
     /// </summary>
     private void Mend(Simulation sim, Building hall, Action<Command> issue)
     {
         var u = sim.Units;
-        _mending.RemoveAll(id => u.IndexOf(id) is var i && (i < 0 || !Hurt(sim, i, HealedPercent)));
-        if (_mending.Count == 0 || sim.Tick % (5 * ArmyTicks) >= ArmyTicks) return;
+        _mending.RemoveAll(id => u.IndexOf(id) is var i && (i < 0 || Mended(sim, i)));
+        if (sim.Tick % (5 * ArmyTicks) >= ArmyTicks) return;
+        BatteredMachines(sim);
+        if (_mending.Count == 0) return;
         var (dx, dz) = Approach(sim, hall);
         _scratch.Clear();
         foreach (int id in _mending)
         {
             int i = u.IndexOf(id);
             if (u.Order[i] != UnitOrder.Idle || u.Target[i] != 0 || u.Rout[i] > 0) continue;
-            if (Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), dx, dz) <= 36) continue;
             _scratch.Add(id);
         }
-        if (_scratch.Count > 0) issue(new MoveCommand(Player, _scratch.ToArray(), dx, dz));
+        var rest = SendToYards(sim, _scratch, issue);
+        rest.RemoveAll(id => u.IndexOf(id) is var i && Dist2(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), dx, dz) <= 36);
+        if (rest.Count > 0) issue(new MoveCommand(Player, rest.ToArray(), dx, dz));
     }
 
     /// <summary>True if the enemy soldiers it sees around the wave are much stronger than it (see <see cref="OutmatchedPercent"/>).</summary>
