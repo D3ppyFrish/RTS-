@@ -94,6 +94,9 @@ public class AiShipTests
     public void HardLiftsSoldiersJoiningItsWaveAcrossTheWater()
     {
         var sim = Strait(fleet: true);
+        // A second town hall out of the way in the far corner: the wave razing the first does not end the match
+        // (and the computer's turns with it) before the lift is done.
+        Assert.NotNull(sim.Economy.PlaceFinished(1, sim.Content.Building("town_hall"), 180, 116));
         var ai = new AiPlayer(0, 1, AiLevel.Hard) { Bridging = false };
         Assert.True(Play(sim, ai, () => ai.Ferrying, AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps), "a wave to set out by sea");
         Assert.True(Play(sim, ai, () => !ai.Ferrying, 4 * 60 * Tps), "the wave to be across");

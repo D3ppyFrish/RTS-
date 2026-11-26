@@ -2159,7 +2159,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   takes the enemy army to be worth what it has seen of it in the last 3 minutes, never less than the
   army a player starts with, and for 6 minutes after one of its own waves was beaten, what that wave
   was worth. While its own army is worth less than 120% of that, soldiers come before everything but
-  houses. Its barracks weigh a unit as Easy's do, times what it is worth in a fight for its price. It
+  houses. Its barracks weigh a unit as Easy's do, times what it is worth in a fight for its price, and keeps its army mixed: once it has 12 soldiers, a role
+  that is over half of them weighs half as much (`MixedArmyFrom`). It
   scouts the enemy town only when it means to attack (every look risks a rider, who comes home at 85%
   of its hit points): a wave of at least 12, leaving 15% at home (a quarter for a faction it plays
   balanced), sets out when it is worth 150% of the
