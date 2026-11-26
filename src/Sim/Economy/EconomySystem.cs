@@ -77,7 +77,7 @@ public sealed class PlayerEconomy
     internal int Researching = -1;
     internal int ResearchTicks;
     // Bonuses from the techs had, recomputed when one is added (see EconomySystem.UpdateBonuses).
-    internal bool Roads, SpareWorkers, MurderHoles, Salvage, FieldRepairs, CutWebs;
+    internal bool Roads, SpareWorkers, MurderHoles, Salvage, FieldRepairs, CutWebs, Thorns;
     // The discoveries made (bit 1 << Discovery), which open discovery techs.
     internal byte Discoveries;
     internal readonly int[] HousingBonus, HpBonus;
@@ -318,6 +318,7 @@ public sealed partial class EconomySystem
             else if (b.Active)
             {
                 if (b.Upgrade != null) StepUpgrade(b);
+                if (b.Def.RegrowTicks > 0 && (_sim.Tick + b.Id) % b.Def.RegrowTicks == 0) Regrow(b);
                 if (b.Def.Kind == BuildingKind.Smelter) StepSmelter(b);
                 else if (b.Def.Kind == BuildingKind.Shrine) StepShrine(b);
                 else if (b.Def.Kind == BuildingKind.Workshop) StepWorkshop(b);

@@ -2187,6 +2187,7 @@ public partial class PlayerControl : Node
         }
         if (Tool != ToolMode.Wall || !_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
         if (!_sim.Content.TryGetBuilding(WallBuilding, out var def)) return;
+        def = _sim.FactionOf(LocalPlayer).Own(def); // your faction's own wall (the Elves' living wall)
         var stock = (int[])_sim.Economy.Stockpile(LocalPlayer).Clone();
         bool broke = false;
         foreach (var (x, z) in EconomySystem.WallLine(_wallX, _wallZ, x2, z2))

@@ -191,8 +191,26 @@ public sealed partial class EconomySystem
         return best;
     }
 
-    /// <summary>Puts back block k of the building (or with k = -1 takes away its damage), <paramref name="h"/> hit points.</summary>
-    private void Mend(Building b, int k, int h)
+    /// <summary>
+    /// Living wood grows back (see <see cref="BuildingDef.RegrowTicks"/>): a damaged building that is not under fire puts
+    /// back its next knocked-out block (bottom up, once nothing is in its way), or heals the damage toward it, for nothing.
+    /// What grows back is not counted as paid for, so a repair after it still costs its share.
+    /// </summary>
+    internal void Regrow(Building b)
+    {
+        if (!b.Damaged || UnderFire(b) || b.Owner < 0 || b.Owner >= Simulation.WildPlayer || !NextMend(b, out int k, out int h)) return;
+        Mend(b, k, h, paid: false);
+        Regrown++;
+    }
+
+    /// <summary>Steps of growing back (<see cref="Regrow"/>) since the match began.</summary>
+    public long Regrown { get; private set; }
+
+    /// <summary>
+    /// Puts back block k of the building (or with k = -1 takes away its damage), <paramref name="h"/> hit points;
+    /// <paramref name="paid"/> counts them toward what the repair has been paid for.
+    /// </summary>
+    private void Mend(Building b, int k, int h, bool paid = true)
     {
         if (k >= 0)
         {
@@ -202,7 +220,7 @@ public sealed partial class EconomySystem
             b.Lost = Math.Max(0, b.Lost - h);
         }
         else b.Damage = 0;
-        b.Mended += h;
+        if (paid) b.Mended += h;
         if (b.Lost == 0 && b.Damage == 0)
         {
             b.Mended = 0;

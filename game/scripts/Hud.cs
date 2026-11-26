@@ -561,14 +561,22 @@ public partial class Hud : CanvasLayer
         }
         if (_sim.Content.TryGetBuilding(PlayerControl.WallBuilding, out var wallDef))
         {
+            var everyones = wallDef;
+            wallDef = _sim.FactionOf(PlayerControl.LocalPlayer).Own(wallDef); // your faction's own (the Elves' living wall)
             var wall = MakeToolButton("");
             wall.Name = "build_wall";
             wall.Icon = UiIcons.Get(wallDef.Icon.Length > 0 ? wallDef.Icon : wallDef.Id);
-            wall.TooltipText = "Drag a line for the selected workers to wall off, a column at a time. " +
-                               "Walls join up with each other and with gates; a gate lets only your units through. " +
-                               "This is the cheap first tier, easy to knock down: select a column of it to upgrade the " +
-                               "stretch to a wooden wall that archers stand on, and that to a stone wall three columns " +
-                               "thick. Put a tower onto a wall for a strong point that sees far.";
+            wall.TooltipText = wallDef != everyones
+                ? $"Drag a line for the selected workers to plant a {wallDef.Name.ToLowerInvariant()}, a column at a time: a hedge of " +
+                  $"living wood {wallDef.WallHeight} high that archers stand on. Walls join up with each other and with gates; a gate " +
+                  "lets only your units through. It has no upgrade, but what is knocked out of it grows back by itself while " +
+                  "nobody is hitting it, and with Thornwood it pricks whoever hacks at it. Put a tower onto a wall for a strong " +
+                  "point that sees far."
+                : "Drag a line for the selected workers to wall off, a column at a time. " +
+                  "Walls join up with each other and with gates; a gate lets only your units through. " +
+                  "This is the cheap first tier, easy to knock down: select a column of it to upgrade the " +
+                  "stretch to a wooden wall that archers stand on, and that to a stone wall three columns " +
+                  "thick. Put a tower onto a wall for a strong point that sees far.";
             wall.Pressed += () => _control.ToggleWall();
             grid.AddChild(wall);
             _buildButtons.Add((wall, wallDef, Key.Y));

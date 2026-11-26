@@ -170,12 +170,18 @@ public enum BlockType : byte
     /// screens what is behind it like a hedge.
     /// </summary>
     Orchard,
+    /// <summary>
+    /// Living wood: the Elves' walls, grown rather than built (a building block). A hedge of live trunks, barked and
+    /// mossy, as tough as planks; what is knocked out of it grows back (see <see cref="Economy.BuildingDef.RegrowTicks"/>).
+    /// It breaks into broken timber.
+    /// </summary>
+    Livewood,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Orchard;
+    public const BlockType Last = BlockType.Livewood;
 
     /// <summary>Anything but air, water, a ladder's rungs and an orchard's trees (which units stand in).</summary>
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Ladder && t != BlockType.Orchard;
@@ -190,7 +196,7 @@ public static class BlockInfo
     public static bool CanStandOn(BlockType t) => IsSolid(t) && t != BlockType.Lava && t != BlockType.Floor;
 
     /// <summary>Blocks that buildings are made of (walls, floors, roofs, doors, gates, stakes, fields and roads).</summary>
-    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle or BlockType.Floor or BlockType.Hive;
+    public static bool IsBuilt(BlockType t) => t >= BlockType.Planks && t <= BlockType.Road || t is BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle or BlockType.Floor or BlockType.Hive or BlockType.Livewood;
 
     /// <summary>
     /// Damage a building's block takes before it is knocked out (see <see cref="Units.CombatSystem"/>); 0 for
@@ -211,6 +217,7 @@ public static class BlockInfo
         BlockType.Trestle => 10,
         BlockType.Floor => 6,
         BlockType.Hive => 10,
+        BlockType.Livewood => 10,
         _ => 0,
     };
 
@@ -243,7 +250,7 @@ public static class BlockInfo
         BlockType.Stone or BlockType.Crystal or BlockType.GoldOre or BlockType.StoneBrick or BlockType.RoofTile or BlockType.Rampart or BlockType.LooseRock => BlockType.StoneRubble,
         BlockType.IronOre => BlockType.OreRubble,
         BlockType.Coal => BlockType.CoalRubble,
-        BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Trestle or BlockType.Floor => BlockType.WoodRubble,
+        BlockType.Planks or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Trestle or BlockType.Floor or BlockType.Livewood => BlockType.WoodRubble,
         _ when IsTrunk(t) => BlockType.WoodRubble,
         _ when IsRubble(t) => t,
         _ => BlockType.Rubble,

@@ -288,6 +288,17 @@ public sealed class BuildingDef
     /// tech; null for a gate without them.
     /// </summary>
     public MurderHoles? MurderHoles { get; init; }
+    /// <summary>
+    /// Ticks one step of growing back takes (<c>"regrow"</c> in the data; 0 for a building that does not): once finished,
+    /// a damaged building of living wood puts a knocked-out block back, or heals the damage toward its next, every this
+    /// many ticks, for nothing and with nobody working it, unless it is under fire (see <see cref="EconomySystem.Regrow"/>).
+    /// </summary>
+    public int RegrowTicks { get; init; }
+    /// <summary>
+    /// What each blow struck at it from close up deals the striker back (<c>"thorns"</c>; 0 for none), once its owner has
+    /// a <see cref="Content.TechEffectType.Thorns"/> tech (see <see cref="Units.CombatSystem"/>).
+    /// </summary>
+    public int Thorns { get; init; }
     /// <summary>A beast pen's numbers (<c>pen</c> in the data; only for <see cref="BuildingKind.Pen"/>), else null.</summary>
     public PenDef? Pen { get; init; }
     /// <summary>A crystal lens's numbers (<c>lens</c> in the data; only for <see cref="BuildingKind.Lens"/>), else null.</summary>

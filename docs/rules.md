@@ -1263,6 +1263,42 @@ Computer players play the Deepfolk as they play any faction, going by what it ca
 chamber, skitterlings, spitters and burrowers), and from Easy up a wave of theirs tunnels its swarm under an enemy wall
 rather than raising a ladder against it (see Tunnels under walls under [Winning and computer players](#winning-and-computer-players)).
 
+## The Elves
+
+The Elves are the fourth faction, the design doc's forest guardians: archers that outshoot everyone's, druids that
+heal, and walls of living wood that grow back. Their archers are fragile and they have no stone walls; they win by
+holding a hedge with archers on it and shooting what comes (`ElvesTests`).
+
+- **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **glade wardens** instead of spearmen,
+  **elf archers** instead of archers, and **druids** instead of mages and healers. Riders, sappers, workers and the
+  rest are everyone's. They start with as many units as anyone, their own in place of those they replace.
+  - The **glade warden** (line infantry, 80 hit points, 9 slashing damage a second, speed 4.5, armoured like a
+    spearman) is quicker and harder-hitting than a spearman, and dearer (45 food, 30 wood).
+  - The **elf archer** (ranged, 45 hit points, 6 damage every 1.2 seconds, 35 food and 40 wood) shoots **12 blocks**, a third further than an
+    archer, and sees 13; she wears no armour. Needs Archery, like the archer.
+  - The **druid** (caster, 40 hit points) heals the most hurt ally within 7 blocks by 6 every 2 seconds and stems its
+    bleeding, shoots thorny bolts (5 damage at 7 blocks) and casts Grow Forest (see [Terrain magic](#terrain-magic)),
+    but none of a mage's other spells. Needs Basic magic. With a druid the Elves heal the dusk tree, as the Settlers do
+    (see [The dusk tree](#the-dusk-tree)).
+- **Living walls** (`living_wall` in `data/buildings.json`, `BlockType.Livewood`): the wall tool plants a living wall
+  where everyone else lays a barrier, a column at a time, for 2 wood. It grows up as a hedge of living trunks 4 high,
+  thick, as sturdy as a wooden wall, with a walkway on its crown that archers are posted on. The Elves cannot build
+  barriers, wooden walls or stone walls, and a living wall has no upgrade; their gates are everyone's.
+- **Growing back** (`"regrow"`, `BuildingDef.RegrowTicks`, `EconomySystem.Regrow`): a finished living wall that is
+  damaged grows back by itself, for nothing and with no worker: every 5 seconds the lowest knocked-out block grows back
+  where it stood (once nothing is in its way), then the damage toward its next block heals. It does not grow while it
+  is under fire (hit by another side in the last 5 seconds), so a siege that keeps at it still gets through, but a
+  breach left alone closes. Workers can still repair it faster, at the usual cost.
+- **Thornwood** (`elf_thornwood`, a `thorns` tech effect; `"thorns"` in `data/buildings.json`, `BuildingDef.Thorns`):
+  once researched, every blow struck at a living wall from close up costs the striker 4 hit points (piercing, at the
+  legs, so leg armour helps). Ranged shots and machines (rams) are not hurt.
+- **Their final tech** is the Song of the Eldertree (after Thornwood, Basic magic and Smelting), which opens their great
+  work, the **Eldertree**: a living mound of wood as broad as a hall that also grows back (see
+  [Ascendancy and great works](#ascendancy-and-great-works)).
+
+Computer players play the Elves as a balanced faction: they wall their town with living walls (the wall tool's
+building, `AiPlayer.FirstBuilding`), post archers on it, and research Thornwood after their other techs.
+
 ## Dropped relics and the Dusk Staff
 
 Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the block where it fell

@@ -50,7 +50,9 @@ public sealed partial class EconomySystem
 
     internal void Apply(WallCommand c)
     {
-        if (!_sim.Content.TryGetBuilding(c.Building, out var def) || !def.IsWall) return;
+        if (!_sim.Content.TryGetBuilding(c.Building, out var def)) return;
+        def = _sim.FactionOf(c.PlayerId).Own(def); // the faction's own wall in place of everyone's (the Elves' living wall)
+        if (!def.IsWall) return;
         if (def.SizeX != 1 || def.SizeZ != 1) return; // a line is laid a column at a time
         if (def.UpgradeOf != null) return; // a higher tier is not laid: the wall it comes from is, and then upgraded
         var sites = new List<Building>();
@@ -457,7 +459,7 @@ public sealed partial class EconomySystem
     {
         int x = U.X[i].FloorToInt(), y = U.Y[i] - 1, z = U.Z[i].FloorToInt();
         // The block first: almost every unit stands on plain ground, and that is settled without a look at the buildings.
-        if (World.Get(x, y, z) is not (BlockType.Planks or BlockType.StoneBrick or BlockType.Palisade or BlockType.Gate or BlockType.Rampart or BlockType.Trestle)) return null;
+        if (World.Get(x, y, z) is not (BlockType.Planks or BlockType.StoneBrick or BlockType.Palisade or BlockType.Gate or BlockType.Rampart or BlockType.Trestle or BlockType.Livewood)) return null;
         var b = Buildings.At(x, y, z);
         return b != null && b.Def.IsRampart ? b : null;
     }

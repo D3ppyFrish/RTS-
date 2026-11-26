@@ -906,6 +906,7 @@ public sealed partial class CombatSystem
             AddShot(i, def, Clamp(u.X[i], b.X, b.MaxX + 1), b.Y + 1, Clamp(u.Z[i], b.Z, b.MaxZ + 1));
             _sim.Evolution.Damaged(i, damage);
             HitBuilding(b, damage, i, def.Role == UnitRole.Sapper || def.Ram, def.Blast);
+            Thorns(i, def, b);
             if (def.Crater > 0) CraterBeside(i, def, b);
             u.ChargeLeft[i] = 0; // the charge's first blow is struck
             return true;

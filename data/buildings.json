@@ -73,6 +73,11 @@
 // cut stone.
 // shore: true means it must stand at the water's edge, with open water in a column right beside its footprint
 // (the fishing hut, a quarry whose rounds give food).
+// regrow (optional, seconds; the Elves' living wood): once finished, the building grows back by itself, for nothing: every
+// regrow seconds a knocked-out block grows back where it stood (bottom up, once nothing is in its way), then the damage
+// toward the next one heals, unless it was hit in the last few seconds (see "Living walls" in docs/rules.md).
+// thorns (optional): each blow struck at it from close up deals the striker this much back (piercing, at the legs), once
+// its owner has a "thorns" tech; ranged shots, machines and its owner's allies are not hurt.
 // Kind great_work is a faction's great work (see "Ascendancy" in docs/rules.md): it stands only in the deep caves,
 // on ground under the land, a player has one at a time, and once finished it wins the match for its owner if it
 // is still standing a few minutes later.
@@ -236,5 +241,16 @@
   // swarms hatch in batches (see "batch" in units.json), and where 12 of them nest.
   { "id": "brood_chamber", "name": "Brood chamber", "kind": "barracks", "size": [6, 5], "wallHeight": 2, "faction": "deepfolk",
     "wall": "hive", "mound": true,
-    "cost": { "wood": 70, "stone": 10 }, "buildTime": 25, "housing": 12, "light": 2 }
+    "cost": { "wood": 70, "stone": 10 }, "buildTime": 25, "housing": 12, "light": 2 },
+  // The Elves' wall (see "replaces" in factions.json): saplings planted close in a line that grow into a hedge of living
+  // wood as high as a wooden wall, with a walkway along its crown for their archers. It has no upgrade, but what is
+  // knocked out of it grows back by itself, and with Thornwood it pricks whoever hacks at it.
+  { "id": "living_wall", "name": "Living wall", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "livewood", "faction": "elves",
+    "cost": { "wood": 2 }, "buildTime": 2, "sight": 2, "thick": true, "sturdy": 3, "walkway": true, "icon": "wall",
+    "regrow": 5, "thorns": 4 },
+  // The Elves' great work: an eldertree's trunk, a living tower of wood as broad as a hall, sung up in the deep caves.
+  { "id": "eldertree", "name": "Eldertree", "kind": "great_work", "size": [7, 7], "wallHeight": 4,
+    "wall": "livewood", "mound": true, "icon": "crown", "faction": "elves",
+    "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "requires": "elf_eldertree", "sight": 10, "light": 6, "regrow": 10 }
 ]

@@ -219,6 +219,11 @@ public enum TechEffectType : byte
     /// (see <see cref="Units.CombatSystem"/>, webs) no longer slow them.
     /// </summary>
     CutWebs,
+    /// <summary>
+    /// The player's buildings with thorns (<see cref="Economy.BuildingDef.Thorns"/>, the Elves' living walls) prick whoever
+    /// strikes them from close up (see <see cref="Units.CombatSystem"/>).
+    /// </summary>
+    Thorns,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

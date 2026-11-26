@@ -37,5 +37,8 @@
   { "id": "deepfolk", "name": "Deepfolk", "uiLook": "crystal", "description": "An insect hive that hatches swarms in batches and burrows under walls unseen.", "look": "mound",
     "replaces": { "barracks": "brood_chamber", "spearman": "skitterling", "archer": "spitter", "rider": "skitterling",
       "sapper": "burrower", "mage": "spitter" },
-    "duskTree": "raze", "aiStyle": "waves" }
+    "duskTree": "raze", "aiStyle": "waves" },
+  { "id": "elves", "name": "Elves", "uiLook": "timber", "description": "Forest guardians whose archers outrange everyone's, whose druids heal, and whose walls are living trees that grow back.",
+    "replaces": { "spearman": "glade_warden", "archer": "elf_archer", "mage": "druid", "healer": "druid", "barrier": "living_wall" },
+    "duskTree": "heal", "aiStyle": "balanced" }
 ]
