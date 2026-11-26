@@ -15,6 +15,24 @@ namespace Rts.Sim.Tests;
 /// </summary>
 public class HardAiTests
 {
+    /// <summary>
+    /// A Hard wave presses on at a far enemy town rather than walk home (<see cref="AiPlayer.PressOnFar"/>) only on the
+    /// large map: the default map's town halls are well within that of each other, the large map's farther apart.
+    /// </summary>
+    [Fact]
+    public void WavesPressOnOnlyWhereTheTownsAreFarApart()
+    {
+        foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5, 1234 })
+        {
+            var usual = RegionGenerator.Generate(seed, RegionGenerator.DefaultSize, RegionGenerator.DefaultHeight, RegionGenerator.DefaultSize);
+            var large = RegionGenerator.Generate(seed, RegionGenerator.LargeSize, RegionGenerator.DefaultHeight, RegionGenerator.LargeSize);
+            int Apart(RegionMap m) => IntMath.Distance(m.Starts[0].X, m.Starts[0].Z, m.Starts[1].X, m.Starts[1].Z);
+            // With room for a wave a little past the hall and a building a little this side of it.
+            Assert.True(Apart(usual) < AiPlayer.PressOnFar - AiPlayer.PressOnNear, $"seed {seed}: the default map's towns are {Apart(usual)} apart");
+            Assert.True(Apart(large) > AiPlayer.PressOnFar, $"seed {seed}: the large map's towns are {Apart(large)} apart");
+        }
+    }
+
     private const int Tps = Simulation.TicksPerSecond;
     private const int Ground = 3; // flat test worlds: grass at 3, units stand at 4
 

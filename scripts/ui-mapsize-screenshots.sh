@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Scripted-input screenshot test for the start screen's map size. Large is picked (1024 by 1024 blocks) and the
 # match starts on a world that size, with more monster lairs spread across it than the standard map has; the camera
-# looks out over the land from above the town. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
+# looks east from above the town over the land it has seen. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-mapsize-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/mapsize}")"
@@ -24,7 +24,7 @@ clickui start_button
 waitmatch
 wait 10
 print
-camera 512,512 0 75 420
+camera 200,512 90 55 160
 wait 20
 shot $OUT/ui-mapsize-large.png
 "

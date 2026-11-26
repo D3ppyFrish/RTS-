@@ -44,7 +44,7 @@ public sealed partial class AiPlayer
     /// across a large map (<see cref="World.RegionGenerator.LargeSize"/>) takes longer than the fight at home, so it
     /// races the enemy instead, at the enemy's town. The default map's towns are about 520 columns apart.
     /// </summary>
-    public const int PressOnFar = 600, PressOnNear = 64;
+    public const int PressOnFar = 620, PressOnNear = 64;
     /// <summary>
     /// Hard: enemies it sees this close (columns) to a town hall of its own, or to any other building of its
     /// own, are met by its soldiers at home, in formation (melee in front, ranged behind, at the pace of the

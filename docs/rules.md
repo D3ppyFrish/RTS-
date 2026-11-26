@@ -2236,8 +2236,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   real force (half its own worth or more) is waited for in a line 10 columns out from the town hall,
   where its new soldiers come out. A wave that is out is called home only for enemies worth more than
   80% of the soldiers at home, and from more than 48 columns away only when they are by a town hall; a
-  wave already within 64 columns of an enemy building at least 600 columns from home (only on the large
-  map, where the towns are about 700 apart) is not called home at all, and races the enemy at its town
+  wave already within 64 columns of an enemy building at least 620 columns from home (on the large map,
+  where the towns are about 700 apart; the default map's are about 520) is not called home at all, and races the enemy at its town
   rather than walk back too late (`PressOnFar`). It fights with Normal's focus fire, sends totem parties and hires as the others do. It does not raid
   yet, and in a long match it runs short of wood once the trees near its town are gone.
 - **Styles**: how the computer plays a faction is in the game data (`aiStyle` in `data/factions.json`).
