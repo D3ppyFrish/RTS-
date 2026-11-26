@@ -35,7 +35,7 @@ namespace Rts.Game;
 ///   --cam-yaw=DEG --cam-pitch=DEG --cam-distance=M   starting camera view
 ///   --benchmark[=SECONDS] dig 100 blocks per second while slowly orbiting, log frame times and quit
 ///   --benchmark-out=PATH  file the benchmark result line is appended to (default user://benchmark.txt)
-///   --world=NxHxN         world size in blocks (default 512x64x512)
+///   --world=NxHxN         world size in blocks (default 768x128x768; the start screen picks 768 or 1024 across)
 ///   --terrain=blocks      draw the ground in whole blocks (0.5 m) everywhere. Otherwise the ground near the
 ///                         camera is drawn in blocks half the size (0.25 m), its steps split in two (see
 ///                         Rts.Sim.World.FineTerrain); the rules always run on whole blocks
@@ -236,7 +236,8 @@ public partial class Main : Node3D
             StartMatch(new MatchSetup(_scenario.Seed, player, _args.ContainsKey("ai"), _scenario.Fog, level, _scenario.DayNight, TestMode: true,
                 Dominion: _scenario.Dominion, Awakening: _scenario.Awakening), fromMenu: false);
         else if (_args.Count == 0 || _args.ContainsKey("menu"))
-            ShowStartScreen(new MatchSetup(seed ?? StartScreen.RandomSeed(), player, Computer: true, Fog: fog ?? true, level, DayNight: dayNight ?? true, test, dominion ?? true, awakening ?? true, factions));
+            ShowStartScreen(new MatchSetup(seed ?? StartScreen.RandomSeed(), player, Computer: true, Fog: fog ?? true, level, DayNight: dayNight ?? true, test, dominion ?? true, awakening ?? true, factions,
+                WorldX == WorldZ ? WorldX : 0));
         else
             StartMatch(new MatchSetup(seed ?? 1234UL, player, _args.ContainsKey("ai"), Fog: fog ?? false, level, DayNight: dayNight ?? false, test, dominion ?? false, awakening ?? false, factions), fromMenu: false);
     }
@@ -322,6 +323,8 @@ public partial class Main : Node3D
         }
         else
         {
+            // The start screen's map size (see StartScreen), keeping the height --world gave.
+            if (setup.Size > 0) WorldX = WorldZ = setup.Size;
             // --trees=1 grows the first, smaller trees, --trees=3 bigger ones still (see VoxelWorld.TreeScale).
             int treeScale = _args.TryGetValue("trees", out var ts) && int.TryParse(ts, out var tv) ? tv : Rts.Sim.World.RegionGenerator.DefaultTreeScale;
             _sim = new Simulation(setup.Seed, WorldX, WorldY, WorldZ, _content, treeScale);

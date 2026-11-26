@@ -32,9 +32,9 @@ public class WildsTests
     }
 
     /// <summary>A match on the default map, set up as the game starts one.</summary>
-    private static Simulation DefaultMatch(ulong seed = 1234)
+    private static Simulation DefaultMatch(ulong seed = 1234, int size = RegionGenerator.DefaultSize)
     {
-        var sim = new Simulation(seed, RegionGenerator.DefaultSize, RegionGenerator.DefaultHeight, RegionGenerator.DefaultSize);
+        var sim = new Simulation(seed, size, RegionGenerator.DefaultHeight, size);
         sim.PlaceStartingBuildings();
         sim.SpawnStartingUnits(24);
         sim.SpawnLairs();
@@ -147,7 +147,8 @@ public class WildsTests
         foreach (var id in new[] { "boar", "stone_giant", "wolf", "bog_horror", "giant_crab", "giant_spider" })
         {
             var def = sim.Content.Unit(id).Lair!;
-            int want = (int)(def.Count * area / (512 * 512));
+            int want = MonsterSystem.WildCount(def.Count, area);
+            Assert.Equal((int)(def.Count * area / (512 * 512)), want); // the default map: as many as ever
             int found = wild.Count(l => l.Monster.Id == id);
             Assert.True(found >= 1 && found <= want, $"{found} wild {id} lairs, want 1 to {want}");
         }
@@ -167,6 +168,39 @@ public class WildsTests
         var again = DefaultMatch();
         Assert.Equal(sim.Monsters.Lairs.Select(l => (l.Monster.Id, l.X, l.Z)), again.Monsters.Lairs.Select(l => (l.Monster.Id, l.X, l.Z)));
         Assert.Equal(sim.StateHash(), again.StateHash());
+    }
+
+    /// <summary>
+    /// The land beyond the default map's area is twice as wild: a map up to the default size gets the data's count
+    /// for each 512 by 512 blocks, and the large map that many again for every 512 by 512 blocks beyond it.
+    /// </summary>
+    [Fact]
+    public void BigMapsAreWilderBeyondTheDefaultMapsArea()
+    {
+        long Area(int n) => (long)n * n;
+        Assert.Equal(1, MonsterSystem.WildCount(1, Area(512)));
+        Assert.Equal(4, MonsterSystem.WildCount(2, Area(RegionGenerator.DefaultSize))); // 2 x 2.25, rounded down
+        // The large map: 2.25 blocks of 512 by 512 as before, and its 1.75 more twice over: 5.75 for each one in the data.
+        Assert.Equal(5, MonsterSystem.WildCount(1, Area(RegionGenerator.LargeSize)));
+        Assert.Equal(11, MonsterSystem.WildCount(2, Area(RegionGenerator.LargeSize)));
+        Assert.Equal(17, MonsterSystem.WildCount(3, Area(RegionGenerator.LargeSize)));
+    }
+
+    /// <summary>
+    /// The large map (see <see cref="RegionGenerator.LargeSize"/>) is made, and has more lairs spread across it than
+    /// the default map, every one still well away from the starts.
+    /// </summary>
+    [Fact]
+    public void TheLargeMapHasMoreLairsAwayFromTheStarts()
+    {
+        var usual = DefaultMatch();
+        var large = DefaultMatch(size: RegionGenerator.LargeSize);
+        Assert.Equal(RegionGenerator.LargeSize, large.World.SizeX);
+        static int Wild(Simulation sim) => sim.Monsters.Lairs.Count(l => l.Monster.Lair!.Biome != null && l.Monster.Lair.Cavern == CavernSpot.None);
+        Assert.True(Wild(large) > Wild(usual) * 3 / 2, $"{Wild(large)} lairs on the large map, {Wild(usual)} on the default one");
+        foreach (var lair in large.Monsters.Lairs.Where(l => !l.Monster.Lair!.AtStarts && l.Monster.Lair.Cavern == CavernSpot.None && l.Monster.Lair.Biome != null))
+            foreach (var s in large.Map.Starts)
+                Assert.True(IntMath.Distance(lair.X, lair.Z, s.X, s.Z) >= MonsterSystem.WildStartGap, $"{lair.Monster.Id} lair near a start");
     }
 
     /// <summary>

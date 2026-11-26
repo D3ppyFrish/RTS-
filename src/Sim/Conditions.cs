@@ -307,6 +307,11 @@ public sealed class Lights
     private bool _any;
     // The top lava block of each column that has one, found once (lava cannot be dug or placed).
     private System.Collections.Generic.List<(int X, int Z)>? _lava;
+    // The light of the lava alone (stamped once), whether it is in _lit now, and the boxes the buildings lit
+    // into _lit since, so an update puts back only those.
+    private byte[]? _lavaLit;
+    private bool _lavaAny;
+    private readonly System.Collections.Generic.List<(int X0, int Z0, int X1, int Z1)> _stamped = new();
 
     public Lights(Simulation sim)
     {
@@ -329,18 +334,40 @@ public sealed class Lights
     internal void Step(bool dark, bool storm)
     {
         if (_sim.Tick % UpdateTicks != 0) return;
-        if (_any) Array.Clear(_lit!);
+        // Only what the buildings lit last time is put out (lava never changes, so its light is stamped once);
+        // the whole map is never cleared, which on a big map would be a million columns every update.
+        if (_any)
+        {
+            foreach (var (x0, z0, x1, z1) in _stamped)
+                for (int z = z0; z <= z1; z++)
+                    Array.Copy(_lavaLit!, x0 + z * _sizeX, _lit!, x0 + z * _sizeX, x1 - x0 + 1);
+            _stamped.Clear();
+            if (!dark && _lavaAny) { Array.Clear(_lit!); _lavaAny = false; }
+        }
         _any = false;
         if (!dark) return;
-        _lava ??= FindLava();
-        foreach (var (lx, lz) in _lava)
+        if (_lava == null)
         {
-            _lit ??= new byte[_sizeX * _sizeZ];
-            _any = true;
-            for (int z = Math.Max(0, lz - LavaLight); z <= Math.Min(_sizeZ - 1, lz + LavaLight); z++)
-            for (int x = Math.Max(0, lx - LavaLight); x <= Math.Min(_sizeX - 1, lx + LavaLight); x++)
-                if ((x - lx) * (x - lx) + (z - lz) * (z - lz) <= LavaLight * LavaLight) _lit[x + z * _sizeX] = 1;
+            _lava = FindLava();
+            if (_lava.Count > 0)
+            {
+                _lavaLit = new byte[_sizeX * _sizeZ];
+                foreach (var (lx, lz) in _lava)
+                    for (int z = Math.Max(0, lz - LavaLight); z <= Math.Min(_sizeZ - 1, lz + LavaLight); z++)
+                    for (int x = Math.Max(0, lx - LavaLight); x <= Math.Min(_sizeX - 1, lx + LavaLight); x++)
+                        if ((x - lx) * (x - lx) + (z - lz) * (z - lz) <= LavaLight * LavaLight) _lavaLit[x + z * _sizeX] = 1;
+            }
         }
+        if (_lava.Count > 0)
+        {
+            // Back from the dark-free spell (by day outside the wilds): the lava's light comes on again.
+            if (_lit == null) _lit = (byte[])_lavaLit!.Clone();
+            else if (!_lavaAny) Array.Copy(_lavaLit!, _lit, _lit.Length);
+            _lavaAny = true;
+            _any = true;
+        }
+        else _lavaAny = false;
+        _lavaLit ??= new byte[_sizeX * _sizeZ];
         foreach (var b in _sim.Buildings.All)
         {
             if (!Shines(b, storm)) continue;
@@ -352,8 +379,12 @@ public sealed class Lights
             int cx2 = b.X + b.MaxX + 1, cz2 = b.Z + b.MaxZ + 1;
             int R = r + Math.Max(b.Def.SizeX, b.Def.SizeZ) / 2;
             long r2 = 4L * R * R;
-            for (int z = Math.Max(0, cz2 / 2 - R - 1); z <= Math.Min(_sizeZ - 1, cz2 / 2 + R); z++)
-            for (int x = Math.Max(0, cx2 / 2 - R - 1); x <= Math.Min(_sizeX - 1, cx2 / 2 + R); x++)
+            int x0 = Math.Max(0, cx2 / 2 - R - 1), x1 = Math.Min(_sizeX - 1, cx2 / 2 + R);
+            int z0 = Math.Max(0, cz2 / 2 - R - 1), z1 = Math.Min(_sizeZ - 1, cz2 / 2 + R);
+            if (x0 > x1 || z0 > z1) continue;
+            _stamped.Add((x0, z0, x1, z1));
+            for (int z = z0; z <= z1; z++)
+            for (int x = x0; x <= x1; x++)
             {
                 long dx = 2L * x + 1 - cx2, dz = 2L * z + 1 - cz2;
                 if (dx * dx + dz * dz <= r2) _lit[x + z * _sizeX] = 1;

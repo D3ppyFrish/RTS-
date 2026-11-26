@@ -11,10 +11,11 @@ namespace Rts.Game;
 /// A match as the start screen sets it up: the world seed, the player you play (and so your start), each
 /// player's faction (<see cref="Factions"/>, by player; null, or a null entry, for the faction in data order), whether a computer plays the other side and how well (see <see cref="AiLevel"/>), whether there
 /// is fog of war (see <see cref="FogOfWar"/>) and whether there are day, night and weather (see
-/// <see cref="Rts.Sim.Conditions"/>), and whether it is a test mode match (see <see cref="TestPanel"/>).
+/// <see cref="Rts.Sim.Conditions"/>), whether it is a test mode match (see <see cref="TestPanel"/>), and the map's width and
+/// depth in blocks (<see cref="Size"/>: 0 keeps the size the game was started with).
 /// </summary>
 public sealed record MatchSetup(ulong Seed, int Player, bool Computer, bool Fog, AiLevel Level = AiLevel.Normal, bool DayNight = false,
-    bool TestMode = false, bool Dominion = false, bool Awakening = false, IReadOnlyList<string?>? Factions = null);
+    bool TestMode = false, bool Dominion = false, bool Awakening = false, IReadOnlyList<string?>? Factions = null, int Size = 0);
 
 /// <summary>
 /// The start screen: pick your faction and the other side's (any faction for either, so both can play the same
@@ -25,7 +26,7 @@ public sealed record MatchSetup(ulong Seed, int Player, bool Computer, bool Fog,
 /// keeps the faction picked for it. Shown when the game starts without command-line options (or with
 /// --menu), and again from the end of a match. Its controls are named for scripted input: start_ plus the
 /// faction id (start_settlers, start_orcs) for yours, start_vs_ plus the faction id (start_vs_settlers, start_vs_orcs) for the
-/// other side's, start_seed, start_new_seed, start_computer, start_level, start_fog, start_daynight, start_dominion, start_test,
+/// other side's, start_seed, start_new_seed, start_size, start_computer, start_level, start_fog, start_daynight, start_dominion, start_test,
 /// start_button and start_quit.
 /// </summary>
 public partial class StartScreen : CanvasLayer
@@ -53,6 +54,15 @@ public partial class StartScreen : CanvasLayer
     private CheckButton _dominion = null!;
     private CheckButton _awakening = null!;
     private OptionButton _level = null!;
+    private OptionButton _size = null!;
+
+    /// <summary>The map sizes on the start screen, in the order shown.</summary>
+    private static readonly (int Size, string Name, string Tip)[] Sizes =
+    {
+        (Rts.Sim.World.RegionGenerator.DefaultSize, "Standard", "768 by 768 blocks: the usual map."),
+        (Rts.Sim.World.RegionGenerator.LargeSize, "Large", "1024 by 1024 blocks: nearly twice the land, farther apart, and the land beyond the usual map's " +
+            "is twice as thick with monster lairs. Takes longer to make and to cross."),
+    };
 
     /// <summary>The computer player's levels on the start screen, in the order shown.</summary>
     private static readonly (AiLevel Level, string Name, string Tip)[] Levels =
@@ -156,6 +166,20 @@ public partial class StartScreen : CanvasLayer
         Hud.Frame(newSeed, Hud.PlainColour);
         newSeed.Pressed += () => _seed.Text = RandomSeed().ToString(CultureInfo.InvariantCulture);
         seedRow.AddChild(newSeed);
+
+        var sizeRow = new HBoxContainer();
+        sizeRow.AddThemeConstantOverride("separation", 10);
+        sizeRow.AddChild(Hud.MakeLabel("Map size", 16));
+        _size = new OptionButton { Name = "start_size", FocusMode = Control.FocusModeEnum.None };
+        _size.AddThemeFontSizeOverride("font_size", 16);
+        for (int k = 0; k < Sizes.Length; k++)
+        {
+            _size.AddItem(Sizes[k].Name, k);
+            _size.SetItemTooltip(k, Sizes[k].Tip);
+        }
+        _size.Select(Math.Max(0, Array.FindIndex(Sizes, z => z.Size == setup.Size)));
+        sizeRow.AddChild(_size);
+        column.AddChild(sizeRow);
 
         _computer = new CheckButton
         {
@@ -292,10 +316,11 @@ public partial class StartScreen : CanvasLayer
 
     /// <summary>The choices as they stand, for scripted tests.</summary>
     public string Describe() =>
-        $"player={_player} faction={FactionOf(_player).Id} rival={FactionOf(Rival).Id} seed={(_seed.Text.Length > 0 ? _seed.Text : "random")} computer={(_computer.ButtonPressed ? 1 : 0)} " +
+        $"player={_player} faction={FactionOf(_player).Id} rival={FactionOf(Rival).Id} seed={(_seed.Text.Length > 0 ? _seed.Text : "random")} size={SelectedSize} computer={(_computer.ButtonPressed ? 1 : 0)} " +
         $"level={SelectedLevel.ToString().ToLowerInvariant()} fog={(_fog.ButtonPressed ? 1 : 0)} test={(_test.ButtonPressed ? 1 : 0)} dominion={(_dominion.ButtonPressed ? 1 : 0)} awakening={(_awakening.ButtonPressed ? 1 : 0)}";
 
     private AiLevel SelectedLevel => _level.Selected >= 0 ? Levels[_level.Selected].Level : AiLevel.Normal;
+    private int SelectedSize => _size.Selected >= 0 ? Sizes[_size.Selected].Size : Rts.Sim.World.RegionGenerator.DefaultSize;
 
     /// <summary>A seed for a new match: short enough to read out and type in.</summary>
     public static ulong RandomSeed() => (ulong)Random.Shared.Next(1, 100000);
@@ -307,7 +332,7 @@ public partial class StartScreen : CanvasLayer
     {
         ulong seed = ulong.TryParse(_seed.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var s) ? s : RandomSeed();
         return new MatchSetup(seed, _player, _computer.ButtonPressed, _fog.ButtonPressed, SelectedLevel, _dayNight.ButtonPressed, _test.ButtonPressed,
-            _dominion.ButtonPressed, _awakening.ButtonPressed, Factions());
+            _dominion.ButtonPressed, _awakening.ButtonPressed, Factions(), SelectedSize);
     }
 
     /// <summary>Each player's faction as picked, for the match; null when both have their usual ones.</summary>

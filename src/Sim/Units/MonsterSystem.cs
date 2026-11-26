@@ -278,6 +278,26 @@ public sealed class MonsterSystem
         return placed;
     }
 
+    /// <summary>
+    /// How many times as many lairs for its size the land beyond the default map's area has
+    /// (<see cref="Rts.Sim.World.RegionGenerator.DefaultSize"/>): a bigger map is not only bigger but wilder, its far reaches
+    /// thick with dens.
+    /// </summary>
+    public const int BeyondWildness = 2;
+
+    /// <summary>
+    /// How many lairs of a monster with <paramref name="perMap"/> for each 512 by 512 blocks (<see cref="LairDef.Count"/>)
+    /// a map of <paramref name="area"/> columns gets (rounded down): that many for each 512 by 512 blocks up to the
+    /// default map's area, and <see cref="BeyondWildness"/> times as many for the land beyond it. The default map
+    /// and smaller ones get the same as ever.
+    /// </summary>
+    public static int WildCount(int perMap, long area)
+    {
+        long usual = (long)Rts.Sim.World.RegionGenerator.DefaultSize * Rts.Sim.World.RegionGenerator.DefaultSize;
+        long weighted = area <= usual ? area : usual + (area - usual) * BeyondWildness;
+        return (int)(perMap * weighted / (512L * 512L));
+    }
+
     /// <summary>The nearest a lair spread across the map (see <see cref="PlaceWild"/>) is to a start area (blocks).</summary>
     public const int WildStartGap = 100;
     /// <summary>The nearest a lair spread across the map is to any other lair or to a city-state's town (blocks).</summary>
@@ -288,7 +308,7 @@ public sealed class MonsterSystem
     /// <summary>
     /// Match setup: the lairs spread across the map (issue #45), for each monster with a
     /// <see cref="LairDef.Biome"/> in data order, <see cref="LairDef.Count"/> of them for each 512 by 512 blocks of
-    /// map (rounded down). Each den is on dry ground of its biome where <see cref="SiteFits"/>, at least
+    /// map (rounded down; <see cref="WildCount"/>, more beyond the default map's area). Each den is on dry ground of its biome where <see cref="SiteFits"/>, at least
     /// <see cref="WildStartGap"/> from every start and <see cref="WildGap"/> from every other lair and town, at a
     /// column picked from a random stream of the map's seed; a lair with no such column in
     /// <see cref="WildTries"/> tries is left out. Call after placing the starts' lairs and the city-states.
@@ -303,7 +323,7 @@ public sealed class MonsterSystem
         {
             var monster = monsters[k];
             var def = monster.Lair!;
-            int count = (int)(def.Count * area / (512L * 512L));
+            int count = WildCount(def.Count, area);
             var rng = new DeterministicRandom(_sim.Seed ^ 0x3A1D5EEDUL ^ (ulong)(k + 1) * 0x9E3779B97F4A7C15UL);
             if (def.Pass && PlaceInPasses(monster, placed) > 0) continue;
             if (def.Cave && PlaceInCaves(monster, count, placed) > 0) continue;

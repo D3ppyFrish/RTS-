@@ -53,7 +53,8 @@ scripts/setup.sh --with-export-templates && scripts/export-windows.sh
 ### Maps
 
 `RegionGenerator` (src/Sim/World) builds the region from a seed with integer maths, 768×128×768 by default
-(`RegionGenerator.DefaultSize`, issue #45, and `DefaultHeight`; `--world=WxHxD` picks another size, and the features are laid out
+(`RegionGenerator.DefaultSize`, issue #45, and `DefaultHeight`; the start screen's Map size picks it or the large
+1024×128×1024 map, `RegionGenerator.LargeSize`, the most the flow fields reach; `--world=WxHxD` picks another size, and the features are laid out
 for 512 across and 64 high and scale with it). On a map at least 96 high, the land's 64 layers sit on
 `RegionGenerator.DeepLayers` more of deep rock (64 on the default map), with **the deep caves** running through it:
 two levels of domed chambers on a grid about `DeepSpacing` (120) blocks apart under most of the map, joined by

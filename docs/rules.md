@@ -993,7 +993,11 @@ areas, and Orcs who beat a wolf keep it.
 - **Across the map** (issue #45): more lairs are spread over the map by biome, for each 512 by 512 blocks
   of it: a wolf pack in the grassland, two herds of **wild boar** in the forests and a **stone giant** in the
   hills (in its mountain pass, below), two pairs of **bog horrors** in the swamp and two pairs of **giant crabs** on the beaches (on the
-  default 768 map, twice that, rounded down: 2, 4, 2, 4 and 4). Each den is at least 100 blocks from
+  default 768 map, twice that, rounded down: 2, 4, 2, 4 and 4). A bigger map is wilder, not only bigger
+  (`MonsterSystem.WildCount`, `BeyondWildness`): the land beyond the default map's area counts twice, so the
+  large 1024 map (`RegionGenerator.LargeSize`, picked on the start screen) has 5.75 times the data's count
+  rather than 4 (5, 11, 5, 11 and 11; any other kind likewise), and the default map and smaller ones get as
+  many as ever. Each den is at least 100 blocks from
   every start and 40 from any other lair or town. A boar herd is three boars (80 hit points, quick, tusks
   that pierce) that pay 200 food; Orcs who beat a boar can ride it, and the spearman becomes a rider (the
   Orcs' own rider sits on a war boar). A stone giant stands alone: 450 hit points, slow, heavy armour and
@@ -2246,8 +2250,10 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   hall, by everyone; by a far building, a few raiders by a party worth three times as much, while a
   real force (half its own worth or more) is waited for in a line 10 columns out from the town hall,
   where its new soldiers come out. A wave that is out is called home only for enemies worth more than
-  80% of the soldiers at home, and from more than 48 columns away only when they are by a town hall. It
-  fights with Normal's focus fire, sends totem parties and hires as the others do. It does not raid
+  80% of the soldiers at home, and from more than 48 columns away only when they are by a town hall; a
+  wave already within 64 columns of an enemy building at least 620 columns from home (on the large map,
+  where the towns are about 700 apart; the default map's are about 520) is not called home at all, and races the enemy at its town
+  rather than walk back too late (`PressOnFar`). It fights with Normal's focus fire, sends totem parties and hires as the others do. It does not raid
   yet, and in a long match it runs short of wood once the trees near its town are gone.
 - **Styles**: how the computer plays a faction is in the game data (`aiStyle` in `data/factions.json`).
   The Orcs are played in **waves**: no walls, and nearly every soldier goes with the wave. The Settlers
