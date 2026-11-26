@@ -32,6 +32,9 @@ shot $OUT/sculpt-rider$suffix.png
 camera 106,290 -8 14 8
 wait 5
 shot $OUT/sculpt-imported$suffix.png
+camera 102,296 8 18 12
+wait 5
+shot $OUT/sculpt-evolved$suffix.png
 camera 106,281 15 35 45
 wait 5
 shot $OUT/sculpt-far$suffix.png
@@ -47,5 +50,5 @@ LOG="$OUT/ui-sculpt.log"
 
 fail() { echo "UI sculpt test failed: $1" >&2; exit 1; }
 ! grep -q '^Input script' "$LOG" || fail "a scripted step failed: $(grep '^Input script' "$LOG")"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 12 ] || fail "missing screenshots"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 14 ] || fail "missing screenshots"
 echo "UI sculpt screenshot test OK: $OUT"

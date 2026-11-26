@@ -72,6 +72,14 @@ public static partial class Sculpted
         ["archer"] = ImportedRig("res://models/archer.vox.gz"),
         ["rider"] = ImportedRig("res://models/rider.vox.gz", stride: 1.6f, bob: 1.5f),
         ["mage"] = ImportedRig("res://models/mage.vox.gz"),
+        ["battle_mage"] = ImportedRig("res://models/battle_mage.vox.gz"),
+        ["longbowman"] = ImportedRig("res://models/longbowman.vox.gz"),
+        ["ranger"] = ImportedRig("res://models/ranger.vox.gz"),
+        ["lancer"] = ImportedRig("res://models/lancer.vox.gz", stride: 1.6f, bob: 1.5f),
+        ["outrider"] = ImportedRig("res://models/outrider.vox.gz", stride: 1.8f, bob: 1.5f),
+        ["tunneller"] = ImportedRig("res://models/tunneller.vox.gz"),
+        ["demolisher"] = ImportedRig("res://models/demolisher.vox.gz"),
+        ["battle_priest"] = ImportedRig("res://models/battle_priest.vox.gz"),
         ["healer"] = ImportedRig("res://models/healer.vox.gz"),
         ["golem"] = new RigDef
         {
