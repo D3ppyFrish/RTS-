@@ -970,6 +970,7 @@ public partial class Main : Node3D
         Put("lancer", -6.5f, 18f, 0);
         Put("outrider", -3f, 18f, 0);
         Put("battle_priest", 0f, 15.5f, 0);
+        Put("seer", -3.5f, 22f, 0);
         Put("dusk_warden", -8.5f, -1.5f, 40);
         GD.Print($"Showcase at {cx},{cz}");
     }

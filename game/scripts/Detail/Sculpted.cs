@@ -81,6 +81,8 @@ public static partial class Sculpted
         ["demolisher"] = ImportedRig("res://models/demolisher.vox.gz"),
         ["battle_priest"] = ImportedRig("res://models/battle_priest.vox.gz"),
         ["healer"] = ImportedRig("res://models/healer.vox.gz"),
+        // The seer came untextured; its colours were painted after Sawyer's reference picture, the crystal lit.
+        ["seer"] = LitImportedRig("res://models/seer.vox.gz", Color.Color8(238, 246, 250)),
         ["golem"] = new RigDef
         {
             Roles = new[] { Role.LegA, Role.LegB, Role.Body, Role.Head, Role.ArmA, Role.ArmB, Role.Fixed },
