@@ -959,6 +959,7 @@ public partial class Main : Node3D
         Put("archer", 2f, 11.5f, 0);
         Put("mage", 4f, 11.5f, 0);
         Put("healer", 5.3f, 9.8f, 0);
+        Put("foreman", -3f, 9.8f, 0);
         Put("rider", 6.5f, 11.5f, 0);
         Put("dusk_warden", -8.5f, -1.5f, 40);
         GD.Print($"Showcase at {cx},{cz}");

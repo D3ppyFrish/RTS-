@@ -65,6 +65,7 @@ public static partial class Sculpted
         // Sawyer's Meshy AI models for telling troops apart. The shared base units' models are the Settlers' look:
         // the Orcs keep their own ("orcs/spearman" and the rest, see UnitModels.ForFaction).
         ["worker"] = ImportedRig("res://models/worker.vox.gz"),
+        ["foreman"] = ImportedRig("res://models/foreman.vox.gz"),
         ["militia"] = ImportedRig("res://models/militia.vox.gz"),
         ["spearman"] = ImportedRig("res://models/spearman.vox.gz"),
         ["pathfinder"] = ImportedRig("res://models/pathfinder.vox.gz"),
