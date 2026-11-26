@@ -78,6 +78,35 @@ public class PathTests
     }
 
     [Fact]
+    public void ReverseEdgesFollowTheTerrain()
+    {
+        // The path search walks edges backwards through Into: it must list exactly the steps onto each node,
+        // on a map that is built and then changed (walls raised, tunnels dug, a ramp, a pit).
+        var w = TestWorlds.Flat();
+        TestWorlds.Box(w, 20, Feet, 0, 24, Feet + 5, 63, BlockType.Stone);
+        w.Set(11, Feet, 10, BlockType.Stone);
+        var sim = TestWorlds.Sim(w);
+        var g = sim.Walkable;
+        AssertReverseEdges(g);
+        TestWorlds.Box(w, 30, Feet, 30, 40, Feet + 1, 30, BlockType.Stone);
+        TestWorlds.Box(w, 20, Feet, 15, 24, Feet + 1, 15, BlockType.Air);
+        for (int k = 0; k < 4; k++) w.Set(44 + k, Feet + k, 50, BlockType.Stone);
+        TestWorlds.Box(w, 10, 1, 40, 12, Feet - 1, 42, BlockType.Air);
+        sim.Step();
+        AssertReverseEdges(g);
+    }
+
+    private static void AssertReverseEdges(WalkGraph g)
+    {
+        var want = new uint[g.NodeCount];
+        for (int n = 0; n < g.NodeCount; n++)
+            for (int d = 0; d < 8; d++)
+                if (g.Step(n, d) is int m and >= 0) want[m] |= 1u << (4 * d + (n & (WalkGraph.MaxLevels - 1)));
+        for (int n = 0; n < g.NodeCount; n++)
+            if (g.Into(n) != want[n]) Assert.Fail($"node {n}: reverse edges {g.Into(n):X8}, steps onto it {want[n]:X8}");
+    }
+
+    [Fact]
     public void WalksAroundAWall()
     {
         var w = TestWorlds.Flat();
