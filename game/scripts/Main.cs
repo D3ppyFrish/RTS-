@@ -960,7 +960,17 @@ public partial class Main : Node3D
         Put("mage", 4f, 11.5f, 0);
         Put("healer", 5.3f, 9.8f, 0);
         Put("foreman", -3f, 9.8f, 0);
+        Put("battle_mage", 1f, 9.8f, 0);
         Put("rider", 6.5f, 11.5f, 0);
+        // The evolved forms in a row in front, with a shot of their own.
+        Put("tunneller", -8f, 15.5f, 0);
+        Put("demolisher", -6f, 15.5f, 0);
+        Put("longbowman", -4f, 15.5f, 0);
+        Put("ranger", -2f, 15.5f, 0);
+        Put("lancer", -6.5f, 18f, 0);
+        Put("outrider", -3f, 18f, 0);
+        Put("battle_priest", 0f, 15.5f, 0);
+        Put("seer", -3.5f, 22f, 0);
         Put("dusk_warden", -8.5f, -1.5f, 40);
         GD.Print($"Showcase at {cx},{cz}");
     }

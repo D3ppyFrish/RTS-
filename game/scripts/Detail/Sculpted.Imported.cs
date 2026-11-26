@@ -57,10 +57,16 @@ public static partial class Sculpted
     /// <paramref name="glows"/> are boxes in the file's own voxels (x0, y0, z0, x1, y1, z1, inclusive) painted
     /// with a glowing material, for eyes and the like the model's texture can only give as a colour.
     /// </summary>
-    private static FineGrid[] Imported(string path, int step, (int X0, int Y0, int Z0, int X1, int Y1, int Z1, FineMaterial M)[]? glows = null)
+    private static FineGrid[] Imported(string path, int step, (int X0, int Y0, int Z0, int X1, int Y1, int Z1, FineMaterial M)[]? glows = null,
+        Color[]? lit = null)
     {
         var g = ReadImported(path);
         if (g == null) return new[] { new Sculpt(step, 0, 0, 0, 1, 1, 1).Grid };
+        // Palette colours that glow, wherever they are (a crystal of any shape, where a box would not fit).
+        if (lit != null)
+            for (int k = 1; k < g.Palette.Length; k++)
+                foreach (var l in lit)
+                    if (g.Palette[k].Colour.ToRgba32() == l.ToRgba32()) g.Palette[k] = new FineMaterial(l, Surface.Glow);
         if (glows != null && glows.Length > 0)
         {
             int first = g.Palette.Length;
@@ -100,5 +106,12 @@ public static partial class Sculpted
     {
         Roles = new[] { Role.Body }, Pivots = new[] { Vector3.Zero }, Build = step => Imported(path, step, glows),
         StrideBlocks = stride, Bob = bob, Far = true,
+    };
+
+    /// <summary>An imported model whose <paramref name="lit"/> palette colours glow.</summary>
+    private static RigDef LitImportedRig(string path, params Color[] lit) => new()
+    {
+        Roles = new[] { Role.Body }, Pivots = new[] { Vector3.Zero }, Build = step => Imported(path, step, null, lit),
+        StrideBlocks = 1.2f, Bob = 1f, Far = true,
     };
 }
