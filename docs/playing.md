@@ -12,7 +12,9 @@ It opens on the start screen: pick your faction, the Settlers (who start in the 
 east) or the Deepfolk (an insect hive that hatches swarms in batches at brood chambers and burrows under walls;
 see [The Deepfolk](rules.md#the-deepfolk)) or the Elves (forest guardians with long-range archers, healing druids and
 living walls that grow back; see [The Elves](rules.md#the-elves)), and under Against the faction of the other side (the same as yours makes a mirror match), the
-world seed, whether the computer plays the other side and how well (Computer level: Easy, Normal, which
+world seed, the map size (Standard, 768 by 768 blocks, or Large, 1024 by 1024: nearly twice the land, the towns
+about 700 blocks apart instead of 520, and the land beyond the standard map's twice as thick with monster lairs; see
+[Monsters and taming](rules.md#monsters-and-taming)), whether the computer plays the other side and how well (Computer level: Easy, Normal, which
 is the default, Hard, or Classic, the first computer player; hover a level to read how it plays. No level
 is given anything you are not, and only Classic sees through the fog of war), and whether there is fog of
 war, then Start match. The computer plays the two factions differently: the Orcs mass their soldiers and

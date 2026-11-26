@@ -39,6 +39,13 @@ public sealed partial class AiPlayer
     /// </summary>
     public const int RecallPercent = 80;
     /// <summary>
+    /// Hard: a wave already within <see cref="PressOnNear"/> columns of an enemy building it knows of, when that
+    /// building is at least <see cref="PressOnFar"/> columns from its own town hall, is not called home: the walk back
+    /// across a large map (<see cref="World.RegionGenerator.LargeSize"/>) takes longer than the fight at home, so it
+    /// races the enemy instead, at the enemy's town. The default map's towns are about 520 columns apart.
+    /// </summary>
+    public const int PressOnFar = 600, PressOnNear = 64;
+    /// <summary>
     /// Hard: enemies it sees this close (columns) to a town hall of its own, or to any other building of its
     /// own, are met by its soldiers at home, in formation (melee in front, ranged behind, at the pace of the
     /// slowest) so that they arrive together. Out by a far building it weighs the enemy soldiers it has seen
@@ -178,7 +185,7 @@ public sealed partial class AiPlayer
             if (threat > 0) _alarm = sim.Tick;
             // The wave comes back only for a force those at home cannot see off, and from far away only for a town hall.
             if (_wave.Count > 0 && _waveLair == 0 && threat * 100 > PowerOf(sim, home) * RecallPercent
-                && (WaveNear(sim, hx, hz, RecallRadius) || ByHall(sim, tx, tz)))
+                && (WaveNear(sim, hx, hz, RecallRadius) || ByHall(sim, tx, tz)) && !PressesOn(sim, hx, hz))
             {
                 Note(sim, $"calls its wave of {_wave.Count} home to help");
                 home.AddRange(_wave);
@@ -349,6 +356,21 @@ public sealed partial class AiPlayer
     /// True if column (x, z) is within <see cref="HardHallRadius"/> columns of a finished town hall of its own,
     /// or of where its soldiers gather (see <see cref="GatheringGround"/>).
     /// </summary>
+    /// <summary>True if the wave is to press on rather than come home: see <see cref="PressOnFar"/>.</summary>
+    private bool PressesOn(Simulation sim, int hx, int hz)
+    {
+        var u = sim.Units;
+        foreach (int id in _wave)
+        {
+            int i = u.IndexOf(id);
+            if (i < 0) continue;
+            // The enemy building it knows nearest the wave's first soldier: the town it is at, if any.
+            if (KnownBuilding(u.X[i].FloorToInt(), u.Z[i].FloorToInt()) is not { } near) return false;
+            return Dist2(hx, hz, near.X, near.Z) >= (long)PressOnFar * PressOnFar && WaveNear(sim, near.X, near.Z, PressOnNear);
+        }
+        return false;
+    }
+
     private bool ByHall(Simulation sim, int x, int z)
     {
         if (GatheringGround(sim) is var (gx, gz) && Dist2(x, z, gx, gz) <= (long)HardHallRadius * HardHallRadius) return true;

@@ -142,6 +142,41 @@ public class ConditionsTests
     }
 
     [Fact]
+    public void LightsGoOutAndComeBackAcrossDaysWhereLavaAndTorchesOverlap()
+    {
+        // The lights are put back only where they were lit (lava is stamped once), so check that what lava and a
+        // torch light together comes and goes right through day, night, a storm and the next day.
+        var w = TestWorlds.Flat(96, 16, 96, Ground);
+        w.Set(20, Ground, 20, BlockType.Lava);
+        var sim = TestWorlds.Sim(w);
+        sim.DayNight = true;
+        sim.Conditions.SetWeather(Weather.Clear, 3L * Conditions.DayTicks);
+        Place(sim, 1, "torch", 30, 20);
+        bool Lit(int x) => sim.Conditions.Lights.Lit(x, 20);
+        sim.Run(Lights.UpdateTicks);
+        Assert.False(Lit(20)); // 8:00: no light at all by day
+        Assert.False(Lit(30));
+        RunTo(sim, Midnight);
+        Assert.True(Lit(20 + Lights.LavaLight)); // lava and torch both
+        Assert.True(Lit(26));
+        Assert.True(Lit(30));
+        Assert.False(Lit(40));
+        sim.Conditions.SetWeather(Weather.Storm, Conditions.HourTicks);
+        sim.Run(Lights.UpdateTicks);
+        Assert.True(Lit(20 + Lights.LavaLight)); // the storm puts out the torch, not the lava
+        Assert.False(Lit(26));
+        Assert.False(Lit(30));
+        sim.Conditions.SetWeather(Weather.Clear, 3L * Conditions.DayTicks);
+        RunTo(sim, Midnight + Conditions.DayTicks / 2); // noon the next day
+        Assert.False(Lit(20));
+        Assert.False(Lit(30));
+        RunTo(sim, Midnight + Conditions.DayTicks);
+        Assert.True(Lit(20));
+        Assert.True(Lit(30));
+        Assert.False(Lit(10));
+    }
+
+    [Fact]
     public void GeneratedMapsHaveLavaInTheHills()
     {
         var map = RegionGenerator.Generate(1234, 256, 64, 256);

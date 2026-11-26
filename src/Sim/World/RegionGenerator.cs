@@ -56,6 +56,13 @@ public static partial class RegionGenerator
     public const int DefaultSize = 768, DefaultHeight = SurfaceLayers + 64;
 
     /// <summary>
+    /// The large map's width and depth in blocks, the start screen's other map size: the most the flow fields
+    /// reach (<see cref="Rts.Sim.Units.PathService"/>), 1.8 times the default map's land. The land beyond the default map's
+    /// area is wilder (see <see cref="Rts.Sim.Units.MonsterSystem.WildCount"/>).
+    /// </summary>
+    public const int LargeSize = 1024;
+
+    /// <summary>
     /// How many times bigger than the first trees a generated map's trees grow (see
     /// <see cref="VoxelWorld.TreeScale"/>): twice, so the world's trees tower over its people.
     /// </summary>
