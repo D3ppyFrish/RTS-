@@ -4,7 +4,7 @@
 # swamp, a stone giant in its mountain pass through a ridge in the hills (clicked, so its panel shows), a herd of wild boar, a pair of bog horrors
 # lying in the swamp's pools, a pair of giant crabs on a beach, a giant spiders' hill cave (its mouth on the hillside, and its bottom cut open by the height slice with the nest round its totem), and (issue #65) the cavern under the hills cut open by the
 # height slice, with a cave crawler nest and the cave wyrm at its far end, and (issue #66) a sinkhole's pale
-# crust in the grassland, the deep caves under the land, (issue #78) a patch of quicksand on the west beach and a rockfall (loose rock over scree) in the hills, and (issue #67) one of the old stone ruins in the open country. Saves PNGs to
+# crust in the grassland, the deep caves under the land, (issue #78) a patch of quicksand on the west beach and a rockfall (loose rock over scree) in the hills, and (issue #67) one of the old stone ruins in the open country, and a giant hornets' nest round its hive in the forest. Saves PNGs to
 # OUT_DIR and fails if the map is not the default size or its lairs are missing.
 # Usage: scripts/ui-wilds-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -22,7 +22,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # on 64 layers of deep rock). A deep chamber of the upper level, with a pool and giant mushrooms, is at 174,314 (its
 # floor at 47): the last shot cuts the slice down to 52 over it. A sinkhole's crust is
 # centred on 365,350 (its top at 84). A patch of quicksand lies on the west beach round 71,307 (at 78). Loose rock
-# stands on a cliff's brink at 306,601 (top rock at 99), over scree at its foot. A ruin stands round 574,157 (its floor at 83).
+# stands on a cliff's brink at 306,601 (top rock at 99), over scree at its foot. A ruin stands round 574,157 (its floor at 83). A giant hornets' hive stands at 298,289 in the forest (at 86).
 STEPS="
 wait 20
 print
@@ -71,6 +71,9 @@ key pagedown*20
 wait 20
 shot $OUT/ui-wilds-cavern.png
 key home
+camera 298,290 30 40 14
+wait 15
+shot $OUT/ui-wilds-hornets.png
 camera 174,314 30 55 28
 wait 3
 key pagedown*37
@@ -89,7 +92,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "${#UI[@]}" -eq 2 ] || fail "expected 2 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" world)" = 768x128x768 ] || fail "the default map is not 768 by 768: ${UI[0]}"
 lairs="$(field "${UI[0]}" lair_kinds)"
-for kind in boar stone_giant wolf bog_horror giant_crab giant_spider cave_crawler cave_wyrm; do [[ ",$lairs," == *",$kind:"* ]] || fail "no $kind lair on the map: $lairs"; done
+for kind in boar stone_giant wolf bog_horror giant_crab giant_spider giant_hornet cave_crawler cave_wyrm; do [[ ",$lairs," == *",$kind:"* ]] || fail "no $kind lair on the map: $lairs"; done
 [ "$(field "${UI[1]}" unit)" = stone_giant ] || fail "the stone giant was not selected: ${UI[1]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 13 ] || fail "missing screenshots"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 14 ] || fail "missing screenshots"
 echo "UI wilds screenshot test OK: $OUT"

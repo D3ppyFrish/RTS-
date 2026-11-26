@@ -1093,6 +1093,24 @@ areas, and Orcs who beat a wolf keep it.
   monster, and keep them. Computer players' hunting parties go down into the cave and, with no spider in sight, knock
   the totem down (`AiPlayer.Hunt.cs`, `MonsterSystem.TotemOf`). In the game a webbed unit's panel says "caught in a web
   (Ns)". All numbers are first guesses for playtesting.
+- **Giant hornets swarm from hives in the forests** (`HornetTests`; `giant_hornet` in `data/units.json`, `fear` on a unit or a
+  relic, `CombatSystem.Fear.cs`, `hornet_hive` in `data/buildings.json`): two nests for each 512 by 512 blocks of map
+  (four on the default map) lie in the forests, spread like any lair (100 from every start, 40 from every other lair and
+  town). Each is a **hornet hive**, a great paper nest wrapped round a dead stump (a 3 by 3 totem of the wild side's, 4
+  high), in a **glade**: no trunk stands within 7 columns of it and the crowns of the trees felled for it are gone too
+  (`MonsterSystem.TotemGlade`; a totem underground, the spiders', is left as it is), so it is seen from above. A swarm
+  of five hornets guards it: 30 hit points, quick (7), light piercing stings (4, every 0.8 seconds), sight 10, guarding 10
+  columns round the hive with a leash of 18. **Their stings frighten** (`"fear": 6`): each sting that lands (not one a
+  shield stops) takes 6 morale from the stung, landing with the tick's hits, so a swarm breaks a squad and sends it home
+  running long before it has killed many (a unit routs at 25 morale, as it does when its friends die round it). A hero
+  near the stung takes its share of the sting out (the Marshal's steadying halves it), and heroes themselves, monsters,
+  ships and machines are never frightened. **The hive hatches a new hornet every 20 seconds** while it stands (`"grow":
+  20`), up to seven, even once the whole swarm is dead (`MonsterSystem.Step`), so swatting hornets never clears the
+  nest: **knocking the hive down does**, as the spiders' totem does. It pays 120 food and 30 wood (honey and comb) to the
+  side that struck it last, if it does not tame monsters, and either faction takes up the **queen's sting** from its den
+  (a relic: +2 damage, and each blow of its bearer's that lands takes 8 morale from whom it strikes). Orcs beat hornets
+  as they beat any monster, and keep them. Computer players' hunting parties go for the hive once they are near it,
+  hornets or no hornets (`AiPlayer.Hunt.cs`), since the swarm comes back. All numbers are first guesses for playtesting.
 - **Silk knives** (`silk_knives` in `data/techs.json`, the `cut_webs` effect, `EconomySystem.CutsWebs`; tests in
   `SpiderTests`): a shared tech after Better tools (30 wood, 30 stone, 30 seconds), for every faction. The player's
   units cut themselves out of a web the moment it lands: the giant spiders' bites and the blows of a spider silk's
@@ -1134,6 +1152,7 @@ The den is gone from the map either way.
 | Bog horror | a fighting unit takes up the bog lantern | the same: the bog lantern |
 | Giant crab | a fighting unit takes up a crab shell shield | crab pots |
 | Giant spider | a fighting unit takes up the spider silk | the same: the spider silk |
+| Giant hornet | a fighting unit takes up the queen's sting | the same: the queen's sting |
 | Cave crawler | none | none |
 | Cave wyrm | a fighting unit takes up the wyrm crystal | the same: the wyrm crystal (and they keep the beaten wyrm) |
 | Dusk Warden | the Dusk Staff, by healing the tree (see "Dusk tree") | the beaten warden itself |
@@ -1158,7 +1177,7 @@ The den is gone from the map either way.
   no relic yet takes it up at once. The giant's heart gives its bearer 60 more hit points (it gets them
   at once too) and 2 more armour on every part. A unit bears one relic at most, keeps it when it evolves,
   and drops it where it falls when it dies (see "Dropped relics and the Dusk Staff"). The bog lantern adds 4 damage to each
-  hit, the crab shell shield 3 armour on every part, the spider silk 1 damage and webs whom its bearer strikes, and the wyrm crystal 40 hit points, 6 damage a hit and
+  hit, the crab shell shield 3 armour on every part, the spider silk 1 damage and webs whom its bearer strikes, the queen's sting 2 damage and takes 8 morale from whom its bearer strikes, and the wyrm crystal 40 hit points, 6 damage a hit and
   1 armour on every part.
 - **Orcs: crab pots.** At a cleared crab den the Orcs' workers set crab pots (20 wood, 10 seconds): they
   house 2 and bring in 6 food every 15 seconds.

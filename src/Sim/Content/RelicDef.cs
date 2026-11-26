@@ -20,6 +20,8 @@ public sealed class RelicDef
     public int Armour { get; init; }
     /// <summary>The bearer's blows web whom they strike, as a giant spider's bite does (see <see cref="Units.UnitDef.Web"/>); null for none.</summary>
     public Units.WebDef? Web { get; init; }
+    /// <summary>Morale each of the bearer's blows that lands takes from whom it strikes, as a giant hornet's sting does (see <see cref="Units.UnitDef.Fear"/>); 0 for none.</summary>
+    public int Fear { get; init; }
     /// <summary>Position in <see cref="ContentDb.Relics"/>.</summary>
     public int Index { get; internal set; }
 }

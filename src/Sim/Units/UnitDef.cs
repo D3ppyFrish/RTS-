@@ -221,6 +221,11 @@ public sealed class UnitDef
     /// which loses hit points every second for a while. Null for a unit whose blows do not poison.
     /// </summary>
     public PoisonDef? Poison { get; init; }
+    /// <summary>
+    /// The giant hornet's sting (see <c>CombatSystem.Fear.cs</c>): morale each of its blows that lands takes from the unit
+    /// struck, so a swarm breaks a squad before it kills it. 0 for a unit whose blows frighten no one.
+    /// </summary>
+    public int Fear { get; init; }
 
     /// <summary>How fast it gathers, builds, farms and digs tunnels, in percent of the usual.</summary>
     public int WorkPercent { get; init; } = 100;

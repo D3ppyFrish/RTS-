@@ -38,7 +38,7 @@ public class ContentTests
     {
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs", "deepfolk", "elves" }, db.Factions.Select(f => f.Id));
-        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "orchard", "barracks", "great_barracks", "siege_workshop", "dock", "smelter", "foundry", "sawmill", "mason_yard", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "hunting_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "listening_post", "crystal_lens", "torch", "campfire", "wolf_lodge", "boar_pen", "beast_pen", "crab_pots", "hall_of_legends", "beast_throne", "queens_chamber", "goblin_totem", "ogre_idol", "kobold_crystal", "troll_stone", "centaur_standard", "merfolk_conch", "spider_totem", "bridge", "brood_chamber", "living_wall", "eldertree" }, db.Buildings.Select(b => b.Id));
+        Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "orchard", "barracks", "great_barracks", "siege_workshop", "dock", "smelter", "foundry", "sawmill", "mason_yard", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "hunting_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "listening_post", "crystal_lens", "torch", "campfire", "wolf_lodge", "boar_pen", "beast_pen", "crab_pots", "hall_of_legends", "beast_throne", "queens_chamber", "goblin_totem", "ogre_idol", "kobold_crystal", "troll_stone", "centaur_standard", "merfolk_conch", "spider_totem", "hornet_hive", "bridge", "brood_chamber", "living_wall", "eldertree" }, db.Buildings.Select(b => b.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "catapult", "battering_ram", "healer", "war_drummer", "delver", "skitterling", "spitter", "burrower", "glade_warden", "elf_archer", "druid" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "master_builder", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
@@ -519,6 +519,7 @@ public class ContentTests
         Assert.Contains("units.json: unit 'giant_crab', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains("units.json: unit 'shade_stalker', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains("units.json: unit 'giant_spider', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
+        Assert.Contains("units.json: unit 'giant_hornet', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'crab_pots': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'beast_pen': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains("units.json: unit 'cave_wyrm', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
@@ -530,7 +531,7 @@ public class ContentTests
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 6: \"faction\" is \"orcs\", which is not a faction"));
         // And the war drummer.
         Assert.Contains(e.Errors, m => m.StartsWith("units.json: unit 'war_drummer': \"faction\" is \"orcs\", which is not a faction"));
-        Assert.Equal(23, e.Errors.Count);
+        Assert.Equal(24, e.Errors.Count);
     }
 
     [Fact]
