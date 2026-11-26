@@ -1180,27 +1180,43 @@ public sealed partial class EconomySystem
     {
         if (!CanLayRoads(c.PlayerId)) return;
         var w = World;
-        int x = c.X1, z = c.Z1;
-        int dx = Math.Abs(c.X2 - c.X1), dz = -Math.Abs(c.Z2 - c.Z1);
-        int sx = c.X1 < c.X2 ? 1 : -1, sz = c.Z1 < c.Z2 ? 1 : -1;
+        foreach (var (x, z) in RoadLine(c.X1, c.Z1, c.X2, c.Z2))
+        {
+            if (!RoadGoesOn(x, z, out int y)) continue;
+            if (Take(c.PlayerId, Good.Stone, StonePerRoad, (c.X1, c.Z1)) < StonePerRoad) return;
+            Player(c.PlayerId).Spent[(int)Good.Stone] += StonePerRoad;
+            w.Set(x, y - 1, z, BlockType.Road);
+        }
+    }
+
+    /// <summary>The columns a road from (x1, z1) towards (x2, z2) runs over, in order: at most <see cref="MaxRoad"/>.</summary>
+    public static IEnumerable<(int X, int Z)> RoadLine(int x1, int z1, int x2, int z2)
+    {
+        int x = x1, z = z1;
+        int dx = Math.Abs(x2 - x1), dz = -Math.Abs(z2 - z1);
+        int sx = x1 < x2 ? 1 : -1, sz = z1 < z2 ? 1 : -1;
         int err = dx + dz;
         for (int n = 0; n < MaxRoad; n++)
         {
-            if (w.InBounds(x, 0, z) && Buildings.AtColumn(x, z) == null)
-            {
-                int y = Walk.GroundLevel(w, x, z);
-                if (y >= 1 && BlockInfo.IsGround(w.Get(x, y - 1, z)))
-                {
-                    if (Take(c.PlayerId, Good.Stone, StonePerRoad, (c.X1, c.Z1)) < StonePerRoad) return;
-                    Player(c.PlayerId).Spent[(int)Good.Stone] += StonePerRoad;
-                    w.Set(x, y - 1, z, BlockType.Road);
-                }
-            }
-            if (x == c.X2 && z == c.Z2) return;
+            yield return (x, z);
+            if (x == x2 && z == z2) yield break;
             int e2 = 2 * err;
             if (e2 >= dz) { err += dz; x += sx; }
             if (e2 <= dx) { err += dx; z += sz; }
         }
+    }
+
+    /// <summary>
+    /// True if a road laid over column (x, z) turns a block into road there (open natural ground, no building on it;
+    /// a column already road is not), with <paramref name="y"/> the level a unit stands at on it.
+    /// </summary>
+    public bool RoadGoesOn(int x, int z, out int y)
+    {
+        y = -1;
+        var w = World;
+        if (!w.InBounds(x, 0, z) || Buildings.AtColumn(x, z) != null) return false;
+        y = Walk.GroundLevel(w, x, z);
+        return y >= 1 && BlockInfo.IsGround(w.Get(x, y - 1, z));
     }
 
     internal void Apply(TrainCommand c)

@@ -2053,6 +2053,15 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   home, where raiders reach it last and its workshops are. Its workers leave the supply duty to the carts: Easy and
   Normal take supply off their default work list then (Hard's lists never have it). The classic level never trains
   carts. All numbers are first guesses.
+- **Roads** (Easy, Normal and Hard; `AI/AiPlayer.Roads.cs`, tests in `AiRoadTests`): once it has the Roads tech, it
+  lays a road from its town hall to each of its finished storage buildings, the way its carts, ponies and workers
+  walk goods home: one road every 20 seconds at most, from the column just outside the hall nearest the storehouse to
+  the one just outside the storehouse nearest the hall, and only with the road's stone plus 100 to spare on top of
+  what it is keeping for other things. It lays none to a storehouse where the road would add fewer than 6 blocks
+  (close by), would be longer than one road reaches (64), or would cross one of its own walls or towers (a gate is
+  fine), a hazard, bog or quicksand, ground it keeps off near the Heartscar or (Hard) its pits; it does not look at
+  that storehouse again. Hard lays roads only while no enemies are at its buildings. The classic level never lays
+  roads. All numbers are first guesses.
 - **Pack ponies** (Easy, Normal and Hard; `AiPlayer.Ponies` in `AI/AiPlayer.Carts.cs`, tests in `AiCartTests`): once
   it has Handcarts and a finished sawmill it trains 2 pack ponies at the town hall while it has room and the goods
   (Hard: only while no enemies are at its buildings). They find their work on their own. The classic level never
