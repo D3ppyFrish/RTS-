@@ -1340,7 +1340,8 @@ public sealed partial class CombatSystem
     /// on the ground it stands on, and once a second each (spread over units by id) each bleeding wound loses
     /// <see cref="BleedLoss"/> hit points, which land with the tick's hits (they do not count as being in the
     /// fight). A wound that has bled all it will clots; a grievous one (<see cref="OpenGrievousWound"/>) never does. A unit healing at home (<see cref="AtHome"/>, out of the
-    /// fight for the recovery delay) has its wounds bound: they stop at once.
+    /// fight for the recovery delay) has its wounds bound: they stop at once. So do a unit's whose owner knows Field
+    /// dressings (<see cref="EconomySystem.BindTicks"/>) once it has been out of the fight that long, wherever it is.
     /// </summary>
     private void StepBleeding()
     {
@@ -1356,7 +1357,9 @@ public sealed partial class CombatSystem
             if ((tick + u.Id[i]) % Rts.Sim.World.BloodSystem.DripTicks == 0)
                 blood.Spill(u.X[i], u.Y[i] - 1, u.Z[i], Rts.Sim.World.BloodSystem.Drip, u.Id[i]);
             if ((tick + u.Id[i]) % Tps != 0) continue;
-            if (tick - u.LastFight[i] >= rules.RecoveryDelayTicks && AtHome(i))
+            long quiet = tick - u.LastFight[i];
+            int bind = _sim.Economy.BindTicks(u.Owner[i]);
+            if ((bind > 0 && quiet >= bind) || (quiet >= rules.RecoveryDelayTicks && AtHome(i)))
             {
                 u.StopBleeding(i);
                 continue;
@@ -1470,8 +1473,8 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>
-    /// True if unit i is at home: within the role table's home range (columns) of a finished town hall or house of
-    /// its owner's, or within the healing reach of a city-state town its owner holds (<see cref="CityStateSystem.HealingTown"/>).
+    /// True if unit i is at home: within the role table's home range (columns) of a finished town hall, house or
+    /// field hospital (<see cref="BuildingKind.Infirmary"/>) of its owner's, or within the healing reach of a city-state town its owner holds (<see cref="CityStateSystem.HealingTown"/>).
     /// </summary>
     private bool AtHome(int i)
     {
@@ -1479,7 +1482,7 @@ public sealed partial class CombatSystem
         {
             _homes.Clear();
             foreach (var b in Buildings.All)
-                if (b.Active && b.Def.Kind is BuildingKind.TownHall or BuildingKind.House) _homes.Add(b);
+                if (b.Active && b.Def.Kind is BuildingKind.TownHall or BuildingKind.House or BuildingKind.Infirmary) _homes.Add(b);
             _homesFound = true;
         }
         var u = U;

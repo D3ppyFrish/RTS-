@@ -148,14 +148,14 @@ replay made with different data says so instead of drifting apart.
   grow back, `"regrow"` and `"thorns"` in `data/buildings.json`; see [The Elves](docs/rules.md#the-elves)). Player 0 plays the first
   faction, player 1 the second, and so on; picking a faction on the start screen picks the player who
   has it.
-- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 29
+- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 31
   in all: a shared core (farming, better tools, roads, archery, basic magic, masonry, crop rotation,
-  horse breeding, handcarts, smelting, sapping, silk knives), two per faction plus each faction's final tech (its great work,
+  horse breeding, handcarts, smelting, sapping, silk knives, and field medicine: field dressings and the field hospital), two per faction plus each faction's final tech (its great work,
   see [Ascendancy](docs/rules.md#ascendancy-and-great-works)), and six discovery techs (`"discovery"`) opened only by exploring:
   Wardens' charts, Beast lore, Trail maps, and the rare Giant's marrow, Cave guides and Crystal lens (see
   [Discovery techs](docs/rules.md#discovery-techs)). Prerequisites form a branching tree up to four deep. A tech
   unlocks the units and buildings that name it in `requires`, and can have effects: roads, showing the map's
-  ruins, lairs or towns through the fog (`reveal`), wild monsters sparing workers (`spare_workers`), units cutting free of webs (`cut_webs`), the shield
+  ruins, lairs or towns through the fog (`reveal`), wild monsters sparing workers (`spare_workers`), units cutting free of webs (`cut_webs`), units binding their own wounds (`bind_wounds`, Field dressings), the shield
   wall (`shield_wall`), aimed felling and prospecting (`felling`, `prospecting`), murder holes in stone gates
   (`murder_holes`, Masonry), salvage and field repairs (`salvage`, `field_repairs`, Craft guilds: take down your own buildings for half their cost back, and mend catapults and rams in the field; repairing buildings needs no tech, and docks and siege workshops mend their own ships and siege machines beside them: `mends` in `data/buildings.json`), molting (`molt`, the Deepfolk's Molting), thorns on living walls (`thorns`, the Elves' Thornwood), and the
   two large buffs: more housing (`housing`, a number more or a `percent` of the building's own: Brood warrens

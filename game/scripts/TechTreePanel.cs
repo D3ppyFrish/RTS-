@@ -215,6 +215,7 @@ public partial class TechTreePanel : PanelContainer
         },
         TechEffectType.SpareWorkers => "Wild monsters leave your workers alone",
         TechEffectType.CutWebs => "Your units are never caught in webs",
+        TechEffectType.BindWounds => $"Your units bind their own wounds {e.Ticks / Simulation.TicksPerSecond} seconds out of the fight",
         _ => e.Type.ToString(),
     };
 

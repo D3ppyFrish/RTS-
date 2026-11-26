@@ -521,6 +521,18 @@ public static class UiIcons
             "............", "..kk....kk..", ".kBBk..kBBk.", ".kBBk..kBBk.", "..kkkkkkkk..", "kk.kBBBBk.kk",
             "kBkBBBBBBkBk", "kBkBBBBBBkBk", ".kkBBBBBBkk.", "..kBBBBBBk..", "...kBBBBk...", "....kkkk....",
         },
+        // Field dressings: a roll of white linen, spotted red where it binds a wound.
+        ["bandage"] = new[]
+        {
+            "............", "....kkkk....", "...kwwwwk...", "..kwlwwlwk..", "..kwwrrwwk..", "..kwrRRrwk..",
+            "..kwwrrwwk..", "..kwlwwlwk..", "...kwwwwkk..", "....kkkkwwk.", ".......kwwlk", "........kkk.",
+        },
+        // The field hospital (Field hospital): a white tent marked with a red cross, pitched on the grass.
+        ["field_hospital"] = new[]
+        {
+            ".....kk.....", "....kwwk....", "...kwrrwk...", "...kwrrwk...", "..kwrrrrwk..", "..kwwrrwwk..",
+            ".kwwwrrwwwk.", ".kwwwkkwwwk.", "kwwwkBBkwwwk", "kwwwkBBkwwwk", "kkkkkBBkkkkk", "GGGGGGGGGGGG",
+        },
         // An ear: the listening post, which hears units underground (see Rts.Sim.VisionSystem).
         ["ear"] = new[]
         {

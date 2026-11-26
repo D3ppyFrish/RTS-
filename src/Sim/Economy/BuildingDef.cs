@@ -106,6 +106,12 @@ public enum BuildingKind : byte
     /// through the fog of war, for <see cref="LensDef.Ticks"/>.
     /// </summary>
     Lens,
+    /// <summary>
+    /// A field hospital (Field hospital, a tech): a tent of the wounded that its owner pitches anywhere. Units of its
+    /// owner's within the home range of it heal as at home: at the home rate once out of the fight, and their wounds are
+    /// bound (see <see cref="Units.CombatSystem"/>, healing). It houses nobody and stores nothing.
+    /// </summary>
+    Infirmary,
 }
 
 /// <summary>

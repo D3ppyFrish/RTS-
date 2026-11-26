@@ -224,6 +224,11 @@ public enum TechEffectType : byte
     /// strikes them from close up (see <see cref="Units.CombatSystem"/>).
     /// </summary>
     Thorns,
+    /// <summary>
+    /// The player's units bind their own wounds (Field dressings): one that has been out of the fight for the effect's
+    /// time (<see cref="TechEffect.Ticks"/>) stops bleeding, grievous wounds too (see <see cref="Units.CombatSystem"/>, bleeding).
+    /// </summary>
+    BindWounds,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>
@@ -282,7 +287,7 @@ public sealed class TechEffect
     public MapFeature Reveal { get; init; }
     /// <summary>For unit effects: only for players of this faction (null: every faction).</summary>
     public FactionDef? Faction { get; internal set; }
-    /// <summary>For felling and prospecting: the ticks of work it takes.</summary>
+    /// <summary>For felling and prospecting: the ticks of work it takes; for binding wounds, the ticks out of the fight first.</summary>
     public int Ticks { get; init; }
 
     /// <summary>True if a unit effect applies to units of this type.</summary>

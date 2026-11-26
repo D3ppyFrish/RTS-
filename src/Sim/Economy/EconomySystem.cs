@@ -78,6 +78,8 @@ public sealed class PlayerEconomy
     internal int ResearchTicks;
     // Bonuses from the techs had, recomputed when one is added (see EconomySystem.UpdateBonuses).
     internal bool Roads, SpareWorkers, MurderHoles, Salvage, FieldRepairs, CutWebs, Thorns;
+    /// <summary>Ticks out of the fight after which the player's units bind their own wounds, 0 if they cannot (<see cref="TechEffectType.BindWounds"/>).</summary>
+    internal int BindTicks;
     // The discoveries made (bit 1 << Discovery), which open discovery techs.
     internal byte Discoveries;
     internal readonly int[] HousingBonus, HpBonus;
