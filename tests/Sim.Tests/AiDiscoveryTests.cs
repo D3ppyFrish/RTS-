@@ -127,4 +127,30 @@ public class AiDiscoveryTests
             Assert.Equal(lore, chops);
         }
     }
+
+    /// <summary>
+    /// Silk knives come last in every order, and only once one of its units has been caught in a web: with every
+    /// other tech done it researches nothing, until a worker of its is webbed.
+    /// </summary>
+    [Fact]
+    public void ItResearchesSilkKnivesOnlyOnceWebbed()
+    {
+        foreach (var level in new[] { AiLevel.Classic, AiLevel.Easy, AiLevel.Normal, AiLevel.Hard })
+        {
+            var sim = Town();
+            var order = level == AiLevel.Hard ? AiPlayer.HardTechOrder : AiPlayer.TechOrder;
+            Assert.Equal("silk_knives", order[^1]);
+            foreach (var id in order.Take(order.Length - 1)) sim.Economy.Grant(0, Tech(sim, id));
+            var ai = new AiPlayer(0, 1, level);
+            Assert.DoesNotContain("silk_knives", Researched(Play(sim, ai, 20 * Tps)));
+
+            int worker = -1;
+            for (int i = 0; i < sim.Units.Count && worker < 0; i++)
+                if (sim.Units.Owner[i] == 0 && sim.Content.Units[sim.Units.Def[i]].Role == Rts.Sim.Units.UnitRole.Worker) worker = i;
+            Assert.True(worker >= 0);
+            sim.Units.Webbed[worker] = 3 * Tps;
+            sim.Units.WebPace[worker] = 40;
+            Assert.Contains("silk_knives", Researched(Play(sim, ai, 20 * Tps)));
+        }
+    }
 }

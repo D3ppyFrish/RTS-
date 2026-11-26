@@ -1065,7 +1065,7 @@ areas, and Orcs who beat a wolf keep it.
   units cut themselves out of a web the moment it lands: the giant spiders' bites and the blows of a spider silk's
   bearer still hurt them but no longer slow them, so a nest can be fought with riders or run from. A web already on a
   unit when the research ends wears off as before. It guards only the researching player's units: their own silk
-  bearer still webs a rival who lacks the knives. The computer players research it last of their techs.
+  bearer still webs a rival who lacks the knives. The computer players research it last of their techs, and only once one of their units has been caught in a web (`AiPlayer.Wanted`).
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.

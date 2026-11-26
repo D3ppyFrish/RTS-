@@ -284,7 +284,7 @@ public sealed partial class AiPlayer
             foreach (string id in InLine(sim, HardTechOrder))
             {
                 k++;
-                if (!sim.Content.TryGetTech(id, out var tech)) continue;
+                if (!sim.Content.TryGetTech(id, out var tech) || !Wanted(sim, tech)) continue;
                 var r = econ.CanResearch(Player, tech, checkCost: false);
                 if (r is ResearchResult.Researched or ResearchResult.OtherFaction or ResearchResult.NeedsTechs) continue;
                 if (r != ResearchResult.Ok) break;
