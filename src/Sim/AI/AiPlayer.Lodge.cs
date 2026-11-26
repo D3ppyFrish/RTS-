@@ -204,7 +204,7 @@ public sealed partial class AiPlayer
         {
             if (u.Owner[i] != Player || sim.Content.Units[u.Def[i]].Role != UnitRole.Worker) continue;
             int id = u.Id[i];
-            if (picked.Contains(id) || _masons.Contains(id) || _passMiners.Contains(id) || u.Held[i]) continue;
+            if (picked.Contains(id) || _masons.Contains(id) || _passMiners.Contains(id) || id == _stonecutter || u.Held[i]) continue;
             bool ok = pass switch
             {
                 0 => u.Job[i] == UnitJob.None && u.Order[i] == UnitOrder.Idle,

@@ -217,7 +217,9 @@ public sealed partial class AiPlayer
             LayNext(sim, wall, gate, issue);
             return;
         }
+        int laid = TowersLaid;
         Towers(sim, enemy, issue);
+        if (TowersLaid == laid) StoneTowers(sim, hall, enemy, issue); // one tower site at a time
         StrengthenWall(sim, WallSides(x0, z0, x1, z1, enemy.Item1, enemy.Item2), issue);
     }
 

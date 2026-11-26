@@ -391,7 +391,7 @@ public sealed partial class AiPlayer
         var u = sim.Units;
         _scratch.Clear();
         for (int i = 0; i < u.Count; i++)
-            if (u.Owner[i] == Player && !u.Auto[i] && sim.Content.Units[u.Def[i]].Role == UnitRole.Worker) _scratch.Add(u.Id[i]);
+            if (u.Owner[i] == Player && !u.Auto[i] && u.Id[i] != _stonecutter && sim.Content.Units[u.Def[i]].Role == UnitRole.Worker) _scratch.Add(u.Id[i]);
         if (_scratch.Count > 0) issue(new AutomateCommand(Player, _scratch.ToArray(), true));
     }
 
@@ -419,7 +419,7 @@ public sealed partial class AiPlayer
         int farming = 0;
         for (int i = 0; i < u.Count; i++)
         {
-            if (u.Owner[i] != Player || sim.Content.Units[u.Def[i]].Role != UnitRole.Worker || _masons.Contains(u.Id[i])) continue;
+            if (u.Owner[i] != Player || sim.Content.Units[u.Def[i]].Role != UnitRole.Worker || _masons.Contains(u.Id[i]) || u.Id[i] == _stonecutter) continue;
             if (u.Job[i] == UnitJob.Farm) farming++;
             if (u.Job[i] == UnitJob.None && u.Order[i] == UnitOrder.Idle && !u.Held[i]) idle.Add(u.Id[i]);
             else if (u.CarryAmount[i] > 0) continue; // it finishes its trip first

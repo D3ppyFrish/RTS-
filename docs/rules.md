@@ -105,7 +105,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
     captured and burned like any good. **Stone towers** are built of it (60 cut stone and 20 wood) and so are the
     **great works** (150 of their 300 stone is cut stone), so a town that wants either needs a mason's yard first.
     Stone walls, facings and gates are still laid with plain stone.
-  - Computer players do not build stone towers or great works; from Easy up they build a sawmill for the planks of a
+  - Computer players do not build great works; Hard builds a mason's yard for the stone towers it puts over its
+    watchtowers (see Computer players). From Easy up they build a sawmill for the planks of a
     siege workshop and its catapults, a dock, or a bridge over the water on the way to the enemy (see Computer players). All numbers are first guesses for playtesting.
 - **Crystal, shrines and mana** (`ManaTests`; the design doc's Resources table: crystal from the deep caverns,
   channelled into mana at a shrine): crystal grows on the cavern walls (`BlockType.Crystal`). Workers dig it like
@@ -2209,7 +2210,18 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   there first (8 to a watchtower), and those already standing on the wall within reach climb up it while
   it has room (not those holding a gate with murder holes): from up there they aim better and the tower
   sees 14 columns through the fog. A tower knocked down leaves a gap in the line that is laid again as
-  barriers, and the tower is put back on them. Hard does not
+  barriers, and the tower is put back on them. With Masonry, once two of its watchtowers stand, Hard lays out a
+  **mason's yard** in its town and keeps one worker of its own cutting stone there (taken off automation, as
+  automatic workers seldom go to the yard) while it has a watchtower left to replace and less than 60 cut stone,
+  and then puts a **stone tower** over each of its watchtowers in the order it put them up, the two by the
+  gate first (`AI/AiPlayer.StoneTowers.cs`: `StoneTowers`, `StoneReadyUnder`; tests in `HardAiTests`), one tower
+  site at a time and never in the same look as a watchtower: centred on the watchtower, or shifted a column so
+  that it still covers it whole, over finished wall columns that are not being upgraded. A stone tower takes only
+  20 wood (with 60 cut stone), so Hard pays for the yard and the towers keeping 40 wood spare
+  (`StoneTowerSpareWood`) rather than the wall's 100; it sees 18 columns, holds 16 archers and they aim better
+  from it. The yard goes up at about 20 to 27 minutes, and the first stone tower some 4 to 5 minutes later if the
+  wall stands whole that long, so in the CI matches against Classic, won by 20 to 33 minutes, Hard seldom gets one. One knocked down is
+  laid again as barriers, a watchtower, then a stone tower. Hard does not
   fight from behind its wall yet, though: all but its posted archers still go out to meet whoever comes
   near the town, so the wall is worth less to it than it would be to a player who waits behind it.
 - `scripts/ai-versus.sh` plays two levels against each other over 20 seeds with fog of war, the first
