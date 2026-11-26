@@ -26,6 +26,8 @@
 //                                         and the goods they held (see "Salvage" in docs/rules.md)
 //   field_repairs                         workers can mend the player's damaged catapults and battering rams in the field
 //                                         for a share of their cost in materials (see "Field repairs" in docs/rules.md)
+//   cut_webs                              the player's units cut themselves out of webs: giant spiders' bites and the spider
+//                                         silk's bearer no longer slow them (see "Monsters and taming" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
 // ruin (their units searched an old ruin), lair (their unit got the last of a monster lair's pack), town
 // (they broke a city-state's totem and took the town), giant (they beat a stone giant guarding a mountain
@@ -63,6 +65,9 @@
     "cost": { "stone": 40, "wood": 20 }, "researchTime": 30, "requires": [ "masonry" ] },
   { "id": "sapping", "icon": "shovel", "name": "Sapping", "description": "Tunnellers who bring down walls.",
     "cost": { "wood": 40, "stone": 40 }, "researchTime": 30, "requires": [ "masonry" ] },
+  { "id": "silk_knives", "icon": "silk_knife", "name": "Silk knives", "description": "Hooked knives on every belt, made for spider silk. Your units cut themselves out of a web the moment it lands: the forest's giant spiders and a bearer of the spider silk no longer slow them, so a nest can be fought, or run from.",
+    "cost": { "wood": 30, "stone": 30 }, "researchTime": 30, "requires": [ "tools" ],
+    "effects": [ { "type": "cut_webs" } ] },
   { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades, taking down as well as putting up. Salvage: mark one of your finished buildings to take down, and workers (automatic ones too) take it apart in half the time it took to build, bringing back half its cost (less if it is damaged) and every good it held to your nearest other storage. Field repairs: right-click a damaged catapult or battering ram of yours with workers, and they mend it where it stands, even under fire, for a share of its cost in materials. Only the Settlers have these.",
     "cost": { "wood": 80, "stone": 40 }, "researchTime": 40, "requires": [ "tools" ],
     "effects": [ { "type": "salvage" }, { "type": "field_repairs" } ] },

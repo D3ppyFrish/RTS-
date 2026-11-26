@@ -105,6 +105,9 @@ public sealed partial class EconomySystem
     /// <summary>True if wild monsters leave the player's workers alone (a <see cref="TechEffectType.SpareWorkers"/> tech).</summary>
     public bool SparesWorkers(int player) => Find(player)?.SpareWorkers ?? false;
 
+    /// <summary>True if the player's units cut themselves out of webs (a <see cref="TechEffectType.CutWebs"/> tech).</summary>
+    public bool CutsWebs(int player) => Find(player)?.CutWebs ?? false;
+
     /// <summary>True if the player's gates with murder holes drop stones (a <see cref="TechEffectType.MurderHoles"/> tech).</summary>
     public bool HasMurderHoles(int player) => Find(player)?.MurderHoles ?? false;
 
@@ -181,7 +184,7 @@ public sealed partial class EconomySystem
     private void UpdateBonuses(PlayerEconomy p)
     {
         var units = Content.Units;
-        p.Roads = p.SpareWorkers = p.MurderHoles = p.Salvage = p.FieldRepairs = false;
+        p.Roads = p.SpareWorkers = p.MurderHoles = p.Salvage = p.FieldRepairs = p.CutWebs = false;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
@@ -202,6 +205,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.MurderHoles: p.MurderHoles = true; break;
                     case TechEffectType.Salvage: p.Salvage = true; break;
                     case TechEffectType.FieldRepairs: p.FieldRepairs = true; break;
+                    case TechEffectType.CutWebs: p.CutWebs = true; break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.HpFor(d);

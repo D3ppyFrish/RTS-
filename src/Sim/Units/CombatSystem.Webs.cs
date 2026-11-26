@@ -7,7 +7,8 @@ namespace Rts.Sim.Units;
 /// of a relic of their silk (<see cref="Content.RelicDef.Web"/>). Each blow that lands (not one a shield stops, nor a
 /// blast's splash) webs the unit struck: for the web's time it walks at the web's pace (see
 /// <see cref="UnitMovement"/>), so it cannot run from the fight. A fresh web starts the time again and the slower
-/// pace holds. Ships and machines are not webbed, nor a unit that webs itself (a spider walks on silk).
+/// pace holds. Ships and machines are not webbed, nor a unit that webs itself (a spider walks on silk), nor the units
+/// of a player with silk knives (<see cref="Content.TechEffectType.CutWebs"/>), who cut themselves free.
 /// </summary>
 public sealed partial class CombatSystem
 {
@@ -25,7 +26,7 @@ public sealed partial class CombatSystem
     {
         if (WebOf(i, def) is not { } web) return;
         var target = Def(t);
-        if (target.Machine || target.IsBoat || target.Web != null) return;
+        if (target.Machine || target.IsBoat || target.Web != null || _sim.Economy.CutsWebs(U.Owner[t])) return;
         var u = U;
         u.WebPace[t] = u.Webbed[t] > 0 ? Math.Min(u.WebPace[t], web.Pace) : web.Pace;
         u.Webbed[t] = Math.Max(u.Webbed[t], web.Ticks);

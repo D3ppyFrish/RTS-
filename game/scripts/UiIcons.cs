@@ -486,6 +486,12 @@ public static class UiIcons
             "....kkkk....", "...kcCCck...", "..kcCttCck..", "..kcCCCCck..", ".kcCcCCcCck.", ".kcIcCCcIck.",
             "kcCIcCCcICck", "kcCcCCCCcCck", "kcCcCIICcCck", "kcCcCCCCcCck", ".kkcICCIckk.", "...kkkkkk...",
         },
+        // Silk knives: a hooked blade cutting a white thread.
+        ["silk_knife"] = new[]
+        {
+            "........kk..", ".......kllk.", "......klk.k.", ".....kllk...", "w...klik...w", ".w.klik...w.",
+            "..wlik...w..", "..kik.ww....", ".kBkk.......", "kBBk........", "kBk.........", ".k..........",
+        },
         // Spider silk: a skein of white silk wound on a stick, a thread trailing from it.
         ["spider_silk"] = new[]
         {
