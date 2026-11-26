@@ -214,6 +214,7 @@ public partial class TechTreePanel : PanelContainer
             _ => "Shows every city-state town on the map",
         },
         TechEffectType.SpareWorkers => "Wild monsters leave your workers alone",
+        TechEffectType.CutWebs => "Your units are never caught in webs",
         _ => e.Type.ToString(),
     };
 

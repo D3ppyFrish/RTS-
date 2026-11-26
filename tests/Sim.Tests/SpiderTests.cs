@@ -146,6 +146,55 @@ public class SpiderTests
         Assert.Equal(60, bearer.Units.WebPace[Index(bearer, foe)]);
     }
 
+    /// <summary>
+    /// Silk knives (a tech after Better tools): the player's units cut themselves out of webs. A spearman of theirs
+    /// bitten at a nest takes the bite but walks on at its pace, and a spider silk's bearer cannot web it either; a
+    /// rival without the tech is still webbed.
+    /// </summary>
+    [Fact]
+    public void SilkKnivesCutTheirUnitsFree()
+    {
+        var knives = ContentDb.Default.Techs.First(t => t.Id == "silk_knives");
+        Assert.Equal(TechEffectType.CutWebs, Assert.Single(knives.Effects).Type);
+        Assert.Contains(knives.Requires, r => r.Id == "tools");
+        Assert.Equal(Discovery.None, knives.Discovery);
+        Assert.Null(knives.Faction);
+
+        var sim = Flat();
+        sim.Economy.Grant(Settlers, knives);
+        Assert.True(sim.Economy.CutsWebs(Settlers));
+        Assert.False(sim.Economy.CutsWebs(Orcs));
+        sim.Monsters.Place(sim.Content.Unit("giant_spider"), 60, 48);
+        int spearman = sim.SpawnUnit(Settlers, "spearman", 56, 48);
+        sim.Units.Hp[Index(sim, spearman)] = 10000;
+        int hp = sim.Units.Hp[Index(sim, spearman)];
+        RunUntil(sim, () => sim.Units.Hp[Index(sim, spearman)] < hp - 30, 20 * Tps, "the spiders bite the spearman");
+        Assert.False(sim.Combat.IsWebbed(Index(sim, spearman)));
+        Assert.Equal(0, sim.Combat.Webs);
+
+        // Against a bearer of the silk: the Settlers' spearman is not webbed, the Orcs' own foe without knives is.
+        var bearer = Flat();
+        bearer.Economy.Grant(Settlers, knives);
+        int orc = bearer.SpawnUnit(Orcs, "spearman", 40, 40);
+        Bear(bearer, orc, "spider_silk");
+        int foe = bearer.SpawnUnit(Settlers, "spearman", 42, 40);
+        bearer.Units.Hp[Index(bearer, foe)] = 10000;
+        hp = bearer.Units.Hp[Index(bearer, foe)];
+        bearer.Schedule(0, new AttackCommand(Orcs, new[] { orc }, foe));
+        RunUntil(bearer, () => bearer.Units.Hp[Index(bearer, foe)] < hp - 20, 20 * Tps, "the silk's bearer strikes its foe");
+        Assert.False(bearer.Combat.IsWebbed(Index(bearer, foe)));
+        Assert.Equal(0, bearer.Combat.Webs);
+
+        var rival = Flat();
+        rival.Economy.Grant(Orcs, knives); // the bearer's own side has the knives: that does not shield the foe
+        int orc2 = rival.SpawnUnit(Orcs, "spearman", 40, 40);
+        Bear(rival, orc2, "spider_silk");
+        int foe2 = rival.SpawnUnit(Settlers, "spearman", 42, 40);
+        rival.Units.Hp[Index(rival, foe2)] = 10000;
+        rival.Schedule(0, new AttackCommand(Orcs, new[] { orc2 }, foe2));
+        RunUntil(rival, () => rival.Combat.IsWebbed(Index(rival, foe2)), 10 * Tps, "the bearer webs a foe without knives");
+    }
+
     /// <summary>The default map has spider nests in its forests, the same for the same seed.</summary>
     [Fact]
     public void TheDefaultMapHasSpiderNests()

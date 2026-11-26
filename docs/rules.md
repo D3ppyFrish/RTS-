@@ -1060,6 +1060,12 @@ areas, and Orcs who beat a wolf keep it.
   from its den (a relic: +1 damage, and its bearer's blows web whom they strike, at 60% for 2 seconds). Orcs beat
   spiders as they beat any monster, and keep them. In the game a webbed unit's panel says "caught in a web (Ns)". All
   numbers are first guesses for playtesting.
+- **Silk knives** (`silk_knives` in `data/techs.json`, the `cut_webs` effect, `EconomySystem.CutsWebs`; tests in
+  `SpiderTests`): a shared tech after Better tools (30 wood, 30 stone, 30 seconds), for every faction. The player's
+  units cut themselves out of a web the moment it lands: the giant spiders' bites and the blows of a spider silk's
+  bearer still hurt them but no longer slow them, so a nest can be fought with riders or run from. A web already on a
+  unit when the research ends wears off as before. It guards only the researching player's units: their own silk
+  bearer still webs a rival who lacks the knives. The computer players research it last of their techs, and only once one of their units has been caught in a web (`AiPlayer.Wanted`).
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.

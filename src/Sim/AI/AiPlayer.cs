@@ -103,7 +103,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
         "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
-        "settler_drill",
+        "settler_drill", "silk_knives",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
@@ -124,6 +124,27 @@ public sealed partial class AiPlayer
                     if (tech.Discovery != Discovery.None && sim.Economy.Discovered(Player, tech.Discovery)) yield return tech.Id;
             yield return order[i];
         }
+    }
+
+    /// <summary>True once one of its units has been caught in a web (see <see cref="Wanted"/>).</summary>
+    private bool _webbed;
+
+    /// <summary>
+    /// False for a tech it has no use for yet: one that only cuts its units out of webs (Silk knives) waits until one
+    /// of its units has been caught in a web, so a match without spiders in its way costs it nothing.
+    /// </summary>
+    private bool Wanted(Simulation sim, TechDef tech)
+    {
+        if (tech.Effects.Count == 0) return true;
+        foreach (var e in tech.Effects)
+            if (e.Type != TechEffectType.CutWebs) return true;
+        if (!_webbed)
+        {
+            var u = sim.Units;
+            for (int i = 0; i < u.Count && !_webbed; i++)
+                if (u.Owner[i] == Player && u.Webbed[i] > 0) _webbed = true;
+        }
+        return _webbed;
     }
 
     /// <summary>How often (out of the weights of what a barracks can train) each role is picked.</summary>
@@ -408,7 +429,7 @@ public sealed partial class AiPlayer
         {
             foreach (string id in InLine(sim, TechOrder))
             {
-                if (!sim.Content.TryGetTech(id, out var tech)) continue;
+                if (!sim.Content.TryGetTech(id, out var tech) || !Wanted(sim, tech)) continue;
                 var r = econ.CanResearch(Player, tech);
                 if (r is ResearchResult.Researched or ResearchResult.OtherFaction) continue;
                 if (r == ResearchResult.Ok && Affordable(sim, tech.Cost)) issue(new ResearchCommand(Player, id));

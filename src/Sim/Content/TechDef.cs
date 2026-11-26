@@ -214,6 +214,11 @@ public enum TechEffectType : byte
     /// back to full, then stay soft for a while. The numbers are in the role table (<see cref="CombatRules.Molt"/>).
     /// </summary>
     Molt,
+    /// <summary>
+    /// The player's units cut themselves out of webs: the giant spiders' bites and the blows of a spider silk's bearer
+    /// (see <see cref="Units.CombatSystem"/>, webs) no longer slow them.
+    /// </summary>
+    CutWebs,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

@@ -1391,6 +1391,7 @@ public static class ContentLoader
                     case TechEffectType.MurderHoles:
                     case TechEffectType.Salvage:
                     case TechEffectType.FieldRepairs:
+                    case TechEffectType.CutWebs:
                         o.Keys("type");
                         effects.Add(new TechEffect { Type = type });
                         break;

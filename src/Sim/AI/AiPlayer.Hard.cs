@@ -68,7 +68,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "crop_rotation", "deep_warrens", "horse_breeding", "roads", "carts", "archery", "masonry",
         "settler_guilds", "orc_beast_pens", "orc_war_drums", "deep_chitin", "sapping", "basic_magic", "smelting",
-        "settler_drill",
+        "settler_drill", "silk_knives",
     };
 
     /// <summary>What the player has, counted once each time Hard looks at its economy.</summary>
@@ -284,7 +284,7 @@ public sealed partial class AiPlayer
             foreach (string id in InLine(sim, HardTechOrder))
             {
                 k++;
-                if (!sim.Content.TryGetTech(id, out var tech)) continue;
+                if (!sim.Content.TryGetTech(id, out var tech) || !Wanted(sim, tech)) continue;
                 var r = econ.CanResearch(Player, tech, checkCost: false);
                 if (r is ResearchResult.Researched or ResearchResult.OtherFaction or ResearchResult.NeedsTechs) continue;
                 if (r != ResearchResult.Ok) break;
