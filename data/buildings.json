@@ -235,6 +235,9 @@
     "wall": "planks", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
   { "id": "merfolk_conch", "name": "Merfolk conch", "kind": "totem", "size": [3, 3], "wallHeight": 6,
     "wall": "stone_brick", "footing": "stone_brick", "buildTime": 1, "sight": 9 },
+  // The giant spiders' totem at the bottom of their hill caves: knocking it down clears the nest (see "totem" on a lair).
+  { "id": "spider_totem", "name": "Spider totem", "kind": "totem", "size": [3, 3], "wallHeight": 4,
+    "wall": "planks", "footing": "stone_brick", "buildTime": 1, "sight": 6 },
   { "id": "bridge", "name": "Bridge", "kind": "bridge", "size": [1, 1], "wallHeight": 1, "wall": "planks",
     "cost": { "planks": 2 }, "buildTime": 3, "sight": 2 },
   // The Deepfolk's barracks (see "replaces" in factions.json): a low mound of packed earth and resin where their

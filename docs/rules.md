@@ -1063,17 +1063,32 @@ areas, and Orcs who beat a wolf keep it.
   guard or its sight, and **its first blow out of the water does twice the damage** (`"ambush": 100`, percent more;
   `MonsterSystem.Spring` from `CombatSystem.Wound`); after that it strikes as usual, and once back in its pool it
   lies in wait again. A lair with no water near its den waits on the bank as before. All numbers are first guesses.
-- **Giant spiders nest in the forests** (`SpiderTests`; `giant_spider` in `data/units.json`, `web` on a unit or a relic,
-  `CombatSystem.Webs.cs`): besides the boar herds, two nests of giant spiders for each 512 by 512 blocks of map (four on
-  the default map) lie in the forests, each a nest of three that stays home: 70 hit points, quick (5.5), light piercing
-  bites (7), sight 9, guarding 10 columns round the nest with a leash of 16. **Each bite that lands webs the unit
-  bitten** (`"web": { "pace": 40, "time": 3 }`): for 3 seconds it walks at 40% of its pace, a fresh bite starting the time
-  again, so whoever turns and runs from a nest is run down, and riders lose their speed while they fight one. A blow a
-  shield stops or a blast's splash webs nobody; ships and machines are never webbed, nor spiders themselves. Clearing a
-  nest pays 80 food and 40 wood to a side that does not tame monsters, and either faction takes up the **spider silk**
-  from its den (a relic: +1 damage, and its bearer's blows web whom they strike, at 60% for 2 seconds). Orcs beat
-  spiders as they beat any monster, and keep them. In the game a webbed unit's panel says "caught in a web (Ns)". All
-  numbers are first guesses for playtesting.
+- **Giant spiders nest in caves in the hills** (`SpiderTests`; `giant_spider` in `data/units.json`, `web` on a unit or a
+  relic, `CombatSystem.Webs.cs`; the caves: `RegionGenerator.HillCaves.cs`, `RegionMap.HillCaves`/`HillCaveMouths`,
+  `MonsterSystem.PlaceInCaves`, `cave` and `totem` in a lair): each hill range has two **hill caves**, a tunnel three
+  columns wide running into the hillside away from the range's middle and climbing down a level every two columns to a
+  round chamber 6 columns across from its middle, under the hill's solid ground (four caves on the default map, none
+  near a start, a ridge, a pass, the cavern or a ruin). A nest of three giant spiders lies at the bottom of each, round
+  a **spider totem** at the back of the chamber (a 3 by 3 pole of the wild side's, 4 high, wound in silk with a spider's
+  head on top). On a map with no hill caves the nests are spread over the hills instead, the totem on the den. The
+  spiders stay home: 70 hit points, quick (5.5), light piercing bites (7), sight 9, guarding 10 columns round the den
+  (and no more than 4 levels above it, so units walking over the hill are left alone) with a leash of 16. **They spit
+  webs**: a spider fighting a unit further off than its bite, up to 8 blocks away with a clear line, spits a gob of web at
+  it every 6 seconds (`"web": { "pace": 40, "time": 3, "range": 8, "every": 6 }`, `CombatSystem.StepWebs`), so for 3
+  seconds it walks at 40% of its pace, a fresh web starting the time again: whoever turns and runs from a nest is run
+  down, archers shooting from afar are pinned, and riders lose their speed. A unit already webbed is not spat at again
+  until it is free. **Their bite poisons** (`"poison": { "damage": 2, "time": 6 }`, `UnitDef.Poison`,
+  `CombatSystem.Envenom`/`StepPoison`, `UnitStore.Poisoned`): each bite that lands (not one a shield stops) poisons
+  the bitten, who loses 2 hit points a second for 6 seconds after the last bite, landing with the tick's hits like
+  bleeding and killing as bleeding does; a healer stemming the unit's bleeding draws the poison out too. In the game the
+  unit's panel says "(poisoned, Ns)". Ships and machines are never webbed nor poisoned, nor spiders themselves.
+  **Killing the spiders does not clear the nest: knocking the totem down does**, whether the
+  spiders are dead or not (those left go on guarding the den). It pays 80 food and 40 wood to the side that struck the
+  totem last, if it does not tame monsters, and either faction then takes up the **spider silk** from its den (a relic:
+  +1 damage, and its bearer's blows web whom they strike, at 60% for 2 seconds). Orcs beat spiders as they beat any
+  monster, and keep them. Computer players' hunting parties go down into the cave and, with no spider in sight, knock
+  the totem down (`AiPlayer.Hunt.cs`, `MonsterSystem.TotemOf`). In the game a webbed unit's panel says "caught in a web
+  (Ns)". All numbers are first guesses for playtesting.
 - **Silk knives** (`silk_knives` in `data/techs.json`, the `cut_webs` effect, `EconomySystem.CutsWebs`; tests in
   `SpiderTests`): a shared tech after Better tools (30 wood, 30 stone, 30 seconds), for every faction. The player's
   units cut themselves out of a web the moment it lands: the giant spiders' bites and the blows of a spider silk's

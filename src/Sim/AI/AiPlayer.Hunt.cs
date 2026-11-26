@@ -37,6 +37,9 @@ public sealed partial class AiPlayer
     public int Hunts { get; private set; }
     public int HuntsBrokenOff { get; private set; }
 
+    /// <summary>How near a lair's totem (columns) a hunting party has to be, seeing none of the pack, to attack the totem.</summary>
+    public const int TotemNear = 12;
+
     private readonly List<int> _huntParty = new();
     private int _huntLair;
     private long _huntSent, _huntAt = HuntTicks;
@@ -55,7 +58,8 @@ public sealed partial class AiPlayer
     /// </summary>
     private bool Huntable(Simulation sim, Lair lair)
     {
-        if (lair.Cleared || lair.Pack.Count == 0) return false;
+        // A nest whose pack is dead still stands until its totem is down (see LairDef.Totem).
+        if (lair.Cleared || (lair.Pack.Count == 0 && sim.Monsters.TotemOf(lair) == null)) return false;
         if (lair.Monster.Lair is not { Cavern: CavernSpot.None } def) return false;
         if (def.DuskTree && !WantsDuskTree(sim)) return false; // the warden only for a player that wants the tree
         foreach (var s in _shunned)
@@ -121,7 +125,7 @@ public sealed partial class AiPlayer
         _huntLair = best.Id;
         _huntSent = sim.Tick;
         Note(sim, $"sends a party of {_huntParty.Count} (worth {worth / 1000}k) to clear the {best.Monster.Name} lair at {best.X},{best.Z} (worth {pack / 1000}k)");
-        issue(new AttackMoveCommand(Player, _huntParty.ToArray(), best.X, best.Z));
+        issue(new AttackMoveCommand(Player, _huntParty.ToArray(), best.X, best.Z, best.Y));
     }
 
     /// <summary>The party out: see <see cref="HuntStep"/>.</summary>
@@ -153,16 +157,23 @@ public sealed partial class AiPlayer
         }
         if (sim.Tick % (5 * ArmyTicks) >= ArmyTicks) return;
         // After the pack where it sees one of them (a pack roams), else to the den.
-        var (gx, gz) = (lair.X, lair.Z);
+        var (gx, gy, gz) = (lair.X, lair.Y, lair.Z);
+        bool seen = false;
         foreach (int id in lair.Pack)
         {
             int i = u.IndexOf(id);
             if (i < 0 || !sim.Vision.SeesUnit(Player, i)) continue;
-            (gx, gz) = (u.X[i].FloorToInt(), u.Z[i].FloorToInt());
+            (gx, gy, gz) = (u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
+            seen = true;
             break;
         }
         var idle = Unordered(sim, _huntParty, gx, gz);
-        if (idle.Count > 0) issue(new AttackMoveCommand(Player, idle.ToArray(), gx, gz));
+        if (idle.Count == 0) return;
+        // No monster in sight and a totem at the den (see LairDef.Totem): knock it down.
+        int first = u.IndexOf(idle[0]);
+        if (!seen && sim.Monsters.TotemOf(lair) is { } totem && Dist2(gx, gz, u.X[first].FloorToInt(), u.Z[first].FloorToInt()) <= (long)TotemNear * TotemNear)
+            issue(new AttackBuildingCommand(Player, idle.ToArray(), totem.Id));
+        else issue(new AttackMoveCommand(Player, idle.ToArray(), gx, gz, gy));
     }
 
     /// <summary>The hunt is over: the hurt go home to heal, and all of them home if <paramref name="home"/>.</summary>

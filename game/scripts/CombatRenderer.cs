@@ -22,6 +22,7 @@ public partial class CombatRenderer : Node3D
     private static readonly Color Hurt = new(0.95f, 0.8f, 0.2f);
     private static readonly Color Dying = new(0.95f, 0.25f, 0.2f);
     private static readonly Color Arrow = new(0.95f, 0.9f, 0.75f);
+    private static readonly Color Silk = new(0.92f, 0.92f, 0.9f);
     private static readonly Color Blast = new(0.75f, 0.45f, 1f);
     // A stone dropped through a gate's murder holes, and the dust where it lands.
     private static readonly Color Stone = new(0.55f, 0.53f, 0.5f);
@@ -175,7 +176,12 @@ public partial class CombatRenderer : Node3D
                 var p = from.Lerp(to, t) + new Vector3(0, 4 * h * t * (1 - t), 0);
                 var dir = to - from + new Vector3(0, 4 * h * (1 - 2 * t), 0);
                 if (shot.Splash) Cube(p, 0.5f * bs, Blast);
+                else if (shot.Web) Cube(p, 0.35f * bs, Silk); // a gob of web
                 else Stick(p, dir, 1.4f * bs, 0.14f * bs, Arrow);
+            }
+            else if (shot.Web && age < flight + BurstTicks)
+            {
+                Cube(to, Mathf.Lerp(0.6f, 1.4f, (age - flight) / BurstTicks) * bs, Silk); // the web bursting over its mark
             }
             else if (shot.Splash && age < flight + BurstTicks)
             {

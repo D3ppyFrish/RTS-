@@ -301,12 +301,12 @@
       "grow": 150, "growTo": 9, "spread": 300, "spreadTo": 3,
       "prizes": { "orcs": { "relic": "shade_pelt" }, "settlers": { "relic": "shade_pelt" } } } },
 
-  // The forests' giant spiders: nests of three among the trees, whose bites web the bitten so they cannot run.
+  // The giant spiders: nests of three in the hill caves, a totem at the bottom of each. They spit webs so nobody can run, and their bites poison.
   { "id": "giant_spider", "name": "Giant spider", "role": "monster",
-    "description": "A hairy forest spider as big as a pony, nesting in threes among the trees. Its bite is light but wraps the bitten in silk: for 3 seconds they walk at less than half their pace, so whoever runs from a nest is run down. Whoever clears a nest takes up a skein of its silk.",
+    "description": "A hairy spider as big as a pony, nesting in threes in the caves dug into the hills, round a silk-wrapped totem at the bottom. It spits a gob of web at whoever it fights from up to 8 blocks off, every 6 seconds: for 3 seconds they walk at less than half their pace, so whoever runs from a nest is run down. Its bite poisons, for 2 hit points a second over 6 seconds. Knock the totem down to clear the nest; whoever clears it takes up a skein of its silk.",
     "speed": 5.5, "hp": 70, "model": "giant_spider", "damage": 7, "attackTime": 1, "range": 1.25, "sight": 9,
-    "attack": "pierce", "body": "beast", "armor": { "body": 1 }, "web": { "pace": 40, "time": 3 },
-    "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 80, "wood": 40 }, "biome": "forest", "count": 2,
+    "attack": "pierce", "body": "beast", "armor": { "body": 1 }, "web": { "pace": 40, "time": 3, "range": 8, "every": 6 }, "poison": { "damage": 2, "time": 6 },
+    "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 80, "wood": 40 }, "biome": "hills", "count": 2, "cave": true, "totem": "spider_totem",
       "prizes": { "orcs": { "relic": "spider_silk" }, "settlers": { "relic": "spider_silk" } } } },
 
   // The dark power's corrupted beasts: broods of them claw up out of the Heartscar as it wakes (see the Awakening).

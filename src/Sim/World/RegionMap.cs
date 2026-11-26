@@ -33,7 +33,7 @@ public readonly record struct StartArea(int Player, int X, int Y, int Z);
 /// </summary>
 public sealed class RegionMap
 {
-    public const int FormatVersion = 4;
+    public const int FormatVersion = 5;
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("RTSMAP");
 
     public ulong Seed { get; }
@@ -74,6 +74,15 @@ public sealed class RegionMap
     /// </summary>
     public List<(int X, int Y, int Z)> Passes { get; } = new();
 
+    /// <summary>
+    /// The hill caves the giant spiders nest in (see <see cref="RegionGenerator.HillCavesPerRange"/>): the middle of
+    /// each one's chamber at its bottom, a unit standing there having its feet at Y.
+    /// </summary>
+    public List<(int X, int Y, int Z)> HillCaves { get; } = new();
+
+    /// <summary>Where each of <see cref="HillCaves"/> comes out on the hillside, in the same order: a unit standing there has its feet at Y.</summary>
+    public List<(int X, int Y, int Z)> HillCaveMouths { get; } = new();
+
     private readonly Biome[] _biomes;
 
     public RegionMap(ulong seed, VoxelWorld world)
@@ -110,8 +119,8 @@ public sealed class RegionMap
     /// <summary>
     /// Binary format, little-endian: "RTSMAP", u16 version, u64 seed, i32 sizeX/Y/Z, i32 start count,
     /// then (i32 player, x, y, z) per start, i32 cavern count then (i32 x, y, z) per cavern, the same for ruins
-    /// for the deep caves' chambers and for the mountain passes (version 1 had u8 hasCavern (+ i32 x, y, z) and no ruins,
-    /// version 2 no deep caves, version 3 no passes; all still load), the biome map run-length
+    /// for the deep caves' chambers, the mountain passes, the hill caves and their mouths (version 1 had u8 hasCavern (+ i32 x, y, z) and no ruins,
+    /// version 2 no deep caves, version 3 no passes, version 4 no hill caves; all still load), the biome map run-length
     /// encoded, then every block in (y, z, x) order run-length encoded. Runs are (u16 length, u8 value).
     /// </summary>
     public void Save(Stream stream)
@@ -123,7 +132,7 @@ public sealed class RegionMap
         w.Write(World.SizeX); w.Write(World.SizeY); w.Write(World.SizeZ);
         w.Write(Starts.Count);
         foreach (var s in Starts) { w.Write(s.Player); w.Write(s.X); w.Write(s.Y); w.Write(s.Z); }
-        foreach (var list in new[] { Caverns, Ruins, Deeps, Passes })
+        foreach (var list in new[] { Caverns, Ruins, Deeps, Passes, HillCaves, HillCaveMouths })
         {
             w.Write(list.Count);
             foreach (var c in list) { w.Write(c.X); w.Write(c.Y); w.Write(c.Z); }
@@ -162,7 +171,8 @@ public sealed class RegionMap
                      {
                          2 => new[] { map.Caverns, map.Ruins },
                          3 => new[] { map.Caverns, map.Ruins, map.Deeps },
-                         _ => new[] { map.Caverns, map.Ruins, map.Deeps, map.Passes },
+                         4 => new[] { map.Caverns, map.Ruins, map.Deeps, map.Passes },
+                         _ => new[] { map.Caverns, map.Ruins, map.Deeps, map.Passes, map.HillCaves, map.HillCaveMouths },
                      })
             {
                 int n = r.ReadInt32();

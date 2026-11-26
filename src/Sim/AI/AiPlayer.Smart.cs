@@ -312,7 +312,7 @@ public sealed partial class AiPlayer
         if (NearestLair(sim, hx, hz, PowerOf(sim, _wave)) is { } lair)
         {
             _waveLair = lair.Id;
-            issue(new AttackMoveCommand(Player, _wave.ToArray(), lair.X, lair.Z));
+            issue(new AttackMoveCommand(Player, _wave.ToArray(), lair.X, lair.Z, lair.Y));
             return true;
         }
         var (cx, cz) = Centroid(sim, _wave);

@@ -324,7 +324,7 @@ public sealed partial class AiPlayer
         if (nearest != null)
         {
             _waveLair = nearest.Id;
-            issue(new AttackMoveCommand(Player, soldiers.ToArray(), nearest.X, nearest.Z));
+            issue(new AttackMoveCommand(Player, soldiers.ToArray(), nearest.X, nearest.Z, nearest.Y));
             return;
         }
         // The smart levels have not seen a lair yet. In a match with lairs there is one on the way from every
@@ -902,7 +902,10 @@ public sealed partial class AiPlayer
             else if (sim.Tick % (10 * ArmyTicks) < ArmyTicks)
             {
                 var idle = Unordered(sim, _wave, lair.X, lair.Z);
-                if (idle.Count > 0) issue(new AttackMoveCommand(Player, idle.ToArray(), lair.X, lair.Z));
+                // The pack gone and its totem standing (see LairDef.Totem): knock it down.
+                if (idle.Count > 0 && lair.Pack.Count == 0 && sim.Monsters.TotemOf(lair) is { } totem)
+                    issue(new AttackBuildingCommand(Player, idle.ToArray(), totem.Id));
+                else if (idle.Count > 0) issue(new AttackMoveCommand(Player, idle.ToArray(), lair.X, lair.Z, lair.Y));
             }
             return;
         }
