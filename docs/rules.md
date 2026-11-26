@@ -1105,7 +1105,7 @@ areas, and Orcs who beat a wolf keep it.
   running long before it has killed many (a unit routs at 25 morale, as it does when its friends die round it). A hero
   near the stung takes its share of the sting out (the Marshal's steadying halves it), and heroes themselves, monsters,
   ships and machines are never frightened. **The hive hatches a new hornet every 20 seconds** while it stands (`"grow":
-  20`), up to seven, even once the whole swarm is dead (`MonsterSystem.Step`), so swatting hornets never clears the
+  20`) back to a swarm of five (`"growTo": 5`; a nest with a totem may hatch only back to strength), even once the whole swarm is dead (`MonsterSystem.Step`), so swatting hornets never clears the
   nest: **knocking the hive down does**, as the spiders' totem does. It pays 120 food and 30 wood (honey and comb) to the
   side that struck it last, if it does not tame monsters, and either faction takes up the **queen's sting** from its den
   (a relic: +2 damage, and each blow of its bearer's that lands takes 8 morale from whom it strikes). Orcs beat hornets

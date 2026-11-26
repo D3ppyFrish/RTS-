@@ -51,7 +51,7 @@ public class HornetTests
         Assert.Equal(Biome.Forest, hornet.Lair!.Biome);
         Assert.Same(db.Building("hornet_hive"), hornet.Lair.Totem);
         Assert.Equal(BuildingKind.Totem, hornet.Lair.Totem!.Kind);
-        Assert.Equal((5, 20 * Tps, 7), (hornet.Lair.Pack, hornet.Lair.GrowTicks, hornet.Lair.GrowTo));
+        Assert.Equal((5, 20 * Tps, 5), (hornet.Lair.Pack, hornet.Lair.GrowTicks, hornet.Lair.GrowTo));
         Assert.Contains(hornet, db.WildMonsters);
         var sting = db.Relic("queens_sting");
         Assert.Equal((2, 8), (sting.Damage, sting.Fear));
@@ -119,6 +119,9 @@ public class HornetTests
         var hive = sim.Monsters.TotemOf(lair)!;
         Assert.Equal((Simulation.WildPlayer, "hornet_hive"), (hive.Owner, hive.Def.Id));
         Assert.True(hive.Covers(60, 48));
+        // A full swarm hatches no more: the hive only brings it back to five.
+        sim.Run(45 * Tps);
+        Assert.Equal(5, lair.Pack.Count);
         foreach (int id in lair.Pack.ToArray()) sim.Units.RemoveAt(Index(sim, id));
         sim.Step();
         Assert.Empty(lair.Pack);

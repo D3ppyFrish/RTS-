@@ -513,7 +513,10 @@ public static class ContentLoader
             int pack = o.Int("pack", 1, 50, 4, required: true);
             int growTo = o.Int("growTo", 1, 50, grow > 0 ? pack * 2 : pack);
             if (e.TryGetProperty("growTo", out _) && grow == 0) o.Error("\"growTo\" needs a \"grow\" (seconds between births)");
-            if (grow > 0 && growTo <= pack) o.Error($"\"growTo\" is {growTo}, but the pack starts {pack} strong, so it should be more");
+            // A nest with a totem may only hatch its swarm back to strength (the hornets' hive): growTo may be the pack.
+            bool refills = e.TryGetProperty("totem", out _);
+            if (grow > 0 && (refills ? growTo < pack : growTo <= pack))
+                o.Error($"\"growTo\" is {growTo}, but the pack starts {pack} strong, so it should be {(refills ? "at least that" : "more")}");
             if (grow > 0 && dusk) o.Error("the dusk tree's warden does not \"grow\"");
             bool atStarts = !dusk && (e.TryGetProperty("atStarts", out _) ? o.Bool("atStarts") : biome == null && cavern == CavernSpot.None);
             if (dusk && (biome != null || cavern != CavernSpot.None || o.Bool("atStarts") || e.TryGetProperty("prizes", out _)))

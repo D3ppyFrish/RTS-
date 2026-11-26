@@ -312,11 +312,11 @@
   // morale), so a swarm sends a squad running; the hive hatches a new hornet every "grow" seconds while it stands, so the
   // nest is cleared by knocking the hive down, not by swatting hornets. First guesses for playtesting.
   { "id": "giant_hornet", "name": "Giant hornet", "role": "monster",
-    "description": "A hornet as long as a forearm, black and amber, swarming from a papery hive on a dead stump in the forests. Its sting is light but terrifying: each that lands takes 6 morale, so a swarm breaks a squad and sends it running long before it has killed many. A hero near them steadies them. The hive hatches a new hornet every 20 seconds while it stands, even once the swarm is dead: knock the hive down to clear the nest, and whoever does takes up the queen's sting.",
+    "description": "A hornet as long as a forearm, black and amber, swarming from a papery hive on a dead stump in the forests. Its sting is light but terrifying: each that lands takes 6 morale, so a swarm breaks a squad and sends it running long before it has killed many. A hero near them steadies them. The hive hatches a new hornet every 20 seconds while it stands, back to a swarm of five, even once the swarm is dead: knock the hive down to clear the nest, and whoever does takes up the queen's sting.",
     "speed": 7, "hp": 30, "model": "giant_hornet", "damage": 4, "attackTime": 0.8, "range": 1.25, "sight": 10,
     "attack": "pierce", "body": "beast", "fear": 6,
     "lair": { "pack": 5, "guard": 10, "leash": 18, "reward": { "food": 120, "wood": 30 }, "biome": "forest", "count": 2, "totem": "hornet_hive",
-      "grow": 20, "growTo": 7,
+      "grow": 20, "growTo": 5,
       "prizes": { "orcs": { "relic": "queens_sting" }, "settlers": { "relic": "queens_sting" } } } },
 
   // The dark power's corrupted beasts: broods of them claw up out of the Heartscar as it wakes (see the Awakening).

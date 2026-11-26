@@ -2,7 +2,8 @@
 # Scripted-input screenshot test for the city-states: the goblin town is picked from the top bar (neutral,
 # its totem in plain wood and six wild guards round it). The starting units clear the wolf lair on the
 # road east, then march on the goblin town and break its totem: the town is yours, its guards change sides
-# and the totem stands again in your colour. A goblin of each kind is hired at its market, and a caravan is
+# and the totem stands again in your colour. A goblin of each kind is hired at its market, the army knocks down
+# the hornets' hive by the road home, and a caravan is
 # trained at the town hall and sent to trade at the town, while tribute (gold) comes in. Last the ogres' hold
 # (issue #46) is picked from the top bar: neutral, its stone idol plain and four ogre guards round it, and then
 # the kobolds' warren, dug into a chamber of the deep caves, seen through the height slice: neutral, its great
@@ -20,7 +21,8 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 
 # Seed 1234: the goblin town's market at 393,20,296 (the totem on it), the west start's town hall at
 # 128..134 x 381..387 with the starting units in rows just south of it, and the wolf lair 40 blocks east
-# (den at 171,384), which a lone caravan would not get past. --goods gives enough for the hires and the
+# (den at 171,384), which a lone caravan would not get past, and a giant hornets' hive at 298,289 by the road from the
+# goblin town, which the army knocks down once the town is taken (its swarm would rout the caravans). --goods gives enough for the hires and the
 # caravan; --houses makes room for them behind the hall (the start has more people than its hall houses).
 # The ogres' hold has its market at 393,632, the kobolds' warren at 418,46,437 (under the forest), and the
 # troll bridge at 389,180, its bridge west over the river (columns 364 to 381, rows 179 to 181), and the
@@ -63,6 +65,11 @@ print
 camera 394,297 -30 40 9
 wait 5
 shot $OUT/ui-goblins.png
+key f2
+camera 298,289 20 50 30
+wait 5
+clickworld 298,g+2,289 right
+ticks 1500
 camera 131,389 45 55 22
 wait 5
 clickworld 131,g,384
