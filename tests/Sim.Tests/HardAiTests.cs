@@ -760,6 +760,74 @@ public class HardAiTests
     }
 
     [Fact]
+    public void WithMasonryHardBuildsAMasonsYardAndPutsStoneTowersOverItsWatchtowersByTheGateFirst()
+    {
+        var (sim, hall) = ATownToWall(0);
+        sim.TestMode = true; // so that the other town cannot be razed: the match has to go on
+        sim.Schedule(0, new SandboxCheatCommand(0, 1, SandboxCheat.Invulnerable, true));
+        sim.Economy.Grant(0, sim.Content.Tech("masonry"));
+        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        var players = new[] { ai };
+        FinishWall(sim, hall, "wooden");
+        var log = new List<Command>();
+        Play(sim, players, () => false, 1, log);
+        AssertWalled(sim, ai);
+        var (x0, z0, x1, z1) = ai.TownWall!.Value;
+        var watch = sim.Content.Building("watchtower");
+        var stone = sim.Content.Building("stone_tower");
+        bool IsYard(Building b) => b.Owner == 0 && b.Def.Kind == BuildingKind.Workshop && b.Def.Makes == Good.CutStone;
+        List<Building> Of(BuildingDef d) => sim.Buildings.All.Where(b => b.Owner == 0 && b.Def == d).OrderBy(b => b.Id).ToList();
+        void Stock()
+        {
+            hall.Stock[(int)Good.Wood] = Math.Max(hall.Stock[(int)Good.Wood], 2000);
+            hall.Stock[(int)Good.Stone] = Math.Max(hall.Stock[(int)Good.Stone], 1000);
+        }
+
+        // The mason's yard is laid out only once the two watchtowers by the gate toward the enemy stand.
+        int towersAtYard = -1;
+        Assert.True(Play(sim, players, () =>
+        {
+            Stock();
+            if (towersAtYard < 0 && sim.Buildings.All.Any(IsYard)) towersAtYard = Of(watch).Count(b => b.Active);
+            return sim.Buildings.All.Any(b => IsYard(b) && b.Active);
+        }, 8 * 60 * Tps, log), "a mason's yard; " + string.Join("; ", ai.Journal.TakeLast(8).Select(j => $"{j.Tick / Tps}s {j.Text}")));
+        Assert.True(towersAtYard >= 2, $"{towersAtYard} watchtowers stood when the yard was laid out");
+        Assert.Single(sim.Buildings.All, IsYard);
+        Assert.Contains(ai.Journal, j => j.Text.StartsWith("lays out a mason's yard"));
+        var gate = Assert.Single(ai.TownGates, g => !g.AlongX && g.X == x1 && Of(watch).Count(t => t.ColumnDistance(g.X, g.Z) <= AiPlayer.KeepGate) == 2);
+        // It keeps a worker of its own cutting stone at the yard.
+        Assert.True(Play(sim, players, () => { Stock(); return ai.StonecutterId != 0; }, 30 * Tps, log), "a stonecutter");
+        var yardB = sim.Buildings.All.Single(IsYard);
+        Play(sim, players, () => { Stock(); return false; }, 10 * Tps, log);
+        int cutter = sim.Units.IndexOf(ai.StonecutterId);
+        Assert.True(cutter >= 0 && sim.Units.Job[cutter] == UnitJob.Haul && sim.Units.JobTarget[cutter] == yardB.Id && !sim.Units.Auto[cutter]);
+
+        // Its workers cut the stone (topped up here to keep the test short); the two stone towers go over the
+        // watchtowers by that gate first, one site at a time, and each takes its watchtower's place.
+        var byGate = Of(watch).Where(t => t.ColumnDistance(gate.X, gate.Z) <= AiPlayer.KeepGate).ToList();
+        int most = 0;
+        Assert.True(Play(sim, players, () =>
+        {
+            Stock();
+            hall.Stock[(int)Good.CutStone] = Math.Max(hall.Stock[(int)Good.CutStone], 200);
+            most = Math.Max(most, sim.Buildings.All.Count(b => b.Owner == 0 && b.Def.IsTower && !b.Active));
+            return Of(stone).Count(b => b.Active) >= 2;
+        }, 8 * 60 * Tps, log), "two stone towers; " + string.Join("; ", ai.Journal.TakeLast(8).Select(j => $"{j.Tick / Tps}s {j.Text}")));
+        Assert.Equal(1, most);
+        var stones = Of(stone);
+        Assert.All(byGate, t => Assert.Null(sim.Buildings.Get(t.Id)));
+        Assert.All(stones.Take(2), s => Assert.True(s.ColumnDistance(gate.X, gate.Z) <= AiPlayer.KeepGate, "a stone tower away from the gate"));
+        Assert.All(stones, s => Assert.Equal(16, sim.Economy.FreePosts(s) + Enumerable.Range(0, sim.Units.Count).Count(i => sim.Units.Job[i] == UnitJob.Post && sim.Units.JobTarget[i] == s.Id)));
+        Assert.Equal(log.OfType<BuildCommand>().Count(c => c.Building == "stone_tower"), ai.StoneTowersLaid);
+        Assert.Contains(ai.Journal, j => j.Text.StartsWith("puts a stone tower over its watchtower"));
+        // The wall still runs whole into every tower: no column of the line is missing.
+        bool OnLine(int x, int z) => ((x == x0 || x == x1) && z >= z0 && z <= z1) || ((z == z0 || z == z1) && x >= x0 && x <= x1);
+        for (int x = x0; x <= x1; x++)
+        for (int z = z0; z <= z1; z++)
+            if (OnLine(x, z)) Assert.True(sim.Buildings.AtColumn(x, z) is { Owner: 0 } b && b.Def.IsRampart, $"{x},{z} is open");
+    }
+
+    [Fact]
     public void HardPostsItsArchersOnTheTowerByTheGateAndThoseOnTheWallGoUpIt()
     {
         var (sim, hall) = ATownToWall(0);
