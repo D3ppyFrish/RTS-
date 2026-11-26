@@ -160,7 +160,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   tree round the lodge (a pine, a birch, otherwise broad-leaved). Two minutes later it grows into a full tree, once
   nobody stands on its trunk's columns, and wood cutters fell it like any other. A sapling dug up, built over or
   knocked off by a tree felled beside it is gone. When there is no room left the foresters wait and try again. The
-  rounds give no goods, so automatic workers leave the lodge alone.
+  rounds give no goods, so automatic workers leave the lodge alone. Computer players put one up once the woods by
+  their town are cut down (see "Foresters" under Winning and computer players).
 - **Orchards** (Crop rotation; kind `orchard` in `data/buildings.json`; `EconomySystem.Orchards.cs`, `OrchardTests`, #148):
   Crop rotation no longer makes harvests richer (farms give 6 food a harvest for everyone instead of 5); it opens
   the orchard, a 6 by 6 field (30 wood, 15 seconds to build) planted with four fruit trees. Finished, it is
@@ -1967,6 +1968,17 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   hunt there (idle ones first, then wood cutters, then other gatherers not on food), and lets them go back to other
   work when the lodge has no deer to spare in reach, sending them again once 4 are in reach. When the lodge is 24 columns or more from its nearest storage
   it puts a storehouse by it. The classic level never hunts. All numbers are first guesses.
+- **Foresters** (Easy, Normal and Hard; `AI/AiPlayer.Foresters.cs`, tests in `AiForesterTests`): from 4 minutes on,
+  with at least 8 workers and less than 400 wood in hand, once fewer than 6 trees stand within 28 columns of its town
+  hall (Normal, walling its town, once the wall is laid out) it lays out one forester's lodge, the nearest spot to the hall at least 16 columns out (within 36; Hard: within
+  34, and only while no enemies are at its buildings) on safe ground away from lairs, where saplings have room for at
+  least 6 trees (`EconomySystem.PlantingRoom`); on Hard the lodge's planting ground (its reach of 10 columns round it)
+  also keeps clear of its wall line and quarry pits. It does not save up for the lodge, and with no such ground it
+  looks again a minute later. The rounds give no goods, so its automatic workers leave the lodge alone: it sends two
+  foresters there itself while wood is under 400 (idle ones first, then wood cutters, then other gatherers not on
+  food), keeps them there until wood reaches 800, then lets them go back to other work. Workers that went there on
+  their own count as its foresters. Its wood cutters fell the grown trees like any others. The classic level never
+  plants. All numbers are first guesses.
 - **Mining the passes** (Easy, Normal and Hard; `AI/AiPlayer.Passes.cs`, tests in `AiPassTests`): the iron and gold
   seamed into a mountain pass's walls (see Monsters and taming) are what clearing its stone giant is for. Once no lair
   it knows of with monsters still about lies within 24 columns of a pass it has seen, within 160 columns of its town
