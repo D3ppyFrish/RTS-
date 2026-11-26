@@ -139,8 +139,8 @@ public class AiDiscoveryTests
         {
             var sim = Town();
             var order = level == AiLevel.Hard ? AiPlayer.HardTechOrder : AiPlayer.TechOrder;
-            Assert.Equal("silk_knives", order[^1]);
-            foreach (var id in order.Take(order.Length - 1)) sim.Economy.Grant(0, Tech(sim, id));
+            Assert.Contains("silk_knives", order);
+            foreach (var id in order.Where(id => id != "silk_knives")) sim.Economy.Grant(0, Tech(sim, id));
             var ai = new AiPlayer(0, 1, level);
             Assert.DoesNotContain("silk_knives", Researched(Play(sim, ai, 20 * Tps)));
 
