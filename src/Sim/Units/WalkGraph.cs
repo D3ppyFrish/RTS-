@@ -72,6 +72,10 @@ public sealed class WalkGraph
     // Shared with PathService's inner loop, which reads them directly.
     internal readonly short[] _level;     // node -> feet level, or -1
     internal readonly uint[] _edges;      // node -> 8 x 3 bits: bit 2 = can step that way, bits 0-1 = target slot
+    // The reverse of _edges, 8 x 4 bits a node: bit 4 * d + s is set if slot s of the column one step
+    // against direction d steps onto the node in direction d. The path search walks edges backwards from
+    // the goal, and this lets it visit only the nodes that really step onto the one it settles.
+    internal readonly uint[] _into;
     internal readonly byte[] _ground;     // node -> Plain, Wading, OnRoad, Rough, InGate or Hazard: what a step onto it costs
     private readonly byte[] _base;        // node -> the same but for hazards, which depend on the columns around
     internal readonly bool[] _gated;      // column -> a unit standing there has its feet in a gate
@@ -91,6 +95,7 @@ public sealed class WalkGraph
         int columns = SizeX * SizeZ;
         _level = new short[columns * MaxLevels];
         _edges = new uint[columns * MaxLevels];
+        _into = new uint[columns * MaxLevels];
         _ground = new byte[columns * MaxLevels];
         _base = new byte[columns * MaxLevels];
         _gated = new bool[columns];
@@ -99,6 +104,12 @@ public sealed class WalkGraph
         _regionStamp = new int[RegionsX * RegionsZ];
         for (int c = 0; c < columns; c++) ComputeLevels(c);
         for (int c = 0; c < columns; c++) ComputeEdges(c);
+        for (int n = 0; n < _edges.Length; n++)
+            for (int d = 0; d < 8; d++)
+            {
+                int m = Step(n, d);
+                if (m >= 0) _into[m] |= 1u << (4 * d + (n & (MaxLevels - 1)));
+            }
         world.BlockChanged += OnBlockChanged;
     }
 
@@ -158,6 +169,12 @@ public sealed class WalkGraph
         uint e = (_edges[from] >> (3 * d)) & 7;
         return (e & 4) != 0 && (int)(e & 3) == (to & (MaxLevels - 1));
     }
+
+    /// <summary>
+    /// The nodes that step onto <paramref name="node"/>: bit 4 * d + s is set if slot s of the column one
+    /// step against direction d steps onto it in direction d (the reverse of <see cref="Step"/>).
+    /// </summary>
+    public uint Into(int node) => _into[node];
 
     /// <summary>Path cost of stepping in direction d onto <paramref name="to"/>: wading counts double, roads half, hazards eightfold.</summary>
     public int Cost(int d, int to) => StepCost[_ground[to]][d];
@@ -220,6 +237,22 @@ public sealed class WalkGraph
                 }
             }
         }
+        // The reverse edges of a column come from the edges of the columns around it.
+        _stamp++;
+        foreach (int c in _dirtyColumns)
+        {
+            int x = c % SizeX, z = c / SizeX;
+            for (int oz = -2; oz <= 2; oz++)
+            for (int ox = -2; ox <= 2; ox++)
+            {
+                int nx = x + ox, nz = z + oz;
+                if ((uint)nx >= (uint)SizeX || (uint)nz >= (uint)SizeZ) continue;
+                int nc = nz * SizeX + nx;
+                if (_edgeStamp[nc] == _stamp) continue;
+                _edgeStamp[nc] = _stamp;
+                ComputeInto(nx, nz);
+            }
+        }
         _dirtyColumns.Clear();
         ChangedRegions.Sort();
         Version++;
@@ -266,6 +299,24 @@ public sealed class WalkGraph
             _ground[first + s] = Plain;
             _base[first + s] = Plain;
             _edges[first + s] = 0;
+        }
+    }
+
+    /// <summary>Rebuilds <see cref="_into"/> for the nodes of column (x, z) from its neighbours' edges.</summary>
+    private void ComputeInto(int x, int z)
+    {
+        int first = (z * SizeX + x) << LevelBits;
+        for (int t = 0; t < MaxLevels; t++) _into[first + t] = 0;
+        for (int d = 0; d < 8; d++)
+        {
+            int px = x - Dirs[d].X, pz = z - Dirs[d].Z;
+            if ((uint)px >= (uint)SizeX || (uint)pz >= (uint)SizeZ) continue;
+            int pfirst = (pz * SizeX + px) << LevelBits;
+            for (int s = 0; s < MaxLevels; s++)
+            {
+                uint e = (_edges[pfirst + s] >> (3 * d)) & 7;
+                if ((e & 4) != 0) _into[first + (int)(e & 3)] |= 1u << (4 * d + s);
+            }
         }
     }
 

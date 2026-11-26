@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Rts.Sim.Units;
 
@@ -193,8 +194,14 @@ public sealed class PathService
     private readonly SortedDictionary<int, FlowField> _byId = new();
     private readonly SortedDictionary<long, FlowField> _byGoal = new();
     private readonly Stack<ushort[]> _pool = new();
-    private readonly List<int>[] _buckets = new List<int>[BucketCount];
+    // The queue: one stack of packed entries per bucket (last in, first out), kept in plain arrays
+    // because pushing and popping them is most of the search's work.
+    private readonly int[][] _buckets = new int[BucketCount][];
+    private readonly int[] _bucketCount = new int[BucketCount];
     private readonly int[] _wantStamp;
+    // A region's stamp is the computation's want id if a unit to head for stands in it: most nodes the search
+    // settles are in regions with none, and checking this small table spares a look at the big one.
+    private readonly int[] _wantRegion;
     // Stuck checks: a node's stamp is the id of the check that visited it, or minus the computation's
     // want id once a check from it found it is not stuck.
     private readonly int[] _pocketStamp;
@@ -217,8 +224,9 @@ public sealed class PathService
         if (graph.SizeX > CoordMask + 1 || graph.SizeZ > CoordMask + 1)
             throw new ArgumentException("Flow fields support worlds up to 1024 blocks across", nameof(graph));
         _g = graph;
-        for (int i = 0; i < BucketCount; i++) _buckets[i] = new List<int>();
+        for (int i = 0; i < BucketCount; i++) _buckets[i] = new int[64];
         _wantStamp = new int[graph.NodeCount];
+        _wantRegion = new int[graph.RegionsX * graph.RegionsZ];
         _pocketStamp = new int[graph.NodeCount];
     }
 
@@ -337,7 +345,7 @@ public sealed class PathService
         // With roads on the map a step can cost half as much, so the heuristic must assume roads everywhere.
         // A computation keeps the choice it starts with; roads laid meanwhile count from the next one.
         _heuristicShift = _g.RoadNodes > 0 ? 1 : 0;
-        foreach (var b in _buckets) b.Clear();
+        Array.Clear(_bucketCount);
         _cur = 0;
         _pending = 0;
         _wantId++;
@@ -362,6 +370,7 @@ public sealed class PathService
             int n = _g.Node(ux, uz, units.Y[i]);
             if (n < 0 || _wantStamp[n] == _wantId) continue;
             _wantStamp[n] = _wantId;
+            _wantRegion[(uz >> 4) * _g.RegionsX + (ux >> 4)] = _wantId;
             _wantedLeft++;
             _boxMinX = Math.Min(_boxMinX, ux);
             _boxMaxX = Math.Max(_boxMaxX, ux);
@@ -382,7 +391,7 @@ public sealed class PathService
 
         f.Set(f.Next, gx, gz, gs, 0, _pool);
         _cur = ToBox(gx, gz);
-        _buckets[_cur & (BucketCount - 1)].Add(gx | gz << CoordBits | gs << (2 * CoordBits));
+        Push(_cur & (BucketCount - 1), gx | gz << CoordBits | gs << (2 * CoordBits));
         _pending = 1;
     }
 
@@ -412,11 +421,13 @@ public sealed class PathService
         var f = _computing!;
         var next = f.Next!;
         int sizeX = _g.SizeX, sizeZ = _g.SizeZ, regionsX = _g.RegionsX;
-        var level = _g._level;
-        var edges = _g._edges;
+        var intoEdges = _g._into;
         var ground = _g._ground;
         var gated = _g._gated;
-        var dirs = WalkGraph.Dirs;
+        var wantStamp = _wantStamp;
+        var wantRegion = _wantRegion;
+        var buckets = _buckets;
+        var counts = _bucketCount;
         int used = 0;
         while (true)
         {
@@ -431,35 +442,43 @@ public sealed class PathService
                 used += CheckNextWanted();
                 continue;
             }
-            var bucket = _buckets[_cur & (BucketCount - 1)];
-            if (bucket.Count == 0)
+            int bi = _cur & (BucketCount - 1);
+            int count = counts[bi];
+            if (count == 0)
             {
                 _cur++;
                 continue;
             }
-            int packed = bucket[^1];
-            bucket.RemoveAt(bucket.Count - 1);
+            int packed = buckets[bi][--count];
+            counts[bi] = count;
             _pending--;
             int x = packed & CoordMask, z = (packed >> CoordBits) & CoordMask, slot = packed >> (2 * CoordBits);
-            int dist = f.Get(next, x, z, slot);
+            int region = (z >> 4) * regionsX + (x >> 4);
+            var own = next[region];
+            int local = (((z & 15) << 4 | (x & 15)) << WalkGraph.LevelBits) | slot;
+            int dist = own == null ? FlowField.Unknown : own[local];
             if (dist + ToBox(x, z) != _cur) continue; // superseded by a shorter path
             used++;
             Expansions++;
             int m = ((z * sizeX + x) << WalkGraph.LevelBits) | slot;
-            if (_wantStamp[m] == _wantId)
+            if (wantRegion[region] == _wantId && wantStamp[m] == _wantId)
             {
-                _wantStamp[m] = 0;
+                wantStamp[m] = 0;
                 if (--_wantedLeft == 0) _stopAt = _cur + Margin;
             }
             // The cost of stepping onto m. Roads count only if the heuristic allows for them (see Start).
             int kind = ground[m];
             var stepCost = WalkGraph.StepCost[kind == WalkGraph.OnRoad && _heuristicShift == 0 ? WalkGraph.Plain : kind];
 
-            // Relax every node that steps onto m: those in the column behind each direction.
-            for (int d = 0; d < 8; d++)
+            // Relax every node that steps onto m, in direction order then slot order: the reverse edges
+            // list them, so columns with no step onto m are not looked at.
+            uint into = intoEdges[m];
+            while (into != 0)
             {
-                int px = x - dirs[d].X, pz = z - dirs[d].Z;
-                if ((uint)px >= (uint)sizeX || (uint)pz >= (uint)sizeZ) continue;
+                int d = BitOperations.TrailingZeroCount(into) >> 2;
+                uint ofDir = into & (0xFu << (4 * d));
+                into &= ~ofDir;
+                int px = x - DirX[d], pz = z - DirZ[d];
                 // Another player's gate is a wall: nobody gets there, and no corner is cut past one.
                 if (gated[pz * sizeX + px] && !GateLets(f, px, pz)) continue;
                 if (d >= 4 && ((gated[pz * sizeX + x] && !GateLets(f, x, pz)) || (gated[z * sizeX + px] && !GateLets(f, px, z))))
@@ -467,31 +486,34 @@ public sealed class PathService
                 int nd = dist + stepCost[d];
                 if (nd >= FlowField.Unreachable) continue; // farther than a distance can say
                 int key = -1;
-                int first = (pz * sizeX + px) << WalkGraph.LevelBits;
-                int shift = 3 * d;
                 int r = (pz >> 4) * regionsX + (px >> 4);
                 var block = next[r];
                 int localBase = (((pz & 15) << 4) | (px & 15)) << WalkGraph.LevelBits;
-                for (int s = 0; s < WalkGraph.MaxLevels; s++)
+                for (uint slots = ofDir >> (4 * d); slots != 0; slots &= slots - 1)
                 {
-                    int n = first + s;
-                    if (level[n] < 0) break;
-                    uint e = (edges[n] >> shift) & 7;
-                    if ((e & 4) == 0 || (int)(e & 3) != slot) continue;
-                    if (block != null && nd >= block[localBase | s]) continue;
+                    int s = BitOperations.TrailingZeroCount(slots);
                     if (block == null)
                     {
                         f.Set(next, px, pz, s, nd, _pool);
-                        block = next[r];
+                        block = next[r]!;
                     }
+                    else if (nd >= block[localBase | s]) continue;
                     else block[localBase | s] = (ushort)nd;
-                    if (key < 0) key = nd + ToBox(px, pz);
-                    _buckets[key & (BucketCount - 1)].Add(px | pz << CoordBits | s << (2 * CoordBits));
+                    if (key < 0) key = (nd + ToBox(px, pz)) & (BucketCount - 1);
+                    int c = counts[key];
+                    var items = buckets[key];
+                    if (c == items.Length) buckets[key] = items = Grow(items);
+                    items[c] = px | pz << CoordBits | s << (2 * CoordBits);
+                    counts[key] = c + 1;
                     _pending++;
                 }
             }
         }
     }
+
+    // WalkGraph.Dirs split into plain arrays for the search loop.
+    private static readonly int[] DirX = Array.ConvertAll(WalkGraph.Dirs, d => d.X);
+    private static readonly int[] DirZ = Array.ConvertAll(WalkGraph.Dirs, d => d.Z);
 
     /// <summary>
     /// The search has gone well past the next unit on the list without reaching it: is the unit stuck? Walks
@@ -554,14 +576,16 @@ public sealed class PathService
     {
         var f = _computing!;
         // Nodes reached but not settled before an early stop only have upper bounds: forget them.
-        foreach (var b in _buckets)
+        for (int b = 0; b < BucketCount; b++)
         {
-            foreach (int packed in b)
+            var items = _buckets[b];
+            for (int k = 0, n = _bucketCount[b]; k < n; k++)
             {
+                int packed = items[k];
                 int x = packed & CoordMask, z = (packed >> CoordBits) & CoordMask, slot = packed >> (2 * CoordBits);
                 if (f.Get(f.Next!, x, z, slot) + ToBox(x, z) > _stopAt) f.Set(f.Next!, x, z, slot, FlowField.Unknown, _pool);
             }
-            b.Clear();
+            _bucketCount[b] = 0;
         }
         FlowField.Release(f.Current, _pool);
         f.Current = f.Next;
@@ -576,6 +600,22 @@ public sealed class PathService
         FlowField.Release(f.Next, _pool);
         f.Next = null;
         _computing = null;
-        foreach (var b in _buckets) b.Clear();
+        Array.Clear(_bucketCount);
+    }
+
+    private void Push(int bucket, int packed)
+    {
+        int n = _bucketCount[bucket];
+        var items = _buckets[bucket];
+        if (n == items.Length) _buckets[bucket] = items = Grow(items);
+        items[n] = packed;
+        _bucketCount[bucket] = n + 1;
+    }
+
+    private static int[] Grow(int[] items)
+    {
+        var bigger = new int[items.Length * 2];
+        Array.Copy(items, bigger, items.Length);
+        return bigger;
     }
 }
