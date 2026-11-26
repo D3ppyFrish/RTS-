@@ -2356,6 +2356,7 @@ public partial class Hud : CanvasLayer
                 : u.RunStage[i] != 0 ? "    stampeding"
                 : u.PenFor[i] != 0 ? "    going into the beast pen"
                 : u.Tired[i] > 0 ? $"    tired after the stampede ({(u.Tired[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)"
+                : u.Webbed[i] > 0 ? $"    caught in a web ({(u.Webbed[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)"
                 : def.CanAttack ? $"    {StanceName(u.Stance[i])}" : "";
             string heals = _sim.Economy.YardFor(i) is { } yard ? $" (being mended at the {yard.Def.Name.ToLowerInvariant()})"
                 : !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"

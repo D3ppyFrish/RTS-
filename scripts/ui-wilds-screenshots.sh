@@ -2,7 +2,7 @@
 # Screenshot test for the bigger, wilder default map (issue #45; the other UI scripts play on it too since
 # issue #67). Looks at a patch of poison bog in the
 # swamp, a stone giant in its mountain pass through a ridge in the hills (clicked, so its panel shows), a herd of wild boar, a pair of bog horrors
-# lying in the swamp's pools, a pair of giant crabs on a beach, and (issue #65) the cavern under the hills cut open by the
+# lying in the swamp's pools, a pair of giant crabs on a beach, a nest of giant spiders in a forest, and (issue #65) the cavern under the hills cut open by the
 # height slice, with a cave crawler nest and the cave wyrm at its far end, and (issue #66) a sinkhole's pale
 # crust in the grassland, the deep caves under the land, (issue #78) a patch of quicksand on the west beach and a rockfall (loose rock over scree) in the hills, and (issue #67) one of the old stone ruins in the open country. Saves PNGs to
 # OUT_DIR and fails if the map is not the default size or its lairs are missing.
@@ -17,7 +17,7 @@ dotnet build game/Game.csproj -v q -nologo >/dev/null
 # Seed 1234 on the 768 map: the starts are at 131,384 and 655,384. Poison bog lies around 472..496,192 in
 # the swamp north of the river's middle; a stone giant's den is at 187,164 in the pass through the northern
 # hills' ridge (its floor at 89; the giant stands two columns north of it), a boar herd's den at 453,386, a bog horrors' den at 436,270 (the pair lying in the pools at 436,269 and 434,270, sunk to their eyes) and a giant crabs'
-# den at 103,67. Under the hills the cavern's crawler nests are at 351,625, 352,645 and 333,667 and the
+# den at 103,67, and a nest of giant spiders at 472,466 in a forest. Under the hills the cavern's crawler nests are at 351,625, 352,645 and 333,667 and the
 # cave wyrm's den at 316,672, at levels 69 to 73 (the ground above is at about 90; the map is 128 high, the land
 # on 64 layers of deep rock). A deep chamber of the upper level, with a pool and giant mushrooms, is at 174,314 (its
 # floor at 47): the last shot cuts the slice down to 52 over it. A sinkhole's crust is
@@ -44,6 +44,9 @@ shot $OUT/ui-wilds-horrors.png
 camera 103,66 30 20 7
 wait 15
 shot $OUT/ui-wilds-crabs.png
+camera 472,465 30 30 9
+wait 15
+shot $OUT/ui-wilds-spiders.png
 camera 365,350 30 45 16
 wait 15
 shot $OUT/ui-wilds-sinkhole.png
@@ -80,7 +83,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG")
 [ "${#UI[@]}" -eq 2 ] || fail "expected 2 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" world)" = 768x128x768 ] || fail "the default map is not 768 by 768: ${UI[0]}"
 lairs="$(field "${UI[0]}" lair_kinds)"
-for kind in boar stone_giant wolf bog_horror giant_crab cave_crawler cave_wyrm; do [[ ",$lairs," == *",$kind:"* ]] || fail "no $kind lair on the map: $lairs"; done
+for kind in boar stone_giant wolf bog_horror giant_crab giant_spider cave_crawler cave_wyrm; do [[ ",$lairs," == *",$kind:"* ]] || fail "no $kind lair on the map: $lairs"; done
 [ "$(field "${UI[1]}" unit)" = stone_giant ] || fail "the stone giant was not selected: ${UI[1]}"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 11 ] || fail "missing screenshots"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 12 ] || fail "missing screenshots"
 echo "UI wilds screenshot test OK: $OUT"

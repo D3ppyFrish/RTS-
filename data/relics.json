@@ -6,6 +6,7 @@
 //   hp: hit points added to the bearer's most (it gets them at once too)
 //   damage: added to each of the bearer's hits
 //   armor: added on every part of the bearer
+//   web: { pace, time }: whom the bearer's blows land on walks at pace percent for time seconds
 //   icon: the pixel icon (game/scripts/UiIcons.cs), by default the id
 [
   { "id": "giant_heart", "name": "Giant's heart", "icon": "giant_heart",
@@ -23,6 +24,9 @@
   { "id": "shade_pelt", "name": "Shade pelt", "icon": "shade_pelt",
     "description": "A shade stalker's blue-black pelt, worn as a hooded cloak. Its bearer strikes from the dark and shrugs off the first of a blow.",
     "damage": 3, "armor": 1 },
+  { "id": "spider_silk", "name": "Spider silk", "icon": "spider_silk",
+    "description": "A skein of a giant spider's silk wound round its bearer's weapon. Whatever it strikes is caught in sticky threads and slowed for a moment.",
+    "damage": 1, "web": { "pace": 60, "time": 2 } },
   { "id": "sunstone_circlet", "name": "Sunstone circlet", "icon": "sunstone_circlet",
     "description": "A warden's circlet of the old builders, found in a ruin, its stone still warm. Its bearer stands and strikes like one who has seen worse.",
     "hp": 30, "damage": 2, "armor": 1 }

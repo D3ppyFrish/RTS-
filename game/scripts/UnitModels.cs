@@ -84,6 +84,10 @@ public static class UnitModels
     private static readonly Color DuskBarkDark = new(0.18f, 0.17f, 0.22f);
     private static readonly Color DuskVein = new(0.3f, 0.9f, 0.95f);
     private static readonly Color DuskLeaf = new(0.55f, 0.33f, 0.7f);
+    private static readonly Color SpiderHair = new(0.24f, 0.18f, 0.13f);
+    private static readonly Color SpiderDark = new(0.1f, 0.08f, 0.07f);
+    private static readonly Color SpiderMark = new(0.86f, 0.78f, 0.55f);
+    private static readonly Color SpiderEye = new(0.95f, 0.18f, 0.1f);
     private static readonly Color Chitin = new(0.78f, 0.76f, 0.7f);
     private static readonly Color ChitinDark = new(0.5f, 0.48f, 0.44f);
     private static readonly Color HiveChitin = new(0.27f, 0.22f, 0.2f);
@@ -640,6 +644,27 @@ public static class UnitModels
             .Box(-3, 9, 5, -3, 12, 5, CrabDark).Box(2, 9, 5, 2, 12, 5, CrabDark)               // eye stalks
             .Box(-3, 13, 5, -3, 13, 5, Dark).Box(2, 13, 5, 2, 13, 5, Dark)
             .Box(-6, 8, -6, 5, 8, -6, TeamDark),                                                // a band, once it is someone's
+        // A giant spider: a hairy brown body as big as a pony, a bulging abdomen with a pale cross on it, eight long
+        // arched legs, pale fangs and a cluster of red eyes.
+        "giant_spider" => new Builder()
+            .Box(-5, 4, -12, 4, 11, -3, SpiderHair)                                             // abdomen
+            .Box(-1, 12, -10, 0, 12, -5, SpiderMark).Box(-3, 12, -8, 2, 12, -7, SpiderMark)     // the pale cross on its back
+            .Box(-1, 5, -3, 0, 6, -2, SpiderDark)                                               // waist
+            .Box(-4, 4, -2, 3, 8, 4, SpiderHair)                                                // forebody
+            .Box(-3, 5, 5, 2, 7, 5, SpiderDark)                                                 // face
+            .Box(-2, 7, 6, -2, 7, 6, SpiderEye).Box(1, 7, 6, 1, 7, 6, SpiderEye)                // eyes
+            .Box(-1, 8, 5, -1, 8, 5, SpiderEye).Box(0, 8, 5, 0, 8, 5, SpiderEye)
+            .Box(-2, 2, 6, -1, 4, 7, SpiderMark).Box(0, 2, 6, 1, 4, 7, SpiderMark)              // fangs
+            // eight legs, arched up and out from the forebody
+            .Box(-10, 8, 3, -5, 9, 3, SpiderDark).Box(-12, 9, 3, -10, 10, 7, SpiderDark).Box(-13, 0, 7, -12, 9, 7, SpiderDark)
+            .Box(4, 8, 3, 9, 9, 3, SpiderDark).Box(9, 9, 3, 11, 10, 7, SpiderDark).Box(11, 0, 7, 12, 9, 7, SpiderDark)
+            .Box(-10, 8, 1, -5, 9, 1, SpiderDark).Box(-12, 9, 1, -10, 10, 3, SpiderDark).Box(-13, 0, 3, -12, 9, 3, SpiderDark)
+            .Box(4, 8, 1, 9, 9, 1, SpiderDark).Box(9, 9, 1, 11, 10, 3, SpiderDark).Box(11, 0, 3, 12, 9, 3, SpiderDark)
+            .Box(-10, 8, -1, -5, 9, -1, SpiderDark).Box(-12, 9, -1, -10, 10, -1, SpiderDark).Box(-13, 0, -1, -12, 9, -1, SpiderDark)
+            .Box(4, 8, -1, 9, 9, -1, SpiderDark).Box(9, 9, -1, 11, 10, -1, SpiderDark).Box(11, 0, -1, 12, 9, -1, SpiderDark)
+            .Box(-10, 8, -2, -5, 9, -2, SpiderDark).Box(-12, 9, -5, -10, 10, -2, SpiderDark).Box(-13, 0, -5, -12, 9, -5, SpiderDark)
+            .Box(4, 8, -2, 9, 9, -2, SpiderDark).Box(9, 9, -5, 11, 10, -2, SpiderDark).Box(11, 0, -5, 12, 9, -5, SpiderDark)
+            .Box(-4, 8, 0, 3, 8, 1, TeamDark),                                                  // a band, once it is someone's
         // A cave crawler: a pale, segmented thing the size of a dog, low to the ground on six legs, with
         // feelers, pincer jaws and small glowing eyes.
         "cave_crawler" => new Builder()

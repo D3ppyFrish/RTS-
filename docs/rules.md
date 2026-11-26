@@ -1049,6 +1049,17 @@ areas, and Orcs who beat a wolf keep it.
   guard or its sight, and **its first blow out of the water does twice the damage** (`"ambush": 100`, percent more;
   `MonsterSystem.Spring` from `CombatSystem.Wound`); after that it strikes as usual, and once back in its pool it
   lies in wait again. A lair with no water near its den waits on the bank as before. All numbers are first guesses.
+- **Giant spiders nest in the forests** (`SpiderTests`; `giant_spider` in `data/units.json`, `web` on a unit or a relic,
+  `CombatSystem.Webs.cs`): besides the boar herds, two nests of giant spiders for each 512 by 512 blocks of map (four on
+  the default map) lie in the forests, each a nest of three that stays home: 70 hit points, quick (5.5), light piercing
+  bites (7), sight 9, guarding 10 columns round the nest with a leash of 16. **Each bite that lands webs the unit
+  bitten** (`"web": { "pace": 40, "time": 3 }`): for 3 seconds it walks at 40% of its pace, a fresh bite starting the time
+  again, so whoever turns and runs from a nest is run down, and riders lose their speed while they fight one. A blow a
+  shield stops or a blast's splash webs nobody; ships and machines are never webbed, nor spiders themselves. Clearing a
+  nest pays 80 food and 40 wood to a side that does not tame monsters, and either faction takes up the **spider silk**
+  from its den (a relic: +1 damage, and its bearer's blows web whom they strike, at 60% for 2 seconds). Orcs beat
+  spiders as they beat any monster, and keep them. In the game a webbed unit's panel says "caught in a web (Ns)". All
+  numbers are first guesses for playtesting.
 - **Guarding**: wolves attack the nearest unit within 12 blocks of their den (also workers; not more
   than 4 levels above or below it). One chased more than 20 blocks out (the leash) breaks off and goes
   home, and with nobody near they go back to the den. Monsters never break and run.
@@ -1083,6 +1094,7 @@ The den is gone from the map either way.
 | Stone giant | a fighting unit takes up the giant's heart | none: they keep the beaten giant itself |
 | Bog horror | a fighting unit takes up the bog lantern | the same: the bog lantern |
 | Giant crab | a fighting unit takes up a crab shell shield | crab pots |
+| Giant spider | a fighting unit takes up the spider silk | the same: the spider silk |
 | Cave crawler | none | none |
 | Cave wyrm | a fighting unit takes up the wyrm crystal | the same: the wyrm crystal (and they keep the beaten wyrm) |
 | Dusk Warden | the Dusk Staff, by healing the tree (see "Dusk tree") | the beaten warden itself |
@@ -1107,7 +1119,7 @@ The den is gone from the map either way.
   no relic yet takes it up at once. The giant's heart gives its bearer 60 more hit points (it gets them
   at once too) and 2 more armour on every part. A unit bears one relic at most, keeps it when it evolves,
   and drops it where it falls when it dies (see "Dropped relics and the Dusk Staff"). The bog lantern adds 4 damage to each
-  hit, the crab shell shield 3 armour on every part, and the wyrm crystal 40 hit points, 6 damage a hit and
+  hit, the crab shell shield 3 armour on every part, the spider silk 1 damage and webs whom its bearer strikes, and the wyrm crystal 40 hit points, 6 damage a hit and
   1 armour on every part.
 - **Orcs: crab pots.** At a cleared crab den the Orcs' workers set crab pots (20 wood, 10 seconds): they
   house 2 and bring in 6 food every 15 seconds.
