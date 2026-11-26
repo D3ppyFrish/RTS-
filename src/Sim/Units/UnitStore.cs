@@ -416,6 +416,11 @@ public sealed class UnitStore
     /// <summary>Ticks left in which a beast is tired after a stampede and walks slower.</summary>
     public int[] Tired = Array.Empty<int>();
     /// <summary>
+    /// Webs (a giant spider's bite, see <c>CombatSystem.Webs.cs</c>): ticks left caught in silk, and the percent of its
+    /// pace it walks at meanwhile. 0 ticks: not webbed.
+    /// </summary>
+    public int[] Webbed = Array.Empty<int>(), WebPace = Array.Empty<int>();
+    /// <summary>
     /// Molting (see <see cref="CombatSystem"/>, <see cref="MoltCommand"/>): ticks left shedding its shell, standing still
     /// and healing back to full, then ticks left soft after it, slower and with no armour. Both 0: not molting.
     /// </summary>
@@ -502,7 +507,7 @@ public sealed class UnitStore
         WallX[i] = WallZ[i] = Fix64.Zero;
         Stunned[i] = 0;
         DrumLeft[i] = DrumWait[i] = ChargeMark[i] = ChargeLeft[i] = ChargeBlow[i] = 0;
-        Penned[i] = PenFor[i] = RunStage[i] = RunDef[i] = Tired[i] = 0;
+        Penned[i] = PenFor[i] = RunStage[i] = RunDef[i] = Tired[i] = Webbed[i] = WebPace[i] = 0;
         Molting[i] = Soft[i] = 0;
         RunAX[i] = RunAZ[i] = RunBX[i] = RunBZ[i] = RunLeft[i] = Fix64.Zero;
         SlideX[i] = SlideZ[i] = Fix64.Zero;
@@ -602,7 +607,7 @@ public sealed class UnitStore
             Mix(Burrowed[i] ? 1 : 0); Mix(BurstLeft[i]);
             Mix(ShieldWall[i] ? 1 : 0); Mix(WallX[i].Raw); Mix(WallZ[i].Raw); Mix(Stunned[i]);
             Mix(DrumLeft[i]); Mix(DrumWait[i]); Mix(ChargeMark[i]); Mix(ChargeLeft[i]); Mix(ChargeBlow[i]);
-            Mix(Penned[i]); Mix(PenFor[i]); Mix(RunStage[i]); Mix(RunDef[i]); Mix(Tired[i]);
+            Mix(Penned[i]); Mix(PenFor[i]); Mix(RunStage[i]); Mix(RunDef[i]); Mix(Tired[i]); Mix(Webbed[i]); Mix(WebPace[i]);
             Mix(Molting[i]); Mix(Soft[i]);
             Mix(RunAX[i].Raw); Mix(RunAZ[i].Raw); Mix(RunBX[i].Raw); Mix(RunBZ[i].Raw); Mix(RunLeft[i].Raw);
         }
@@ -639,7 +644,7 @@ public sealed class UnitStore
         ShieldWall[to] = ShieldWall[from]; WallX[to] = WallX[from]; WallZ[to] = WallZ[from]; Stunned[to] = Stunned[from];
         DrumLeft[to] = DrumLeft[from]; DrumWait[to] = DrumWait[from];
         ChargeMark[to] = ChargeMark[from]; ChargeLeft[to] = ChargeLeft[from]; ChargeBlow[to] = ChargeBlow[from];
-        Penned[to] = Penned[from]; PenFor[to] = PenFor[from]; RunStage[to] = RunStage[from]; RunDef[to] = RunDef[from]; Tired[to] = Tired[from];
+        Penned[to] = Penned[from]; PenFor[to] = PenFor[from]; RunStage[to] = RunStage[from]; RunDef[to] = RunDef[from]; Tired[to] = Tired[from]; Webbed[to] = Webbed[from]; WebPace[to] = WebPace[from];
         Molting[to] = Molting[from]; Soft[to] = Soft[from];
         RunAX[to] = RunAX[from]; RunAZ[to] = RunAZ[from]; RunBX[to] = RunBX[from]; RunBZ[to] = RunBZ[from]; RunLeft[to] = RunLeft[from];
         Array.Copy(BleedLeft, from * Body.Parts, BleedLeft, to * Body.Parts, Body.Parts);
@@ -683,7 +688,7 @@ public sealed class UnitStore
         Array.Resize(ref DrumLeft, capacity); Array.Resize(ref DrumWait, capacity);
         Array.Resize(ref ChargeMark, capacity); Array.Resize(ref ChargeLeft, capacity); Array.Resize(ref ChargeBlow, capacity);
         Array.Resize(ref Penned, capacity); Array.Resize(ref PenFor, capacity); Array.Resize(ref RunStage, capacity);
-        Array.Resize(ref RunDef, capacity); Array.Resize(ref Tired, capacity);
+        Array.Resize(ref RunDef, capacity); Array.Resize(ref Tired, capacity); Array.Resize(ref Webbed, capacity); Array.Resize(ref WebPace, capacity);
         Array.Resize(ref Molting, capacity); Array.Resize(ref Soft, capacity);
         Array.Resize(ref RunAX, capacity); Array.Resize(ref RunAZ, capacity); Array.Resize(ref RunBX, capacity);
         Array.Resize(ref RunBZ, capacity); Array.Resize(ref RunLeft, capacity);

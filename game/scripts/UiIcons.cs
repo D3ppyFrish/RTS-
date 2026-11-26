@@ -486,6 +486,12 @@ public static class UiIcons
             "....kkkk....", "...kcCCck...", "..kcCttCck..", "..kcCCCCck..", ".kcCcCCcCck.", ".kcIcCCcIck.",
             "kcCIcCCcICck", "kcCcCCCCcCck", "kcCcCIICcCck", "kcCcCCCCcCck", ".kkcICCIckk.", "...kkkkkk...",
         },
+        // Spider silk: a skein of white silk wound on a stick, a thread trailing from it.
+        ["spider_silk"] = new[]
+        {
+            "............", "...kkkkkk...", "..kwlwlwlwk.", ".kwlwlwlwlwk", ".kwlwlwlwlwk", "kBbbbbbbbbBk",
+            ".kwlwlwlwlwk", ".kwlwlwlwlwk", "..kwlwlwlwk.", "...kkkkkk...", "......kw....", ".......kw...",
+        },
         // The wyrm crystal: a violet crystal, glowing at its heart.
         ["wyrm_crystal"] = new[]
         {

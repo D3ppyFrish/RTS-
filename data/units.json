@@ -55,6 +55,8 @@
 // through the fog of war.
 // pen (optional, a monster): a tamed beast its owner can keep in a beast pen and loose from it as a stampede (see the
 // pen in buildings.json).
+// web (optional; the giant spider): { pace, time }: each of its blows that lands (not on a shield, not a splash) wraps
+// the unit struck in silk, so it walks at pace percent of its pace for time seconds. Ships and machines are not webbed.
 // Monsters: a unit with lair (role monster) lives in the wild, in packs that guard their dens. Each match
 // has a lair for every start, on the way to the map centre. pack is the monsters in a lair, guard how
 // near its den (blocks) the pack goes after other players' units, leash how far from the den a monster
@@ -295,6 +297,14 @@
     "lair": { "pack": 3, "guard": 12, "leash": 18, "reward": { "crystal": 40, "gold": 20 }, "biome": "wilds", "count": 2,
       "grow": 150, "growTo": 9,
       "prizes": { "orcs": { "relic": "shade_pelt" }, "settlers": { "relic": "shade_pelt" } } } },
+
+  // The forests' giant spiders: nests of three among the trees, whose bites web the bitten so they cannot run.
+  { "id": "giant_spider", "name": "Giant spider", "role": "monster",
+    "description": "A hairy forest spider as big as a pony, nesting in threes among the trees. Its bite is light but wraps the bitten in silk: for 3 seconds they walk at less than half their pace, so whoever runs from a nest is run down. Whoever clears a nest takes up a skein of its silk.",
+    "speed": 5.5, "hp": 70, "model": "giant_spider", "damage": 7, "attackTime": 1, "range": 1.25, "sight": 9,
+    "attack": "pierce", "body": "beast", "armor": { "body": 1 }, "web": { "pace": 40, "time": 3 },
+    "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 80, "wood": 40 }, "biome": "forest", "count": 2,
+      "prizes": { "orcs": { "relic": "spider_silk" }, "settlers": { "relic": "spider_silk" } } } },
 
   // The dark power's corrupted beasts: broods of them claw up out of the Heartscar as it wakes (see the Awakening).
   { "id": "blight_hound", "name": "Blight hound", "role": "monster",

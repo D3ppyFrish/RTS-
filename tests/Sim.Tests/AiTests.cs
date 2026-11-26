@@ -321,6 +321,28 @@ public class AiTests
         Assert.Equal(1, W("spearman"));
     }
 
+    /// <summary>
+    /// Hard keeps a mixed army: once it has <see cref="AiPlayer.MixedArmyFrom"/> soldiers, a role that is over half of
+    /// them weighs half as much at the barracks, so it does not pile up one counter (a wave all archers loses to
+    /// spearmen and archers together).
+    /// </summary>
+    [Fact]
+    public void HardKeepsAMixedArmy()
+    {
+        var sim = WithStarts(128, (30, 64), (110, 64));
+        foreach (var t in new[] { "archery", "horse_breeding" }) sim.Economy.Grant(0, sim.Content.Tech(t));
+        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        var archer = sim.Content.Unit("archer");
+        long before = ai.TrainWeight(sim, archer);
+        for (int k = 0; k < AiPlayer.MixedArmyFrom; k++) sim.SpawnUnit(0, "archer", 20 + k % 6, 40 + k / 6);
+        Assert.Equal(Math.Max(1, before / 2), ai.TrainWeight(sim, archer));
+        // Fewer than that: the share is not weighed.
+        var few = WithStarts(128, (30, 64), (110, 64));
+        foreach (var t in new[] { "archery", "horse_breeding" }) few.Economy.Grant(0, few.Content.Tech(t));
+        for (int k = 0; k < AiPlayer.MixedArmyFrom - 1; k++) few.SpawnUnit(0, "archer", 20 + k % 6, 40 + k / 6);
+        Assert.Equal(before, ai.TrainWeight(few, archer));
+    }
+
     [Fact]
     public void WoundedSoldiersOfAWaveGoHomeToHealAndComeBack()
     {

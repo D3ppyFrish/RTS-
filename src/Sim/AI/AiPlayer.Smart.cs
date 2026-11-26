@@ -1142,8 +1142,17 @@ public sealed partial class AiPlayer
         var line = CheapSoldier(sim);
         if (line == null) return w;
         long worth = Power(def, def.MaxHp) * Price(line) * 100 / Math.Max(1, Power(line, line.MaxHp) * Price(def));
-        return Math.Max(1, w * Math.Clamp(worth, LeastWorthPercent, MostWorthPercent) / 100);
+        w = w * Math.Clamp(worth, LeastWorthPercent, MostWorthPercent) / 100;
+        // Hard keeps a mixed army: a role that is already over half of its soldiers counts for half.
+        int soldiers = 0;
+        for (int r = 0; r < mine.Length; r++)
+            if ((UnitRole)r is not (UnitRole.Worker or UnitRole.Hauler or UnitRole.Trader or UnitRole.Boat or UnitRole.Monster)) soldiers += mine[r];
+        if (soldiers >= MixedArmyFrom && mine[(int)def.Role] * 2 > soldiers) w /= 2;
+        return Math.Max(1, w);
     }
+
+    /// <summary>Soldiers Hard has before it weighs the share of each role in its army (see <see cref="Weight(Simulation, UnitDef, int[], int[])"/>).</summary>
+    public const int MixedArmyFrom = 12;
 
     /// <summary>What a unit costs, all goods together (stone double: it is dug, not gathered).</summary>
     private static int Price(UnitDef def)

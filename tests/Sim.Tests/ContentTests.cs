@@ -518,6 +518,7 @@ public class ContentTests
         Assert.Contains("units.json: unit 'bog_horror', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains("units.json: unit 'giant_crab', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains("units.json: unit 'shade_stalker', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
+        Assert.Contains("units.json: unit 'giant_spider', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'crab_pots': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains(e.Errors, m => m.StartsWith("buildings.json: building 'beast_pen': \"faction\" is \"orcs\", which is not a faction"));
         Assert.Contains("units.json: unit 'cave_wyrm', lair, prizes, orcs: \"orcs\" is not a faction", e.Errors);
@@ -529,7 +530,7 @@ public class ContentTests
         Assert.Contains(e.Errors, m => m.StartsWith("techs.json: tech 'tools', effect 6: \"faction\" is \"orcs\", which is not a faction"));
         // And the war drummer.
         Assert.Contains(e.Errors, m => m.StartsWith("units.json: unit 'war_drummer': \"faction\" is \"orcs\", which is not a faction"));
-        Assert.Equal(22, e.Errors.Count);
+        Assert.Equal(23, e.Errors.Count);
     }
 
     [Fact]

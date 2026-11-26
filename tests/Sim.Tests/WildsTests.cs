@@ -144,7 +144,7 @@ public class WildsTests
         // Then those spread across the map; the cavern's come last, underground (see CavernTests).
         var wild = sim.Monsters.Lairs.Skip(fixedLairs).Where(l => l.Monster.Lair!.Cavern == CavernSpot.None).ToList();
         long area = (long)sim.World.SizeX * sim.World.SizeZ;
-        foreach (var id in new[] { "boar", "stone_giant", "wolf", "bog_horror", "giant_crab" })
+        foreach (var id in new[] { "boar", "stone_giant", "wolf", "bog_horror", "giant_crab", "giant_spider" })
         {
             var def = sim.Content.Unit(id).Lair!;
             int want = (int)(def.Count * area / (512 * 512));
@@ -214,7 +214,7 @@ public class WildsTests
         Assert.True(db.Unit("wolf").Lair!.Den);
         Assert.False(db.Unit("dusk_warden").Lair!.Den);
         Assert.Equal(new[] { "wolf" }, db.LairMonsters.Select(u => u.Id));
-        Assert.Equal(new[] { "wolf", "boar", "stone_giant", "bog_horror", "giant_crab", "shade_stalker" }, db.WildMonsters.Select(u => u.Id));
+        Assert.Equal(new[] { "wolf", "boar", "stone_giant", "bog_horror", "giant_crab", "shade_stalker", "giant_spider" }, db.WildMonsters.Select(u => u.Id));
 
         var hall = sim.Economy.PlaceFinished(Settlers, db.Building("town_hall"), 10, 40)!;
         var lair = sim.Monsters.Place(db.Unit("stone_giant"), 60, 48)!;

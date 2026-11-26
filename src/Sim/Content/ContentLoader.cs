@@ -435,6 +435,24 @@ public static class ContentLoader
             };
         }
 
+        /// <summary>A webbing blow, from <c>"web": { "pace": 40, "time": 3 }</c> on a unit or a relic.</summary>
+        private WebDef? Web(Obj owner)
+        {
+            if (!owner.E.TryGetProperty("web", out var e)) return null;
+            var o = new Obj(_errors, owner.File, "web", $"{owner.Where}, web", e);
+            if (e.ValueKind != JsonValueKind.Object)
+            {
+                o.Error("should be an object: { \"pace\": 40, \"time\": 3 }");
+                return null;
+            }
+            o.Keys("pace", "time");
+            return new WebDef
+            {
+                Pace = o.Int("pace", 5, 95, 40),
+                Ticks = o.Int("time", 1, 60, 3) * Tps,
+            };
+        }
+
         private LairDef? Lair(Obj unit)
         {
             if (!unit.E.TryGetProperty("lair", out var e)) return null;
@@ -767,7 +785,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -846,9 +864,12 @@ public static class ContentLoader
                 Batch = o.Int("batch", 1, 20, 1),
                 Burst = o.Int("burst", 0, 500, 0),
                 Drums = Drums(o),
+                Web = Web(o),
             };
             if (def.Drums != null && (def.Rally == Fix64.Zero || def.Hero || def.Machine || def.IsBoat || def.Role == UnitRole.Monster))
                 o.Error("a war drummer (\"drums\") needs \"rally\" (its earshot) and is no hero, machine, ship or monster");
+            if (def.Web != null && !def.CanAttack)
+                o.Error("only a unit that attacks can web (\"web\")");
             if (def.Pennable && def.Role != UnitRole.Monster)
                 o.Error("only a monster (a beast a taming faction keeps) is kept in a pen (\"pen\")");
             if (def.MinRange > Fix64.Zero && def.MinRange >= def.Range)
@@ -937,7 +958,7 @@ public static class ContentLoader
         private void ReadRelic(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "icon", "hp", "damage", "armor");
+            o.Keys("id", "name", "description", "icon", "hp", "damage", "armor", "web");
             if (id == null) return;
             if (_db.TryGetRelic(id, out _))
             {
@@ -953,6 +974,7 @@ public static class ContentLoader
                 Hp = o.Int("hp", 0, 10000, 0),
                 Damage = o.Int("damage", 0, 1000, 0),
                 Armour = o.Int("armor", 0, 100, 0),
+                Web = Web(o),
             });
         }
 
@@ -1763,6 +1785,12 @@ public static class ContentLoader
                     h.Add(drums.WaitTicks);
                     h.Add(drums.Heard);
                 }
+                if (u.Web is { } web)
+                {
+                    h.Add(81);
+                    h.Add(web.Pace);
+                    h.Add(web.Ticks);
+                }
                 if (u.Carry > 0) h.Add(u.Carry);
                 if (u.Seats > 0) h.Add(u.Seats + 1000);
                 if (u.IsGame) h.Add(u.Game);
@@ -1859,6 +1887,11 @@ public static class ContentLoader
                 h.Add(r.Hp);
                 h.Add(r.Damage);
                 h.Add(r.Armour);
+                if (r.Web is { } web)
+                {
+                    h.Add(web.Pace);
+                    h.Add(web.Ticks);
+                }
             }
             h.Add(db.RuinFinds.Count);
             foreach (var f in db.RuinFinds)

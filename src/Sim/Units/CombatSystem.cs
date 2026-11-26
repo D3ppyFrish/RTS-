@@ -262,6 +262,7 @@ public sealed partial class CombatSystem
         StepWalls();
         StepMolts();
         StepPens();
+        StepWebs();
         BuildGrid();
         Rally();
         StepDrums();
@@ -979,6 +980,7 @@ public sealed partial class CombatSystem
                 Cut(t, (int)part, damage);
                 u.Cutter[t] = u.Id[i];
             }
+            if (!splash) Ensnare(i, def, t); // a giant spider's bite, or a relic of its silk (CombatSystem.Webs.cs)
         }
         // The unit answers the nearest of the tick's attackers (ties to the lowest id), whoever struck first.
         Fix64 dx = u.X[i] - u.X[t], dz = u.Z[i] - u.Z[t];

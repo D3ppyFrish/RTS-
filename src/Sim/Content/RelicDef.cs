@@ -18,6 +18,8 @@ public sealed class RelicDef
     public int Damage { get; init; }
     /// <summary>Armour added on every part of the bearer.</summary>
     public int Armour { get; init; }
+    /// <summary>The bearer's blows web whom they strike, as a giant spider's bite does (see <see cref="Units.UnitDef.Web"/>); null for none.</summary>
+    public Units.WebDef? Web { get; init; }
     /// <summary>Position in <see cref="ContentDb.Relics"/>.</summary>
     public int Index { get; internal set; }
 }

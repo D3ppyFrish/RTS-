@@ -144,6 +144,7 @@ public sealed class UnitMovement
         if (spur > 0) full = full * (100 + spur) / 100;
         if (u.Tired[i] > 0) full = full * _sim.Combat.PaceOf(i) / 100; // tired after a stampede
         if (u.Soft[i] > 0) full = full * _sim.Combat.MoltPace(i) / 100; // soft after molting
+        if (u.Webbed[i] > 0) full = full * u.WebPace[i] / 100; // caught in a giant spider's silk
         var speed = full;
         bool formation = u.Formation[i] && u.Order[i] == UnitOrder.Move;
         // A spurred formation keeps the slowest member's pace, a spurred one's faster (riders round the hero

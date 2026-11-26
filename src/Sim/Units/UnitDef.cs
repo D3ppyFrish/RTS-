@@ -210,6 +210,11 @@ public sealed class UnitDef
     /// (see <see cref="ChargeCommand"/>, <see cref="DrumDef"/>, <c>CombatSystem.Drums.cs</c>). Null for every other unit.
     /// </summary>
     public DrumDef? Drums { get; init; }
+    /// <summary>
+    /// The giant spider's bite (see <c>CombatSystem.Webs.cs</c>): each of its blows that lands wraps the unit struck in
+    /// silk, slowing it for a while. Null for a unit whose blows do not web.
+    /// </summary>
+    public WebDef? Web { get; init; }
 
     /// <summary>How fast it gathers, builds, farms and digs tunnels, in percent of the usual.</summary>
     public int WorkPercent { get; init; } = 100;
@@ -360,6 +365,18 @@ public sealed class DrumDef
     /// of war to every rival with a unit or building this near it (see <see cref="VisionSystem.SeesUnit"/>).
     /// </summary>
     public int Heard { get; init; } = 40;
+}
+
+/// <summary>
+/// Webbing blows (see <see cref="UnitDef.Web"/>, <see cref="Content.RelicDef.Web"/>): a unit struck walks at
+/// <see cref="Pace"/> percent of its pace for <see cref="Ticks"/>.
+/// </summary>
+public sealed class WebDef
+{
+    /// <summary>Percent of its pace a webbed unit walks at.</summary>
+    public int Pace { get; init; } = 40;
+    /// <summary>Ticks a web holds (<c>"time"</c> in the data, seconds).</summary>
+    public int Ticks { get; init; } = 3 * Simulation.TicksPerSecond;
 }
 
 /// <summary>A monster's lairs: the pack that guards each, how far they guard and chase, and what clearing one gives.</summary>
