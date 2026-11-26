@@ -246,7 +246,7 @@
   // wood as high as a wooden wall, with a walkway along its crown for their archers. It has no upgrade, but what is
   // knocked out of it grows back by itself, and with Thornwood it pricks whoever hacks at it.
   { "id": "living_wall", "name": "Living wall", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "livewood", "faction": "elves",
-    "cost": { "wood": 3 }, "buildTime": 4, "sight": 2, "thick": true, "sturdy": 3, "walkway": true, "icon": "wall",
+    "cost": { "wood": 2 }, "buildTime": 2, "sight": 2, "thick": true, "sturdy": 3, "walkway": true, "icon": "wall",
     "regrow": 5, "thorns": 4 },
   // The Elves' great work: an eldertree's trunk, a living tower of wood as broad as a hall, sung up in the deep caves.
   { "id": "eldertree", "name": "Eldertree", "kind": "great_work", "size": [7, 7], "wallHeight": 4,
