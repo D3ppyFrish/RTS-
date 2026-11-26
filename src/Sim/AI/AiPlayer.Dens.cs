@@ -75,7 +75,7 @@ public sealed partial class AiPlayer
             }
             // Stopped, or taken up with work on the way (an automatic worker): on to the den again.
             if (u.Order[i] == UnitOrder.Idle || u.Job[i] != UnitJob.None)
-                issue(new MoveCommand(Player, [_denRunner], lair.X, lair.Z));
+                issue(new MoveCommand(Player, [_denRunner], lair.X, lair.Z, lair.Y));
             return;
         }
 
@@ -98,7 +98,7 @@ public sealed partial class AiPlayer
         _denLair = best.Id;
         _denSent = sim.Tick;
         home.Remove(runner);
-        issue(new MoveCommand(Player, [runner], best.X, best.Z));
+        issue(new MoveCommand(Player, [runner], best.X, best.Z, best.Y));
         Note(sim, $"sends a {sim.Content.Units[u.Def[u.IndexOf(runner)]].Name} to use the {best.Monster.Name} den at {best.X},{best.Z}");
     }
 

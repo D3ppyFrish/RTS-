@@ -13,7 +13,7 @@ namespace Rts.Sim.Units;
 /// no unit (<see cref="Dropped"/>). Not part of the game state.
 /// </summary>
 public readonly record struct Shot(long Tick, int Attacker, Fix64 FromX, int FromY, Fix64 FromZ, Fix64 ToX, int ToY, Fix64 ToZ, bool Ranged, bool Splash,
-    BodyPart? Part = null, int Damage = 0, bool Blocked = false, bool Dropped = false);
+    BodyPart? Part = null, int Damage = 0, bool Blocked = false, bool Dropped = false, bool Web = false);
 
 /// <summary>
 /// Fighting, once per tick after the economy and before pathfinding and movement.
@@ -258,6 +258,7 @@ public sealed partial class CombatSystem
         _shots.RemoveRange(0, old);
 
         StepBleeding();
+        StepPoison();
         StepBurst();
         StepWalls();
         StepMolts();
@@ -981,7 +982,11 @@ public sealed partial class CombatSystem
                 Cut(t, (int)part, damage);
                 u.Cutter[t] = u.Id[i];
             }
-            if (!splash) Ensnare(i, def, t); // a giant spider's bite, or a relic of its silk (CombatSystem.Webs.cs)
+            if (!splash)
+            {
+                Ensnare(i, def, t); // a relic of spider silk (CombatSystem.Webs.cs)
+                Envenom(i, def, t); // a giant spider's bite
+            }
         }
         // The unit answers the nearest of the tick's attackers (ties to the lowest id), whoever struck first.
         Fix64 dx = u.X[i] - u.X[t], dz = u.Z[i] - u.Z[t];
@@ -1277,6 +1282,7 @@ public sealed partial class CombatSystem
             int was = u.Hp[best];
             if (u.Bleeding[best] != 0) Stemmed++;
             u.StopBleeding(best); // a healer stems every bleeding wound at once
+            u.Poisoned[best] = u.PoisonRate[best] = 0; // and draws out the poison
             u.Hp[best] = Math.Min(bestMax, u.Hp[best] + _sim.DuskTree.HealOf(i));
             Mend(best, u.Hp[best] - was, u.Hp[best] >= bestMax);
         }

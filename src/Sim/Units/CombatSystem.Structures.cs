@@ -99,7 +99,11 @@ public sealed partial class CombatSystem
         b.Damage += damage;
         if (by != b.Owner) b.LastHit = _sim.Tick;
         _sim.Events.BuildingAttacked(b, by);
-        if (b.Def.Kind == BuildingKind.Totem) _sim.Cities.TotemHit(b, by);
+        if (b.Def.Kind == BuildingKind.Totem)
+        {
+            _sim.Cities.TotemHit(b, by);
+            _sim.Monsters.TotemHit(b, by);
+        }
         while (b.Damage >= BlockInfo.MinToughness)
         {
             int k = Pick(b, x, z, undermine, topple);

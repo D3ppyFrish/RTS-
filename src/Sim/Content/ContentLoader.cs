@@ -436,7 +436,7 @@ public static class ContentLoader
         }
 
         /// <summary>A webbing blow, from <c>"web": { "pace": 40, "time": 3 }</c> on a unit or a relic.</summary>
-        private WebDef? Web(Obj owner)
+        private WebDef? Web(Obj owner, bool spits)
         {
             if (!owner.E.TryGetProperty("web", out var e)) return null;
             var o = new Obj(_errors, owner.File, "web", $"{owner.Where}, web", e);
@@ -445,11 +445,35 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pace\": 40, \"time\": 3 }");
                 return null;
             }
-            o.Keys("pace", "time");
+            if (spits) o.Keys("pace", "time", "range", "every");
+            else o.Keys("pace", "time");
+            int range = spits ? o.Int("range", 0, 20, 0) : 0;
+            int every = spits ? o.Int("every", 1, 60, 6) : 0;
+            if (spits && e.TryGetProperty("every", out _) && range == 0) o.Error("\"every\" needs a \"range\" (how far the web is spat)");
             return new WebDef
             {
                 Pace = o.Int("pace", 5, 95, 40),
                 Ticks = o.Int("time", 1, 60, 3) * Tps,
+                Range = Fix64.FromInt(range),
+                EveryTicks = range > 0 ? every * Tps : 0,
+            };
+        }
+
+        /// <summary>A poisoning bite, from <c>"poison": { "damage": 2, "time": 6 }</c> on a unit.</summary>
+        private PoisonDef? Poison(Obj owner)
+        {
+            if (!owner.E.TryGetProperty("poison", out var e)) return null;
+            var o = new Obj(_errors, owner.File, "poison", $"{owner.Where}, poison", e);
+            if (e.ValueKind != JsonValueKind.Object)
+            {
+                o.Error("should be an object: { \"damage\": 2, \"time\": 6 }");
+                return null;
+            }
+            o.Keys("damage", "time");
+            return new PoisonDef
+            {
+                PerSecond = o.Int("damage", 1, 100, 2),
+                Ticks = o.Int("time", 1, 60, 6) * Tps,
             };
         }
 
@@ -462,7 +486,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush", "pass");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush", "pass", "cave", "totem");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -502,6 +526,11 @@ public static class ContentLoader
             bool inPass = o.Bool("pass");
             if (inPass && biome == null) o.Error("a lair in the mountain passes (\"pass\") needs a \"biome\" to spread over on a map with none");
             if (inPass && (roam > 0 || lurk)) o.Error("a lair in a mountain pass (\"pass\") guards it: it does not \"roam\" or \"lurk\"");
+            bool cave = o.Bool("cave");
+            if (cave && biome == null) o.Error("a lair in the hill caves (\"cave\") needs a \"biome\" to spread over on a map with none");
+            if (cave && (roam > 0 || lurk || inPass)) o.Error("a lair in a hill cave (\"cave\") nests in it: it does not \"roam\", \"lurk\" or keep a \"pass\"");
+            var totemId = o.Str("totem", false);
+            if (totemId != null && biome == null) o.Error("a lair's \"totem\" needs a \"biome\": only the lairs spread across the map raise one");
             var def = new LairDef
             {
                 Pack = pack,
@@ -519,7 +548,15 @@ public static class ContentLoader
                 Lurk = lurk,
                 Ambush = lurk ? ambush : 0,
                 Pass = inPass && biome != null,
+                Cave = cave && biome != null,
             };
+            if (totemId != null && biome != null)
+                _resolve.Add(() =>
+                {
+                    if (!_db.TryGetBuilding(totemId, out var t)) o.Error($"\"totem\" is \"{totemId}\", which is not a building");
+                    else if (t.Kind != BuildingKind.Totem) o.Error($"\"totem\" is \"{totemId}\", which is not of kind totem");
+                    else def.Totem = t;
+                });
             if (!dusk) Prizes(o, def);
             return def;
         }
@@ -787,7 +824,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -866,8 +903,11 @@ public static class ContentLoader
                 Batch = o.Int("batch", 1, 20, 1),
                 Burst = o.Int("burst", 0, 500, 0),
                 Drums = Drums(o),
-                Web = Web(o),
+                Web = Web(o, spits: true),
+                Poison = Poison(o),
             };
+            if (def.Poison != null && !def.CanAttack)
+                o.Error("only a unit that attacks can poison (\"poison\")");
             if (def.Drums != null && (def.Rally == Fix64.Zero || def.Hero || def.Machine || def.IsBoat || def.Role == UnitRole.Monster))
                 o.Error("a war drummer (\"drums\") needs \"rally\" (its earshot) and is no hero, machine, ship or monster");
             if (def.Web != null && !def.CanAttack)
@@ -976,7 +1016,7 @@ public static class ContentLoader
                 Hp = o.Int("hp", 0, 10000, 0),
                 Damage = o.Int("damage", 0, 1000, 0),
                 Armour = o.Int("armor", 0, 100, 0),
-                Web = Web(o),
+                Web = Web(o, spits: false),
             });
         }
 
@@ -1796,6 +1836,14 @@ public static class ContentLoader
                     h.Add(81);
                     h.Add(web.Pace);
                     h.Add(web.Ticks);
+                    h.Add(web.Range.Raw);
+                    h.Add(web.EveryTicks);
+                }
+                if (u.Poison is { } poison)
+                {
+                    h.Add(83);
+                    h.Add(poison.PerSecond);
+                    h.Add(poison.Ticks);
                 }
                 if (u.Carry > 0) h.Add(u.Carry);
                 if (u.Seats > 0) h.Add(u.Seats + 1000);
@@ -1821,6 +1869,8 @@ public static class ContentLoader
                     h.Add(lair.Lurk ? 1 : 0);
                     h.Add(lair.Ambush);
                     h.Add(lair.Pass ? 1 : 0);
+                    h.Add(lair.Cave ? 1 : 0);
+                    h.Add(lair.Totem?.Index ?? -1);
                     h.Add(lair.Prizes.Count);
                     foreach (var p in lair.Prizes)
                     {

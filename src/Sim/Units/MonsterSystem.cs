@@ -39,6 +39,13 @@ public sealed class Lair
     public int UsedBy { get; internal set; } = -1;
     /// <summary>The building put up on the den when it was used, or 0.</summary>
     public int Building { get; internal set; }
+    /// <summary>
+    /// The wild side's totem at the den (see <see cref="LairDef.Totem"/>), a building id, or 0 for a lair with none.
+    /// It stays set once the totem is down; the lair is cleared then.
+    /// </summary>
+    public int Totem { get; internal set; }
+    // The player whose unit last struck the totem, or -1.
+    internal int TotemHitBy = -1;
 
     /// <summary>
     /// How far from the den (blocks) the pack roams (see <see cref="LairDef.Roam"/>), or 0 if it stays home: only
@@ -92,7 +99,9 @@ public sealed class Lair
 /// after a beaten monster on their own, though an attack order or a stray blast can still kill it.
 ///
 /// A lair is cleared when its pack is gone. If the player whose unit got the last of the pack does not tame
-/// monsters, they get the lair's reward (<see cref="LairDef.Reward"/>) in their storage nearest the den.
+/// monsters, they get the lair's reward (<see cref="LairDef.Reward"/>) in their storage nearest the den. A lair with a
+/// totem (<see cref="LairDef.Totem"/>, the giant spiders' at the bottom of their hill caves) is cleared only when the
+/// totem is knocked down, and its reward goes to the player who struck it last.
 ///
 /// A cleared den can then be used, once, by any player with a unit within <see cref="DenRange"/> of it whose
 /// faction has a prize for beating that monster (<see cref="LairDef.Prizes"/>, see <see cref="DenCommand"/>):
@@ -205,7 +214,7 @@ public sealed class MonsterSystem
         {
             Mix(lair.Id); Mix(lair.Monster.Index); Mix(lair.X); Mix(lair.Y); Mix(lair.Z);
             Mix(lair.Cleared ? 1 : 0); Mix(lair.ClearedBy); Mix(lair.LastBeatenBy);
-            Mix(lair.Used ? 1 : 0); Mix(lair.UsedBy); Mix(lair.Building);
+            Mix(lair.Used ? 1 : 0); Mix(lair.UsedBy); Mix(lair.Building); Mix(lair.Totem); Mix(lair.TotemHitBy);
             Mix(lair.Roam); Mix(lair.HomeX); Mix(lair.HomeY); Mix(lair.HomeZ); Mix(lair.NextRoam); Mix(lair.NextBirth);
             Mix(lair.PackIds.Count);
             foreach (int id in lair.PackIds) Mix(id);
@@ -289,6 +298,7 @@ public sealed class MonsterSystem
             int count = (int)(def.Count * area / (512L * 512L));
             var rng = new DeterministicRandom(_sim.Seed ^ 0x3A1D5EEDUL ^ (ulong)(k + 1) * 0x9E3779B97F4A7C15UL);
             if (def.Pass && PlaceInPasses(monster, placed) > 0) continue;
+            if (def.Cave && PlaceInCaves(monster, count, placed) > 0) continue;
             for (int n = 0; n < count; n++)
             for (int t = 0; t < WildTries; t++)
             {
@@ -303,6 +313,76 @@ public sealed class MonsterSystem
             }
         }
         return placed;
+    }
+
+    /// <summary>
+    /// The giant spiders' nests in the hill caves (<see cref="RegionMap.HillCaves"/>): a lair of the monster at the bottom
+    /// of each cave in map order, up to <paramref name="count"/>, its den at the back of the chamber, away from the way in,
+    /// where its totem stands (<see cref="LairDef.Totem"/>). A cave within <see cref="WildStartGap"/> of a start, or within
+    /// <see cref="WildGap"/> of another lair or a town, is passed over. Returns how many caves are taken (none on a map with no hill cave, and the
+    /// monster is then spread over its biome instead).
+    /// </summary>
+    private int PlaceInCaves(UnitDef monster, int count, List<Lair> placed)
+    {
+        int got = 0;
+        var caves = _sim.Map.HillCaves;
+        for (int k = 0; k < caves.Count && got < count; k++)
+        {
+            var (x, y, z) = caves[k];
+            if (!WildGapsFit(x, z)) continue;
+            // The den at the back of the chamber: from its middle, away from the mouth.
+            int dx = 0, dz = 0;
+            if (k < _sim.Map.HillCaveMouths.Count)
+            {
+                var m = _sim.Map.HillCaveMouths[k];
+                dx = Math.Sign(m.X - x);
+                dz = Math.Sign(m.Z - z);
+            }
+            int back = Math.Max(0, Rts.Sim.World.RegionGenerator.HillCaveChamber / 2);
+            if (Place(monster, x - dx * back, z - dz * back, near: y) is not { } lair) continue;
+            placed.Add(lair);
+            got++;
+        }
+        return got;
+    }
+
+    /// <summary>
+    /// The wild side's totem (see <see cref="LairDef.Totem"/>) put up on the lair's den, its middle column on the den: the
+    /// ground under it made solid and the room it takes cleared. Before the pack spawns, which stands round it.
+    /// </summary>
+    private void RaiseTotem(Lair lair, Economy.BuildingDef def)
+    {
+        var w = World;
+        int x0 = lair.X - def.SizeX / 2, z0 = lair.Z - def.SizeZ / 2;
+        int x1 = x0 + def.SizeX - 1, z1 = z0 + def.SizeZ - 1;
+        if (!w.InBounds(x0, 0, z0) || !w.InBounds(x1, 0, z1) || lair.Y + def.Height >= w.SizeY) return;
+        for (int z = z0; z <= z1; z++)
+        for (int x = x0; x <= x1; x++)
+        {
+            if (!BlockInfo.IsSolid(w.Get(x, lair.Y - 1, z))) w.Set(x, lair.Y - 1, z, BlockType.Soil);
+            for (int y = lair.Y; y <= lair.Y + def.Height; y++)
+                if (w.Get(x, y, z) != BlockType.Air) w.Set(x, y, z, BlockType.Air);
+        }
+        var b = _sim.Buildings.Add(Simulation.WildPlayer, def, x0, lair.Y, z0);
+        foreach (var t in def.Blocks) w.Set(b.X + t.X, b.Y + t.Y, b.Z + t.Z, t.Block);
+        b.Placed = def.Blocks.Count;
+        b.Work = def.BuildTicks;
+        b.State = BuildingState.Active;
+        lair.Totem = b.Id;
+    }
+
+    /// <summary>True if the lair has a totem (see <see cref="Lair.Totem"/>) and it is down.</summary>
+    public bool TotemDown(Lair lair) => lair.Totem != 0 && _sim.Buildings.Get(lair.Totem) == null;
+
+    /// <summary>The lair's totem while it stands, or null.</summary>
+    public Building? TotemOf(Lair lair) => lair.Totem != 0 ? _sim.Buildings.Get(lair.Totem) : null;
+
+    /// <summary>A unit of the player's struck building b: if it is a lair's totem, the player is the one who struck it last.</summary>
+    internal void TotemHit(Building b, int player)
+    {
+        if (player < 0 || player >= Simulation.WildPlayer || b.Owner != Simulation.WildPlayer) return;
+        foreach (var lair in _lairs)
+            if (lair.Totem == b.Id && !lair.Cleared) lair.TotemHitBy = player;
     }
 
     /// <summary>
@@ -521,15 +601,21 @@ public sealed class MonsterSystem
 
     private bool WildSiteFits(int x, int z)
     {
+        if (!WildGapsFit(x, z) || !SiteFits(x, z)) return false;
+        int y = Walk.GroundLevel(World, x, z);
+        return World.Get(x, y - 1, z) is not (BlockType.Water or BlockType.Lava or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock);
+    }
+
+    /// <summary>True if column (x, z) is <see cref="WildStartGap"/> from every start and <see cref="WildGap"/> from every lair and town on the land.</summary>
+    private bool WildGapsFit(int x, int z)
+    {
         foreach (var s in _sim.Map.Starts)
             if (IntMath.Distance(x, z, s.X, s.Z) < WildStartGap) return false;
         foreach (var lair in _lairs)
             if (IntMath.Distance(x, z, lair.X, lair.Z) < WildGap) return false;
         foreach (var town in _sim.Cities.Towns)
             if (!town.Deep && IntMath.Distance(x, z, town.X, town.Z) < WildGap) return false;
-        if (!SiteFits(x, z)) return false;
-        int y = Walk.GroundLevel(World, x, z);
-        return World.Get(x, y - 1, z) is not (BlockType.Water or BlockType.Lava or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock);
+        return true;
     }
 
     /// <summary>
@@ -547,6 +633,7 @@ public sealed class MonsterSystem
         int y = Ground(x, z);
         if (y < 0) return null;
         var lair = new Lair(_nextId++, monster, x, y, z);
+        if (def.Totem is { } totem) RaiseTotem(lair, totem);
         if (def.Lurk)
         {
             FindPools(lair, def.Guard, def.Pack);
@@ -678,15 +765,16 @@ public sealed class MonsterSystem
         if (_ambush.Count > 0) _ambush.RemoveAll(id => U.IndexOf(id) is var i && (i < 0 || !IsWild(i) || (U.Target[i] == 0 && !Submerged(i))));
         foreach (var lair in _lairs)
         {
-            if (lair.Cleared) continue;
+            // A lair cleared by knocking its totem down (see LairDef.Totem) still guards its den while any of its pack is left.
+            if (lair.Cleared && lair.PackIds.Count == 0) continue;
             lair.PackIds.RemoveAll(id => U.IndexOf(id) is var i && (i < 0 || !IsWild(i)));
             // A tracker that lost its quarry (it died, or the tracker gave up the fight) is a plain guard again.
             lair.TrackerIds.RemoveAll(id => U.IndexOf(id) is var i && (i < 0 || !IsWild(i) || U.Target[i] == 0));
-            if (lair.PackIds.Count == 0) Clear(lair);
-            else
+            if (!lair.Cleared && (lair.Totem != 0 ? TotemDown(lair) : lair.PackIds.Count == 0)) Clear(lair);
+            if (lair.PackIds.Count > 0)
             {
                 if (lair.Monster.Lair!.Ambush > 0) LieInWait(lair);
-                if (lair.NextBirth > 0 && tick >= lair.NextBirth) Grow(lair);
+                if (!lair.Cleared && lair.NextBirth > 0 && tick >= lair.NextBirth) Grow(lair);
                 if ((tick + lair.Id) % GuardInterval == 0) Guard(lair);
             }
         }
@@ -759,13 +847,14 @@ public sealed class MonsterSystem
     }
 
     /// <summary>
-    /// The lair's pack is gone: whoever got the last of it gets its reward, unless they tame monsters, and
-    /// influence with the city-states it was near (see <see cref="Economy.CityStateSystem"/>).
+    /// The lair's pack is gone, or for a lair with a totem (see <see cref="LairDef.Totem"/>) the totem is down: whoever got
+    /// the last of the pack, or struck the totem last, gets its reward, unless they tame monsters, and influence with the
+    /// city-states it was near (see <see cref="Economy.CityStateSystem"/>).
     /// </summary>
     private void Clear(Lair lair)
     {
         lair.Cleared = true;
-        lair.ClearedBy = lair.LastBeatenBy;
+        lair.ClearedBy = lair.Totem != 0 ? lair.TotemHitBy : lair.LastBeatenBy;
         int p = lair.ClearedBy;
         Economy.Discover(p, Rts.Sim.Content.Discovery.Lair);
         if (lair.Monster.Lair!.Pass) Economy.Discover(p, Rts.Sim.Content.Discovery.Giant);

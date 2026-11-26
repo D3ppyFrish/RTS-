@@ -255,6 +255,7 @@ public static partial class RegionGenerator
             CarveDeepRamps();
             PlaceGold();
             PlaceWilds();
+            CarveHillCaves();
             return _map;
         }
 

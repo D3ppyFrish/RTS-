@@ -102,12 +102,17 @@ public partial class UnitRenderer : Node3D
     private void WriteTotem(CityState town, float bs)
     {
         if (_sim.Cities.Totem(town) is not { } totem) return;
+        WriteTotem(totem, town.Holder >= 0 ? TeamColors[town.Holder & 7] : Neutral, bs);
+    }
+
+    /// <summary>The totem carved over the pole of totem building <paramref name="totem"/>, painted <paramref name="colour"/>.</summary>
+    private void WriteTotem(Building totem, Color colour, float bs)
+    {
         var def = totem.Def;
         int x = def.SizeX / 2 + totem.X, z = def.SizeZ / 2 + totem.Z;
         int top = 0;
         while (top + 1 < def.Height && _sim.World.Get(x, totem.Y + top + 1, z) == def.Wall) top++;
         if (top == 0) return;
-        var colour = town.Holder >= 0 ? TeamColors[town.Holder & 7] : Neutral;
         float px = (x + 0.5f) * bs, pz = (z + 0.5f) * bs;
         var (bands, head) = _totems[def.Id];
         for (int y = 1; y < top; y++) Write(bands, 1, 0, px, (totem.Y + y) * bs, pz, colour);
@@ -230,6 +235,9 @@ void fragment() {
         _staff = Totem("dusk_staff_bearer");
         foreach (var city in sim.Content.CityStates)
             if (city.Totem is { } t && !_totems.ContainsKey(t.Id)) _totems[t.Id] = (Totem(t.Id + "_band"), Totem(t.Id + "_head"));
+        // The wild lairs' totems (the giant spiders' at the bottom of their hill caves).
+        foreach (var monster in sim.Content.WildMonsters)
+            if (monster.Lair?.Totem is { } t && !_totems.ContainsKey(t.Id)) _totems[t.Id] = (Totem(t.Id + "_band"), Totem(t.Id + "_head"));
 
         // The dens of the lairs, which stay where they are until a player uses one.
         var den = UnitModels.Build("den");
@@ -262,6 +270,12 @@ void fragment() {
             var (bands, head) = _totems[t.Id];
             head.Count++;
             bands.Count += t.Height;
+        }
+        foreach (var lair in _sim.Monsters.Lairs)
+        {
+            if (lair.Monster.Lair!.Totem is not { } t || !_totems.TryGetValue(t.Id, out var batches)) continue;
+            batches.Head.Count++;
+            batches.Bands.Count += t.Height;
         }
         foreach (var b in _batches.Values)
         {
@@ -353,6 +367,8 @@ void fragment() {
         }
         foreach (var town in _sim.Cities.Towns)
             if (_fog.HasSeen(town.X, town.Z)) WriteTotem(town, bs);
+        foreach (var lair in _sim.Monsters.Lairs)
+            if (_sim.Monsters.TotemOf(lair) is { } totem && _fog.HasSeen(lair.X, lair.Z)) WriteTotem(totem, Neutral, bs);
         // Showpieces (--golems, --showcase): models that are not units of the rules, standing still and breathing;
         // plain where they would be, if they have a plain model.
         for (int k = 0; k < Showpieces.Count; k++)

@@ -211,10 +211,16 @@ public sealed class UnitDef
     /// </summary>
     public DrumDef? Drums { get; init; }
     /// <summary>
-    /// The giant spider's bite (see <c>CombatSystem.Webs.cs</c>): each of its blows that lands wraps the unit struck in
-    /// silk, slowing it for a while. Null for a unit whose blows do not web.
+    /// The giant spider's web (see <c>CombatSystem.Webs.cs</c>): spat at the unit it fights from up to the web's
+    /// <see cref="WebDef.Range"/>, wrapping it in silk and slowing it for a while (with no range, each of its blows that
+    /// lands does). Null for a unit that does not web.
     /// </summary>
     public WebDef? Web { get; init; }
+    /// <summary>
+    /// The giant spider's bite (see <c>CombatSystem.Webs.cs</c>): each of its blows that lands poisons the unit struck,
+    /// which loses hit points every second for a while. Null for a unit whose blows do not poison.
+    /// </summary>
+    public PoisonDef? Poison { get; init; }
 
     /// <summary>How fast it gathers, builds, farms and digs tunnels, in percent of the usual.</summary>
     public int WorkPercent { get; init; } = 100;
@@ -377,6 +383,22 @@ public sealed class WebDef
     public int Pace { get; init; } = 40;
     /// <summary>Ticks a web holds (<c>"time"</c> in the data, seconds).</summary>
     public int Ticks { get; init; } = 3 * Simulation.TicksPerSecond;
+    /// <summary>
+    /// How far (blocks) a unit spits its web at the unit it is fighting (see <c>CombatSystem.Webs.cs</c>): the giant
+    /// spider's. 0 for a web its blows wrap the struck in (a relic of spider silk). <c>"range"</c> in the data.
+    /// </summary>
+    public Fix64 Range { get; init; }
+    /// <summary>Ticks between two webs spat (<c>"every"</c> in the data, seconds).</summary>
+    public int EveryTicks { get; init; }
+}
+
+/// <summary>A poisoning bite (<c>"poison"</c> on a unit): hit points a second for a while.</summary>
+public sealed class PoisonDef
+{
+    /// <summary>Hit points the poisoned unit loses a second (<c>"damage"</c> in the data).</summary>
+    public int PerSecond { get; init; } = 2;
+    /// <summary>Ticks the poison works (<c>"time"</c> in the data, seconds).</summary>
+    public int Ticks { get; init; } = 6 * Simulation.TicksPerSecond;
 }
 
 /// <summary>A monster's lairs: the pack that guards each, how far they guard and chase, and what clearing one gives.</summary>
@@ -440,6 +462,19 @@ public sealed class LairDef
     /// <see cref="Lurk"/>); 0 for none.
     /// </summary>
     public int Ambush { get; init; }
+    /// <summary>
+    /// The lairs are in the hill caves (the giant spiders, see <see cref="World.RegionMap.HillCaves"/>): one in the
+    /// chamber at the bottom of each cave, up to <see cref="Count"/> for each 512 by 512 blocks of map, rather than spread
+    /// over the <see cref="Biome"/>, which they fall back to on a map with no hill caves. <c>cave</c> in the data.
+    /// </summary>
+    public bool Cave { get; init; }
+    /// <summary>
+    /// A totem the wild side raises at each lair spread across the map (see <see cref="MonsterSystem"/>): at the back
+    /// of a hill cave's chamber, else beside the den. The lair is cleared, and its reward paid, only when the totem is
+    /// knocked down, to the player who struck it last; until then a pack killed to the last leaves the lair standing.
+    /// Null for none. <c>totem</c> in the data, a building of kind totem.
+    /// </summary>
+    public Economy.BuildingDef? Totem { get; internal set; }
     /// <summary>
     /// What each faction gets for beating this monster: what it makes of the den a cleared lair leaves (see
     /// <see cref="MonsterSystem"/>), in data order. Two factions can share a prize; one not listed gets none.

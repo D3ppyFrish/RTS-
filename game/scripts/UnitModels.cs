@@ -48,6 +48,7 @@ public static class UnitModels
     private static readonly Color OrcSkin = new(0.36f, 0.5f, 0.24f);
     private static readonly Color OrcEye = new(0.95f, 0.25f, 0.12f);
     private static readonly Color Bone = new(0.92f, 0.88f, 0.74f);
+    private static readonly Color Silk = new(0.88f, 0.88f, 0.84f);
     private static readonly Color Hide = new(0.36f, 0.27f, 0.2f);
     private static readonly Color Boar = new(0.3f, 0.22f, 0.17f);
     private static readonly Color DeerCoat = new(0.62f, 0.42f, 0.29f);
@@ -1062,6 +1063,22 @@ public static class UnitModels
             .Box(-9, 4, -1, -6, 6, 0, Team).Box(-8, 6, -1, -7, 7, 0, TeamDark)                                    // ears
             .Box(5, 4, -1, 8, 6, 0, Team).Box(6, 6, -1, 7, 7, 0, TeamDark)
             .Box(-4, 8, -1, -3, 10, 0, Bone).Box(2, 8, -1, 3, 10, 0, Bone).Box(-4, 11, -1, -4, 11, 0, Bone).Box(3, 11, -1, 3, 11, 0, Bone),
+
+        // The giant spiders' totem at the bottom of their hill caves: a pole wound thick in grey-white silk, a wrapped bundle
+        // (some catch) bound to it here and there, and on top a carved spider's head with eight red eyes, fangs and pale
+        // egg sacs hung from its jaw.
+        "spider_totem_band" => new Builder()
+            .Box(-5, 0, -5, 4, 7, 4, Wood).Box(-6, 0, -6, 5, 2, 5, Silk).Box(-6, 5, -6, 5, 6, 5, Silk)
+            .Box(-5, 3, -5, 4, 4, 4, Team).Box(4, 1, -2, 7, 5, 1, Silk).Box(-8, 3, 0, -5, 6, 3, Silk),
+        "spider_totem_head" => new Builder()
+            .Box(-6, 0, -6, 5, 7, 5, SpiderHair).Box(-6, 0, -6, 5, 1, 5, Silk)
+            .Box(-4, 6, -3, 3, 8, 2, SpiderDark).Box(-1, 9, -2, 0, 9, 1, SpiderMark)                              // crown, mark
+            .Box(-4, 5, 6, -3, 6, 6, SpiderEye).Box(2, 5, 6, 3, 6, 6, SpiderEye)                                   // eyes
+            .Box(-2, 6, 6, -2, 6, 6, SpiderEye).Box(1, 6, 6, 1, 6, 6, SpiderEye)
+            .Box(-5, 3, 6, -5, 3, 6, SpiderEye).Box(4, 3, 6, 4, 3, 6, SpiderEye).Box(-1, 4, 6, 0, 4, 6, SpiderEye)
+            .Box(-3, -3, 6, -2, 2, 7, SpiderMark).Box(1, -3, 6, 2, 2, 7, SpiderMark)                              // fangs
+            .Box(-9, -4, 2, -7, -1, 4, Silk).Box(6, -3, -3, 8, 0, -1, Silk)                                         // egg sacs
+            .Box(-4, 5, -7, -3, 6, -7, SpiderEye).Box(2, 5, -7, 3, 6, -7, SpiderEye),                             // the back face
 
         // The merfolk's conch, over its pole of stone: bands crusted with shells and a strap of the holder's colour, and
         // on top a great spiralled conch shell, pale outside and pink in its mouth, hung with pearls.
