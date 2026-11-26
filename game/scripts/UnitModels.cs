@@ -89,6 +89,12 @@ public static class UnitModels
     private static readonly Color SpiderDark = new(0.1f, 0.08f, 0.07f);
     private static readonly Color SpiderMark = new(0.86f, 0.78f, 0.55f);
     private static readonly Color SpiderEye = new(0.95f, 0.18f, 0.1f);
+    private static readonly Color HornetAmber = new(0.93f, 0.66f, 0.12f);
+    private static readonly Color HornetBlack = new(0.11f, 0.08f, 0.06f);
+    private static readonly Color HornetWing = new(0.8f, 0.86f, 0.9f);
+    private static readonly Color HivePaper = new(0.84f, 0.78f, 0.64f);
+    private static readonly Color HivePaperDark = new(0.6f, 0.54f, 0.44f);
+    private static readonly Color DeadWood = new(0.36f, 0.3f, 0.24f);
     private static readonly Color Chitin = new(0.78f, 0.76f, 0.7f);
     private static readonly Color ChitinDark = new(0.5f, 0.48f, 0.44f);
     private static readonly Color HiveChitin = new(0.27f, 0.22f, 0.2f);
@@ -717,6 +723,22 @@ public static class UnitModels
             .Box(-10, 8, -2, -5, 9, -2, SpiderDark).Box(-12, 9, -5, -10, 10, -2, SpiderDark).Box(-13, 0, -5, -12, 9, -5, SpiderDark)
             .Box(4, 8, -2, 9, 9, -2, SpiderDark).Box(9, 9, -5, 11, 10, -2, SpiderDark).Box(11, 0, -5, 12, 9, -5, SpiderDark)
             .Box(-4, 8, 0, 3, 8, 1, TeamDark),                                                  // a band, once it is someone's
+        // A giant hornet: hovering off the ground, a black and amber banded abdomen ending in a sting, a narrow waist,
+        // an amber thorax, a black head with big dark eyes and mandibles, legs dangling, and four pale wings spread wide.
+        "giant_hornet" => new Builder()
+            .Box(-1, 6, -6, 0, 8, -5, HornetAmber).Box(-1, 6, -4, 0, 8, -4, HornetBlack)        // abdomen, banded
+            .Box(-1, 6, -3, 0, 8, -3, HornetAmber).Box(-1, 6, -7, 0, 7, -7, HornetBlack)
+            .Box(0, 5, -8, 0, 5, -8, HornetBlack)                                               // the sting
+            .Box(-1, 7, -2, 0, 9, 0, HornetAmber)                                               // thorax
+            .Box(-1, 7, 1, 0, 8, 2, HornetBlack)                                                // head
+            .Box(-2, 8, 2, -2, 8, 2, SpiderDark).Box(1, 8, 2, 1, 8, 2, SpiderDark)              // eyes
+            .Box(-1, 6, 3, -1, 6, 3, HornetAmber).Box(0, 6, 3, 0, 6, 3, HornetAmber)            // mandibles
+            .Box(-1, 9, 2, -1, 10, 3, HornetBlack).Box(0, 9, 2, 0, 10, 3, HornetBlack)          // feelers
+            .Box(-2, 4, -1, -2, 6, -1, HornetBlack).Box(1, 4, -1, 1, 6, -1, HornetBlack)        // legs, dangling
+            .Box(-2, 5, 0, -2, 6, 0, HornetBlack).Box(1, 5, 0, 1, 6, 0, HornetBlack)
+            .Box(-6, 10, -2, -2, 10, 0, HornetWing).Box(1, 10, -2, 5, 10, 0, HornetWing)        // wings
+            .Box(-5, 10, -4, -2, 10, -3, HornetWing).Box(1, 10, -4, 4, 10, -3, HornetWing)
+            .Box(-1, 9, -1, 0, 9, -1, TeamDark),                                                // a mark, once it is someone's
         // A cave crawler: a pale, segmented thing the size of a dog, low to the ground on six legs, with
         // feelers, pincer jaws and small glowing eyes.
         "cave_crawler" => new Builder()
@@ -1079,6 +1101,21 @@ public static class UnitModels
             .Box(-3, -3, 6, -2, 2, 7, SpiderMark).Box(1, -3, 6, 2, 2, 7, SpiderMark)                              // fangs
             .Box(-9, -4, 2, -7, -1, 4, Silk).Box(6, -3, -3, 8, 0, -1, Silk)                                         // egg sacs
             .Box(-4, 5, -7, -3, 6, -7, SpiderEye).Box(2, 5, -7, 3, 6, -7, SpiderEye),                             // the back face
+
+        // The giant hornets' hive: a great grey-tan paper nest wrapped round a dead stump, layered like scales, with a dark
+        // way in low on its front and hornets crawling at it; the stump's top pokes out of the domed crown.
+        "hornet_hive_band" => new Builder()
+            .Box(-7, 0, -7, 6, 7, 6, HivePaper).Box(-8, 1, -6, 7, 6, 5, HivePaper).Box(-6, 1, -8, 5, 6, 7, HivePaper)
+            .Box(-8, 3, -6, 7, 3, 5, HivePaperDark).Box(-6, 3, -8, 5, 3, 7, HivePaperDark)
+            .Box(-7, 7, -7, 6, 7, 6, HivePaperDark)
+            .Box(-2, 1, 8, 1, 4, 8, HornetBlack)                                                 // the way in
+            .Box(-4, 5, 8, -3, 5, 8, HornetAmber).Box(3, 2, 8, 4, 2, 8, HornetAmber)             // hornets at it
+            .Box(-5, 6, -5, 4, 6, 4, Team),
+        "hornet_hive_head" => new Builder()
+            .Box(-7, 0, -7, 6, 3, 6, HivePaper).Box(-6, 4, -6, 5, 6, 5, HivePaper).Box(-6, 2, -6, 5, 2, 5, HivePaperDark)
+            .Box(-4, 7, -4, 3, 8, 3, HivePaper).Box(-4, 5, -4, 3, 5, 3, HivePaperDark)
+            .Box(-1, 9, -1, 0, 12, 0, DeadWood).Box(0, 11, 0, 2, 11, 0, DeadWood)                // the stump's top
+            .Box(5, 4, 3, 6, 4, 4, HornetAmber).Box(-6, 1, -3, -6, 1, -2, HornetAmber),
 
         // The merfolk's conch, over its pole of stone: bands crusted with shells and a strap of the holder's colour, and
         // on top a great spiralled conch shell, pale outside and pink in its mouth, hung with pearls.

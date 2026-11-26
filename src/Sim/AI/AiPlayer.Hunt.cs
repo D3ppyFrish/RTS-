@@ -167,11 +167,14 @@ public sealed partial class AiPlayer
             seen = true;
             break;
         }
+        bool hatches = lair.Monster.Lair!.GrowTicks > 0 && lair.Totem != 0;
+        if (hatches) (gx, gy, gz) = (lair.X, lair.Y, lair.Z);
         var idle = Unordered(sim, _huntParty, gx, gz);
         if (idle.Count == 0) return;
-        // No monster in sight and a totem at the den (see LairDef.Totem): knock it down.
+        // No monster in sight and a totem at the den (see LairDef.Totem): knock it down. A nest that hatches again while
+        // its totem stands (the giant hornets' hive) is never swatted clear: the party goes for the hive once near it.
         int first = u.IndexOf(idle[0]);
-        if (!seen && sim.Monsters.TotemOf(lair) is { } totem && Dist2(gx, gz, u.X[first].FloorToInt(), u.Z[first].FloorToInt()) <= (long)TotemNear * TotemNear)
+        if ((!seen || hatches) && sim.Monsters.TotemOf(lair) is { } totem && Dist2(gx, gz, u.X[first].FloorToInt(), u.Z[first].FloorToInt()) <= (long)TotemNear * TotemNear)
             issue(new AttackBuildingCommand(Player, idle.ToArray(), totem.Id));
         else issue(new AttackMoveCommand(Player, idle.ToArray(), gx, gz, gy));
     }

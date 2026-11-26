@@ -379,6 +379,11 @@ public sealed class MonsterSystem
     /// The wild side's totem (see <see cref="LairDef.Totem"/>) put up on the lair's den, its middle column on the den: the
     /// ground under it made solid and the room it takes cleared. Before the pack spawns, which stands round it.
     /// </summary>
+    /// <summary>The glade (columns from the den) round a totem out in the open, where no tree stands.</summary>
+    public const int TotemGlade = 7;
+    // How far (columns) a tree's crown spreads from its trunk, for clearing a glade's leaves.
+    private const int GladeCrown = 4;
+
     private void RaiseTotem(Lair lair, Economy.BuildingDef def)
     {
         var w = World;
@@ -391,6 +396,51 @@ public sealed class MonsterSystem
             if (!BlockInfo.IsSolid(w.Get(x, lair.Y - 1, z))) w.Set(x, lair.Y - 1, z, BlockType.Soil);
             for (int y = lair.Y; y <= lair.Y + def.Height; y++)
                 if (w.Get(x, y, z) != BlockType.Air) w.Set(x, y, z, BlockType.Air);
+        }
+        // A totem out in the open (the giant hornets' hive in the forests) stands in a glade: no tree within
+        // TotemGlade columns of the den, nor any tree's crown over it, so it is seen. One underground (the spiders') is left as it is.
+        bool open = true;
+        for (int y = lair.Y; y < w.SizeY && open; y++)
+        {
+            var t = w.Get(lair.X, y, lair.Z);
+            open = !BlockInfo.IsSolid(t) || BlockInfo.IsTrunk(t) || BlockInfo.IsLeaves(t);
+        }
+        if (open)
+        {
+            // Trunks within the glade go, and the leaves within it; so do the crowns of the trees felled (leaves within
+            // GladeCrown columns of a trunk gone), but not the leaves hard by a trunk left standing.
+            int reach = TotemGlade + GladeCrown;
+            var felled = new List<(int X, int Z)>();
+            var kept = new List<(int X, int Z)>();
+            for (int z = lair.Z - reach - 1; z <= lair.Z + reach + 1; z++)
+            for (int x = lair.X - reach - 1; x <= lair.X + reach + 1; x++)
+            {
+                if (!w.InBounds(x, 0, z)) continue;
+                bool inGlade = (x - lair.X) * (x - lair.X) + (z - lair.Z) * (z - lair.Z) <= TotemGlade * TotemGlade;
+                bool any = false;
+                for (int y = Math.Max(1, lair.Y - 1); y < w.SizeY; y++)
+                {
+                    if (!BlockInfo.IsTrunk(w.Get(x, y, z))) continue;
+                    any = true;
+                    if (inGlade) w.Set(x, y, z, BlockType.Air);
+                }
+                if (any) (inGlade ? felled : kept).Add((x, z));
+            }
+            for (int z = lair.Z - reach; z <= lair.Z + reach; z++)
+            for (int x = lair.X - reach; x <= lair.X + reach; x++)
+            {
+                if (!w.InBounds(x, 0, z)) continue;
+                bool clear = (x - lair.X) * (x - lair.X) + (z - lair.Z) * (z - lair.Z) <= TotemGlade * TotemGlade;
+                if (!clear)
+                    foreach (var (fx, fz) in felled)
+                        if (Math.Abs(fx - x) <= GladeCrown && Math.Abs(fz - z) <= GladeCrown) { clear = true; break; }
+                if (clear)
+                    foreach (var (kx, kz) in kept)
+                        if (Math.Abs(kx - x) <= 1 && Math.Abs(kz - z) <= 1) { clear = false; break; }
+                if (!clear) continue;
+                for (int y = Math.Max(1, lair.Y - 1); y < w.SizeY; y++)
+                    if (BlockInfo.IsLeaves(w.Get(x, y, z))) w.Set(x, y, z, BlockType.Air);
+            }
         }
         var b = _sim.Buildings.Add(Simulation.WildPlayer, def, x0, lair.Y, z0);
         foreach (var t in def.Blocks) w.Set(b.X + t.X, b.Y + t.Y, b.Z + t.Z, t.Block);
@@ -801,6 +851,8 @@ public sealed class MonsterSystem
             // A tracker that lost its quarry (it died, or the tracker gave up the fight) is a plain guard again.
             lair.TrackerIds.RemoveAll(id => U.IndexOf(id) is var i && (i < 0 || !IsWild(i) || U.Target[i] == 0));
             if (!lair.Cleared && (lair.Totem != 0 ? TotemDown(lair) : lair.PackIds.Count == 0)) Clear(lair);
+            // A nest whose totem stands (the giant hornets' hive) hatches its swarm again even once every one of it is dead.
+            if (lair.PackIds.Count == 0 && !lair.Cleared && lair.Totem != 0 && lair.NextBirth > 0 && tick >= lair.NextBirth) Grow(lair);
             if (lair.PackIds.Count > 0)
             {
                 if (lair.Monster.Lair!.Ambush > 0) LieInWait(lair);

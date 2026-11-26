@@ -498,6 +498,12 @@ public static class UiIcons
             "............", "...kkkkkk...", "..kwlwlwlwk.", ".kwlwlwlwlwk", ".kwlwlwlwlwk", "kBbbbbbbbbBk",
             ".kwlwlwlwlwk", ".kwlwlwlwlwk", "..kwlwlwlwk.", "...kkkkkk...", "......kw....", ".......kw...",
         },
+        // The queen's sting: a long black and amber sting, a bead of venom at its tip.
+        ["queens_sting"] = new[]
+        {
+            "........kkk.", ".......kyyk.", "......kyYyk.", ".....kkkkk..", "....kyyyk...", "...kkkkk....",
+            "..kyyyk.....", "..kkkk......", ".kkk........", ".kk.........", "kgk.........", ".k..........",
+        },
         // The wyrm crystal: a violet crystal, glowing at its heart.
         ["wyrm_crystal"] = new[]
         {

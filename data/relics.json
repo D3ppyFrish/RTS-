@@ -27,6 +27,9 @@
   { "id": "spider_silk", "name": "Spider silk", "icon": "spider_silk",
     "description": "A skein of a giant spider's silk wound round its bearer's weapon. Whatever it strikes is caught in sticky threads and slowed for a moment.",
     "damage": 1, "web": { "pace": 60, "time": 2 } },
+  { "id": "queens_sting", "name": "Queen's sting", "icon": "queens_sting",
+    "description": "The hornet queen's sting, as long as a dagger and still beaded with venom, set as a spike on its bearer's weapon. Whatever it strikes flinches: each blow that lands takes 8 morale.",
+    "damage": 2, "fear": 8 },
   { "id": "sunstone_circlet", "name": "Sunstone circlet", "icon": "sunstone_circlet",
     "description": "A warden's circlet of the old builders, found in a ruin, its stone still warm. Its bearer stands and strikes like one who has seen worse.",
     "hp": 30, "damage": 2, "armor": 1 }

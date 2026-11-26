@@ -92,6 +92,24 @@ public class HuntTests
         Assert.Null(sim.Monsters.TotemOf(nest));
     }
 
+    /// <summary>
+    /// A giant hornets' hive hatches its swarm again while it stands, so a hunting party does not wait to swat the last
+    /// hornet: once near the hive it knocks it down, and the nest is cleared to the computer player.
+    /// </summary>
+    [Fact]
+    public void AHuntingPartyKnocksDownTheHornetsHive()
+    {
+        var sim = WithSpearmen(8);
+        var nest = PlaceLair(sim, "giant_hornet", HallX + 126, HallZ - 88);
+        Assert.NotNull(sim.Monsters.TotemOf(nest));
+        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        Assert.True(Play(sim, ai, () => ai.HuntPartyIds.Count > 0, AiPlayer.HuntTicks + 20 * Tps), "a hunting party to set out");
+        Assert.Equal(nest.Id, ai.HuntLair);
+        Assert.True(Play(sim, ai, () => nest.Cleared, 4 * 60 * Tps), "the party to knock the hive down");
+        Assert.Equal(0, nest.ClearedBy);
+        Assert.Null(sim.Monsters.TotemOf(nest));
+    }
+
     /// <summary>A party that is losing breaks off, comes home, and leaves that lair alone for a while.</summary>
     [Fact]
     public void AHuntingPartyThatIsLosingBreaksOffAndLeavesTheLairAlone()

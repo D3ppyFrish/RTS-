@@ -12,8 +12,9 @@ cd "$(dirname "$0")/.."
 dotnet build game/Game.csproj -v q -nologo >/dev/null
 [ -d game/.godot ] || godot --headless --path game --import >/dev/null 2>&1 || true
 
-# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it. --goods=600
-# pays for the barracks, the towers and the soldiers without waiting on the gatherers. The towers get 6000 ticks
+# Seed 1234, west start: town hall at 128..134 x 381..387, starting units in rows just south of it. --goods=1000
+# pays for the barracks, the towers and the soldiers without waiting on the gatherers, and feeds the town while they
+# are built (with 600 the food ran out by the third tower and the fourth could miss its time). The towers get 6000 ticks
 # in two steps: one step gives up after 600 frames (about 4800 ticks at 4x), and the fourth tower can finish just
 # after that (it did once the map had lairs spread across it).
 STEPS="
@@ -51,7 +52,7 @@ print
 "
 LOG="$OUT/ui-governor.log"
 xvfb-run -a -s "-screen 0 1600x900x24" \
-  godot --path game --rendering-driver opengl3 -- --goods=600 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
+  godot --path game --rendering-driver opengl3 -- --goods=1000 --input="$STEPS" 2>&1 | grep -E "^(UI|Saved|Screenshot)" | tee "$LOG"
 
 fail() { echo "UI governor test failed: $1" >&2; exit 1; }
 field() { [[ "$1" =~ (^| )$2=([^ ]+) ]] && echo "${BASH_REMATCH[2]}"; }

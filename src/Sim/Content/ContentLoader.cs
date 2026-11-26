@@ -513,7 +513,10 @@ public static class ContentLoader
             int pack = o.Int("pack", 1, 50, 4, required: true);
             int growTo = o.Int("growTo", 1, 50, grow > 0 ? pack * 2 : pack);
             if (e.TryGetProperty("growTo", out _) && grow == 0) o.Error("\"growTo\" needs a \"grow\" (seconds between births)");
-            if (grow > 0 && growTo <= pack) o.Error($"\"growTo\" is {growTo}, but the pack starts {pack} strong, so it should be more");
+            // A nest with a totem may only hatch its swarm back to strength (the hornets' hive): growTo may be the pack.
+            bool refills = e.TryGetProperty("totem", out _);
+            if (grow > 0 && (refills ? growTo < pack : growTo <= pack))
+                o.Error($"\"growTo\" is {growTo}, but the pack starts {pack} strong, so it should be {(refills ? "at least that" : "more")}");
             if (grow > 0 && dusk) o.Error("the dusk tree's warden does not \"grow\"");
             bool atStarts = !dusk && (e.TryGetProperty("atStarts", out _) ? o.Bool("atStarts") : biome == null && cavern == CavernSpot.None);
             if (dusk && (biome != null || cavern != CavernSpot.None || o.Bool("atStarts") || e.TryGetProperty("prizes", out _)))
@@ -832,7 +835,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -913,6 +916,7 @@ public static class ContentLoader
                 Drums = Drums(o),
                 Web = Web(o, spits: true),
                 Poison = Poison(o),
+                Fear = o.Int("fear", 0, 100, 0),
             };
             if (def.Poison != null && !def.CanAttack)
                 o.Error("only a unit that attacks can poison (\"poison\")");
@@ -1008,7 +1012,7 @@ public static class ContentLoader
         private void ReadRelic(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "icon", "hp", "damage", "armor", "web");
+            o.Keys("id", "name", "description", "icon", "hp", "damage", "armor", "web", "fear");
             if (id == null) return;
             if (_db.TryGetRelic(id, out _))
             {
@@ -1025,6 +1029,7 @@ public static class ContentLoader
                 Damage = o.Int("damage", 0, 1000, 0),
                 Armour = o.Int("armor", 0, 100, 0),
                 Web = Web(o, spits: false),
+                Fear = o.Int("fear", 0, 100, 0),
             });
         }
 

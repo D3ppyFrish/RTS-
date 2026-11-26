@@ -986,6 +986,7 @@ public sealed partial class CombatSystem
             {
                 Ensnare(i, def, t); // a relic of spider silk (CombatSystem.Webs.cs)
                 Envenom(i, def, t); // a giant spider's bite
+                Frighten(i, def, t); // a giant hornet's sting (CombatSystem.Fear.cs)
             }
         }
         // The unit answers the nearest of the tick's attackers (ties to the lowest id), whoever struck first.
@@ -1199,6 +1200,7 @@ public sealed partial class CombatSystem
                 if (_pending[i] == 0) BledOut++;
             }
         }
+        LandFear();
         if (_dead.Count == 0) return false;
         Array.Clear(_cheer, 0, u.Count);
         _tamed.Clear();
