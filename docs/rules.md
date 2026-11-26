@@ -105,8 +105,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
     captured and burned like any good. **Stone towers** are built of it (60 cut stone and 20 wood) and so are the
     **great works** (150 of their 300 stone is cut stone), so a town that wants either needs a mason's yard first.
     Stone walls, facings and gates are still laid with plain stone.
-  - Computer players do not lay bridges or build stone towers or great works; from Easy up they build a sawmill for
-    the planks of a siege workshop and its catapults (see Computer players). All numbers are first guesses for playtesting.
+  - Computer players do not build stone towers or great works; from Easy up they build a sawmill for the planks of a
+    siege workshop and its catapults, a dock, or a bridge over the water on the way to the enemy (see Computer players). All numbers are first guesses for playtesting.
 - **Crystal, shrines and mana** (`ManaTests`; the design doc's Resources table: crystal from the deep caverns,
   channelled into mana at a shrine): crystal grows on the cavern walls (`BlockType.Crystal`). Workers dig it like
   ore, 3 seconds a block, and carry it to storage as the good `Crystal` (rubble of it is stone). A **shrine**
@@ -2074,6 +2074,19 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   fine), a hazard, bog or quicksand, ground it keeps off near the Heartscar or (Hard) its pits; it does not look at
   that storehouse again. Hard lays roads only while no enemies are at its buildings. The classic level never lays
   roads. All numbers are first guesses.
+- **Bridges** (Easy, Normal and Hard; `AI/AiPlayer.Bridges.cs`, tests in `AiBridgeTests`): every 30 seconds, once it
+  has 8 workers, it looks for a plank bridge on the way to the enemy town hall it knows of (or where it guesses one
+  stands). When the way by land from its town hall is cut off by water (or a drop or trench), or is at least 40 steps
+  longer than the way over a bridge, it takes, of the banks it can walk to within 96 steps of the hall, the straight
+  line across x or along z over the gap to ground from which it can walk to the enemy, short enough for one bridge
+  (32 deck columns) and with room for a deck on every column, that makes the whole way shortest (between ways as
+  short, the straightest); none over ground it keeps off near the Heartscar. With no sawmill it lays one out first;
+  once it has the planks (2 a deck column, on top of what it is keeping for other things) it sends 3 spare workers to
+  lay the bridge, and sends spare workers again while no one is building a column of it that can be built. Its waves
+  then walk over it like any ground, so they need no ice or ships there; the enemy can walk over it too. One bridge at
+  a time: while it stands whole it lays no other, and once a column of it is knocked out it looks afresh. A look that
+  finds no bridge worth laying waits 2 minutes before the next. Hard lays bridges only while no enemies are at its
+  buildings. The classic level never lays bridges. All numbers are first guesses.
 - **Pack ponies** (Easy, Normal and Hard; `AiPlayer.Ponies` in `AI/AiPlayer.Carts.cs`, tests in `AiCartTests`): once
   it has Handcarts and a finished sawmill it trains 2 pack ponies at the town hall while it has room and the goods
   (Hard: only while no enemies are at its buildings). They find their work on their own. The classic level never
