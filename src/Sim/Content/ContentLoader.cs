@@ -62,7 +62,7 @@ public static class ContentLoader
     };
 
     /// <summary>Building materials a building's walls, footing and roof may use.</summary>
-    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle, BlockType.Hive };
+    private static readonly BlockType[] Materials = { BlockType.Planks, BlockType.Thatch, BlockType.RoofTile, BlockType.StoneBrick, BlockType.Palisade, BlockType.Rampart, BlockType.Trestle, BlockType.Hive, BlockType.Livewood };
 
     /// <summary>Loads the game's own data, built into the core.</summary>
     public static ContentDb LoadEmbedded() => Load(EmbeddedText);
@@ -576,7 +576,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime", "grow",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mends", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen", "lens");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mends", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen", "lens", "regrow", "thorns");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -654,6 +654,8 @@ public static class ContentLoader
                 Roof = o.Material("roof", BlockType.Thatch),
                 Chimney = o.Bool("chimney"),
                 Mound = o.Bool("mound"),
+                RegrowTicks = o.Int("regrow", 1, MaxSeconds, 0) * Tps,
+                Thorns = o.Int("thorns", 1, 1000, 0),
                 Cost = o.Cost("cost"),
                 BuildTicks = o.Int("buildTime", 1, MaxSeconds, 20, required: true) * Tps,
                 Housing = o.Int("housing", 0, 1000, 0),
@@ -1392,6 +1394,7 @@ public static class ContentLoader
                     case TechEffectType.Salvage:
                     case TechEffectType.FieldRepairs:
                     case TechEffectType.CutWebs:
+                    case TechEffectType.Thorns:
                         o.Keys("type");
                         effects.Add(new TechEffect { Type = type });
                         break;
@@ -1686,6 +1689,8 @@ public static class ContentLoader
                 h.Add((int)b.Roof);
                 h.Add(b.Chimney ? 1 : 0);
                 h.Add(b.Mound ? 1 : 0);
+                h.Add(b.RegrowTicks);
+                h.Add(b.Thorns);
                 h.Add(b.Cost);
                 h.Add(b.BuildTicks);
                 h.Add(b.Housing);

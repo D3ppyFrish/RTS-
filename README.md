@@ -143,10 +143,11 @@ replay made with different data says so instead of drifting apart.
 
 - **Factions**: Settlers, Orcs (who tame monsters: see [Monsters and taming](docs/rules.md#monsters-and-taming)) and the
   Deepfolk (an insect hive with its own units and brood chamber in place of everyone's, `"replaces"`; see
-  [The Deepfolk](docs/rules.md#the-deepfolk)). Player 0 plays the first
+  [The Deepfolk](docs/rules.md#the-deepfolk)) and the Elves (long-range archers, healing druids and living walls that
+  grow back, `"regrow"` and `"thorns"` in `data/buildings.json`; see [The Elves](docs/rules.md#the-elves)). Player 0 plays the first
   faction, player 1 the second, and so on; picking a faction on the start screen picks the player who
   has it.
-- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 27
+- **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 29
   in all: a shared core (farming, better tools, roads, archery, basic magic, masonry, crop rotation,
   horse breeding, handcarts, smelting, sapping, silk knives), two per faction plus each faction's final tech (its great work,
   see [Ascendancy](docs/rules.md#ascendancy-and-great-works)), and six discovery techs (`"discovery"`) opened only by exploring:
@@ -155,7 +156,7 @@ replay made with different data says so instead of drifting apart.
   unlocks the units and buildings that name it in `requires`, and can have effects: roads, showing the map's
   ruins, lairs or towns through the fog (`reveal`), wild monsters sparing workers (`spare_workers`), units cutting free of webs (`cut_webs`), the shield
   wall (`shield_wall`), aimed felling and prospecting (`felling`, `prospecting`), murder holes in stone gates
-  (`murder_holes`, Masonry), salvage and field repairs (`salvage`, `field_repairs`, Craft guilds: take down your own buildings for half their cost back, and mend catapults and rams in the field; repairing buildings needs no tech, and docks and siege workshops mend their own ships and siege machines beside them: `mends` in `data/buildings.json`), molting (`molt`, the Deepfolk's Molting), and the
+  (`murder_holes`, Masonry), salvage and field repairs (`salvage`, `field_repairs`, Craft guilds: take down your own buildings for half their cost back, and mend catapults and rams in the field; repairing buildings needs no tech, and docks and siege workshops mend their own ships and siege machines beside them: `mends` in `data/buildings.json`), molting (`molt`, the Deepfolk's Molting), thorns on living walls (`thorns`, the Elves' Thornwood), and the
   two large buffs: more housing (`housing`, a number more or a `percent` of the building's own: Brood warrens
   doubles a brood chamber) and more hit points (`unit_hp`, for units already alive too: Giant's marrow, +30% for
   fighters).

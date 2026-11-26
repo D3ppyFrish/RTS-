@@ -108,6 +108,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's units cut themselves out of webs (a <see cref="TechEffectType.CutWebs"/> tech).</summary>
     public bool CutsWebs(int player) => Find(player)?.CutWebs ?? false;
 
+    /// <summary>True if the player's buildings with thorns prick those who strike them (a <see cref="TechEffectType.Thorns"/> tech).</summary>
+    public bool HasThorns(int player) => Find(player)?.Thorns ?? false;
+
     /// <summary>True if the player's gates with murder holes drop stones (a <see cref="TechEffectType.MurderHoles"/> tech).</summary>
     public bool HasMurderHoles(int player) => Find(player)?.MurderHoles ?? false;
 
@@ -184,7 +187,7 @@ public sealed partial class EconomySystem
     private void UpdateBonuses(PlayerEconomy p)
     {
         var units = Content.Units;
-        p.Roads = p.SpareWorkers = p.MurderHoles = p.Salvage = p.FieldRepairs = p.CutWebs = false;
+        p.Roads = p.SpareWorkers = p.MurderHoles = p.Salvage = p.FieldRepairs = p.CutWebs = p.Thorns = false;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
@@ -206,6 +209,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.Salvage: p.Salvage = true; break;
                     case TechEffectType.FieldRepairs: p.FieldRepairs = true; break;
                     case TechEffectType.CutWebs: p.CutWebs = true; break;
+                    case TechEffectType.Thorns: p.Thorns = true; break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.HpFor(d);

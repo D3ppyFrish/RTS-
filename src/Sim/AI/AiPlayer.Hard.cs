@@ -68,7 +68,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "crop_rotation", "deep_warrens", "horse_breeding", "roads", "carts", "archery", "masonry",
         "settler_guilds", "orc_beast_pens", "orc_war_drums", "deep_chitin", "sapping", "basic_magic", "smelting",
-        "settler_drill", "silk_knives",
+        "settler_drill", "elf_thornwood", "silk_knives",
     };
 
     /// <summary>What the player has, counted once each time Hard looks at its economy.</summary>

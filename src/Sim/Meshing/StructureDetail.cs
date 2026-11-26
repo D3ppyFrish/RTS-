@@ -40,8 +40,10 @@ public static class StructurePalette
     public const byte HiveA = 80, HiveB = 81, HiveDark = 82, HiveResin = 83;
     // An orchard's fruit trees: glossy leaves in two greens, and the ripe fruit hanging in them.
     public const byte OrchardLeafA = 84, OrchardLeafB = 85, Fruit = 86;
+    // The Elves' living wood: young bark in two greyish browns, the moss on it, and the pale green of new shoots.
+    public const byte LivewoodA = 87, LivewoodB = 88, LivewoodMoss = 89, LivewoodShoot = 90;
     /// <summary>One more than the highest colour.</summary>
-    public const byte Count = 87;
+    public const byte Count = 91;
 
     /// <summary>Leaf colours: drawn swaying in the wind.</summary>
     public static bool IsLeaf(byte c) => c >= LeafA && c <= LeafYellow || c >= NeedleA && c <= DuskDark || c is >= GloomA and <= GloomDark
@@ -87,7 +89,7 @@ public static class StructureDetail
     public static bool IsStructure(BlockType t) =>
         t is BlockType.Planks or BlockType.Thatch or BlockType.RoofTile or BlockType.StoneBrick
             or BlockType.Door or BlockType.Gate or BlockType.Palisade or BlockType.Rampart or BlockType.Trestle
-            or BlockType.Floor or BlockType.Ladder or BlockType.Hive;
+            or BlockType.Floor or BlockType.Ladder or BlockType.Hive or BlockType.Livewood;
 
     /// <summary>
     /// Blocks drawn as fine voxels: building blocks, and the rubble collapses leave, drawn as heaps of lumps.
@@ -291,6 +293,7 @@ public static class StructureDetail
             BlockType.Trestle => Trestle(x, y, z),
             BlockType.Ladder => Rungs(x, y, z),
             BlockType.Hive => HiveEarth(x, y, z),
+            BlockType.Livewood => Livewood(x, y, z),
             BlockType.Floor => Floorboards(x, y, z),
             BlockType.TreeRubble => Log(x, y, z),
             BlockType.DuskWood => DuskTrunk(x, y, z),
@@ -424,6 +427,36 @@ public static class StructureDetail
                 return StructurePalette.Empty;
             }
             return ((gu >> 1) & 1) == 0 ? StructurePalette.DoorA : StructurePalette.DoorB;
+        }
+
+        // --- Living wood (the Elves) ---------------------------------------------------------------------
+
+        /// <summary>
+        /// Living wood (<see cref="BlockType.Livewood"/>): young trunks grown close and twisted round each other, in
+        /// strands two voxels across that wind slowly as they rise, with dark furrows between, moss in patches and pale
+        /// shoots here and there. Where nothing stands on it, its top is a ragged crown of leaf tufts. It fills its block.
+        /// </summary>
+        private byte Livewood(int x, int y, int z)
+        {
+            int gx = _wx * Size + x, gy = _wy * Size + y, gz = _wz * Size + z;
+            if (Open(PY) && y >= Size - 2)
+            {
+                int tuft = Hash(gx >> 1, gz >> 1, 17);
+                if (y == Size - 1 && tuft % 3 == 0) return StructurePalette.Empty;
+                return ((tuft >> 2) % 4) switch
+                {
+                    0 => StructurePalette.LeafB,
+                    1 => StructurePalette.LeafDark,
+                    2 => StructurePalette.LivewoodShoot,
+                    _ => StructurePalette.LeafA,
+                };
+            }
+            int turn = gy >> 3; // the strands wind a voxel round for every block they rise
+            int u = gx + turn, v = gz + turn;
+            if (((u + v) & 7) == 0) return StructurePalette.LivewoodB;
+            if (Hash(gx >> 1, gy >> 1, gz >> 1) % 7 == 0) return StructurePalette.LivewoodMoss;
+            if (Hash(gx, gy, gz) % 41 == 0) return StructurePalette.LivewoodShoot;
+            return Hash(u >> 1, v >> 1, 5) % 3 != 0 ? StructurePalette.LivewoodA : StructurePalette.LivewoodB;
         }
 
         // --- Hive earth (the Deepfolk) --------------------------------------------------------------------

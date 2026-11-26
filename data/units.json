@@ -478,5 +478,24 @@
     "description": "A broad digging insect with shovel claws. Tunnels twice as fast as a sapper, unseen underground unless a listening post hears it, so a swarm can follow it under a wall and burst out on the far side.",
     "speed": 4, "hp": 50, "model": "burrower", "damage": 5, "attackTime": 1.5, "range": 1.25, "sight": 7,
     "attack": "crush", "armor": { "head": 1, "body": 1 }, "work": 200, "burst": 50,
-    "cost": { "food": 40, "wood": 10 }, "trainTime": 15, "trainedAt": "brood_chamber" }
+    "cost": { "food": 40, "wood": 10 }, "trainTime": 15, "trainedAt": "brood_chamber" },
+
+  // The Elves' own (see "replaces" in factions.json): quick, lightly armoured fighters, archers that outshoot everyone's,
+  // and druids who heal and grow the forest. Fragile one on one; they win from behind their living walls.
+  { "id": "glade_warden", "name": "Glade warden", "faction": "elves", "role": "line_infantry",
+    "description": "An elf swordsman in leaf-green mail: quicker and harder-hitting than a spearman, but with less to him, so he breaks under a long brawl. Holds the gap while the archers shoot.",
+    "speed": 4.5, "hp": 70, "model": "glade_warden", "damage": 9, "attackTime": 1, "range": 1.5, "sight": 9,
+    "attack": "slash", "armor": { "torso": 1 },
+    "cost": { "food": 40, "wood": 25 }, "trainTime": 15, "trainedAt": "barracks" },
+  { "id": "elf_archer", "name": "Elf archer", "faction": "elves", "role": "ranged",
+    "description": "A longbow of yew and a keen eye: shoots 12 blocks, a third further than an archer, and sees further still. Wears no armour and dies quickly once anything reaches her.",
+    "speed": 4, "hp": 40, "model": "elf_archer", "damage": 6, "attackTime": 1.2, "range": 12, "sight": 13,
+    "attack": "pierce",
+    "cost": { "food": 35, "wood": 35 }, "trainTime": 18, "trainedAt": "barracks", "requires": "archery" },
+  { "id": "druid", "name": "Druid", "faction": "elves", "role": "caster",
+    "description": "Keeper of the old groves. Tends the most hurt ally nearby and stems its bleeding, strikes with thorny bolts, and can raise a row of trees (Grow Forest). The Elves' only magic: they have no mage.",
+    "speed": 4, "hp": 40, "model": "druid", "damage": 5, "attackTime": 1.5, "range": 7, "sight": 10,
+    "attack": "pierce", "armor": { "torso": 1 }, "growForest": true,
+    "heal": 6, "healTime": 2, "healRange": 7,
+    "cost": { "food": 50, "wood": 30 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" }
 ]

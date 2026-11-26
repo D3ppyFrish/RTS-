@@ -102,6 +102,11 @@ public static class UnitModels
     private static readonly Color HullDark = new(0.3f, 0.19f, 0.1f);
     private static readonly Color Deck = new(0.62f, 0.47f, 0.28f);
     private static readonly Color Sailcloth = new(0.88f, 0.86f, 0.78f);
+    private static readonly Color ElfSkin = new(0.93f, 0.82f, 0.7f);
+    private static readonly Color ElfHair = new(0.88f, 0.8f, 0.52f);
+    private static readonly Color ElfGreen = new(0.24f, 0.4f, 0.22f);
+    private static readonly Color ElfGreenDark = new(0.16f, 0.28f, 0.15f);
+    private static readonly Color Yew = new(0.42f, 0.24f, 0.12f);
     private static readonly Color Team = new(1f, 0f, 0f, 0f);      // full-strength team colour
     private static readonly Color TeamDark = new(0.7f, 0f, 0f, 0f); // shaded team colour
 
@@ -340,6 +345,35 @@ public static class UnitModels
             .Box(-3, 7, 5, -3, 8, 6, Boar).Box(2, 7, 5, 2, 8, 6, Boar)                   // ears
             .Box(-1, 6, -7, 0, 7, -7, Bristle);                                          // tail
 
+        /// <summary>
+        /// An elf: a person's height, slimmer in the leg, pale, with long fair hair down the back and pointed ears
+        /// sweeping up past the head, in leaf-green leggings and a tunic of its owner's colour. Hands at x = -3 and 2.
+        /// </summary>
+        public Builder Elf(bool legs = true)
+        {
+            if (legs)
+            {
+                Box(-2, 0, -1, -2, 4, 0, ElfGreen);
+                Box(1, 0, -1, 1, 4, 0, ElfGreen);
+                Box(-2, 0, 0, -2, 0, 1, Leather).Box(1, 0, 0, 1, 0, 1, Leather);      // soft boots
+            }
+            Box(-2, 5, -1, 1, 9, 0, Team);
+            Box(-2, 5, -1, 1, 5, 0, ElfGreenDark);                               // belt
+            Box(-2, 6, 1, 1, 6, 1, TeamDark).Box(-1, 7, 1, 0, 8, 1, ElfGreen);   // a leaf clasp on the tunic
+            Box(-3, 6, -1, -3, 9, 0, TeamDark);                                  // arms
+            Box(2, 6, -1, 2, 9, 0, TeamDark);
+            Box(-3, 5, -1, -3, 5, 0, ElfSkin);                                   // hands
+            Box(2, 5, -1, 2, 5, 0, ElfSkin);
+            Box(-2, 10, -2, 1, 13, 1, ElfSkin);                                  // head
+            Box(-2, 13, -2, 1, 13, 1, ElfHair);
+            Box(-2, 9, -2, 1, 12, -2, ElfHair);                                  // long hair down the back
+            Box(-3, 11, -1, -3, 13, -1, ElfSkin).Box(2, 11, -1, 2, 13, -1, ElfSkin); // pointed ears
+            Box(-3, 14, -1, -3, 14, -1, ElfSkin).Box(2, 14, -1, 2, 14, -1, ElfSkin);
+            Box(-1, 11, 1, -1, 11, 1, ElfGreenDark);                             // green eyes
+            Box(0, 11, 1, 0, 11, 1, ElfGreenDark);
+            return this;
+        }
+
         /// <summary>The mage's robe and pointed hat.</summary>
         public Builder Robe() => Humanoid(legs: false).Box(-2, 0, -1, 1, 4, 0, TeamDark);
     }
@@ -378,6 +412,23 @@ public static class UnitModels
             .Box(-2, 6, 1, 1, 9, 1, Cloth).Box(-1, 6, 1, 0, 9, 1, Team).Box(-2, 8, 1, 1, 8, 1, Team) // apron with a cross
             .Box(-4, 4, -1, -4, 6, 0, Leather).Box(-4, 7, -1, -4, 7, 0, Leaf)            // satchel of herbs
             .Box(3, 0, 1, 3, 13, 1, Wood).Box(3, 14, 0, 3, 14, 2, Leaf).Box(3, 15, 1, 3, 15, 1, Lamp), // staff tied with leaves
+        // The Elves' own: slim, fair-haired, in leaf green with their owner's colour.
+        // A glade warden: a leaf-bladed sword and a leaf-shaped shield, a green cloak.
+        "glade_warden" => new Builder().Elf().Cape(bottom: 3)
+            .Box(-2, 14, -2, 1, 14, 1, Steel).Box(-2, 13, -2, -2, 13, 1, Steel).Box(1, 13, -2, 1, 13, 1, Steel) // circlet helm
+            .Box(2, 4, 1, 2, 5, 1, Gold).Box(2, 6, 1, 2, 12, 1, Steel).Box(2, 13, 1, 2, 13, 1, Steel)            // leaf blade
+            .Box(-4, 5, -1, -4, 10, 1, ElfGreen).Box(-4, 6, 2, -4, 9, 2, ElfGreen).Box(-4, 7, -1, -4, 8, 1, Team), // leaf shield
+        // An elf archer: a hood, a longbow as tall as she is, a quiver.
+        "elf_archer" => new Builder().Elf()
+            .Box(-2, 13, -3, 1, 14, 1, ElfGreenDark).Box(-1, 15, -2, 0, 15, -1, ElfGreenDark)                  // pointed hood
+            .Bow(1, 16, x: -4, wood: Yew)
+            .Box(0, 6, -2, 1, 12, -2, Leather).Box(0, 13, -2, 1, 13, -2, Cloth),                                 // quiver and fletchings
+        // A druid: a long robe, a crown of leaves, and a crooked staff with green growing from its head.
+        "druid" => new Builder().Elf(legs: false).Box(-2, 0, -1, 1, 4, 0, TeamDark).Box(-2, 0, 1, 1, 1, 1, TeamDark)
+            .Box(-2, 9, 1, 1, 9, 1, ElfGreenDark)                                                             // mantle
+            .Box(-2, 14, -2, 1, 14, 1, Leaf).Box(-2, 15, -2, -2, 15, -2, Leaf).Box(1, 15, 1, 1, 15, 1, Leaf)   // crown of leaves
+            .Box(3, 0, 1, 3, 14, 1, Wood).Box(4, 14, 1, 4, 16, 1, Wood)                                       // crooked staff
+            .Box(3, 16, 0, 5, 17, 2, Leaf).Box(4, 18, 1, 4, 18, 1, Lamp),
         "rider" => new Builder().Mount(Horse)
             .Box(-3, 5, -4, 2, 9, 1, TeamDark)                                           // caparison down the flanks
             .Humanoid(lift: 6, legs: false)

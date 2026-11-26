@@ -103,6 +103,27 @@ public sealed partial class CombatSystem
         return best;
     }
 
+    /// <summary>Blows struck at buildings with thorns that pricked their strikers, since the match began.</summary>
+    public long ThornPricks { get; private set; }
+
+    /// <summary>
+    /// Thorns (the Elves' Thornwood): unit i struck building b from close up; if b has thorns and its owner the tech for
+    /// them, i takes them back, piercing at the legs, by no unit. Ranged shots, machines and the owner's allies are spared.
+    /// </summary>
+    private void Thorns(int i, UnitDef def, Building b)
+    {
+        int thorns = b.Def.Thorns;
+        if (thorns <= 0 || def.IsRanged || def.Machine || !_sim.Truces.Hostile(b.Owner, U.Owner[i])
+            || !_sim.Economy.HasThorns(b.Owner)) return;
+        var u = U;
+        var part = BodyPart.Legs;
+        int damage = Body.Damage(thorns, def.Body, part, AttackKind.Pierce, Armour(i, part));
+        _pending[i] += damage;
+        int w = i * Body.Parts + (int)part;
+        u.Wounds[w] = (byte)Math.Min(255, u.Wounds[w] + damage);
+        ThornPricks++;
+    }
+
     /// <summary>A stone through the gate's holes on unit t: a crushing blow on the head, by no unit.</summary>
     private void DropStone(Building gate, MurderHoles holes, int t)
     {

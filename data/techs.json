@@ -26,6 +26,8 @@
 //                                         and the goods they held (see "Salvage" in docs/rules.md)
 //   field_repairs                         workers can mend the player's damaged catapults and battering rams in the field
 //                                         for a share of their cost in materials (see "Field repairs" in docs/rules.md)
+//   thorns                                the player's buildings with thorns (the Elves' living walls) prick whoever strikes
+//                                         them from close up (see "thorns" in buildings.json)
 //   cut_webs                              the player's units cut themselves out of webs: giant spiders' bites and the spider
 //                                         silk's bearer no longer slow them (see "Monsters and taming" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
@@ -44,7 +46,9 @@
       { "type": "prospecting", "unit": "foreman", "time": 8, "radius": 12 },
       { "type": "prospecting", "unit": "master_builder", "time": 8, "radius": 12 },
       { "type": "prospecting", "role": "worker", "faction": "orcs", "time": 16, "radius": 12 },
-      { "type": "prospecting", "role": "worker", "faction": "deepfolk", "time": 16, "radius": 12 } ] },
+      { "type": "prospecting", "role": "worker", "faction": "deepfolk", "time": 16, "radius": 12 },
+      { "type": "prospecting", "role": "worker", "faction": "elves", "time": 16, "radius": 12 },
+      { "type": "felling", "role": "worker", "faction": "elves", "time": 8, "crush": 60 } ] },
   { "id": "roads", "icon": "road", "name": "Roads", "description": "Packed gravel paths that double walking speed.",
     "cost": { "stone": 20 }, "researchTime": 20,
     "effects": [ { "type": "roads" } ] },
@@ -85,6 +89,10 @@
     "cost": { "food": 50, "wood": 50 }, "researchTime": 40, "requires": [ "farming" ],
     "effects": [ { "type": "housing", "building": "brood_chamber", "percent": 100 } ] },
 
+  { "id": "elf_thornwood", "icon": "grow_forest", "name": "Thornwood", "faction": "elves", "description": "The druids sing thorns into the living walls: every blow struck at one from close up costs the striker 4 hit points. Arrows and siege engines are not hurt, but sappers and soldiers who hack at the hedge bleed for it.",
+    "cost": { "wood": 60, "food": 40 }, "researchTime": 40,
+    "effects": [ { "type": "thorns" } ] },
+
   // Each faction's final tech: it opens the faction's great work, which wins the match by Ascendancy once it has
   // stood finished in the deep caves long enough (see "Ascendancy" in docs/rules.md).
   { "id": "settler_legends", "icon": "crown", "name": "Legends' lore", "faction": "settlers",
@@ -96,6 +104,9 @@
   { "id": "deep_queen", "icon": "crown", "name": "The Queen's brood", "faction": "deepfolk",
     "description": "The hive raises a queen, to be walled in a great chamber deep under the earth.",
     "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "deep_chitin", "deep_warrens", "smelting" ] },
+  { "id": "elf_eldertree", "icon": "crown", "name": "Song of the Eldertree", "faction": "elves",
+    "description": "The song that wakes an eldertree, to be sung up from a seed in the deep caves.",
+    "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "elf_thornwood", "basic_magic", "smelting" ] },
 
   // Discovery techs: opened by exploring, not by other techs.
   { "id": "wardens_charts", "icon": "chart", "name": "Wardens' charts", "discovery": "ruin",
