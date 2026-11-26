@@ -1022,6 +1022,20 @@ areas, and Orcs who beat a wolf keep it.
   another spot within that distance of its den (on dry ground, away from buildings), and it guards round where it
   is rather than round the den: it goes after any unit, workers too, within its guard radius of that spot, and
   its leash is measured from there. The starts' wolves, the city-states' monsters and the rest stay home.
+- **Packs spread** (`SpreadTests`; `spread` and `spreadTo` in a lair in `data/units.json`, `MonsterSystem.Spread`): the
+  wolf packs, boar herds and shade stalker dens spread across the map found new lairs the longer they are left. Every
+  `spread` seconds (300 for wolves and stalkers, 360 for boars; the first time only after twice that, so not before
+  the tenth minute) a lair whose pack is at full strength (at least the
+  pack it started with in the wild) and not fighting has a new pack born by its den, as many as a lair starts with,
+  which walks off to a den of its own: a column within 64 of the old den (`SpreadRange`), in the same biome, that fits
+  as a lair spread across the map does at match start (100 from every start, 40 from every other lair and town) and is
+  at least 40 columns from every building (`SpreadBuildingGap`), so packs spread through the wild and not into towns.
+  The new lair roams, grows and spreads in turn and leaves a den with its prizes like any other. A lair stops founding
+  new ones while `spreadTo` lairs of its monster spread across the map stand for each 512 by 512 blocks of map (2 for
+  wolves, 3 for boars and stalkers: on the default map 4, 6 and 6, against 2, 4 and 4 at the start), so a corner of
+  the map nobody clears fills up with dens, and clearing them early keeps it down. The starts' own wolf lairs, the
+  city-states', the caverns' and the swamp's, beaches', passes' and spiders' monsters do not spread. All numbers are
+  first guesses for playtesting.
 - **The cavern** (issue #65, `CavernTests`): on maps at least 384 blocks across, the cavern under the hills has
   three nests of **cave crawlers** spread along it, from near the way in to near the far end, and a **cave wyrm**
   alone in its deepest chamber (the furthest on foot from the way in). A crawler (40 hit points, quick, piercing

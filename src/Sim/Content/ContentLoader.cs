@@ -486,7 +486,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush", "pass", "cave", "totem");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush", "pass", "spread", "spreadTo", "cave", "totem");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -531,6 +531,12 @@ public static class ContentLoader
             if (cave && (roam > 0 || lurk || inPass)) o.Error("a lair in a hill cave (\"cave\") nests in it: it does not \"roam\", \"lurk\" or keep a \"pass\"");
             var totemId = o.Str("totem", false);
             if (totemId != null && biome == null) o.Error("a lair's \"totem\" needs a \"biome\": only the lairs spread across the map raise one");
+            int spread = o.Int("spread", 0, 3600, 0);
+            int spreadTo = o.Int("spreadTo", 1, 64, count * 2);
+            if (spread > 0 && biome == null) o.Error("\"spread\" needs a \"biome\": only the lairs spread across the map found new ones");
+            if (spread > 0 && (lurk || inPass)) o.Error("a lair that lurks (\"lurk\") or holds a pass (\"pass\") does not \"spread\"");
+            if (e.TryGetProperty("spreadTo", out _) && spread == 0) o.Error("\"spreadTo\" needs a \"spread\" (seconds between new lairs)");
+            if (spread > 0 && spreadTo <= count) o.Error($"\"spreadTo\" is {spreadTo}, but {count} lairs are spread at the start, so it should be more");
             var def = new LairDef
             {
                 Pack = pack,
@@ -549,6 +555,8 @@ public static class ContentLoader
                 Ambush = lurk ? ambush : 0,
                 Pass = inPass && biome != null,
                 Cave = cave && biome != null,
+                SpreadTicks = biome != null && !lurk && !inPass ? spread * Simulation.TicksPerSecond : 0,
+                SpreadTo = spreadTo,
             };
             if (totemId != null && biome != null)
                 _resolve.Add(() =>

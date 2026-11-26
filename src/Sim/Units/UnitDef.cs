@@ -476,6 +476,18 @@ public sealed class LairDef
     /// </summary>
     public Economy.BuildingDef? Totem { get; internal set; }
     /// <summary>
+    /// The packs spread across the map found new lairs the longer they are left (see <see cref="MonsterSystem"/>,
+    /// "Spreading"): every this many ticks a lair whose pack is at full strength and not fighting has a new pack born
+    /// at its den, which goes off to a new den of its own in the same biome; 0 for a monster whose lairs never spread.
+    /// <c>spread</c> in the data, in seconds.
+    /// </summary>
+    public int SpreadTicks { get; init; }
+    /// <summary>
+    /// The most lairs of this monster spread across the map that stand at once for each 512 by 512 blocks of map
+    /// (see <see cref="SpreadTicks"/>); a lair stops founding new ones while there are that many. <c>spreadTo</c>.
+    /// </summary>
+    public int SpreadTo { get; init; }
+    /// <summary>
     /// What each faction gets for beating this monster: what it makes of the den a cleared lair leaves (see
     /// <see cref="MonsterSystem"/>), in data order. Two factions can share a prize; one not listed gets none.
     /// </summary>

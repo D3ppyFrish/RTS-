@@ -63,6 +63,13 @@ public sealed class Lair
     internal long NextRoam;
     /// <summary>The tick the next monster is born to a growing pack (see <see cref="LairDef.GrowTicks"/>), or 0 if it never grows.</summary>
     public long NextBirth { get; internal set; }
+    /// <summary>
+    /// The tick this lair next tries to found a new one (see <see cref="LairDef.SpreadTicks"/>), or 0 if it never does:
+    /// only lairs spread across the map, and those they founded, spread.
+    /// </summary>
+    public long NextSpread { get; internal set; }
+    /// <summary>The lair whose pack founded this one (see <see cref="LairDef.SpreadTicks"/>), or 0 for one placed at match start.</summary>
+    public int Parent { get; internal set; }
 
     internal readonly List<int> PackIds = new();
     /// <summary>The pack's monsters (ids) following a blood trail, in the order they picked it up.</summary>
@@ -216,6 +223,7 @@ public sealed class MonsterSystem
             Mix(lair.Cleared ? 1 : 0); Mix(lair.ClearedBy); Mix(lair.LastBeatenBy);
             Mix(lair.Used ? 1 : 0); Mix(lair.UsedBy); Mix(lair.Building); Mix(lair.Totem); Mix(lair.TotemHitBy);
             Mix(lair.Roam); Mix(lair.HomeX); Mix(lair.HomeY); Mix(lair.HomeZ); Mix(lair.NextRoam); Mix(lair.NextBirth);
+            Mix(lair.NextSpread); Mix(lair.Parent);
             Mix(lair.PackIds.Count);
             foreach (int id in lair.PackIds) Mix(id);
             Mix(lair.TrackerIds.Count);
@@ -308,6 +316,7 @@ public sealed class MonsterSystem
                 {
                     placed.Add(lair);
                     if (def.Roam > 0) StartRoaming(lair);
+                    if (def.SpreadTicks > 0) StartSpreading(lair);
                 }
                 break;
             }
@@ -763,6 +772,7 @@ public sealed class MonsterSystem
         long tick = _sim.Tick;
         // An ambusher that died, was beaten, or came out of the water with nobody to fight springs no ambush.
         if (_ambush.Count > 0) _ambush.RemoveAll(id => U.IndexOf(id) is var i && (i < 0 || !IsWild(i) || (U.Target[i] == 0 && !Submerged(i))));
+        _founded.Clear();
         foreach (var lair in _lairs)
         {
             // A lair cleared by knocking its totem down (see LairDef.Totem) still guards its den while any of its pack is left.
@@ -775,9 +785,124 @@ public sealed class MonsterSystem
             {
                 if (lair.Monster.Lair!.Ambush > 0) LieInWait(lair);
                 if (!lair.Cleared && lair.NextBirth > 0 && tick >= lair.NextBirth) Grow(lair);
+                if (!lair.Cleared && lair.NextSpread > 0 && tick >= lair.NextSpread) Spread(lair);
                 if ((tick + lair.Id) % GuardInterval == 0) Guard(lair);
             }
         }
+        if (_founded.Count > 0) _lairs.AddRange(_founded);
+    }
+
+    // --- Spreading ---------------------------------------------------------------------------------
+
+    /// <summary>The furthest a new lair is founded from the den of the lair it spread from (blocks).</summary>
+    public const int SpreadRange = 64;
+    /// <summary>The nearest a new lair is founded to any player's building (blocks): packs spread through the wild, not into towns.</summary>
+    public const int SpreadBuildingGap = 40;
+    /// <summary>Columns tried each time a lair spreads; with none that fits it tries again next time.</summary>
+    private const int SpreadTries = 40;
+    // Lairs founded this tick, added to the list once the tick's look at every lair is done.
+    private readonly List<Lair> _founded = new();
+
+    /// <summary>
+    /// The most lairs of the monster spread across the map that stand at once (see <see cref="LairDef.SpreadTo"/>), for
+    /// the map's size: at least one more than were placed at match start.
+    /// </summary>
+    public int SpreadCap(UnitDef monster)
+    {
+        var def = monster.Lair!;
+        long area = (long)World.SizeX * World.SizeZ;
+        int placed = Math.Max(1, (int)(def.Count * area / (512L * 512L)));
+        return Math.Max(placed + 1, (int)(def.SpreadTo * area / (512L * 512L)));
+    }
+
+    /// <summary>
+    /// The lair founds new ones from now on (see <see cref="LairDef.SpreadTicks"/>), the first once twice that time has
+    /// passed (a lair settles in before it spreads), then every time; nothing for a monster whose lairs do not spread.
+    /// </summary>
+    public void StartSpreading(Lair lair)
+    {
+        int every = lair.Monster.Lair!.SpreadTicks;
+        if (every > 0) lair.NextSpread = _sim.Tick + 2L * every;
+    }
+
+    /// <summary>The lairs of the monster spread across the map (placed there or founded since) that are not cleared.</summary>
+    public int Standing(UnitDef monster)
+    {
+        int n = 0;
+        foreach (var lair in _lairs)
+            if (lair.Monster == monster && !lair.Cleared && lair.NextSpread > 0) n++;
+        foreach (var lair in _founded)
+            if (lair.Monster == monster) n++;
+        return n;
+    }
+
+    /// <summary>
+    /// A lair's time to spread has come (see <see cref="LairDef.SpreadTicks"/>): if its pack is at full strength (at
+    /// least <see cref="LairDef.Pack"/> of it in the wild), none of it is fighting, and fewer than
+    /// <see cref="SpreadCap"/> lairs of its monster stand, a new pack of <see cref="LairDef.Pack"/> is born by its den
+    /// and sets off for a new den of its own: a column within <see cref="SpreadRange"/> of the old den, in the same
+    /// biome, that fits as a lair spread across the map does at match start (well away from the starts, other lairs and
+    /// towns) and is at least <see cref="SpreadBuildingGap"/> from every building. The new lair roams, grows and spreads
+    /// as its monster's do. It tries again a while later either way.
+    /// </summary>
+    private void Spread(Lair lair)
+    {
+        var def = lair.Monster.Lair!;
+        lair.NextSpread = _sim.Tick + def.SpreadTicks;
+        if (lair.PackIds.Count < def.Pack) return;
+        foreach (int id in lair.PackIds)
+            if (U.Target[U.IndexOf(id)] != 0) return;
+        if (Standing(lair.Monster) >= SpreadCap(lair.Monster)) return;
+        for (int t = 0; t < SpreadTries; t++)
+        {
+            const int r = SpreadRange, w = 2 * r + 1;
+            uint h = DeterministicRandom.Hash(lair.Id * SpreadTries + t, (int)(_sim.Tick & 0x7FFFFFFF), _sim.Seed ^ 0x5E7D0A11UL);
+            int x = lair.X + (int)(h % w) - r, z = lair.Z + (int)(h / w % w) - r;
+            if (IntMath.Distance(x, z, lair.X, lair.Z) > r || !World.InBounds(x, 0, z)) continue;
+            if (_sim.Map.BiomeAt(x, z) != def.Biome || !SpreadSiteFits(x, z)) continue;
+            int y = Walk.GroundLevel(World, x, z);
+            if (Math.Abs(y - lair.Y) > GuardHeight * 3) continue;
+            Found(lair, x, y, z);
+            return;
+        }
+    }
+
+    private bool SpreadSiteFits(int x, int z)
+    {
+        if (!WildSiteFits(x, z)) return false;
+        foreach (var other in _founded)
+            if (IntMath.Distance(x, z, other.X, other.Z) < WildGap) return false;
+        foreach (var b in _sim.Buildings.All)
+            if (b.ColumnDistance(x, z) < SpreadBuildingGap) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// A new lair of the parent's monster with its den at (x, y, z): its pack is born round the parent's den, on the
+    /// first of the pack's spots there that are no more than <see cref="GuardHeight"/> levels off it, and walks to the
+    /// new den.
+    /// </summary>
+    private void Found(Lair parent, int x, int y, int z)
+    {
+        var monster = parent.Monster;
+        var def = monster.Lair!;
+        var lair = new Lair(_nextId++, monster, x, y, z) { Parent = parent.Id };
+        foreach (var (ox, oz) in PackSpots)
+        {
+            if (lair.PackIds.Count == def.Pack) break;
+            int px = parent.X + ox, pz = parent.Z + oz;
+            if (!World.InBounds(px, 0, pz)) continue;
+            int py = Walk.GroundLevel(World, px, pz);
+            if (py < 0 || Math.Abs(py - parent.Y) > GuardHeight) continue;
+            int id = _sim.SpawnUnit(Simulation.WildPlayer, monster.Id, px, pz, py);
+            if (id > 0) lair.PackIds.Add(id);
+        }
+        if (lair.PackIds.Count == 0) return;
+        if (def.GrowTicks > 0) lair.NextBirth = _sim.Tick + def.GrowTicks;
+        if (def.Roam > 0) StartRoaming(lair);
+        StartSpreading(lair);
+        _founded.Add(lair);
+        _sim.Issue(new MoveCommand(Simulation.WildPlayer, lair.PackIds.ToArray(), x, z, y));
     }
 
     /// <summary>
