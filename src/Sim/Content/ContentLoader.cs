@@ -462,7 +462,7 @@ public static class ContentLoader
                 o.Error("should be an object: { \"pack\": 4, \"guard\": 12, \"leash\": 20, \"reward\": { \"food\": 150 } }");
                 return null;
             }
-            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush", "pass");
+            o.Keys("pack", "guard", "leash", "reward", "duskTree", "biome", "count", "atStarts", "prizes", "cavern", "roam", "grow", "growTo", "lurk", "ambush", "pass", "spread", "spreadTo");
             int guard = o.Int("guard", 1, 64, 12);
             int leash = o.Int("leash", 1, 128, guard + 8);
             if (leash < guard) o.Error($"\"leash\" is {leash}, but the pack guards {guard} blocks around the den, so it should be at least that");
@@ -502,6 +502,12 @@ public static class ContentLoader
             bool inPass = o.Bool("pass");
             if (inPass && biome == null) o.Error("a lair in the mountain passes (\"pass\") needs a \"biome\" to spread over on a map with none");
             if (inPass && (roam > 0 || lurk)) o.Error("a lair in a mountain pass (\"pass\") guards it: it does not \"roam\" or \"lurk\"");
+            int spread = o.Int("spread", 0, 3600, 0);
+            int spreadTo = o.Int("spreadTo", 1, 64, count * 2);
+            if (spread > 0 && biome == null) o.Error("\"spread\" needs a \"biome\": only the lairs spread across the map found new ones");
+            if (spread > 0 && (lurk || inPass)) o.Error("a lair that lurks (\"lurk\") or holds a pass (\"pass\") does not \"spread\"");
+            if (e.TryGetProperty("spreadTo", out _) && spread == 0) o.Error("\"spreadTo\" needs a \"spread\" (seconds between new lairs)");
+            if (spread > 0 && spreadTo <= count) o.Error($"\"spreadTo\" is {spreadTo}, but {count} lairs are spread at the start, so it should be more");
             var def = new LairDef
             {
                 Pack = pack,
@@ -519,6 +525,8 @@ public static class ContentLoader
                 Lurk = lurk,
                 Ambush = lurk ? ambush : 0,
                 Pass = inPass && biome != null,
+                SpreadTicks = biome != null && !lurk && !inPass ? spread * Simulation.TicksPerSecond : 0,
+                SpreadTo = spreadTo,
             };
             if (!dusk) Prizes(o, def);
             return def;

@@ -74,7 +74,10 @@
 // war on); ambush (optional, percent, needs lurk) is how much harder the first blow is that a monster strikes
 // coming up out of the water. pass (optional, needs biome) puts a lair in the middle of each of the map's
 // mountain passes, the gaps through the stone ridges across the hill ranges, instead of spreading count over
-// the biome (which it falls back to on a map with no pass).
+// the biome (which it falls back to on a map with no pass). spread (optional, seconds, needs biome) has the packs
+// spread across the map found new lairs: every spread seconds (the first time after twice that) a lair whose pack is at full strength and not
+// fighting has a new pack born at its den, which goes off to a new den of its own in the same biome, up to
+// spreadTo lairs of the monster standing for each 512 by 512 blocks of map (twice count if left out).
 // prizes (optional): what each faction gets for beating the monster, by faction id. A cleared lair leaves
 // a den that one player of a faction with a prize can use, once: { "building": id } puts that building (one
 // with "fromDen" in buildings.json) up on the den as a site to build, { "form": id } has the nearest unit
@@ -244,14 +247,14 @@
     "speed": 7, "hp": 60, "model": "wolf", "damage": 7, "attackTime": 1, "range": 1.25, "sight": 9,
     "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true, "pen": true,
     "lair": { "pack": 4, "guard": 12, "leash": 20, "reward": { "food": 150, "iron": 20 },
-      "biome": "grassland", "count": 1, "atStarts": true, "roam": 32,
+      "biome": "grassland", "count": 1, "atStarts": true, "roam": 32, "spread": 300, "spreadTo": 2,
       "prizes": { "orcs": { "building": "wolf_lodge" }, "settlers": { "form": "wolfheart" } } },
     "ride": { "rider": "spearman", "becomes": "wolf_rider" } },
   { "id": "boar", "name": "Wild boar", "role": "monster",
     "description": "Roots in the forests in small herds and charges anyone who comes near. Orcs who beat one can ride it to war, and anyone who clears a herd can pen boars at its wallow.",
     "speed": 6, "hp": 80, "model": "boar", "damage": 9, "attackTime": 1.25, "range": 1.25, "sight": 8,
     "attack": "pierce", "body": "beast", "armor": { "body": 2 }, "pen": true,
-    "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 200 }, "biome": "forest", "count": 2, "roam": 24,
+    "lair": { "pack": 3, "guard": 10, "leash": 16, "reward": { "food": 200 }, "biome": "forest", "count": 2, "roam": 24, "spread": 360, "spreadTo": 3,
       "prizes": { "orcs": { "building": "boar_pen" }, "settlers": { "building": "boar_pen" } } },
     "ride": { "rider": "spearman", "becomes": "rider" } },
   { "id": "stone_giant", "name": "Stone giant", "role": "monster",
@@ -295,7 +298,7 @@
     "speed": 6.5, "hp": 110, "model": "shade_stalker", "damage": 10, "attackTime": 1, "range": 1.25, "sight": 11,
     "attack": "slash", "body": "beast", "armor": { "body": 1 }, "tracksBlood": true,
     "lair": { "pack": 3, "guard": 12, "leash": 18, "reward": { "crystal": 40, "gold": 20 }, "biome": "wilds", "count": 2,
-      "grow": 150, "growTo": 9,
+      "grow": 150, "growTo": 9, "spread": 300, "spreadTo": 3,
       "prizes": { "orcs": { "relic": "shade_pelt" }, "settlers": { "relic": "shade_pelt" } } } },
 
   // The forests' giant spiders: nests of three among the trees, whose bites web the bitten so they cannot run.
