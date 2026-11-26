@@ -91,6 +91,32 @@ public sealed partial class EconomySystem
     }
 
     /// <summary>
+    /// How many saplings a forester's lodge of <paramref name="def"/> with its corner at (x, z) would find room for
+    /// now (counting no further than <paramref name="most"/>): the tree-grid spots within its reach where a sapling
+    /// could go (see <see cref="CanPlant"/>), and far enough from the lodge itself. The spots counted are a tree's spacing apart, so
+    /// all of them could be planted. A look ahead for whoever lays one out (computer players); it changes nothing.
+    /// </summary>
+    public int PlantingRoom(BuildingDef def, int x, int z, int most)
+    {
+        if (def.Plants <= 0) return 0;
+        var w = World;
+        int s = Math.Clamp(w.TreeScale, 1, Trees.MaxScale);
+        int reach = def.Plants, clear = BuildingSpacing * s;
+        int maxX = x + def.SizeX - 1, maxZ = z + def.SizeZ - 1;
+        int x0 = Math.Max(1, x - reach), x1 = Math.Min(w.SizeX - 2 - s, maxX + reach);
+        int z0 = Math.Max(1, z - reach), z1 = Math.Min(w.SizeZ - 2 - s, maxZ + reach);
+        int n = 0;
+        int step = s * (TreeSpacing + 1);
+        for (int pz = z0 - z0 % s + (z0 % s == 0 ? 0 : s); pz <= z1 && n < most; pz += step)
+        for (int px = x0 - x0 % s + (x0 % s == 0 ? 0 : s); px <= x1 && n < most; px += step)
+        {
+            if (px <= maxX + clear && px + s - 1 >= x - clear && pz <= maxZ + clear && pz + s - 1 >= z - clear) continue;
+            if (CanPlant(px, pz, s, out _)) n++;
+        }
+        return n;
+    }
+
+    /// <summary>
     /// True if a tree's s-by-s trunk square with its north-west corner at (x, z) can be planted: every column grass
     /// or soil at one level g with open air over it, not a hazard, <see cref="BuildingSpacing"/> times s columns clear of
     /// every building's claim (so the grown crown does not hang over it) and clear of city-states, with nobody standing on it, and no trunk or sapling within <see cref="TreeSpacing"/> times s columns of it.

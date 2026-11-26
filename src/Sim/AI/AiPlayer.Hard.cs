@@ -316,6 +316,7 @@ public sealed partial class AiPlayer
         if (calm) Orchards(sim, hall, issue);
         if (calm) Fishing(sim, hall, issue);
         if (calm) Hunting(sim, hall, issue);
+        if (calm) Foresting(sim, hall, issue);
         if (calm) PassMines(sim, hall, issue);
         if (calm) SiegeEconomy(sim, hall, c.Workers, issue);
         if (calm) Shipyard(sim, hall, c.Workers, issue);
