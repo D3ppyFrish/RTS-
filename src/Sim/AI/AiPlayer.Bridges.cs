@@ -45,10 +45,16 @@ public sealed partial class AiPlayer
     /// <summary>Bridges it has laid out.</summary>
     public int BridgesLaid { get; private set; }
 
+    /// <summary>
+    /// Whether it lays bridges at all (it does unless told not to): the tests of its other ways over the water, ice and
+    /// ships, turn it off so that a bridge laid before the wave sets out does not take their place.
+    /// </summary>
+    public bool Bridging { get; set; } = true;
+
     /// <summary>The smart levels' bridge toward the enemy (see the top of this file).</summary>
     private void Bridges(Simulation sim, Building hall, Action<Command> issue)
     {
-        if (!Smart || !hall.Active || sim.Tick < _bridgeLook) return;
+        if (!Smart || !Bridging || !hall.Active || sim.Tick < _bridgeLook) return;
         _bridgeLook = sim.Tick + BridgeLookTicks;
         if (BridgeDef(sim) is not { } def) return;
 
