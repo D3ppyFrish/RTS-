@@ -78,7 +78,7 @@ public class AiShipTests
     public void AWaveWithTheEnemyAcrossTheWaterIsFerriedOverByShip(AiLevel level)
     {
         var sim = Strait(fleet: true);
-        var ai = new AiPlayer(0, 1, level);
+        var ai = new AiPlayer(0, 1, level) { Bridging = false };
         Assert.True(Play(sim, ai, () => ai.Ferrying, AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps), "a wave to set out by sea");
         var (lx, _) = ai.FerryLanding!.Value;
         Assert.True(lx > SeaX1, "it lands on the far shore");
@@ -94,7 +94,7 @@ public class AiShipTests
     public void HardLiftsSoldiersJoiningItsWaveAcrossTheWater()
     {
         var sim = Strait(fleet: true);
-        var ai = new AiPlayer(0, 1, AiLevel.Hard);
+        var ai = new AiPlayer(0, 1, AiLevel.Hard) { Bridging = false };
         Assert.True(Play(sim, ai, () => ai.Ferrying, AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps), "a wave to set out by sea");
         Assert.True(Play(sim, ai, () => !ai.Ferrying, 4 * 60 * Tps), "the wave to be across");
         Assert.False(ai.Lifting);
@@ -115,7 +115,7 @@ public class AiShipTests
     {
         // What the computer works out about the water changes nothing in the game: its commands alone play it again.
         var sim = Strait(fleet: true);
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal) { Bridging = false };
         var log = new List<(long Tick, Command C)>();
         int ticks = AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps;
         Play(sim, ai, () => false, ticks, log);
@@ -140,7 +140,7 @@ public class AiShipTests
         var sim = Strait(fleet: false);
         Assert.NotNull(sim.Economy.PlaceFinished(0, sim.Content.Building("barracks"), 30, 40));
         for (int k = 0; k < AiPlayer.DockWorkers; k++) sim.SpawnUnit(0, "worker", 40 + k, 90);
-        var ai = new AiPlayer(0, 1, level);
+        var ai = new AiPlayer(0, 1, level) { Bridging = false };
         Assert.True(Play(sim, ai, () => sim.Buildings.All.Any(b => b.Owner == 0 && AiPlayer.Docks(sim, b.Def)), 3 * 60 * Tps), "a dock to be laid out");
         var dock = sim.Buildings.All.First(b => b.Owner == 0 && AiPlayer.Docks(sim, b.Def));
         Assert.InRange(dock.MaxX, SeaX0 - 4, SeaX0 - 1);
@@ -161,7 +161,7 @@ public class AiShipTests
         sim.PlaceStartingBuildings();
         Assert.NotNull(sim.Economy.PlaceFinished(0, sim.Content.Building("barracks"), 30, 40));
         for (int k = 0; k < AiPlayer.DockWorkers; k++) sim.SpawnUnit(0, "worker", 40 + k, 90);
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal) { Bridging = false };
         Play(sim, ai, () => false, 2 * 60 * Tps);
         Assert.DoesNotContain(sim.Buildings.All, b => b.Owner == 0 && AiPlayer.Docks(sim, b.Def));
     }
@@ -186,7 +186,7 @@ public class AiShipTests
         Assert.All(bombards.Append(escort), id => Assert.True(id > 0));
         for (int k = 0; k < 14; k++) sim.SpawnUnit(0, "spearman", 50 + k % 7, 96 + k / 7);
         for (int k = 0; k < 4; k++) sim.SpawnUnit(0, "archer", 20 + k, 60);
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal) { Bridging = false };
 
         Assert.True(Play(sim, ai, () => ai.Waves > 0, AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps), "a wave to set out");
         var ids = wall.Select(b => b.Id).ToHashSet();
@@ -206,7 +206,7 @@ public class AiShipTests
     public void TheClassicLevelLeavesShipsAlone()
     {
         var sim = Strait(fleet: true);
-        var ai = new AiPlayer(0, 1, AiLevel.Classic);
+        var ai = new AiPlayer(0, 1, AiLevel.Classic) { Bridging = false };
         var log = new List<(long Tick, Command C)>();
         Play(sim, ai, () => false, AiPlayer.FirstWaveTicks + 2 * 60 * Tps, log);
         Assert.DoesNotContain(log, e => e.C is BoardCommand);

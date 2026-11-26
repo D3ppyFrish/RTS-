@@ -72,7 +72,7 @@ public class AiIceTests
     {
         var sim = River(mage: true);
         var first = Spearmen(sim);
-        var ai = new AiPlayer(0, 1, level);
+        var ai = new AiPlayer(0, 1, level) { Bridging = false };
         var log = new List<(long, Command)>();
         Assert.True(Play(sim, ai, () => ai.IceCrossingWave, AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps, log), $"{level}: a wave to set out over the ice: wave " + ai.Wave.Count + " " + string.Join("; ", ai.Journal.TakeLast(15).Select(j => $"{j.Tick / Tps}s {j.Text}")));
         var (ax, _, bx, _) = ai.IceBanks!.Value;
@@ -95,7 +95,7 @@ public class AiIceTests
     public void WithoutAMageTheWaveFreezesNothing()
     {
         var sim = River(mage: false);
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal) { Bridging = false };
         var log = new List<(long, Command)>();
         Play(sim, ai, () => false, AiPlayer.SmartFirstWaveTicks + 2 * 60 * Tps, log);
         Assert.DoesNotContain(log, e => e.Item2 is IceBridgeCommand);
@@ -106,7 +106,7 @@ public class AiIceTests
     public void ARiverTooWideToFreezeIsNotTried()
     {
         var sim = River(mage: true, width: SpellSystem.IceLength + 2);
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal) { Bridging = false };
         var log = new List<(long, Command)>();
         Play(sim, ai, () => false, AiPlayer.SmartFirstWaveTicks + 2 * 60 * Tps, log);
         Assert.DoesNotContain(log, e => e.Item2 is IceBridgeCommand);
@@ -117,7 +117,7 @@ public class AiIceTests
     public void EasyLeavesTheIceAlone()
     {
         var sim = River(mage: true);
-        var ai = new AiPlayer(0, 1, AiLevel.Easy);
+        var ai = new AiPlayer(0, 1, AiLevel.Easy) { Bridging = false };
         var log = new List<(long, Command)>();
         Play(sim, ai, () => false, AiPlayer.SmartFirstWaveTicks + 2 * 60 * Tps, log);
         Assert.DoesNotContain(log, e => e.Item2 is IceBridgeCommand);
@@ -127,7 +127,7 @@ public class AiIceTests
     public void AnIceCrossingReplaysTheSameFromItsCommands()
     {
         var sim = River(mage: true);
-        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal) { Bridging = false };
         var log = new List<(long Tick, Command C)>();
         int ticks = AiPlayer.SmartFirstWaveTicks + 3 * 60 * Tps;
         Play(sim, ai, () => false, ticks, log);
