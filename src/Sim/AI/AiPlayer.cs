@@ -255,6 +255,7 @@ public sealed partial class AiPlayer
         // Players look on different ticks, so that two of them do not both work on the same tick.
         if ((tick + Player * 7) % EconomyTicks == 0) Economy(sim, hall, issue);
         if (Smart && (tick + Player * 7) % EconomyTicks == 0) Prospect(sim, issue);
+        if (Skilled && (tick + Player * 7) % EconomyTicks == 0) Charcoal(sim, issue); // burnt stumps dug for charcoal (AiPlayer.Charcoal.cs)
         if ((tick + Player * 3) % ArmyTicks == 0)
         {
             if (Smart) Fell(sim, issue);
