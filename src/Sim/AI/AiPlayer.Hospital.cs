@@ -8,7 +8,8 @@ namespace Rts.Sim.AI;
 // one field hospital on the side of its town the enemy is on (where it last saw an enemy town hall or building),
 // HospitalReach columns out from its town hall: past the hall's own healing reach, where raids come in and waves come
 // home, so soldiers that fought there mend as at home without walking back to the hall. One at a time, as it can pay
-// for it; Hard lays it out like the rest of its town. Classic never researches Field hospital (see Wanted).
+// for it; Hard lays it out like the rest of its town. It researches Field hospital only once it knows where the enemy
+// is, and Classic never does (see Wanted).
 public sealed partial class AiPlayer
 {
     /// <summary>How far (columns) from its town hall's middle, towards the enemy, its field hospital goes.</summary>
@@ -43,6 +44,16 @@ public sealed partial class AiPlayer
         }
         else PlaceNear(sim, def, spot, HospitalRoom, issue);
         Note(sim, $"lays out a field hospital toward the enemy at {spot.X},{spot.Z}");
+    }
+
+    /// <summary>True once it knows where to put a field hospital: an enemy town hall, or the last enemy building it saw.</summary>
+    private bool KnowsFront(Simulation sim)
+    {
+        if (_lastFoe != null) return true;
+        var hall = sim.Economy.TownHall(Player);
+        if (hall == null) return false;
+        var home = Middle(hall);
+        return KnownHall(home.X, home.Z) != null;
     }
 
     /// <summary>True for a tech whose only use is a field hospital, which only the smart levels put up.</summary>

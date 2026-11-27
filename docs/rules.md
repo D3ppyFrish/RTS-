@@ -2225,8 +2225,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   Field hospital and has a finished barracks, it keeps one field hospital 24 columns from its town hall towards the
   enemy (the nearest enemy town hall it knows of, else the last enemy building it saw; none while it knows of
   neither): past the hall's own healing reach, where raids come in and waves come home. As it can pay for it; Hard
-  only while no enemy is at its town, laid out like the rest of its town. The classic level does not research Field
-  hospital and never builds one.
+  only while no enemy is at its town, laid out like the rest of its town. It researches Field hospital only once it
+  knows where the enemy is; the classic level never researches it and never builds one.
 - **Dams** (Easy, Normal and Hard; `AI/AiPlayer.Dams.cs`, tests in `AiDamTests`): once a second it weighs what the
   water held back by a dam would do if let through (`Floods`): the water beside the gap (at the level of the highest
   water next to it) fills the open ground it reaches from the gap below that level, within 24 columns, and it counts

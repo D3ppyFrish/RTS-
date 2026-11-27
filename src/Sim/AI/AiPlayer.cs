@@ -136,7 +136,8 @@ public sealed partial class AiPlayer
     /// </summary>
     private bool Wanted(Simulation sim, TechDef tech)
     {
-        if (!Smart && OpensHospital(sim, tech)) return false; // Classic puts up no field hospital
+        // Classic puts up no field hospital, and the smart levels put theirs toward the enemy: not before they know where it is.
+        if (OpensHospital(sim, tech) && (!Smart || !KnowsFront(sim))) return false;
         if (tech.Effects.Count == 0) return true;
         foreach (var e in tech.Effects)
             if (e.Type != TechEffectType.CutWebs) return true;
