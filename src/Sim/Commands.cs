@@ -594,6 +594,17 @@ public sealed record ChasmCommand(int PlayerId, int[] Units, int X1, int Z1, int
 }
 
 /// <summary>
+/// The units that can (see <see cref="Units.SpellSystem"/>) flood the ground along the line from column (X1, Z1) to
+/// (X2, Z2): its top block of soft ground turns to shallow water for a while, walking into range first if they have to.
+/// </summary>
+public sealed record FloodCommand(int PlayerId, int[] Units, int X1, int Z1, int X2, int Z2) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(FloodCommand? other) =>
+        base.Equals(other) && X1 == other!.X1 && Z1 == other.Z1 && X2 == other.X2 && Z2 == other.Z2;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X1, Z1, X2, Z2);
+}
+
+/// <summary>
 /// The units that can (see <see cref="Units.SpellSystem"/>) grow a forest along the line from column (X1, Z1) to
 /// (X2, Z2): full-grown trees spring up on every other square of it, walking into range first if they have to.
 /// </summary>

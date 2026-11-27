@@ -155,6 +155,12 @@ public sealed class Conditions
     /// </summary>
     public bool InDaylight(int x, int y, int z) => On && Part == DayPart.Day && _sim.World.SurfaceHeight(x, z) < y;
 
+    /// <summary>
+    /// True if (x, z) is cold for the cold-blooded (the Reptilians, <see cref="Units.UnitDef.ColdBlooded"/>): up in the
+    /// hills (the mountains, at any hour), or anywhere at night (not at dawn or dusk; with day and night off there is no night).
+    /// </summary>
+    public bool Cold(int x, int z) => (On && Part == DayPart.Night) || _sim.Map.BiomeAt(x, z) == Biome.Hills;
+
     /// <summary>The weather now; with day and night off, always clear.</summary>
     public Weather Weather => On ? _weather : Weather.Clear;
     /// <summary>The weather that comes after this spell.</summary>

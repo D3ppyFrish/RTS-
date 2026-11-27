@@ -310,7 +310,7 @@ void fragment() {
             if (id >= _yawById.Length) Array.Resize(ref _yawById, Math.Max(id + 1, _yawById.Length * 2));
             // A lurking monster lying in the water sinks to its eyes, and rises as it comes out at someone.
             if (id >= _sinkById.Length) Array.Resize(ref _sinkById, Math.Max(id + 1, _sinkById.Length * 2));
-            float sinkTo = _sim.Monsters.Submerged(i) ? SubmergedSink : 0f;
+            float sinkTo = _sim.Monsters.Submerged(i) || _sim.Combat.Lurking(i) ? SubmergedSink : 0f; // a Reptilian lying in the water too
             _sinkById[id] = Mathf.MoveToward(_sinkById[id], sinkTo, delta * 3f);
             y -= _sinkById[id];
             float dx = cx - px, dz = cz - pz;

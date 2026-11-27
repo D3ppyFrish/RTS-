@@ -120,6 +120,12 @@ public sealed partial class EconomySystem
     /// </summary>
     public int GrudgePercent(int player) => Find(player)?.GrudgePercent ?? 0;
 
+    /// <summary>
+    /// How much more (percent) the first blow of the player's units lying in wait in the water deals, 0 if none of
+    /// theirs lie in wait (a <see cref="TechEffectType.Ambush"/> tech, the Reptilians' Lurkers' strike).
+    /// </summary>
+    public int AmbushPercent(int player) => Find(player)?.AmbushPercent ?? 0;
+
     /// <summary>True if the player's buildings with thorns prick those who strike them (a <see cref="TechEffectType.Thorns"/> tech).</summary>
     public bool HasThorns(int player) => Find(player)?.Thorns ?? false;
 
@@ -200,7 +206,7 @@ public sealed partial class EconomySystem
     {
         var units = Content.Units;
         p.Roads = p.SpareWorkers = p.MurderHoles = p.Salvage = p.FieldRepairs = p.CutWebs = p.Thorns = false;
-        p.BindTicks = p.GrudgePercent = 0;
+        p.BindTicks = p.GrudgePercent = p.AmbushPercent = 0;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
@@ -224,6 +230,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.CutWebs: p.CutWebs = true; break;
                     case TechEffectType.Thorns: p.Thorns = true; break;
                     case TechEffectType.Grudges: p.GrudgePercent = Math.Max(p.GrudgePercent, e.Percent); break;
+                    case TechEffectType.Ambush: p.AmbushPercent = Math.Max(p.AmbushPercent, e.Percent); break;
                     case TechEffectType.BindWounds: p.BindTicks = p.BindTicks == 0 ? e.Ticks : Math.Min(p.BindTicks, e.Ticks); break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)

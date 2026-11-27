@@ -262,6 +262,9 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   full speed instead and takes its place again once it can. Near the end it walks straight to its place if
   nothing is in the way, else to the middle first, and stops there if its place still cannot be reached.
   A formation gets anywhere about as soon as the same units sent with a plain move.
+- **Wading**: a unit with its feet in water a block deep goes at 70% of its pace (`UnitMovement.WadePercent`),
+  and the way it picks counts each step in water double, so it walks round a pool where that is not far. The
+  Reptilians' amphibious units wade at their full pace (see [The Reptilians](#the-reptilians)); ships sail.
 - **Hazards** (#66, #78): a step onto ground that hurts or traps (poison bog, quicksand, beside lava, a sinkhole's crust)
   costs eight times plain ground, so a unit on a move order walks up to seven blocks out of its way for
   each such block it keeps off, and crosses when there is no other way.
@@ -1426,6 +1429,45 @@ Computer players play the Dwarves as a balanced faction: they wall their town wi
 `AiPlayer.FirstBuilding`), post crossbowmen on it, research the Book of Grudges after their other techs, and with fog of
 war on they see the units that bear them a grudge.
 
+## The Reptilians
+
+The Reptilians are the sixth faction, the design doc's swamp brood: lizardfolk who regenerate, are at home in the water,
+and flood the ground on purpose, but grow sluggish in the cold (`ReptiliansTests`; `CombatSystem.Swamp.cs`).
+
+- **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **scale guards** instead of spearmen
+  and riders (the brood rides no horses), **blowpipers** instead of archers, and **marsh shamans** instead of mages.
+  Sappers, healers, workers and the rest are everyone's. They start with as many units as anyone, their own in place of
+  those they replace, so four scale guards where the others have two spearmen and two riders.
+  - The **scale guard** (line infantry, 85 hit points, speed 4, 9 slashing damage every 1.1 seconds, thick scales on
+    head and torso) is a little sturdier and dearer than a spearman (45 food, 20 wood).
+  - The **blowpiper** (ranged, 40 hit points, 4 damage a second at 8 blocks) shoots a block shorter than an archer and
+    lighter but more often, and every dart is venomed: 1 more a second for 6 seconds (`poison`). 30 food and 30 wood;
+    needs Archery.
+  - The **marsh shaman** (caster, 45 hit points) spits swamp bile (8 crushing damage at 8 blocks, splashing) and casts
+    Flood (see [Terrain magic](#terrain-magic)), and no other spell. 50 food and 20 wood; needs Basic magic.
+- **Regeneration** (`regen` in `data/units.json`): all three heal 1% of their hit points a second even in a fight, as
+  ogres do, and twice that with their feet in water (`CombatSystem.SwampRegen`). Out of the fight they heal at that rate
+  or the usual one, whichever is faster.
+- **Amphibious** (`"amphibious"`, `UnitDef.Amphibious`): they wade water a block deep at their full pace, where everyone
+  else goes at 70% (see Wading under [Moving](#moving)), and wet weather's mud does not slow them. One lying in the water
+  with nothing to fight is hidden, as a bog horror in its pool (`CombatSystem.Lurking`): with fog of war on, its enemies
+  see it only within 3 columns of one of their units, and their soldiers do not go after it from further off. It lies in
+  wait: it goes after no enemy further off than that either (an order to attack still sends it), so a pool of them
+  springs on whoever walks into it. The game draws it sunk to its shoulders. Deep water is still too deep for them.
+- **Cold-blooded** (`"coldBlooded"`, `UnitDef.ColdBlooded`, `Conditions.Cold`): at night (not at dawn or dusk) and up in
+  the hills at any hour, they walk at 75% of their pace, strike for 75% of their damage and do not regenerate
+  (`CombatSystem.Chilled`, `ColdPercent`). With day and night off it is never night, but the hills are still cold.
+- **Lurkers' strike** (`reptile_lurkers`, an `ambush` tech effect with a `percent`): once researched, a unit of theirs
+  lying in wait in the water (`CombatSystem.LyingInWait`) deals twice the damage with its first blow coming up out of it
+  at someone (`SpringLurker`), as a bog horror's ambush. A pool their shamans flood across an enemy's way is a trap.
+- **Their final tech** is the Brood Mother's call (after Lurkers' strike, Basic magic and Smelting), which opens their
+  great work, the **Brood Mother's mound**, a mound of reed thatch (see
+  [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers the Reptilians hack the dusk tree
+  down, as the Orcs do (see [The dusk tree](#the-dusk-tree)).
+
+Computer players play the Reptilians as a waves faction and research Lurkers' strike after their other techs. They do
+not cast Flood yet. All numbers are first guesses to be tuned in playtests.
+
 ## Dropped relics and the Dusk Staff
 
 Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the block where it fell
@@ -2523,7 +2565,7 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
 - **Waiting**: a mage that cast a spell (either one) waits 40 seconds before it can cast again; others are
   not held up.
 - **Mana** (`SpellSystem.ManaCost`): every spell costs its player mana, channelled from crystal at a shrine
-  (see Crystal, shrines and mana under Economy): Earth Wall and Grow Forest 20, Ice Bridge 25, Chasm 30, for each
+  (see Crystal, shrines and mana under Economy): Earth Wall, Grow Forest and Flood 20, Ice Bridge 25, Chasm 30, for each
   mage that casts it, so a group spell of three costs three times as much. With too little for one mage, nothing
   is cast and nobody waits; a group casts with only as many mages as the pool covers (the ones already in range
   first), counted again when it goes off, so mana spent while some walked up leaves the last ones out. A spell
@@ -2567,6 +2609,16 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
   open air (or leaves, pushed aside) over it, and not on a building, a city-state's town, water, ice, a hazard or a
   unit standing there. The middle of the line must be within 12 blocks of the mage, which otherwise walks up
   first. A line with no room for a tree grows nothing and costs nothing.
+- **Flood** (`FloodCommand`, `"flood": true`: the Reptilians' marsh shaman; `SpellSystem.PlanFlood`, `FloodPool`): the
+  water comes up out of the ground along a line (the line a wall is laid along, as long as an earth wall): the top block
+  of each column turns to water, a pool a block deep, which units wade (everyone but the amphibious at 70% of their
+  pace, see Wading under [Moving](#moving)). Whoever stands there sinks into it. A column floods where its top block is
+  soft natural ground (grass, soil, sand, swamp mud or gloom moss: not stone, a road, a field or a building's) with ground
+  under it to hold the water, open air (or leaves) over it, no building, city-state's town or hazard, and no open air
+  beside it at its level, so the water does not run off down a slope or into a hole. The middle of the line must be
+  within 12 blocks of the shaman, which otherwise walks up first. It costs 20 mana. After 40 seconds it drains: each
+  block still water is the ground it was again, and whoever stands in it is lifted onto it. A line with nothing to flood
+  costs nothing.
 - **Group spells** (issue #39): every ready mage among the selected casts the spell together, up to 3. The
   ones in range wait while the others walk up, and the spell goes off once all of them are in range (one given
   another order on the way drops out, and the rest cast without it). Each mage beyond the first makes an earth
@@ -2576,7 +2628,7 @@ use (the design doc's "Shape with magic"). A unit type has its spells in `data/u
   is staggered. Every mage in the group then waits its 40
   seconds; a mage still waiting does not join.
 - **In the game**: the Earth Wall button (Shift+Y), the Ice Bridge button (Shift+'), the Chasm button (Shift+Z) and the Grow
-  Forest button (Shift+L) show with a mage selected, greyed out with the wait while none of the selected is ready. All numbers are starting guesses to
+  Forest button (Shift+L) show with a mage selected, the Flood button (Ctrl+Y) with a marsh shaman, greyed out with the wait while none of the selected is ready. All numbers are starting guesses to
   be tuned in playtests.
 
 ## Fog of war

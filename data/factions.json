@@ -43,5 +43,8 @@
     "duskTree": "heal", "aiStyle": "balanced" },
   { "id": "dwarves", "name": "Dwarves", "uiLook": "stone", "description": "Iron-clad mountain clans who see in the dark, wall in stone and never forget a grudge.",
     "replaces": { "spearman": "ironshield", "rider": "ironshield", "archer": "crossbowman", "mage": "runesmith", "barrier": "stonework" },
-    "duskTree": "raze", "aiStyle": "balanced" }
+    "duskTree": "raze", "aiStyle": "balanced" },
+  { "id": "reptilians", "name": "Reptilians", "uiLook": "timber", "description": "The swamp brood: scaled warriors who regenerate, wade and hide in the water and flood the ground on purpose, but grow sluggish at night and in the hills.",
+    "replaces": { "spearman": "scale_guard", "rider": "scale_guard", "archer": "blowpiper", "mage": "marsh_shaman" },
+    "duskTree": "raze", "aiStyle": "waves" }
 ]

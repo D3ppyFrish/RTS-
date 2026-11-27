@@ -52,6 +52,24 @@ public sealed class Chasm
     public List<BlockType> Was { get; } = new();
 }
 
+/// <summary>
+/// Ground flooded by <see cref="SpellSystem"/>'s Flood: the top block of each column it took, now water, and when the
+/// water drains away again.
+/// </summary>
+public sealed class FloodPool
+{
+    /// <summary>Who flooded it.</summary>
+    public int Owner { get; internal set; }
+    /// <summary>The tick it flooded.</summary>
+    public long Flooded { get; internal set; }
+    /// <summary>The tick the water drains and the ground comes back.</summary>
+    public long Drains { get; internal set; }
+    /// <summary>The blocks it turned to water, in the order they flooded.</summary>
+    public List<(int X, int Y, int Z)> Blocks { get; } = new();
+    /// <summary>For each block, what it was: the ground comes back as it was.</summary>
+    public List<BlockType> Was { get; } = new();
+}
+
 /// <summary>A terrain spell (see <see cref="SpellSystem"/>).</summary>
 public enum Spell
 {
@@ -59,6 +77,7 @@ public enum Spell
     IceBridge,
     Chasm,
     GrowForest,
+    Flood,
 }
 
 /// <summary>
@@ -85,6 +104,12 @@ public enum Spell
 /// is cover for archers and a screen an army files through; the trees stay, and wood cutters fell them like any
 /// other. Not on a building or a city-state's town, water, ice or a unit, nor where something is already in the
 /// way above the ground.</para>
+/// <para>The fifth is <b>Flood</b> (<see cref="FloodCommand"/>, <see cref="UnitDef.Flood"/>, the Reptilians' marsh
+/// shaman): the top block of soft ground (grass, soil, sand, mud, moss) along a line as long and thick as an earth wall's
+/// turns to water a block deep, a shallow pool everyone else wades through slowly (see <see cref="UnitMovement.WadePercent"/>)
+/// and the amphibious swim and hide in (see <see cref="CombatSystem.Lurking"/>). The pool's sides must hold water (no
+/// open air beside it), so it does not run off down a slope. After <see cref="FloodLastsTicks"/> it drains and the
+/// ground comes back as it was, lifting whoever stands in it.</para>
 /// A caster that cast any spell waits <see cref="CooldownTicks"/> before it casts again.
 /// <para><b>Group spells</b>: every ready caster among the command's units (up to <see cref="MaxGroup"/>) casts
 /// together. The ones out of range walk up while the others wait, and the spell goes off once all of them are in
@@ -119,6 +144,8 @@ public sealed class SpellSystem
     public const int FallDamage = 15;
     /// <summary>Ticks a chasm stays open before the ground closes over it: 30 seconds.</summary>
     public const int ChasmLastsTicks = 30 * Simulation.TicksPerSecond;
+    /// <summary>Ticks flooded ground stays under water before it drains: 40 seconds.</summary>
+    public const int FloodLastsTicks = 40 * Simulation.TicksPerSecond;
 
     /// <summary>Columns across between the rows of a grove grown by several casters, in tree-grid squares (so a square's gap between rows).</summary>
     public const int GroveRowStep = 2;
@@ -135,7 +162,7 @@ public sealed class SpellSystem
     {
         Spell.IceBridge => 25,
         Spell.Chasm => 30,
-        _ => 20, // Earth Wall, Grow Forest
+        _ => 20, // Earth Wall, Grow Forest, Flood
     };
 
     /// <summary>Columns each caster beyond the first adds to an ice bridge's width (one on each side).</summary>
@@ -161,6 +188,7 @@ public sealed class SpellSystem
     private readonly List<EarthWall> _walls = new();
     private readonly List<IceBridge> _ice = new();
     private readonly List<Chasm> _chasms = new();
+    private readonly List<FloodPool> _floods = new();
 
     private sealed class Pending
     {
@@ -191,6 +219,15 @@ public sealed class SpellSystem
 
     /// <summary>Chasms open now, oldest first.</summary>
     public IReadOnlyList<Chasm> Chasms => _chasms;
+
+    /// <summary>Flooded ground under water now, oldest first.</summary>
+    public IReadOnlyList<FloodPool> Floods => _floods;
+
+    /// <summary>The tick of the last ground flooded, or -1.</summary>
+    public long LastFlood { get; private set; } = -1;
+
+    /// <summary>Unit i's type can flood the ground.</summary>
+    public bool HasFlood(int i) => i >= 0 && _sim.Content.Units[U.Def[i]].Flood;
 
     /// <summary>The tick of the last chasm opened, or -1.</summary>
     public long LastChasm { get; private set; } = -1;
@@ -225,6 +262,7 @@ public sealed class SpellSystem
         Spell.GrowForest => HasGrowForest(i),
         Spell.IceBridge => HasIceBridge(i),
         Spell.Chasm => HasChasm(i),
+        Spell.Flood => HasFlood(i),
         _ => HasEarthWall(i),
     };
 
@@ -273,6 +311,39 @@ public sealed class SpellSystem
     /// </summary>
     public void PlanChasm(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1) =>
         Line(x1, z1, x2, z2, columns, casters, ChasmRoom);
+
+    /// <summary>
+    /// The columns a flood from (x1, z1) to (x2, z2) takes, by <paramref name="casters"/> together: the same columns as
+    /// an earth wall (<see cref="Plan"/>). Each has its ground level (where units stand now) and whether its top block
+    /// turns to water (see <see cref="FloodRoom"/>). The game previews the same plan.
+    /// </summary>
+    public void PlanFlood(int x1, int z1, int x2, int z2, List<(int X, int Z, int Y, bool Room)> columns, int casters = 1) =>
+        Line(x1, z1, x2, z2, columns, casters, FloodRoom);
+
+    /// <summary>
+    /// The top block of column (x, z), under ground level g, can flood: soft natural ground (grass, soil, sand, mud,
+    /// gloom moss, not stone, a road or a building's) with ground to hold the water under it, nothing but air or
+    /// leaves over it, no building or city-state's town in the column, and no open air beside it at its level (so the
+    /// water stays in the pool).
+    /// </summary>
+    private bool FloodRoom(int x, int z, int g)
+    {
+        var w = World;
+        if (g < 3 || x < 1 || z < 1 || x > w.SizeX - 2 || z > w.SizeZ - 2) return false;
+        if (_sim.Buildings.AtColumn(x, z) != null || _sim.Cities.Crowds(x, z, x, z)) return false;
+        if (!Soaks(w.Get(x, g - 1, z)) || !BlockInfo.CanStandOn(w.Get(x, g - 2, z))) return false;
+        if (!Fits(w.Get(x, g, z))) return false;
+        if (HazardSystem.IsHazard(w, x, g, z)) return false;
+        foreach (var (dx, dz) in Around)
+        {
+            var side = w.Get(x + dx, g - 1, z + dz);
+            if (side != BlockType.Water && !BlockInfo.CanStandOn(side)) return false;
+        }
+        return true;
+    }
+
+    /// <summary>Ground that floods: soft natural ground, as wet weather turns to mud (see <see cref="Conditions.Soft"/>), and sand.</summary>
+    private static bool Soaks(BlockType b) => Conditions.Soft(b) || b == BlockType.Sand;
 
     /// <summary>
     /// The trees a grove from (x1, z1) to (x2, z2), grown by <paramref name="casters"/> together, would have: the
@@ -506,6 +577,12 @@ public sealed class SpellSystem
     /// </summary>
     internal void Apply(GrowForestCommand c) => Order(c, Spell.GrowForest, c.X1, c.Z1, c.X2, c.Z2);
 
+    /// <summary>
+    /// The player's units that can flood the ground now (up to <see cref="MaxGroup"/>, ones already in range first)
+    /// flood it together along the command's line, walking into range first where they are not.
+    /// </summary>
+    internal void Apply(FloodCommand c) => Order(c, Spell.Flood, c.X1, c.Z1, c.X2, c.Z2);
+
     private void Order(UnitsCommand c, Spell spell, int x1, int z1, int x2, int z2)
     {
         int mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
@@ -596,6 +673,7 @@ public sealed class SpellSystem
         if (spell == Spell.IceBridge && !Freeze(i, n, x1, z1, x2, z2)) return;
         if (spell == Spell.Chasm && !Open(i, n, x1, z1, x2, z2)) return;
         if (spell == Spell.GrowForest && !Grow(n, x1, z1, x2, z2)) return;
+        if (spell == Spell.Flood && !Drown(i, n, x1, z1, x2, z2)) return;
         if (spell == Spell.EarthWall) Raise(i, n, x1, z1, x2, z2);
         _sim.Economy.SpendMana(owner, cost * n);
         // A caster near a hero that quickens the spells (as it stood when the tick began) waits less.
@@ -684,6 +762,70 @@ public sealed class SpellSystem
             if (opened.Contains(((long)z << 20) | (long)x) && !Walk.CanStand(w, x, u.Y[k], z)) _sim.Combat.Crush(k, FallDamage);
         }
         return true;
+    }
+
+    /// <summary>
+    /// The top block of each column of the flood's plan with room turns to water. Units standing there sink into it
+    /// and wade. False (nothing floods, nothing is spent) if no column has room.
+    /// </summary>
+    private bool Drown(int i, int casters, int x1, int z1, int x2, int z2)
+    {
+        var w = World;
+        PlanFlood(x1, z1, x2, z2, _icePlan, casters);
+        var pool = new FloodPool { Owner = U.Owner[i], Flooded = _sim.Tick, Drains = _sim.Tick + FloodLastsTicks };
+        foreach (var (x, z, g, room) in _icePlan)
+        {
+            if (!room) continue;
+            pool.Blocks.Add((x, g - 1, z));
+            pool.Was.Add(w.Get(x, g - 1, z));
+        }
+        if (pool.Blocks.Count == 0) return false;
+        var flooded = new HashSet<long>();
+        foreach (var (x, y, z) in pool.Blocks)
+        {
+            w.Set(x, y, z, BlockType.Water);
+            flooded.Add(((long)z << 20) | (long)x);
+        }
+        LastFlood = _sim.Tick;
+        _floods.Add(pool);
+        // Whoever stood there sinks in, its feet in the water.
+        var u = U;
+        for (int k = 0; k < u.Count; k++)
+        {
+            int x = u.X[k].FloorToInt(), z = u.Z[k].FloorToInt(), y = u.Y[k];
+            if (flooded.Contains(((long)z << 20) | (long)x) && w.Get(x, y - 1, z) == BlockType.Water && Walk.CanStand(w, x, y - 1, z)) u.Y[k] = y - 1;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The flood drains: each block of it still water comes back as the ground it was, and whoever stands in it is
+    /// lifted onto the ground.
+    /// </summary>
+    private void Drain(FloodPool pool)
+    {
+        var w = World;
+        var drained = new HashSet<long>();
+        for (int k = 0; k < pool.Blocks.Count; k++)
+        {
+            var (x, y, z) = pool.Blocks[k];
+            if (w.Get(x, y, z) != BlockType.Water) continue;
+            w.Set(x, y, z, pool.Was[k]);
+            drained.Add(((long)z << 20) | (long)x);
+        }
+        if (drained.Count == 0) return;
+        var u = U;
+        for (int i = 0; i < u.Count; i++)
+        {
+            int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
+            if (!drained.Contains(((long)z << 20) | (long)x) || Walk.CanStand(w, x, y, z)) continue;
+            for (int up = y + 1; up <= y + 1 + Walk.Clearance && up < w.SizeY - 1; up++)
+                if (Walk.CanStand(w, x, up, z))
+                {
+                    u.Y[i] = up;
+                    break;
+                }
+        }
     }
 
     /// <summary>
@@ -797,6 +939,12 @@ public sealed class SpellSystem
             Thaw(_ice[k]);
             _ice.RemoveAt(k--);
         }
+        for (int k = 0; k < _floods.Count; k++)
+        {
+            if (_sim.Tick < _floods[k].Drains) continue;
+            Drain(_floods[k]);
+            _floods.RemoveAt(k--);
+        }
         for (int k = 0; k < _chasms.Count; k++)
         {
             if (_sim.Tick < _chasms[k].Closes) continue;
@@ -894,6 +1042,17 @@ public sealed class SpellSystem
             {
                 var (x, y, z) = chasm.Blocks[k];
                 Mix(x); Mix(y); Mix(z); Mix((int)chasm.Was[k]);
+            }
+        }
+        Mix(LastFlood);
+        Mix(_floods.Count);
+        foreach (var pool in _floods)
+        {
+            Mix(pool.Owner); Mix(pool.Flooded); Mix(pool.Drains); Mix(pool.Blocks.Count);
+            for (int k = 0; k < pool.Blocks.Count; k++)
+            {
+                var (x, y, z) = pool.Blocks[k];
+                Mix(x); Mix(y); Mix(z); Mix((int)pool.Was[k]);
             }
         }
         Mix(_ice.Count);

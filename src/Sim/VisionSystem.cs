@@ -102,7 +102,7 @@ public sealed class VisionSystem
         if (Units.CombatSystem.Bears(u, player, i)) return true; // a grudge is never forgotten (the Dwarves' Book of Grudges)
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
         if (Underground(i)) return Hears(player, x, z);
-        if (_sim.Monsters.Submerged(i)) return Close(player, x, z);
+        if (_sim.Monsters.Submerged(i) || _sim.Combat.Lurking(i)) return Close(player, x, z); // a Reptilian lying in the water too
         return Sees(player, x, z);
     }
 

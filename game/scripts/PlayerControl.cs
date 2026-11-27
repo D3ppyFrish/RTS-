@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Fell, Prospect, Kindle, Stampede, Gaze, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Flood, Fell, Prospect, Kindle, Stampede, Gaze, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -260,7 +260,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Flood or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Gaze:
@@ -282,7 +282,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Flood or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -362,6 +362,7 @@ public partial class PlayerControl : Node
             case Key.L: StartRoad(); break;
             case Key.Comma: Bloom(); break;
             case Key.Y when key.ShiftPressed: ToggleEarthWall(); break;
+            case Key.Y when key.CtrlPressed: ToggleFlood(); break;
             case Key.Y: ToggleWall(); break;
             case Key.Apostrophe when key.ShiftPressed: ToggleIceBridge(); break;
             case Key.Apostrophe: ToggleBridge(); break;
@@ -1151,7 +1152,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Flood or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -2113,6 +2114,9 @@ public partial class PlayerControl : Node
     /// <summary>The Chasm button and key (Shift+Z): starts (or stops) drawing a chasm for a selected mage to open.</summary>
     public void ToggleChasm() => SetTool(Tool == ToolMode.Chasm ? ToolMode.Select : ToolMode.Chasm);
 
+    /// <summary>The Flood button and key (Ctrl+Y): starts (or stops) drawing a flood for a selected marsh shaman to call up.</summary>
+    public void ToggleFlood() => SetTool(Tool == ToolMode.Flood ? ToolMode.Select : ToolMode.Flood);
+
     /// <summary>The Grow Forest button and key (Shift+L): starts (or stops) drawing a grove for a selected mage to grow.</summary>
     public void ToggleGrowForest() => SetTool(Tool == ToolMode.GrowForest ? ToolMode.Select : ToolMode.GrowForest);
 
@@ -2166,6 +2170,8 @@ public partial class PlayerControl : Node
                 _sim.Schedule(_sim.Tick, new IceBridgeCommand(LocalPlayer, OwnCasters(Spell.IceBridge).ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.Chasm)
                 _sim.Schedule(_sim.Tick, new ChasmCommand(LocalPlayer, OwnCasters(Spell.Chasm).ToArray(), _wallX, _wallZ, x2, z2));
+            else if (Tool == ToolMode.Flood)
+                _sim.Schedule(_sim.Tick, new FloodCommand(LocalPlayer, OwnCasters(Spell.Flood).ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.GrowForest)
                 _sim.Schedule(_sim.Tick, new GrowForestCommand(LocalPlayer, OwnCasters(Spell.GrowForest).ToArray(), _wallX, _wallZ, x2, z2));
             else if (Tool == ToolMode.Ramp)
@@ -2242,7 +2248,7 @@ public partial class PlayerControl : Node
             UpdateStampedePreview();
             return;
         }
-        if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest)
+        if (Tool is ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Flood)
         {
             UpdateEarthWallPreview();
             return;
@@ -2512,6 +2518,7 @@ public partial class PlayerControl : Node
         if (!_wallDragging || !GroundUnder(_mousePos, out int x2, out _, out int z2)) return;
         if (Tool == ToolMode.IceBridge) _sim.Spells.PlanIce(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.IceBridge)); // empty if it cannot span
         else if (Tool == ToolMode.Chasm) _sim.Spells.PlanChasm(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.Chasm));
+        else if (Tool == ToolMode.Flood) _sim.Spells.PlanFlood(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.Flood));
         else if (Tool == ToolMode.GrowForest) _sim.Spells.PlanGrove(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters(Spell.GrowForest));
         else _sim.Spells.Plan(_wallX, _wallZ, x2, z2, _earthPlan, GroupCasters());
         foreach (var (x, z, y, room) in _earthPlan)
@@ -2768,6 +2775,7 @@ public partial class PlayerControl : Node
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
+               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} " +
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"ramps={OwnRamps()} ramp_top={RampTop} ramp_blocks={RampBlocks} ramp_builders={RampBuilders()} " +
@@ -2868,6 +2876,30 @@ public partial class PlayerControl : Node
     }
 
     /// <summary>Units (anyone's) standing in an open chasm, below the ground it was cut from.</summary>
+    /// <summary>Floods of yours under water now, and how many of their blocks are still water.</summary>
+    private int OwnFloods(out int water)
+    {
+        int n = 0;
+        water = 0;
+        foreach (var pool in _sim.Spells.Floods)
+        {
+            if (pool.Owner != LocalPlayer) continue;
+            n++;
+            foreach (var (x, y, z) in pool.Blocks)
+                if (_sim.World.Get(x, y, z) == BlockType.Water) water++;
+        }
+        return n;
+    }
+
+    /// <summary>Units of yours lying hidden in the water (the Reptilians).</summary>
+    private int OwnLurking()
+    {
+        int n = 0;
+        for (int i = 0; i < _sim.Units.Count; i++)
+            if (_sim.Units.Owner[i] == LocalPlayer && _sim.Combat.Lurking(i)) n++;
+        return n;
+    }
+
     private int InChasm()
     {
         var u = _sim.Units;

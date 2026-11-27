@@ -75,6 +75,7 @@ public partial class Hud : CanvasLayer
     private Button _earthWallButton = null!;
     private Button _chasmButton = null!;
     private Button _growForestButton = null!;
+    private Button _floodButton = null!;
     private Button _iceBridgeButton = null!;
     private Button _rampButton = null!;
     private Button _ladderButton = null!;
@@ -912,6 +913,12 @@ public partial class Hud : CanvasLayer
         _growForestButton.Visible = false;
         _growForestButton.Pressed += () => _control.ToggleGrowForest();
         column.AddChild(_growForestButton);
+        _floodButton = MakeToolButton("Flood  [Ctrl+Y]");
+        _floodButton.Name = "flood";
+        _floodButton.Icon = UiIcons.Get("flood");
+        _floodButton.Visible = false;
+        _floodButton.Pressed += () => _control.ToggleFlood();
+        column.AddChild(_floodButton);
 
         _cityBox = new VBoxContainer { Visible = false };
         _cityBox.AddThemeConstantOverride("separation", 4);
@@ -1029,12 +1036,14 @@ public partial class Hud : CanvasLayer
         if (form.IceBridge && !from.IceBridge) spells.Add("Ice Bridge");
         if (form.Chasm && !from.Chasm) spells.Add("Chasm");
         if (form.GrowForest && !from.GrowForest) spells.Add("Grow Forest");
+        if (form.Flood && !from.Flood) spells.Add("Flood");
         if (spells.Count > 0) lines.Add("Casts " + string.Join(", ", spells));
         var lost = new List<string>();
         if (from.EarthWall && !form.EarthWall) lost.Add("Earth Wall");
         if (from.IceBridge && !form.IceBridge) lost.Add("Ice Bridge");
         if (from.Chasm && !form.Chasm) lost.Add("Chasm");
         if (from.GrowForest && !form.GrowForest) lost.Add("Grow Forest");
+        if (from.Flood && !form.Flood) lost.Add("Flood");
         if (lost.Count > 0) lines.Add("No longer casts " + string.Join(", ", lost));
         return string.Join("\n", lines);
     }
@@ -1496,6 +1505,7 @@ public partial class Hud : CanvasLayer
         RefreshIceBridge();
         RefreshChasm();
         RefreshGrowForest();
+        RefreshFlood();
         RefreshCities();
         RefreshSites();
         RefreshGreatWork();
@@ -1977,6 +1987,30 @@ public partial class Hud : CanvasLayer
         ManaGate(_chasmButton, Spell.Chasm, "Chasm", tool);
     }
 
+    /// <summary>The Flood button while a marsh shaman of yours is selected (greyed out while none is ready).</summary>
+    private void RefreshFlood()
+    {
+        bool tool = _control.Tool == PlayerControl.ToolMode.Flood;
+        _floodButton.Visible = _control.OwnCasters(Spell.Flood).Count > 0 || tool;
+        _floodButton.SetPressedNoSignal(tool);
+        if (!_floodButton.Visible) return;
+        int ready = _control.ReadyCaster(spell: Spell.Flood);
+        int next = ready != 0 ? ready : _control.ReadyCaster(soonest: true, spell: Spell.Flood);
+        long wait = next == 0 ? 0 : Math.Max(0, _sim.Spells.ReadyAt(_sim.Units.IndexOf(next)) - _sim.Tick);
+        _floodButton.Text = ready != 0 || next == 0 ? "Flood  [Ctrl+Y]"
+            : $"Flood in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond} s";
+        _floodButton.TooltipText = $"A marsh shaman calls the water up out of the ground along a line of up to {SpellSystem.MaxLength} columns, " +
+                                   $"within {SpellSystem.CastRange} blocks of it: soft ground (grass, soil, sand, mud) turns to a pool a block deep. " +
+                                   $"Everyone else wades through it at {UnitMovement.WadePercent}% of their pace; your brood swims it at full pace, " +
+                                   "heals twice as fast in it and lies hidden in it. Not on stone, roads or buildings, nor where the water would run off. " +
+                                   $"It drains after {SpellSystem.FloodLastsTicks / Simulation.TicksPerSecond} s. " +
+                                   $"Then that shaman waits {SpellSystem.CooldownTicks / Simulation.TicksPerSecond} s before its next spell. " +
+                                   $"Up to {SpellSystem.MaxGroup} ready shamans selected together cast as one: each extra one makes the pool " +
+                                   $"a column wider and {SpellSystem.WallPerHelper} columns longer.";
+        _floodButton.Disabled = ready == 0 && !tool;
+        ManaGate(_floodButton, Spell.Flood, "Flood", tool);
+    }
+
     /// <summary>The Grow Forest button while a mage of yours is selected (greyed out while none is ready).</summary>
     private void RefreshGrowForest()
     {
@@ -2281,6 +2315,21 @@ public partial class Hud : CanvasLayer
                            : _control.ReadyCaster(spell: Spell.Chasm) == 0 ? "   (no selected mage is ready)" : "") +
                        "\nRight click or Esc to stop";
             }
+            case PlayerControl.ToolMode.Flood:
+            {
+                var preview = _control.WallPreview;
+                int ok = 0;
+                foreach (var c in preview)
+                    if (c.Ok) ok++;
+                int group = _control.GroupCasters(Spell.Flood);
+                return (_control.WallStarted
+                           ? $"Flood: let go to flood {ok} columns" + (ok < preview.Count ? $" ({preview.Count - ok} are stone, a road, a building or would run off)" : "")
+                           : $"Flood: drag a line of up to {SpellSystem.WallLength(group)} columns for a marsh shaman to flood") +
+                       (group > 1 ? $"   ({group} shamans together: {SpellSystem.WallThickness(group)} wide)" : "") +
+                       (_control.OwnCasters(Spell.Flood).Count == 0 ? "   (select a marsh shaman first)"
+                           : _control.ReadyCaster(spell: Spell.Flood) == 0 ? "   (no selected shaman is ready)" : "") +
+                       "\nRight click or Esc to stop";
+            }
             case PlayerControl.ToolMode.GrowForest:
             {
                 var preview = _control.WallPreview;
@@ -2383,7 +2432,7 @@ public partial class Hud : CanvasLayer
                     : "Road: click where it starts\nRight click or Esc to stop";
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
-                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
+                       $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   Ctrl+Y: flood   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
                        "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
         }
     }
@@ -2944,7 +2993,8 @@ public partial class Hud : CanvasLayer
         return label;
     }
 
-    private static string Plural(string name) => name.EndsWith("man") ? name[..^3] + "men" : name + "s";
+    private static string Plural(string name) =>
+        name.EndsWith("shaman") ? name + "s" : name.EndsWith("man") ? name[..^3] + "men" : name + "s";
 
     private static string PlayerName(int owner) =>
         owner == PlayerControl.LocalPlayer ? "you" : owner == Simulation.WildPlayer ? "wild" : $"player {owner + 1}";

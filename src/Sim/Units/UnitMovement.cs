@@ -13,6 +13,8 @@ public sealed class UnitMovement
 {
     /// <summary>How many times slower a unit goes pushing through an orchard's trees (<see cref="BlockType.Orchard"/>).</summary>
     public const int OrchardSlow = 2;
+    /// <summary>Percent of its pace a unit keeps wading through water (the amphibious keep all of it).</summary>
+    public const int WadePercent = 70;
 
     /// <summary>True if unit i is in an orchard's trees: its body or head among their branches.</summary>
     public bool InOrchard(UnitStore u, int i)
@@ -156,11 +158,18 @@ public sealed class UnitMovement
         else if (BlockInfo.IsRubble(underfoot)) { speed /= 2; full /= 2; } // picking a way over a heap of rubble
         else if (InOrchard(u, i)) { speed /= OrchardSlow; full /= OrchardSlow; } // pushing through an orchard's branches
         else if (underfoot == BlockType.Quicksand) { speed /= Rts.Sim.World.HazardSystem.QuicksandSlow; full /= Rts.Sim.World.HazardSystem.QuicksandSlow; } // the sand grips
-        else if (_sim.Conditions.Damp)
+        else if (_sim.Conditions.Damp && !_sim.Content.Units[u.Def[i]].Amphibious) // the Reptilians are at home in the mud
         {
             var def = _sim.Content.Units[u.Def[i]];
             int pace = _sim.Conditions.MudPace(underfoot, def.Machine || def.Role == UnitRole.Hauler);
             if (pace < 100) { speed = speed * pace / 100; full = full * pace / 100; } // wading through mud
+        }
+        var kind = _sim.Content.Units[u.Def[i]];
+        if (kind.ColdBlooded && _sim.Combat.Chilled(i)) { speed = speed * CombatSystem.ColdPercent / 100; full = full * CombatSystem.ColdPercent / 100; } // sluggish in the cold
+        if (!kind.Amphibious && kind.Role != UnitRole.Boat && _sim.World.Get(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) == BlockType.Water)
+        {
+            speed = speed * WadePercent / 100; // wading: only the amphibious go through water as fast as on land
+            full = full * WadePercent / 100;
         }
         if (formation)
         {

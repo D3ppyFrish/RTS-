@@ -12,7 +12,9 @@ It opens on the start screen: pick your faction, the Settlers (who start in the 
 east) or the Deepfolk (an insect hive that hatches swarms in batches at brood chambers and burrows under walls;
 see [The Deepfolk](rules.md#the-deepfolk)) or the Elves (forest guardians with long-range archers, healing druids and
 living walls that grow back; see [The Elves](rules.md#the-elves)) or the Dwarves (sturdy, iron-clad soldiers who see in
-the dark, stone walls from the first day, and the Book of Grudges; see [The Dwarves](rules.md#the-dwarves)), and under Against the faction of the other side (the same as yours makes a mirror match), the
+the dark, stone walls from the first day, and the Book of Grudges; see [The Dwarves](rules.md#the-dwarves)) or the Reptilians
+(a swamp brood that regenerates, wades and hides in the water and floods the ground, but is sluggish at night and in the
+hills; see [The Reptilians](rules.md#the-reptilians)), and under Against the faction of the other side (the same as yours makes a mirror match), the
 world seed, the map size (Standard, 768 by 768 blocks, or Large, 1024 by 1024: nearly twice the land, the towns
 about 700 blocks apart instead of 520, and the land beyond the standard map's twice as thick with monster lairs; see
 [Monsters and taming](rules.md#monsters-and-taming)), whether the computer plays the other side and how well (Computer level: Easy, Normal, which
@@ -23,7 +25,7 @@ come in big waves from an open town; the Settlers (at Normal and Hard) wall thei
 stronger as the match goes on, and at Hard post their archers on it and keep a quarter of their soldiers
 at home behind it when the rest attack.
 Each faction has its own look for the menus, panels and buttons: castle stone for the Settlers, rough
-timber for the Orcs and the Elves, dark slate for the Deepfolk, castle stone for the Dwarves too. The start screen changes to the look of the faction you pick. Destroy the other side's
+timber for the Orcs and the Elves, dark slate for the Deepfolk, castle stone for the Dwarves too, timber for the Reptilians. The start screen changes to the look of the faction you pick. Destroy the other side's
 town hall to win, or (unless switched off on the start screen) hold more than half of the old ruins, the
 ancient sites, for 3 minutes: soldiers standing alone in one for 15 seconds take it, and the sites button in the
 top bar says how many you hold and counts down when someone holds most (see
@@ -102,6 +104,7 @@ Controls:
 | Shift+' | with a mage selected (also the Ice Bridge button in the selection panel): drag from bank to bank across water and let go, and a ready mage freezes a level way of ice across, three columns wide and up to 16 long, walking into range first. Green squares are where ice forms; red ones have something in the way. Units on the ice slide: they are slow to get going and to stop. Dark cracks show on it in its last 5 seconds before it melts (see [Terrain magic](rules.md#terrain-magic)) |
 | Shift+Z | with a mage selected (also the Chasm button in the selection panel): drag a line of up to 8 columns and let go, and a ready mage opens the ground along it 3 blocks deep, walking into range first. Green squares open; red ones have a building, water or no natural ground under them. Whoever stands there falls in and is stuck until the ground closes, 30 seconds later, and lifts them out. With several mages selected, up to 3 ready ones cast together: each extra one makes it a column wider and 4 longer |
 | Shift+L | with a mage selected (also the Grow Forest button in the selection panel): drag a line of up to 8 columns and let go, and a ready mage grows full-grown trees along it, one on every other spot, walking into range first. Green squares are where a tree grows; red ones have a building, water, a unit or something in the way. Trunks stop arrows and block the way, and the trees stay (fell them for wood like any tree). With several mages selected, up to 3 ready ones cast together: each extra one adds a row of trees on the gaps of the first and makes it 4 longer |
+| Ctrl+Y | with a marsh shaman selected (the Reptilians; also the Flood button in the selection panel): drag a line of up to 8 columns and let go, and a ready shaman turns its soft ground into a pool a block deep for 40 seconds, walking into range first. Green squares flood; red ones are stone, a road, a building or would let the water run off. Everyone else wades it at 70% of their pace; your brood swims it at full pace, heals twice as fast in it and lies hidden in it. With several shamans selected, up to 3 ready ones cast together: each extra one makes it a column wider and 4 longer |
 | K | open the tech tree: click a tech to research it at your town hall |
 | . | select your next idle worker and look at it (as the Idle workers button does) |
 | F2 | select all your combat units, leaving workers, caravans and carts out (as the Army button does) |

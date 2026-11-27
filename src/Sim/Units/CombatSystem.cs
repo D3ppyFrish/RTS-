@@ -210,6 +210,8 @@ public sealed partial class CombatSystem
         Mix(_kills.Count);
         foreach (int n in _kills) Mix(n);
         HashStampedes(Mix);
+        Mix(_lurkers.Count);
+        foreach (int id in _lurkers) Mix(id);
         return h;
     }
 
@@ -264,6 +266,7 @@ public sealed partial class CombatSystem
         StepMolts();
         StepPens();
         StepWebs();
+        StepLurkers();
         BuildGrid();
         Rally();
         StepDrums();
@@ -461,6 +464,8 @@ public sealed partial class CombatSystem
         Fix64 x = u.X[i], z = u.Z[i];
         bool guard = u.Town[i] != 0;
         bool monster = !guard && u.Owner[i] == Simulation.WildPlayer;
+        // A Reptilian lying in the water lies in wait: it springs only at enemies that come close (CombatSystem.Swamp.cs).
+        bool lying = Lurking(i);
         // In the dark it sees less far, but a target in the light as far as by day (see Conditions).
         var cond = _sim.Conditions;
         int ox = x.FloorToInt(), oz = z.FloorToInt();
@@ -497,7 +502,7 @@ public sealed partial class CombatSystem
                     Fix64 d = dx * dx + dz * dz;
                     if (d > s * s || d < closest) continue;
                     // A monster lying in the water goes unnoticed until it is close (see MonsterSystem.Submerged).
-                    if (d > Spot2 && _sim.Monsters.Submerged(j)) continue;
+                    if (d > Spot2 && (lying || _sim.Monsters.Submerged(j) || Lurking(j))) continue;
                     if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
                     {
                         best = j;
@@ -963,7 +968,7 @@ public sealed partial class CombatSystem
         var part = Location(i, t);
         int damage = 0;
         // A lurking monster's first blow coming up out of the water is an ambush (see MonsterSystem.Spring).
-        int ambush = splash ? 0 : _sim.Monsters.Spring(i);
+        int ambush = splash ? 0 : Math.Max(_sim.Monsters.Spring(i), SpringLurker(i));
         bool blocked = !splash && Shielded(i, t);
         if (blocked) Blocks++;
         else
@@ -1017,6 +1022,7 @@ public sealed partial class CombatSystem
         if (target.Cover > 0 && def.IsRanged && def.Attack == AttackKind.Pierce) m = m * (100 - target.Cover) / 100;
         int grudge = GrudgeAgainst(i, t); // the Dwarves' Book of Grudges (CombatSystem.Grudges.cs)
         if (grudge > 0) m = m * (100 + grudge) / 100;
+        if (Chilled(i)) m = m * ColdPercent / 100; // cold-blooded in the cold (CombatSystem.Swamp.cs)
         return Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * m).RoundToInt());
     }
 
@@ -1446,6 +1452,8 @@ public sealed partial class CombatSystem
             int regen = def.Regen;
             // Trolls' wounds close only out of the daylight.
             if (regen > 0 && def.NightRegen && _sim.Conditions.InDaylight(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt())) regen = 0;
+            // The Reptilians' wounds close twice as fast in the water, and not at all in the cold (CombatSystem.Swamp.cs).
+            if (regen > 0 && (def.Amphibious || def.ColdBlooded)) regen = SwampRegen(i, def, regen);
             bool resting = tick - u.LastFight[i] >= rules.RecoveryDelayTicks;
             if (!resting && regen == 0) continue;
             int max = _sim.MaxHpOf(i);
