@@ -835,7 +835,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear", "flood", "amphibious", "coldBlooded");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -891,6 +891,9 @@ public static class ContentLoader
                 EarthWall = o.Bool("earthWall"),
                 IceBridge = o.Bool("iceBridge"),
                 Chasm = o.Bool("chasm"),
+                Flood = o.Bool("flood"),
+                Amphibious = o.Bool("amphibious"),
+                ColdBlooded = o.Bool("coldBlooded"),
                 GrowForest = o.Bool("growForest"),
                 Heal = o.Int("heal", 0, 100000, 0),
                 HealTicks = Math.Max(1, (healTime * Tps).RoundToInt()),
@@ -1466,6 +1469,11 @@ public static class ContentLoader
                         effects.Add(new TechEffect { Type = type, Ticks = Math.Max(1, ticks) });
                         break;
                     }
+                    case TechEffectType.Ambush:
+                        // { "type": "ambush", "percent": 100 }: how much more a lurking unit's first blow out of the water deals.
+                        o.Keys("type", "percent");
+                        effects.Add(new TechEffect { Type = type, Percent = o.Int("percent", 1, 1000, 0, required: true) });
+                        break;
                     case TechEffectType.Grudges:
                         // { "type": "grudges", "percent": 50 }: how much more the player's units deal a unit they bear a grudge against.
                         o.Keys("type", "percent");
@@ -1856,6 +1864,9 @@ public static class ContentLoader
                 if (u.DarkSight) h.Add(78);
                 if (u.Hearing > 0) h.Add(1000 + u.Hearing);
                 if (u.CaveWise) h.Add(79);
+                if (u.Flood) h.Add(190);
+                if (u.Amphibious) h.Add(191);
+                if (u.ColdBlooded) h.Add(192);
                 if (u.Drums is { } drums)
                 {
                     h.Add(drums.Speed);

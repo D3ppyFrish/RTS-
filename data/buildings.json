@@ -272,5 +272,10 @@
   { "id": "mountain_hall", "name": "Mountain King's hall", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
     "wall": "stone_brick", "footing": "rampart", "roof": "stone_brick", "chimney": true, "icon": "crown", "faction": "dwarves",
     "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
-    "requires": "dwarf_king", "sight": 10, "light": 6 }
+    "requires": "dwarf_king", "sight": 10, "light": 6 },
+  // The Reptilians' great work: the Brood Mother's spawning mound, a mound of reed thatch raised in the deep caves.
+  { "id": "spawning_mound", "name": "Brood Mother's mound", "kind": "great_work", "size": [7, 7], "wallHeight": 4,
+    "wall": "thatch", "mound": true, "icon": "crown", "faction": "reptilians",
+    "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "requires": "reptile_mother", "sight": 10, "light": 6 }
 ]

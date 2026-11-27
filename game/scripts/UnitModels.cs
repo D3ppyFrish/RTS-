@@ -116,6 +116,11 @@ public static class UnitModels
     private static readonly Color Yew = new(0.42f, 0.24f, 0.12f);
     private static readonly Color DwarfBeard = new(0.66f, 0.32f, 0.13f);
     private static readonly Color DwarfBeardDark = new(0.48f, 0.22f, 0.09f);
+    private static readonly Color LizardScale = new(0.3f, 0.48f, 0.26f);
+    private static readonly Color LizardScaleDark = new(0.2f, 0.34f, 0.18f);
+    private static readonly Color LizardBelly = new(0.72f, 0.7f, 0.42f);
+    private static readonly Color LizardEye = new(1f, 0.78f, 0.15f);
+    private static readonly Color Obsidian = new(0.1f, 0.09f, 0.13f);
     private static readonly Color Team = new(1f, 0f, 0f, 0f);      // full-strength team colour
     private static readonly Color TeamDark = new(0.7f, 0f, 0f, 0f); // shaded team colour
 
@@ -412,6 +417,33 @@ public static class UnitModels
             return this;
         }
 
+        /// <summary>
+        /// A lizardfolk of the Reptilians: green-scaled, as tall as a person, with a long snout and yellow eyes, a crest
+        /// down the back of the head, a pale belly, a long tail behind, and a sash and loincloth of its owner's colour.
+        /// Hands at x = -3 and 2, at y = 5.
+        /// </summary>
+        public Builder Lizard(bool legs = true)
+        {
+            if (legs)
+            {
+                Box(-2, 0, -1, -1, 4, 0, LizardScale);
+                Box(0, 0, -1, 1, 4, 0, LizardScale);
+                Box(-2, 0, 1, -1, 0, 1, LizardScaleDark).Box(0, 0, 1, 1, 0, 1, LizardScaleDark); // clawed feet
+            }
+            Box(-2, 5, -1, 1, 9, 0, LizardScale);                                  // body
+            Box(-1, 5, 1, 0, 8, 1, LizardBelly);                                   // pale belly
+            Box(-2, 4, -1, 1, 5, 0, Team).Box(-2, 9, -1, -1, 9, 0, TeamDark);      // loincloth and sash
+            Box(-3, 6, -1, -3, 9, 0, LizardScaleDark);                             // arms
+            Box(2, 6, -1, 2, 9, 0, LizardScaleDark);
+            Box(-3, 5, -1, -3, 5, 0, LizardScaleDark).Box(2, 5, -1, 2, 5, 0, LizardScaleDark); // hands
+            Box(-2, 10, -2, 1, 12, 1, LizardScale);                                // head
+            Box(-1, 10, 2, 0, 11, 3, LizardScale).Box(-1, 10, 3, 0, 10, 3, LizardBelly); // snout and jaw
+            Box(-2, 12, 1, -2, 12, 1, LizardEye).Box(1, 12, 1, 1, 12, 1, LizardEye);     // eyes either side
+            Box(-1, 13, -1, 0, 13, 0, TeamDark).Box(-1, 12, -2, 0, 12, -3, TeamDark);   // crest
+            Box(-1, 4, -2, 0, 5, -3, LizardScale).Box(-1, 3, -4, 0, 3, -5, LizardScaleDark).Box(-1, 2, -6, 0, 2, -7, LizardScaleDark); // tail
+            return this;
+        }
+
         /// <summary>The mage's robe and pointed hat.</summary>
         public Builder Robe() => Humanoid(legs: false).Box(-2, 0, -1, 1, 4, 0, TeamDark);
     }
@@ -484,6 +516,27 @@ public static class UnitModels
             .Box(-2, 0, 2, 1, 2, 2, Leather)                                                                 // apron below the beard
             .Box(-2, 11, -2, 1, 11, 1, Gold).Box(0, 11, 2, 0, 11, 2, Glow)                                    // circlet and rune
             .Box(3, 0, 1, 3, 11, 1, Wood).Box(2, 11, 0, 4, 13, 2, Rock).Box(3, 12, 3, 3, 12, 3, Glow),         // rune hammer
+        // The Reptilians' own: lizardfolk of the swamp, green-scaled with long tails, in their owner's colour.
+        // A scale guard: a bone-rimmed shield of hide and a club set with obsidian teeth.
+        "scale_guard" => new Builder().Lizard()
+            .Box(-2, 7, -1, 1, 8, 0, LizardScaleDark).Box(-3, 9, -1, -3, 9, 0, Bone).Box(2, 9, -1, 2, 9, 0, Bone)  // thick scales, bone pauldrons
+            .Box(-4, 4, -1, -4, 9, 1, Hide).Box(-4, 4, -1, -4, 4, 1, Bone).Box(-4, 9, -1, -4, 9, 1, Bone)         // hide shield rimmed with bone
+            .Box(2, 4, 1, 2, 11, 1, Wood).Box(3, 8, 1, 3, 11, 1, Obsidian).Box(1, 9, 1, 1, 11, 1, Obsidian),       // club with obsidian teeth
+        // A blowpiper: a long reed blowpipe held to the snout, a pouch of darts.
+        "blowpiper" => new Builder().Lizard()
+            .Box(0, 11, 4, 0, 11, 10, Reed).Box(0, 11, 10, 0, 11, 10, Toxic)                                     // blowpipe, a venom-green dart
+            .Box(1, 6, 1, 1, 7, 1, Leather).Box(-2, 7, -2, -1, 9, -2, Leather),                                  // dart pouch, quiver
+        // A marsh shaman: a reed cloak, a frog-skull necklace and a crooked staff hung with a glowing bog light.
+        "marsh_shaman" => new Builder().Lizard(legs: false).Box(-2, 0, -1, 1, 4, 0, Reed).Box(-2, 0, -1, 1, 0, 0, LizardScaleDark)
+            .Box(-2, 6, -2, 1, 9, -2, Reed).Box(-1, 9, 1, 0, 9, 1, Bone)                                         // reed cloak, skull necklace
+            .Box(3, 0, 1, 3, 13, 1, Wood).Box(4, 13, 1, 4, 14, 1, Wood).Box(4, 15, 1, 4, 15, 1, BogLight),        // staff and bog light
+        // The Reptilians' versions of everyone's: a fisher with a net and a reed basket, a digger with a bone shovel.
+        "reptilians/worker" => new Builder().Lizard()
+            .Box(2, 3, 0, 2, 11, 0, Wood).Box(1, 11, -1, 3, 11, 1, Bone)                                         // bone hoe
+            .Box(-2, 6, -3, 1, 9, -2, Reed),                                                                     // reed basket on the back
+        "reptilians/sapper" => new Builder().Lizard()
+            .Box(-2, 12, -2, 1, 12, 1, Hide)                                                                     // hide cap
+            .Box(2, 2, 0, 2, 9, 0, Wood).Box(2, 0, -1, 2, 1, 1, Bone),                                           // bone shovel
         "rider" => new Builder().Mount(Horse)
             .Box(-3, 5, -4, 2, 9, 1, TeamDark)                                           // caparison down the flanks
             .Humanoid(lift: 6, legs: false)

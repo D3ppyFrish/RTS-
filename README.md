@@ -151,7 +151,9 @@ replay made with different data says so instead of drifting apart.
   [The Deepfolk](docs/rules.md#the-deepfolk)) and the Elves (long-range archers, healing druids and living walls that
   grow back, `"regrow"` and `"thorns"` in `data/buildings.json`; see [The Elves](docs/rules.md#the-elves)) and the Dwarves
   (iron-clad soldiers who see in the dark, stonework walls, and the Book of Grudges, a `grudges` tech effect; see
-  [The Dwarves](docs/rules.md#the-dwarves)). Player 0 plays the first
+  [The Dwarves](docs/rules.md#the-dwarves)) and the Reptilians (a swamp brood that regenerates, is `"amphibious"` and
+  `"coldBlooded"` in `data/units.json`, floods the ground with `"flood"`, and has an `ambush` tech effect; see
+  [The Reptilians](docs/rules.md#the-reptilians)). Player 0 plays the first
   faction, player 1 the second, and so on; picking a faction on the start screen picks the player who
   has it.
 - **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 33
@@ -163,7 +165,7 @@ replay made with different data says so instead of drifting apart.
   unlocks the units and buildings that name it in `requires`, and can have effects: roads, showing the map's
   ruins, lairs or towns through the fog (`reveal`), wild monsters sparing workers (`spare_workers`), units cutting free of webs (`cut_webs`), units binding their own wounds (`bind_wounds`, Field dressings), the shield
   wall (`shield_wall`), aimed felling and prospecting (`felling`, `prospecting`), murder holes in stone gates
-  (`murder_holes`, Masonry), salvage and field repairs (`salvage`, `field_repairs`, Craft guilds: take down your own buildings for half their cost back, and mend catapults and rams in the field; repairing buildings needs no tech, and docks and siege workshops mend their own ships and siege machines beside them: `mends` in `data/buildings.json`), molting (`molt`, the Deepfolk's Molting), thorns on living walls (`thorns`, the Elves' Thornwood), grudges (`grudges`, the Dwarves' Book of Grudges), and the
+  (`murder_holes`, Masonry), salvage and field repairs (`salvage`, `field_repairs`, Craft guilds: take down your own buildings for half their cost back, and mend catapults and rams in the field; repairing buildings needs no tech, and docks and siege workshops mend their own ships and siege machines beside them: `mends` in `data/buildings.json`), molting (`molt`, the Deepfolk's Molting), thorns on living walls (`thorns`, the Elves' Thornwood), grudges (`grudges`, the Dwarves' Book of Grudges), ambushes from the water (`ambush`, the Reptilians' Lurkers' strike), and the
   two large buffs: more housing (`housing`, a number more or a `percent` of the building's own: Brood warrens
   doubles a brood chamber) and more hit points (`unit_hp`, for units already alive too: Giant's marrow, +30% for
   fighters).

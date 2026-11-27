@@ -235,6 +235,12 @@ public enum TechEffectType : byte
     /// <see cref="TechEffect.Percent"/> more, and the player sees it through the fog of war (see <see cref="Units.CombatSystem"/>).
     /// </summary>
     Grudges,
+    /// <summary>
+    /// The Reptilians' Lurkers' strike: a unit of the player's lying in wait in the water (see
+    /// <see cref="Units.CombatSystem.Lurking"/>) deals the effect's <see cref="TechEffect.Percent"/> more with its first
+    /// blow coming up out of it at someone.
+    /// </summary>
+    Ambush,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

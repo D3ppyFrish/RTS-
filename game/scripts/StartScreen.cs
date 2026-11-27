@@ -343,6 +343,9 @@ public partial class StartScreen : CanvasLayer
         return usual ? null : Array.ConvertAll(_factions, f => (string?)f.Id);
     }
 
+    /// <summary>Width of a faction's button: 300, narrower when there are too many factions for a row of them to fit the screen.</summary>
+    private int ButtonWidth => Math.Min(300, (1540 - 14 * (_content.Factions.Count - 1)) / Math.Max(1, _content.Factions.Count));
+
     /// <summary>
     /// A faction to play. Picking it puts you at its usual start, if it has one (the other side moves to the other
     /// start), and the menus take its look.
@@ -354,7 +357,7 @@ public partial class StartScreen : CanvasLayer
             Name = "start_" + faction.Id,
             ToggleMode = true,
             FocusMode = Control.FocusModeEnum.None,
-            CustomMinimumSize = new Vector2(300, 108),
+            CustomMinimumSize = new Vector2(ButtonWidth, ButtonWidth < 300 ? 124 : 108),
             TooltipText = $"Play the {faction.Name}",
         };
         b.Pressed += () =>
@@ -393,7 +396,7 @@ public partial class StartScreen : CanvasLayer
             Text = faction.Name,
             ToggleMode = true,
             FocusMode = Control.FocusModeEnum.None,
-            CustomMinimumSize = new Vector2(300, 40),
+            CustomMinimumSize = new Vector2(ButtonWidth, 40),
             TooltipText = $"The other side plays the {faction.Name}",
         };
         b.AddThemeFontSizeOverride("font_size", 18);

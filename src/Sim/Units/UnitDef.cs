@@ -142,6 +142,23 @@ public sealed class UnitDef
     public bool Chasm { get; init; }
     /// <summary>It can grow forests (see <see cref="SpellSystem"/>).</summary>
     public bool GrowForest { get; init; }
+    /// <summary>It can flood the ground (<c>"flood"</c> in the data; see <see cref="SpellSystem"/>, the Reptilians' marsh shaman).</summary>
+    public bool Flood { get; init; }
+
+    /// <summary>
+    /// It is at home in the water (<c>"amphibious"</c> in the data; the Reptilians): it wades as fast as it walks and mud
+    /// does not slow it, its <see cref="Regen"/> is doubled with its feet in water, and while it lies in the water with
+    /// nothing to fight it is hidden like a bog horror, seen by its enemies only from close by (see
+    /// <c>CombatSystem.Lurking</c>, <see cref="Rts.Sim.VisionSystem.SpotSubmerged"/>).
+    /// </summary>
+    public bool Amphibious { get; init; }
+
+    /// <summary>
+    /// It is cold-blooded (<c>"coldBlooded"</c> in the data; the Reptilians): in the cold, at night or up in the hills
+    /// (see <c>Conditions.Cold</c>), it walks a quarter slower, strikes a quarter softer and does not regenerate
+    /// (see <c>CombatSystem.Chilled</c>).
+    /// </summary>
+    public bool ColdBlooded { get; init; }
 
     /// <summary>Hit points it gives back to the most hurt ally near it (<see cref="HealRange"/>) every <see cref="HealTicks"/>; 0 if it does not heal.</summary>
     public int Heal { get; init; }

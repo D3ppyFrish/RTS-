@@ -177,6 +177,18 @@ public static class UiIcons
             "t.........v.", ".....t......", "kkkk....kkkk", "gggk....kggg", "GgGbk..kbGgG", "bbbbk..kbbbb",
             "bBbbk..kbBbb", "bbbbbkkbbbbb", "bbBbbbbbbBbb", "bbbbbbBbbbbb", "BbbbbbbbbbbB", "kkkkkkkkkkkk",
         },
+        // Flood: the ground sunk into a pool of water, with sparks of magic.
+        ["flood"] = new[]
+        {
+            "t.........v.", "....t.......", "..........t.", "kkkk....kkkk", "gggknnnnkggg", "GgGkntnnkGgG",
+            "bbbknnnnkbbb", "bBbkkkkkkbBb", "bbBbbbbbbBbb", "bbbbbbBbbbbb", "BbbbbbbbbbbB", "kkkkkkkkkkkk",
+        },
+        // Lurkers' strike: a lizard's yellow eyes just above the water.
+        ["lurk"] = new[]
+        {
+            "............", "............", "............", "............", "..kkk..kkk..", ".kgykk.kgyk.",
+            "kgggggggggkk", "nnkkkkkkkknn", "nnnnntnnnnnn", "nntnnnnnnnnn", "nnnnnnnntnnn", "nnnnnnnnnnnn",
+        },
         // Grow Forest: trees sprung up from the ground, with sparks of magic.
         ["grow_forest"] = new[]
         {

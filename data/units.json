@@ -15,7 +15,11 @@
 // it knocks out of one, away from the blast, onto whoever is behind. weakTo (optional) lists roles whose attacks deal it
 // that many percent more damage, as in { "caster": 50 }. heal (optional) is the hit points it gives back
 // to the most hurt ally within healRange blocks every healTime seconds. earthWall, iceBridge, chasm and growForest (optional) let it cast
-// Earth Wall, Ice Bridge, Chasm and Grow Forest (see Terrain magic in docs/rules.md).
+// Earth Wall, Ice Bridge, Chasm and Grow Forest (see Terrain magic in docs/rules.md); flood (optional) lets it cast Flood.
+// amphibious (optional): it wades as fast as it walks, mud does not slow it, its regen doubles with its feet in water,
+// and lying in the water with nothing to fight it is hidden until an enemy comes close (the Reptilians).
+// coldBlooded (optional): at night and up in the hills it walks and strikes a quarter slower and softer, and its regen
+// stops (the Reptilians; see "The Reptilians" in docs/rules.md).
 // darkSight (optional): night, weather and mist do not shorten its sight, and underground it sees twice as far.
 // hearing (optional): columns round it in which it hears units underground, as a listening post does. caveWise
 // (optional): lava's heat does not hurt it, and in the deep caves wild monsters do not go after it (the delver).
@@ -538,5 +542,24 @@
     "description": "A smith of stone runes. Hurls rune-struck stones, raises an Earth Wall and opens a Chasm, but has no ice or forest magic. Tougher than a mage. Sees in the dark.",
     "speed": 4, "hp": 60, "model": "runesmith", "damage": 9, "attackTime": 2, "range": 7, "sight": 9, "splash": 1.5,
     "attack": "crush", "armor": { "head": 1, "torso": 1 }, "earthWall": true, "chasm": true, "darkSight": true,
-    "cost": { "food": 50, "stone": 30 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" }
+    "cost": { "food": 50, "stone": 30 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" },
+
+  // The Reptilians' own (see "replaces" in factions.json): the swamp brood. Scaled, slow to die and at home in the water:
+  // all three regenerate even in a fight, twice as fast in the water, wade as fast as they walk and lie hidden in it.
+  // They are cold-blooded: sluggish at night and up in the hills, where their wounds stop closing.
+  { "id": "scale_guard", "name": "Scale guard", "faction": "reptilians", "role": "line_infantry",
+    "description": "A lizard warrior in his own thick scales, swinging a club set with obsidian teeth. Regenerates even in a fight, twice as fast in the water; wades as fast as he walks and lies hidden in it. Cold-blooded: at night and up in the hills he is slower, hits softer and stops healing. The Reptilians ride no horses: he stands in for riders too.",
+    "speed": 4, "hp": 85, "model": "scale_guard", "damage": 9, "attackTime": 1.1, "range": 1.5, "sight": 8,
+    "attack": "slash", "armor": { "head": 1, "torso": 2 }, "regen": 1, "amphibious": true, "coldBlooded": true,
+    "cost": { "food": 45, "wood": 20 }, "trainTime": 16, "trainedAt": "barracks" },
+  { "id": "blowpiper", "name": "Blowpiper", "faction": "reptilians", "role": "ranged",
+    "description": "A lean lizard with a long reed blowpipe. Shoots a block shorter than an archer and lighter, but quicker, and every dart is tipped with swamp venom that keeps hurting for 6 seconds. Regenerates, wades as fast as she walks and lies hidden in the water. Cold-blooded.",
+    "speed": 4, "hp": 40, "model": "blowpiper", "damage": 4, "attackTime": 1, "range": 8, "sight": 10,
+    "attack": "pierce", "armor": { "torso": 1 }, "poison": { "damage": 1, "time": 6 }, "regen": 1, "amphibious": true, "coldBlooded": true,
+    "cost": { "food": 30, "wood": 30 }, "trainTime": 15, "trainedAt": "barracks", "requires": "archery" },
+  { "id": "marsh_shaman", "name": "Marsh shaman", "faction": "reptilians", "role": "caster",
+    "description": "An old lizard hung with reeds and frog skulls. Spits gobs of swamp bile and calls the water up out of the ground: Flood turns a line of soft ground into a shallow pool for 40 seconds, which everyone else wades slowly and the brood swims and hides in. No other spells. Regenerates; cold-blooded.",
+    "speed": 4, "hp": 45, "model": "marsh_shaman", "damage": 8, "attackTime": 2, "range": 8, "sight": 9, "splash": 1,
+    "attack": "crush", "armor": { "torso": 1 }, "flood": true, "regen": 1, "amphibious": true, "coldBlooded": true,
+    "cost": { "food": 50, "wood": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" }
 ]

@@ -82,6 +82,8 @@ public sealed class PlayerEconomy
     internal int BindTicks;
     /// <summary>How much more (percent) the player's units deal units they bear a grudge against, 0 for no grudges (<see cref="TechEffectType.Grudges"/>).</summary>
     internal int GrudgePercent;
+    /// <summary>How much more (percent) the first blow of the player's units lying in wait in the water deals, 0 for none (<see cref="TechEffectType.Ambush"/>).</summary>
+    internal int AmbushPercent;
     // The discoveries made (bit 1 << Discovery), which open discovery techs.
     internal byte Discoveries;
     internal readonly int[] HousingBonus, HpBonus;

@@ -661,7 +661,7 @@ public class CityStateTests
         });
         // Only the ogres, the swamp's bog horrors, which heal in the muck, and the dark power's blight horror regenerate.
         // (and the trolls, whose wounds close only out of the daylight).
-        Assert.All(db.Units.Where(u => u.HiredFrom != ogres && u.Id is not ("bog_horror" or "blight_horror" or "troll")), u => Assert.Equal(0, u.Regen));
+        Assert.All(db.Units.Where(u => u.HiredFrom != ogres && u.Id is not ("bog_horror" or "blight_horror" or "troll") && u.Faction?.Id != "reptilians"), u => Assert.Equal(0, u.Regen));
     }
 
     /// <summary>
