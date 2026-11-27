@@ -49,10 +49,15 @@ public sealed class VoxelWorld
 
     public BlockType Get(int x, int y, int z)
     {
-        if (!InBounds(x, y, z)) return BlockType.Air;
-        var chunk = _chunks[ChunkIndex(x / ChunkSize, y / ChunkSize, z / ChunkSize)];
-        return chunk is null ? BlockType.Air : chunk[LocalIndex(x % ChunkSize, y % ChunkSize, z % ChunkSize)];
+        // Unsigned compares fold the negative checks in; inside the world every coordinate is non-negative,
+        // so shifts and masks give the same chunk and cell as dividing by the chunk size.
+        if ((uint)x >= (uint)SizeX || (uint)y >= (uint)SizeY || (uint)z >= (uint)SizeZ) return BlockType.Air;
+        var chunk = _chunks[ChunkIndex(x >> ChunkShift, y >> ChunkShift, z >> ChunkShift)];
+        return chunk is null ? BlockType.Air : chunk[LocalIndex(x & ChunkMask, y & ChunkMask, z & ChunkMask)];
     }
+
+    private const int ChunkShift = 4;
+    private const int ChunkMask = ChunkSize - 1;
 
     public void Set(int x, int y, int z, BlockType type)
     {

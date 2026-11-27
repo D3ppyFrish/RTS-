@@ -189,6 +189,18 @@ public sealed class WalkGraph
         return (col << LevelBits) + (int)(e & 3);
     }
 
+    /// <summary>
+    /// All eight steps out of a node at once, 3 bits a direction (bit 2 set if it can step that way, bits 0 and
+    /// 1 the slot it lands on): <see cref="Step"/> reads one of them. For searches that try every direction.
+    /// </summary>
+    public uint Edges(int node) => _edges[node];
+
+    /// <summary>
+    /// How far the node numbers of the column one step in direction d are from this column's (the first
+    /// slot of each): <see cref="Step"/> is the node plus this, less its slot, plus the slot it lands on.
+    /// </summary>
+    public int StepOffset(int d) => (Dirs[d].Z * SizeX + Dirs[d].X) << LevelBits;
+
     /// <summary>True if stepping from <paramref name="from"/> in direction d lands on <paramref name="to"/>.</summary>
     public bool StepsTo(int from, int d, int to)
     {

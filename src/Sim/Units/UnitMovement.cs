@@ -492,9 +492,10 @@ public sealed class UnitMovement
 
     /// <summary>Most nodes searched for the nearest reachable place to a goal a unit cannot get to.</summary>
     public const int NearestSearchLimit = 40_000;
-    private int[] _seen = Array.Empty<int>();
-    private int _seenStamp;
-    private readonly System.Collections.Generic.Queue<int> _open = new();
+    private ulong[] _seen = Array.Empty<ulong>();
+    // The search's queue: nodes in the order they were found, read from the front (never wraps, so it
+    // visits in the same order a first-in first-out queue would).
+    private int[] _open = Array.Empty<int>();
 
     /// <summary>
     /// The node unit i can walk to that is nearest to the goal (across first, then in height; ties to the
@@ -505,30 +506,48 @@ public sealed class UnitMovement
         var g = _sim.Walkable;
         int start = g.Node(u.X[i].FloorToInt(), u.Z[i].FloorToInt(), u.Y[i]);
         if (start < 0) return -1;
-        if (_seen.Length < g.NodeCount) _seen = new int[g.NodeCount];
-        _seenStamp++;
-        _open.Clear();
-        _open.Enqueue(start);
-        _seen[start] = _seenStamp;
+        // One bit a node: a big map's few million nodes fit in half a megabyte, which stays in cache.
+        int words = (g.NodeCount + 63) >> 6;
+        if (_seen.Length < words) _seen = new ulong[words];
+        else Array.Clear(_seen, 0, words);
+        var seen = _seen;
+        var open = _open;
+        int head = 0, tail = 0;
+        if (open.Length == 0) open = _open = new int[1024];
+        open[tail++] = start;
+        seen[start >> 6] |= 1UL << start;
         int best = -1, visited = 0;
         long bestScore = long.MaxValue;
-        while (_open.Count > 0 && visited < NearestSearchLimit)
+        int sizeX = g.SizeX;
+        Span<int> offsets = stackalloc int[8];
+        for (int d = 0; d < 8; d++) offsets[d] = g.StepOffset(d);
+        while (head < tail && visited < NearestSearchLimit)
         {
-            int a = _open.Dequeue();
+            int a = open[head++];
             visited++;
-            long dx = g.ColumnX(a) - gx, dz = g.ColumnZ(a) - gz, dy = g.Level(a) - gy;
+            int col = g.Column(a), az = col / sizeX, ax = col - az * sizeX;
+            long dx = ax - gx, dz = az - gz, dy = g.Level(a) - gy;
             long score = (dx * dx + dz * dz) * 1024 + Math.Abs(dy);
             if (score < bestScore || (score == bestScore && a < best))
             {
                 bestScore = score;
                 best = a;
             }
-            for (int d = 0; d < 8; d++)
+            if (tail + 8 > open.Length)
             {
-                int b = g.Step(a, d);
-                if (b < 0 || _seen[b] == _seenStamp) continue;
-                _seen[b] = _seenStamp;
-                _open.Enqueue(b);
+                Array.Resize(ref open, open.Length * 2);
+                _open = open;
+            }
+            uint edges = g.Edges(a);
+            int slot0 = a & ~(WalkGraph.MaxLevels - 1);
+            for (int d = 0; d < 8; d++, edges >>= 3)
+            {
+                if ((edges & 4) == 0) continue;
+                int b = slot0 + offsets[d] + (int)(edges & 3); // g.Step(a, d)
+                ulong bit = 1UL << b;
+                if ((seen[b >> 6] & bit) != 0) continue;
+                seen[b >> 6] |= bit;
+                open[tail++] = b;
             }
         }
         return best;
