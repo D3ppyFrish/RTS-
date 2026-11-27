@@ -339,6 +339,19 @@ public sealed class UnitDef
     /// </summary>
     public bool Sails { get; init; }
 
+    /// <summary>
+    /// For a fishing boat (a boat with <c>"catch"</c> in the data and no seats): the food a round of fishing out on open
+    /// water brings in, which it sails home to its dock (see <see cref="Economy.EconomySystem"/>, fishing). 0 for every
+    /// other unit.
+    /// </summary>
+    public int Catch { get; init; }
+
+    /// <summary>For a fishing boat: ticks a round of fishing takes, out on the fishing ground.</summary>
+    public int FishTicks { get; init; }
+
+    /// <summary>A fishing boat: a boat that fishes rather than carrying units (see <see cref="Catch"/>).</summary>
+    public bool IsFisher => Catch > 0;
+
     /// <summary>A ship, which sails on water (role <see cref="UnitRole.Boat"/>, which carries units, or <see cref="Sails"/>).</summary>
     public bool IsBoat => Role == UnitRole.Boat || Sails;
 

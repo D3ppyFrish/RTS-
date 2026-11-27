@@ -308,7 +308,26 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   water it gives up. Being a siege machine it takes double damage from cavalry and heavy infantry if they ever
   reach it, but its real bane is other siege: **siege attacks deal it twice their damage** (`"weakTo": { "siege":
   100 }`), so catapults on the shore and other bombard ships sink it quickly.
-- **Computer players** (Easy and up) build docks, ferry waves across the water and send bombard ships out with them: see Ships under Computer players. All numbers are first guesses.
+- **Fishing boats** (`FishingBoatTests`; `"catch"` and `"fishTime"` on a boat in `data/units.json`,
+  `UnitDef.Catch`/`FishTicks`, `UnitJob.Fish`, `FishCommand`, `Economy/EconomySystem.Fishing.cs`): the dock also
+  builds the **fishing boat** (40 wood, 20 planks, 20 seconds, no tech; 120 hit points, speed 4), a boat with no seats
+  that fishes without a worker, the harbor moodboard's boats off the beach. Launched with no rally point set, it goes
+  fishing at once from the dock that built it:
+  - **Out**: it sails to its fishing ground, the **open water** nearest the dock by water (every column within 2 of
+    it water at the same level, so never a narrow river or the shallows by the bank) within 40 columns of the water
+    the dock launches onto by water, keeping 4 columns clear of the other fishing boats' grounds (anyone's) while
+    there is such water.
+  - **Fishing**: there it fishes for 20 seconds and takes aboard **12 food** (more while its owner holds the merfolk's
+    cove, as for fishing huts).
+  - **Home**: it sails back to the dock's launch water, and the catch goes into its owner's storage nearest the dock
+    (counted as food gathered). Then out again, round and round.
+  - With no open water in reach, no way there or home, or no storage, it waits 2 seconds and tries again. With its dock
+    gone it fishes from its owner's nearest other dock it can sail to, or stops, keeping its catch aboard.
+  - **Orders**: any move order stops it fishing. **Go fishing** (`FishCommand`, the Go fishing button) sends the
+    selected fishing boats out again from their nearest dock (by water); right-clicking one of your docks with them
+    selected fishes from that dock. Other units, and boats with no dock of theirs in reach, ignore it. It does not
+    fight, and can be sunk; it is a machine like the ship.
+- **Computer players** (Easy and up) build docks, ferry waves across the water and send bombard ships out with them: see Ships under Computer players. Their docks also keep 2 fishing boats (`AiPlayer.FishingBoatsWanted`), which fish on their own. All numbers are first guesses.
 
 ## Combat
 
@@ -2194,7 +2213,8 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   workers it lays out a dock on the shore within 48 columns of its town hall, where the water by the dock opens onto
   at least 300 columns a ship can sail (not a pond); with no sawmill yet it lays that out first, for the planks
   (Hard: only while no enemies are at its buildings). A dock is not counted as one of its barracks, and ships are
-  not soldiers: barracks training and waves leave them out. Every 30 seconds it looks at the sea. While its way by
+  not soldiers: barracks training and waves leave them out. Its docks keep 2 fishing boats, one at a time as it can
+  pay, which fish on their own (`FishingBoatsWanted`). Every 30 seconds it looks at the sea. While its way by
   land to the enemy (the town hall it knows, or where it guesses one stands) is cut off or more than twice the
   straight way (and that is at least 40 columns), and a ship from its dock could put soldiers ashore within 40
   columns of the enemy where they can walk on to it, its docks keep 2 transport ships; while it knows of an enemy

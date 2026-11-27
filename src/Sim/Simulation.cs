@@ -613,6 +613,7 @@ public sealed class Simulation
             case MarketCommand mk: Economy.Apply(mk); break;
             case BoardCommand bo: Boats.Apply(bo); break;
             case UnloadCommand ul: Boats.Apply(ul); break;
+            case FishCommand fi: Economy.Apply(fi); break;
         }
         if (command is UnitsCommand uc) Automation.Note(uc);
     }

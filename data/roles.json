@@ -63,7 +63,7 @@
     { "role": "hauler", "job": "Haul goods between storage",
       "strongAgainst": [],
       "weakAgainst": ["line_infantry", "heavy_infantry", "ranged", "cavalry", "sapper", "caster", "siege", "monster"] },
-    { "role": "boat", "job": "Carry units across water",
+    { "role": "boat", "job": "Carry units across water, or fish",
       "strongAgainst": [],
       "weakAgainst": ["ranged", "siege"] }
   ]

@@ -76,6 +76,7 @@ Controls:
 | Sluice button | with units of yours selected within 24 columns of a finished dam of yours: Open the dam's sluice takes the boards out of its deepest column (all but the top one, so the way across stays), and the water pours through into lower ground on the far side; Shut the dam's sluice puts them back (not while anyone is in the gap) |
 | Right click your ship | with units selected: they walk to the shore beside it and step aboard, 10 at most (see [Ships and docks](rules.md#ships-and-docks)). With a ship selected, a right click on water sails there and one on land sails to the shore by it and puts everyone aboard ashore |
 | Put ashore button | with ships of yours selected (it shows how many are aboard): they sail to the nearest land and put everyone aboard ashore |
+| Go fishing button | with fishing boats of yours selected (it shows how many are fishing): they sail out to open water, fish and bring the catch home to their nearest dock, again and again (see [Ships and docks](rules.md#ships-and-docks)). Right-click one of your docks with them selected to fish from that one |
 | L | lay a road: click where it starts, then where it ends (Shift carries on from there) |
 | U | train at the selected building: a worker at a town hall, a spearman at a barracks (its panel has a button for each unit it trains) |
 | P | repeat at the selected building: each unit it finishes is queued again once there are goods for it and a minute's food to spare |

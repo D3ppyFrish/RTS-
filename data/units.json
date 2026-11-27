@@ -94,6 +94,8 @@
 // never units (not even when ordered to), striking a column's bottom block so the rest falls, as a sapper does;
 // gates (optional, percent, default 100) is what its blows on a gate deal next to any other building. cover
 // (optional, percent) is how much less arrows and other ranged piercing shots hurt it (a roof over it).
+// catch (optional, boats only, instead of seats) makes a boat a fishing boat: out on open water it fishes for fishTime
+// seconds (default 20) and brings catch food home to its dock, again and again (see "Fishing boats" in docs/rules.md).
 // sails (optional) makes a unit of a role other than boat a ship: it sails on open water as a boat does (built at a
 // dock, launched onto the water beside it) but carries nobody; a ship that fights sails within range of its target.
 // crater (optional, blocks, needs
@@ -387,6 +389,13 @@
     "speed": 5, "hp": 260, "model": "ship", "seats": 10, "sight": 10, "machine": true, "cover": 50,
     "armor": { "head": 3, "torso": 3, "arms": 3, "legs": 3 },
     "cost": { "food": 20, "wood": 60, "planks": 40 }, "trainTime": 30, "trainedAt": "dock", "start": false },
+  // A fishing boat (the harbor moodboard's rowboats): built at a dock, it sails out to open water a few columns clear
+  // of the shore, fishes there and brings the catch home to its dock, again and again, without a worker. First guesses.
+  { "id": "fishing_boat", "name": "Fishing boat", "role": "boat", "model": "fishing_boat",
+    "description": "A small single-masted boat with a net, built at a dock. It sails out to open water on its own, fishes there and brings the catch home to its dock, 12 food a trip, again and again. Send it anywhere and it stops; Go fishing sends it out again. It does not fight, and bridges and ice stop it.",
+    "speed": 4, "hp": 120, "sight": 8, "machine": true, "catch": 12, "fishTime": 20,
+    "armor": { "head": 1, "torso": 1, "arms": 1, "legs": 1 },
+    "cost": { "wood": 40, "planks": 20 }, "trainTime": 20, "trainedAt": "dock", "start": false },
   { "id": "bombard_ship", "name": "Bombard ship", "role": "siege", "sails": true, "speed": 2.5, "hp": 240, "model": "bombard_ship",
     "description": "A broad-beamed ship with an iron bombard on its deck, built at a dock. Sails the rivers, lakes and sea and lobs its shells over walls at towns on the shore from the water, blowing craters where its shells land, but cannot hit anything closer than 4 blocks. Slow, and siege hits it twice as hard: catapults on the shore and other bombard ships are its bane. Bridges and ice stop it.",
     "damage": 35, "attackTime": 6, "range": 16, "minRange": 4, "sight": 13, "splash": 1.5,

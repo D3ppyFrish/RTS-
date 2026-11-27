@@ -47,6 +47,7 @@ public sealed partial class EconomySystem
             case UnitJob.Repair: StepRepair(i); break;
             case UnitJob.Salvage: StepSalvage(i); break;
             case UnitJob.Mend: StepMend(i); break;
+            case UnitJob.Fish: StepFish(i); break;
         }
     }
 

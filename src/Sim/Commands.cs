@@ -757,3 +757,14 @@ public sealed record BoardCommand(int PlayerId, int[] Units, int Boat) : UnitsCo
 /// ashore on, within <see cref="Units.BoatSystem.UnloadReach"/> columns, and lands them there (see <see cref="Units.BoatSystem"/>).
 /// </summary>
 public sealed record UnloadCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
+
+/// <summary>
+/// The fishing boats among the units go fishing (see <see cref="Units.UnitDef.Catch"/>): from the player's dock
+/// <see cref="Dock"/>, or with 0 from their nearest dock. Other units, and boats with no dock of theirs to fish from,
+/// ignore it.
+/// </summary>
+public sealed record FishCommand(int PlayerId, int[] Units, int Dock = 0) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(FishCommand? other) => base.Equals(other) && Dock == other!.Dock;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Dock);
+}

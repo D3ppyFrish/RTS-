@@ -155,6 +155,22 @@ public class AiShipTests
         Assert.InRange(Units(sim, 0, d => d.Id == "ship").Count, 1, AiPlayer.ShipsWanted);
     }
 
+    [Theory]
+    [InlineData(AiLevel.Normal)]
+    [InlineData(AiLevel.Hard)]
+    public void ItsDockKeepsFishingBoatsThatBringInFood(AiLevel level)
+    {
+        var sim = Strait(fleet: true);
+        var ai = new AiPlayer(0, 1, level) { Bridging = false };
+        Assert.True(Play(sim, ai, () => Units(sim, 0, d => d.IsFisher).Count == AiPlayer.FishingBoatsWanted, 3 * 60 * Tps),
+            "the dock to build its fishing boats");
+        Assert.All(Units(sim, 0, d => d.IsFisher), id => Assert.Equal(UnitJob.Fish, sim.Units.Job[sim.Units.IndexOf(id)]));
+        int before = sim.Economy.Player(0).Gathered[(int)Good.Food];
+        Play(sim, ai, () => false, 2 * 60 * Tps);
+        Assert.True(sim.Economy.Player(0).Gathered[(int)Good.Food] >= before + 2 * 12, "the catch comes in");
+        Assert.Equal(AiPlayer.FishingBoatsWanted, Units(sim, 0, d => d.IsFisher).Count);
+    }
+
     [Fact]
     public void WithNoWaterNearItsTownItBuildsNoDock()
     {

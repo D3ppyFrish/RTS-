@@ -159,6 +159,12 @@ public static class UiIcons
             "....k.......", "...kwk..k...", "..kwwwk.r...", "..kwrwk.kk..", "..kwwwk.kwk.", "....k...kwwk",
             "....k...k...", "bkkkkkkkkkkb", "kBbbbbbbbbBk", ".kBbbbbbbBk.", "nnkkkkkkkknn", "nnnnnnnnnnnn",
         },
+        // Go fishing: a silver fish leaping from blue water.
+        ["fish"] = new[]
+        {
+            "............", "............", "...kkkk...kk", "..killlk.kik", ".kiklllllkik", "kilillllllk.",
+            ".kiIIIIIIkik", "..kkkkkkk.kk", "............", "nnnnnnnnnnnn", "ntnnnnntnnnn", "nnnnnnnnnnnn",
+        },
         // Ice Bridge: a slab of ice over blue water, with sparks of magic.
         ["ice_bridge"] = new[]
         {

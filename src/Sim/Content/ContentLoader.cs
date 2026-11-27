@@ -835,7 +835,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -872,6 +872,8 @@ public static class ContentLoader
                 Carry = o.Int("carry", 1, 100, 0),
                 Seats = o.Int("seats", 1, 50, 0),
                 Sails = o.Bool("sails"),
+                Catch = o.Int("catch", 1, 500, 0),
+                FishTicks = o.Int("fishTime", 1, MaxSeconds, 20) * Tps,
                 Runs = o.Bool("runs"),
                 DarkSight = o.Bool("darkSight"),
                 Hearing = o.Int("hearing", 0, 64, 0),
@@ -969,12 +971,16 @@ public static class ContentLoader
                 o.Error("is a caravan (role trader): it cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"");
             if (def.Role == UnitRole.Hauler && (def.Carry == 0 || def.Damage > 0 || evolvesFrom != null || def.Lair != null || hiredFrom != null))
                 o.Error("is a cart (role hauler): it needs a \"carry\" and cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"");
-            if (def.Role == UnitRole.Boat && (def.Seats == 0 || def.Damage > 0 || evolvesFrom != null || def.Lair != null || hiredFrom != null))
-                o.Error("is a boat (role boat): it needs \"seats\" and cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"");
+            if (def.Role == UnitRole.Boat && ((def.Seats == 0) == (def.Catch == 0) || def.Damage > 0 || evolvesFrom != null || def.Lair != null || hiredFrom != null))
+                o.Error("is a boat (role boat): it needs \"seats\" (a ship) or a \"catch\" (a fishing boat), not both, and cannot have \"damage\", \"evolvesFrom\", \"lair\" or \"hiredFrom\"");
             if (def.Sails && (def.Role == UnitRole.Boat || !def.Machine || evolvesFrom != null || def.Lair != null || hiredFrom != null || def.Ram))
                 o.Error("sails (\"sails\"): it is a ship of a role other than boat, a machine, and cannot have \"evolvesFrom\", \"lair\", \"hiredFrom\" or \"ram\"");
             if (def.Role != UnitRole.Boat && def.Seats > 0)
                 o.Error("only a boat (role boat) has \"seats\"");
+            if (def.Role != UnitRole.Boat && (def.Catch > 0 || o.Has("fishTime")))
+                o.Error("only a boat (role boat) has a \"catch\" and a \"fishTime\"");
+            if (def.Catch == 0 && o.Has("fishTime"))
+                o.Error("has a \"fishTime\" but no \"catch\"");
             if (def.Runs && def.Role != UnitRole.Hauler)
                 o.Error("only a hauler (role hauler) \"runs\" goods as a pack pony");
             if (def.Role != UnitRole.Hauler && def.Carry > 0)
@@ -1873,6 +1879,12 @@ public static class ContentLoader
                 }
                 if (u.Carry > 0) h.Add(u.Carry);
                 if (u.Seats > 0) h.Add(u.Seats + 1000);
+                if (u.Catch > 0)
+                {
+                    h.Add(84);
+                    h.Add(u.Catch);
+                    h.Add(u.FishTicks);
+                }
                 if (u.IsGame) h.Add(u.Game);
                 if (u.Awakening > 0 || u.Bounty.Length > 0)
                 {

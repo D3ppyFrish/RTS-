@@ -40,6 +40,8 @@ public sealed partial class AiPlayer
     public const int SeaLookTicks = 30 * Tps;
     /// <summary>Transport ships its docks keep while the way to the enemy is by sea; bombard ships while it knows a wall by the shore.</summary>
     public const int ShipsWanted = 2, BombardShipsWanted = 2;
+    /// <summary>Fishing boats its docks keep (they fish on their own once launched; see <see cref="EconomySystem.FishingGround"/>).</summary>
+    public const int FishingBoatsWanted = 2;
     /// <summary>
     /// A way by land more than this many times the straight way is long: it goes by sea instead. Only when the straight
     /// way is at least <see cref="FerryLeast"/> columns.
@@ -243,10 +245,13 @@ public sealed partial class AiPlayer
         return null;
     }
 
-    /// <summary>Its docks keep <see cref="ShipsWanted"/> transport ships and <see cref="BombardShipsWanted"/> bombard ships while it needs them, one at a time.</summary>
+    /// <summary>
+    /// Its docks keep <see cref="ShipsWanted"/> transport ships and <see cref="BombardShipsWanted"/> bombard ships while it
+    /// needs them, and <see cref="FishingBoatsWanted"/> fishing boats, one at a time.
+    /// </summary>
     private void TrainShips(Simulation sim, Action<Command> issue)
     {
-        int transports = 0, bombards = 0;
+        int transports = 0, bombards = 0, fishers = 0;
         var u = sim.Units;
         for (int i = 0; i < u.Count; i++)
         {
@@ -254,6 +259,7 @@ public sealed partial class AiPlayer
             var d = sim.Content.Units[u.Def[i]];
             if (Transport(d)) transports++;
             else if (Bombarder(d)) bombards++;
+            else if (d.IsFisher) fishers++;
         }
         foreach (var b in sim.Buildings.All)
         {
@@ -262,6 +268,7 @@ public sealed partial class AiPlayer
             {
                 if (Transport(sim.Content.Units[q])) transports++;
                 else if (Bombarder(sim.Content.Units[q])) bombards++;
+                else if (sim.Content.Units[q].IsFisher) fishers++;
             }
         }
         foreach (var b in sim.Buildings.All)
@@ -270,10 +277,12 @@ public sealed partial class AiPlayer
             UnitDef? next = null;
             if (_seaWanted && transports < ShipsWanted) next = ShipDef(sim, b.Def, Transport);
             if (next == null && _shoreTargets && bombards < BombardShipsWanted) next = ShipDef(sim, b.Def, Bombarder);
+            if (next == null && fishers < FishingBoatsWanted) next = ShipDef(sim, b.Def, d => d.IsFisher);
             if (next == null || !sim.Economy.Unlocked(Player, next) || !Affordable(sim, next.Cost)) continue;
             issue(new TrainCommand(Player, b.Id, next.Id));
             if (Hard) Spend(next.Cost);
             if (Transport(next)) transports++;
+            else if (next.IsFisher) fishers++;
             else bombards++;
             Note(sim, $"has its dock build a {next.Name.ToLowerInvariant()}");
         }

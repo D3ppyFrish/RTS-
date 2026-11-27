@@ -824,6 +824,7 @@ public sealed partial class EconomySystem
                 _sim.SendUnit(i, b.RallyX, b.RallyZ, b.RallyY);
                 U.ArriveRadius[i] = RallyArrive;
             }
+            else if (def.IsFisher && FishesFrom(b, def)) StartFishing(U.IndexOf(id), b); // out fishing at once
             _population[owner]++;
             _sim.Events.UnitTrained(owner, id, def.Index, ux, uy, uz);
         }
