@@ -40,5 +40,8 @@
     "duskTree": "raze", "aiStyle": "waves" },
   { "id": "elves", "name": "Elves", "uiLook": "timber", "description": "Forest guardians whose archers outrange everyone's, whose druids heal, and whose walls are living trees that grow back.",
     "replaces": { "spearman": "glade_warden", "archer": "elf_archer", "mage": "druid", "healer": "druid", "barrier": "living_wall" },
-    "duskTree": "heal", "aiStyle": "balanced" }
+    "duskTree": "heal", "aiStyle": "balanced" },
+  { "id": "dwarves", "name": "Dwarves", "uiLook": "stone", "description": "Iron-clad mountain clans who see in the dark, wall in stone and never forget a grudge.",
+    "replaces": { "spearman": "ironshield", "rider": "ironshield", "archer": "crossbowman", "mage": "runesmith", "barrier": "stonework" },
+    "duskTree": "raze", "aiStyle": "balanced" }
 ]

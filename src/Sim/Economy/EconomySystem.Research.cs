@@ -114,6 +114,12 @@ public sealed partial class EconomySystem
     /// </summary>
     public int BindTicks(int player) => Find(player)?.BindTicks ?? 0;
 
+    /// <summary>
+    /// How much more (percent) the player's units deal the units they bear a grudge against, 0 if the player keeps no
+    /// grudges (a <see cref="TechEffectType.Grudges"/> tech, the Dwarves' Book of Grudges).
+    /// </summary>
+    public int GrudgePercent(int player) => Find(player)?.GrudgePercent ?? 0;
+
     /// <summary>True if the player's buildings with thorns prick those who strike them (a <see cref="TechEffectType.Thorns"/> tech).</summary>
     public bool HasThorns(int player) => Find(player)?.Thorns ?? false;
 
@@ -194,7 +200,7 @@ public sealed partial class EconomySystem
     {
         var units = Content.Units;
         p.Roads = p.SpareWorkers = p.MurderHoles = p.Salvage = p.FieldRepairs = p.CutWebs = p.Thorns = false;
-        p.BindTicks = 0;
+        p.BindTicks = p.GrudgePercent = 0;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
@@ -217,6 +223,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.FieldRepairs: p.FieldRepairs = true; break;
                     case TechEffectType.CutWebs: p.CutWebs = true; break;
                     case TechEffectType.Thorns: p.Thorns = true; break;
+                    case TechEffectType.Grudges: p.GrudgePercent = Math.Max(p.GrudgePercent, e.Percent); break;
                     case TechEffectType.BindWounds: p.BindTicks = p.BindTicks == 0 ? e.Ticks : Math.Min(p.BindTicks, e.Ticks); break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)

@@ -263,5 +263,14 @@
   { "id": "eldertree", "name": "Eldertree", "kind": "great_work", "size": [7, 7], "wallHeight": 4,
     "wall": "livewood", "mound": true, "icon": "crown", "faction": "elves",
     "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
-    "requires": "elf_eldertree", "sight": 10, "light": 6, "regrow": 10 }
+    "requires": "elf_eldertree", "sight": 10, "light": 6, "regrow": 10 },
+  // The Dwarves' wall (see "replaces" in factions.json): dressed stone from the first day, a rampart as high as a wooden
+  // wall and as thick, with a walkway for their crossbowmen. Dearer than a barrier, in stone, and with no upgrade.
+  { "id": "stonework", "name": "Dwarf stonework", "kind": "wall", "size": [1, 1], "wallHeight": 4, "wall": "rampart", "faction": "dwarves",
+    "cost": { "stone": 1, "wood": 1 }, "buildTime": 3, "sight": 2, "thick": true, "sturdy": 4, "walkway": true, "icon": "wall" },
+  // The Dwarves' great work: the Mountain King's hall, carved and built in the deep caves.
+  { "id": "mountain_hall", "name": "Mountain King's hall", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
+    "wall": "stone_brick", "footing": "rampart", "roof": "stone_brick", "chimney": true, "icon": "crown", "faction": "dwarves",
+    "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "requires": "dwarf_king", "sight": 10, "light": 6 }
 ]

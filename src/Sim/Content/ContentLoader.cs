@@ -1459,6 +1459,11 @@ public static class ContentLoader
                         effects.Add(new TechEffect { Type = type, Ticks = Math.Max(1, ticks) });
                         break;
                     }
+                    case TechEffectType.Grudges:
+                        // { "type": "grudges", "percent": 50 }: how much more the player's units deal a unit they bear a grudge against.
+                        o.Keys("type", "percent");
+                        effects.Add(new TechEffect { Type = type, Percent = o.Int("percent", 1, 1000, 0, required: true) });
+                        break;
                     case TechEffectType.Reveal:
                         o.Keys("type", "what");
                         effects.Add(new TechEffect { Type = type, Reveal = o.Enum("what", MapFeature.Ruins, required: true) });

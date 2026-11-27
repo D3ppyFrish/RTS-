@@ -381,6 +381,11 @@ public sealed class UnitStore
     public bool[] Burrowed = Array.Empty<bool>();
     public int[] BurstLeft = Array.Empty<int>();
     /// <summary>
+    /// The players who bear the unit a grudge, a bit (1 &lt;&lt; player) each (the Dwarves' Book of Grudges, see
+    /// <see cref="CombatSystem.BearGrudge"/>): it killed one of their units while they kept grudges. It keeps them for life.
+    /// </summary>
+    public byte[] Grudged = Array.Empty<byte>();
+    /// <summary>
     /// The unit stands in a shield wall (see <see cref="CombatSystem"/>, <see cref="ShieldWallCommand"/>), facing
     /// (<see cref="WallX"/>, <see cref="WallZ"/>), a unit vector or near enough, fixed when it raised the wall.
     /// </summary>
@@ -510,6 +515,7 @@ public sealed class UnitStore
         Cutter[i] = 0;
         Burrowed[i] = false;
         BurstLeft[i] = 0;
+        Grudged[i] = 0;
         ShieldWall[i] = false;
         WallX[i] = WallZ[i] = Fix64.Zero;
         Stunned[i] = 0;
@@ -611,7 +617,7 @@ public sealed class UnitStore
             for (int p = 0; p < Body.Parts; p++)
                 Mix(Wounds[i * Body.Parts + p] | ExtraArmour[i * Body.Parts + p] << 8 | BleedLeft[i * Body.Parts + p] << 16);
             Mix(Bleeding[i]); Mix(Grievous[i]); Mix(Cutter[i]);
-            Mix(Burrowed[i] ? 1 : 0); Mix(BurstLeft[i]);
+            Mix(Burrowed[i] ? 1 : 0); Mix(BurstLeft[i]); Mix(Grudged[i]);
             Mix(ShieldWall[i] ? 1 : 0); Mix(WallX[i].Raw); Mix(WallZ[i].Raw); Mix(Stunned[i]);
             Mix(DrumLeft[i]); Mix(DrumWait[i]); Mix(ChargeMark[i]); Mix(ChargeLeft[i]); Mix(ChargeBlow[i]);
             Mix(Penned[i]); Mix(PenFor[i]); Mix(RunStage[i]); Mix(RunDef[i]); Mix(Tired[i]); Mix(Webbed[i]); Mix(WebPace[i]); Mix(Poisoned[i]); Mix(PoisonRate[i]); Mix(SpitWait[i]);
@@ -647,7 +653,7 @@ public sealed class UnitStore
         Array.Copy(Wounds, from * Body.Parts, Wounds, to * Body.Parts, Body.Parts);
         Array.Copy(ExtraArmour, from * Body.Parts, ExtraArmour, to * Body.Parts, Body.Parts);
         Bleeding[to] = Bleeding[from]; Grievous[to] = Grievous[from]; Cutter[to] = Cutter[from];
-        Burrowed[to] = Burrowed[from]; BurstLeft[to] = BurstLeft[from];
+        Burrowed[to] = Burrowed[from]; BurstLeft[to] = BurstLeft[from]; Grudged[to] = Grudged[from];
         ShieldWall[to] = ShieldWall[from]; WallX[to] = WallX[from]; WallZ[to] = WallZ[from]; Stunned[to] = Stunned[from];
         DrumLeft[to] = DrumLeft[from]; DrumWait[to] = DrumWait[from];
         ChargeMark[to] = ChargeMark[from]; ChargeLeft[to] = ChargeLeft[from]; ChargeBlow[to] = ChargeBlow[from];
@@ -689,7 +695,7 @@ public sealed class UnitStore
         Array.Resize(ref Wounds, capacity * Body.Parts); Array.Resize(ref ExtraArmour, capacity * Body.Parts);
         Array.Resize(ref Bleeding, capacity); Array.Resize(ref BleedLeft, capacity * Body.Parts);
         Array.Resize(ref Cutter, capacity); Array.Resize(ref Grievous, capacity);
-        Array.Resize(ref Burrowed, capacity); Array.Resize(ref BurstLeft, capacity);
+        Array.Resize(ref Burrowed, capacity); Array.Resize(ref BurstLeft, capacity); Array.Resize(ref Grudged, capacity);
         Array.Resize(ref ShieldWall, capacity); Array.Resize(ref WallX, capacity); Array.Resize(ref WallZ, capacity);
         Array.Resize(ref Stunned, capacity);
         Array.Resize(ref DrumLeft, capacity); Array.Resize(ref DrumWait, capacity);

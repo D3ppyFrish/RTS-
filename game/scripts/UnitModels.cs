@@ -114,6 +114,8 @@ public static class UnitModels
     private static readonly Color ElfGreen = new(0.24f, 0.4f, 0.22f);
     private static readonly Color ElfGreenDark = new(0.16f, 0.28f, 0.15f);
     private static readonly Color Yew = new(0.42f, 0.24f, 0.12f);
+    private static readonly Color DwarfBeard = new(0.66f, 0.32f, 0.13f);
+    private static readonly Color DwarfBeardDark = new(0.48f, 0.22f, 0.09f);
     private static readonly Color Team = new(1f, 0f, 0f, 0f);      // full-strength team colour
     private static readonly Color TeamDark = new(0.7f, 0f, 0f, 0f); // shaded team colour
 
@@ -381,6 +383,35 @@ public static class UnitModels
             return this;
         }
 
+        /// <summary>
+        /// A dwarf: two thirds of a person's height and broader, stout in the leg, with a great ginger beard down over the
+        /// chest and a belt with a gold buckle, in a tunic of its owner's colour. Hands at x = -4 and 3, at y = 3.
+        /// </summary>
+        public Builder Dwarf(bool legs = true)
+        {
+            if (legs)
+            {
+                Box(-2, 0, -1, -1, 2, 0, Pants);
+                Box(0, 0, -1, 1, 2, 0, Pants);
+                Box(-2, 0, 1, -1, 0, 1, Leather).Box(0, 0, 1, 1, 0, 1, Leather);      // heavy boots
+            }
+            Box(-3, 3, -1, 2, 7, 1, Team);                                        // broad body
+            Box(-3, 3, -1, 2, 3, 1, Leather).Box(-1, 3, 2, 0, 3, 2, Gold);        // belt and buckle
+            Box(-4, 4, -1, -4, 7, 0, TeamDark);                                   // arms
+            Box(3, 4, -1, 3, 7, 0, TeamDark);
+            Box(-4, 3, -1, -4, 3, 0, Skin);                                       // hands
+            Box(3, 3, -1, 3, 3, 0, Skin);
+            Box(-2, 8, -2, 1, 11, 1, Skin);                                       // head
+            Box(-2, 11, -2, 1, 11, 1, Hair);
+            Box(-2, 9, -2, 1, 10, -2, Hair);
+            Box(-1, 10, 1, -1, 10, 1, Dark).Box(0, 10, 1, 0, 10, 1, Dark);        // eyes
+            Box(-2, 8, 1, 1, 9, 1, DwarfBeard);                                   // the beard over the mouth and cheeks,
+            Box(-2, 5, 2, 1, 9, 2, DwarfBeard).Box(-1, 3, 2, 0, 4, 2, DwarfBeard); // down over the chest to a point,
+            Box(-1, 6, 2, -1, 8, 2, DwarfBeardDark).Box(0, 4, 2, 0, 5, 2, DwarfBeardDark); // braided
+            Box(-1, 9, 2, 0, 9, 2, Skin);                                         // a big nose
+            return this;
+        }
+
         /// <summary>The mage's robe and pointed hat.</summary>
         public Builder Robe() => Humanoid(legs: false).Box(-2, 0, -1, 1, 4, 0, TeamDark);
     }
@@ -436,12 +467,37 @@ public static class UnitModels
             .Box(-2, 14, -2, 1, 14, 1, Leaf).Box(-2, 15, -2, -2, 15, -2, Leaf).Box(1, 15, 1, 1, 15, 1, Leaf)   // crown of leaves
             .Box(3, 0, 1, 3, 14, 1, Wood).Box(4, 14, 1, 4, 16, 1, Wood)                                       // crooked staff
             .Box(3, 16, 0, 5, 17, 2, Leaf).Box(4, 18, 1, 4, 18, 1, Lamp),
+        // The Dwarves' own: short, broad and bearded, in iron and their owner's colour.
+        // An ironshield: plate and a crested helm, a great iron-rimmed shield and a war hammer.
+        "ironshield" => new Builder().Dwarf()
+            .Box(-2, 11, -2, 1, 12, 1, Steel).Box(-1, 13, -1, 0, 13, 0, Team).Box(-1, 9, 2, -1, 11, 2, Steel)   // helm, crest, nasal
+            .Box(-4, 7, -1, -4, 7, 1, Steel).Box(3, 7, -1, 3, 7, 1, Steel)                                    // shoulder plates
+            .Box(-5, 1, -2, -5, 8, 2, Iron).Box(-5, 2, -1, -5, 7, 1, TeamDark).Box(-6, 4, 0, -6, 5, 0, Steel)   // shield and boss
+            .Box(3, 2, 1, 3, 10, 1, Wood).Box(2, 10, 0, 4, 12, 2, Iron),                                      // war hammer
+        // A crossbowman: a steel cap, a heavy crossbow held level before him, a case of bolts on his back.
+        "crossbowman" => new Builder().Dwarf()
+            .Box(-2, 11, -2, 1, 12, 1, Steel).Box(-3, 11, -2, 2, 11, 1, Steel)                                // kettle helm
+            .Box(0, 6, 3, 0, 6, 7, Wood).Box(-3, 6, 7, 3, 6, 7, Steel).Box(0, 7, 6, 0, 7, 7, Steel)            // crossbow
+            .Box(0, 4, -2, 1, 8, -2, Leather).Box(0, 9, -2, 1, 9, -2, Steel),                                // bolt case
+        // A runesmith: a long apron over a robe, a gold circlet with a glowing rune, a stone-headed rune hammer.
+        "runesmith" => new Builder().Dwarf(legs: false).Box(-3, 0, -1, 2, 2, 1, TeamDark)
+            .Box(-2, 0, 2, 1, 2, 2, Leather)                                                                 // apron below the beard
+            .Box(-2, 11, -2, 1, 11, 1, Gold).Box(0, 11, 2, 0, 11, 2, Glow)                                    // circlet and rune
+            .Box(3, 0, 1, 3, 11, 1, Wood).Box(2, 11, 0, 4, 13, 2, Rock).Box(3, 12, 3, 3, 12, 3, Glow),         // rune hammer
         "rider" => new Builder().Mount(Horse)
             .Box(-3, 5, -4, 2, 9, 1, TeamDark)                                           // caparison down the flanks
             .Humanoid(lift: 6, legs: false)
             .Box(3, 12, 1, 3, 24, 1, Wood).Box(3, 25, 1, 3, 26, 1, Steel),               // lance
 
         // The Orcs' versions of the trained types: bigger, green, tusked, with crude bone and iron gear.
+        // The Dwarves' versions of everyone's: a miner with a pick and a lamp on his cap, a sapper with a powder keg.
+        "dwarves/worker" => new Builder().Dwarf()
+            .Box(-2, 11, -2, 1, 12, 1, Leather).Box(-1, 12, 2, -1, 12, 2, Lamp)                               // cap and lamp
+            .Box(3, 2, 0, 3, 10, 0, Wood).Box(2, 10, -1, 4, 10, 1, Steel),                                    // pick
+        "dwarves/sapper" => new Builder().Dwarf()
+            .Box(-2, 11, -2, 1, 12, 1, Steel).Box(-2, 11, -2, 1, 11, 1, Team)                                 // helm with a band
+            .Box(3, 2, 0, 3, 9, 0, Wood).Box(3, 0, -1, 3, 1, 1, Steel)                                        // shovel
+            .Box(-2, 4, -3, 1, 7, -2, Wood).Box(-2, 5, -3, 1, 5, -2, Iron).Box(-1, 8, -3, -1, 8, -3, Fire),     // powder keg and fuse
         "orcs/worker" => new Builder().Orc()
             .Box(3, 3, 0, 3, 12, 0, Wood).Box(2, 12, -1, 4, 13, 1, Rock)                 // stone pick
             .Box(-2, 6, -3, 1, 10, -2, Hide),                                            // hide sack on the back

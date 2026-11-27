@@ -1366,6 +1366,47 @@ holding a hedge with archers on it and shooting what comes (`ElvesTests`).
 Computer players play the Elves as a balanced faction: they wall their town with living walls (the wall tool's
 building, `AiPlayer.FirstBuilding`), post archers on it, and research Thornwood after their other techs.
 
+## The Dwarves
+
+The Dwarves are the fifth faction: mountain clans of iron-clad soldiers who see in the dark, wall in stone from the
+first day, and never forget a grudge. They have no horses, so nothing of theirs outruns anything, but what they send is
+hard to bring down, and an enemy that kills one of theirs pays for it for the rest of its life (`DwarvesTests`).
+
+- **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **ironshields** instead of spearmen
+  and riders (the Dwarves ride no horses), **crossbowmen** instead of archers, and **runesmiths** instead of mages.
+  Sappers, healers, workers and the rest are everyone's. They start with as many units as anyone, their own in place
+  of those they replace, so four ironshields where the others have two spearmen and two riders. All three of their
+  own **see in the dark** (`darkSight`: night, weather and mist do not shorten their sight, and underground they see
+  twice as far).
+  - The **ironshield** (line infantry, 110 hit points, speed 4, 9 crushing damage every 1.2 seconds, plate on every
+    part and a shield that stops a fifth of the blows from in front) is dearer than a spearman (50 food, 25 wood) but
+    much harder to bring down, and his hammer crushes through armour.
+  - The **crossbowman** (ranged, 65 hit points, mail on head and torso) shoots 8 blocks, a block short of an archer,
+    and only every 2 seconds, but each bolt hits for 12, twice an arrow. 35 food and 35 wood; needs Archery.
+  - The **runesmith** (caster, 60 hit points) hurls rune-struck stones (9 crushing damage at 7 blocks, splashing) and
+    casts Earth Wall and Chasm (see [Terrain magic](#terrain-magic)), but not Ice Bridge or Grow Forest. 50 food and
+    30 stone; needs Basic magic.
+- **Born miners**: with Better tools, Dwarf workers sound the ground (prospecting) in 6 seconds, quicker than a foreman,
+  and 16 columns round them instead of 12; they fell trees as the Orcs' and Deepfolk's workers do.
+- **Stonework** (`stonework` in `data/buildings.json`): the wall tool lays dwarf stonework where everyone else lays a
+  barrier, a column at a time, for 1 stone and 1 wood. It is a rampart of dressed stone 4 high, thick, as sturdy as a wooden wall
+  and more, with a walkway that crossbowmen are posted on: the strength of a wooden wall from the first day, for little
+  more than a barrier. The Dwarves cannot build barriers, wooden walls or stone walls, and stonework has no upgrade;
+  their gates are everyone's.
+- **The Book of Grudges** (`dwarf_grudges`, a `grudges` tech effect with a `percent`; `CombatSystem.Grudges.cs`): once
+  researched, an enemy unit (another player's, or a wild monster) that kills one of the Dwarves' units is marked with
+  their grudge for the rest of its life (`UnitStore.Grudged`). Every blow the Dwarves' units strike at a marked unit
+  deals half as much again, and a grudge is never forgotten: a marked unit shows through the fog of war to them
+  (`VisionSystem.SeesUnit`), wherever it goes. A unit selected that bears your grudge says so. Units killed before the
+  Book was researched leave no grudge.
+- **Their final tech** is the Mountain King's oath (after the Book of Grudges, Masonry and Smelting), which opens their
+  great work, the **Mountain King's hall** (see [Ascendancy and great works](#ascendancy-and-great-works)). With their
+  soldiers the Dwarves hack the dusk tree down, as the Orcs do (see [The dusk tree](#the-dusk-tree)).
+
+Computer players play the Dwarves as a balanced faction: they wall their town with stonework (the wall tool's building,
+`AiPlayer.FirstBuilding`), post crossbowmen on it, research the Book of Grudges after their other techs, and with fog of
+war on they see the units that bear them a grudge.
+
 ## Dropped relics and the Dusk Staff
 
 Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the block where it fell

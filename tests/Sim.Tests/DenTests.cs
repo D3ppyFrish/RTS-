@@ -323,13 +323,13 @@ public class DenTests
         Assert.Equal(3, e.Errors.Count);
 
         files = Files();
-        Edit(files, "units.json", Wolf, "\"prizes\": { \"orcs\": { \"building\": \"house\" }, \"settlers\": { \"building\": \"wolf_lodge\" }, \"dwarves\": { \"relic\": \"crown\" } }");
+        Edit(files, "units.json", Wolf, "\"prizes\": { \"orcs\": { \"building\": \"house\" }, \"settlers\": { \"building\": \"wolf_lodge\" }, \"gnomes\": { \"relic\": \"crown\" } }");
         Edit(files, "units.json", "\"id\": \"knight\", \"name\": \"Knight\", \"evolvesFrom\": \"spearman\",", "\"id\": \"knight\", \"name\": \"Knight\",");
         Edit(files, "units.json", "\"id\": \"knight\", \"name\": \"Knight\",", "\"id\": \"knight\", \"name\": \"Knight\", \"fromDen\": true,");
         e = Assert.Throws<ContentException>(() => ContentLoader.Load(files));
         Assert.Contains("units.json: unit 'wolf', lair, prizes, orcs: \"building\" is \"house\", which needs \"fromDen\": true in buildings.json", e.Errors);
         Assert.Contains("units.json: unit 'wolf', lair, prizes, settlers: \"building\" is \"wolf_lodge\", which only orcs can build", e.Errors);
-        Assert.Contains("units.json: unit 'wolf', lair, prizes, dwarves: \"dwarves\" is not a faction", e.Errors);
+        Assert.Contains("units.json: unit 'wolf', lair, prizes, gnomes: \"gnomes\" is not a faction", e.Errors);
         Assert.Contains("units.json: unit 'knight': is taken at a den (\"fromDen\"), so it is a form: it needs \"evolvesFrom\"", e.Errors);
     }
 

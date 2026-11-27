@@ -25,7 +25,8 @@ public class FactionChoiceTests
         Assert.Equal("orcs", sim.FactionOf(1).Id);
         Assert.Equal("deepfolk", sim.FactionOf(2).Id);
         Assert.Equal("elves", sim.FactionOf(3).Id);
-        Assert.Equal("settlers", sim.FactionOf(4).Id);
+        Assert.Equal("dwarves", sim.FactionOf(4).Id);
+        Assert.Equal("settlers", sim.FactionOf(5).Id);
         Assert.Same(sim.Content.Wild, sim.FactionOf(Simulation.WildPlayer));
         Assert.Same(sim.FactionOf(1), sim.Economy.Player(1).Faction);
         Assert.Same(sim.FactionOf(1), sim.Economy.Faction(1));
@@ -130,7 +131,7 @@ public class FactionChoiceTests
     [Fact]
     public void ALogWithAnUnknownFactionDoesNotPlay()
     {
-        var log = CommandLog.Parse("rts-log 1\nseed 1\nworld 32 16 32\nticks 10\nfaction 0 dwarves\n");
+        var log = CommandLog.Parse("rts-log 1\nseed 1\nworld 32 16 32\nticks 10\nfaction 0 gnomes\n");
         Assert.Throws<InvalidOperationException>(() => log.CreateSimulation());
         Assert.Throws<FormatException>(() => CommandLog.Parse("rts-log 1\nseed 1\nworld 32 16 32\nticks 10\nfaction 7 orcs\n"));
         Assert.Throws<FormatException>(() => CommandLog.Parse("rts-log 1\nseed 1\nworld 32 16 32\nticks 10\nfaction 0 or-cs\n"));

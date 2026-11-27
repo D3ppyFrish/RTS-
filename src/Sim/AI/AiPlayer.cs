@@ -103,7 +103,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
         "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
-        "settler_drill", "elf_thornwood", "silk_knives", "field_dressings", "field_hospital",
+        "settler_drill", "elf_thornwood", "dwarf_grudges", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
