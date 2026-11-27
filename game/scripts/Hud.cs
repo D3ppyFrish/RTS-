@@ -82,6 +82,7 @@ public partial class Hud : CanvasLayer
     private Button _sluiceButton = null!;
     private Button _salvageButton = null!;
     private Button _unloadButton = null!;
+    private Button _fishButton = null!;
     private Button _digButton = null!;
     private readonly List<(Button Button, UnitDef Unit)> _trainButtons = new();
     private readonly List<(Button Button, CityState Town)> _cityButtons = new();
@@ -856,6 +857,14 @@ public partial class Hud : CanvasLayer
         _unloadButton.Visible = false;
         _unloadButton.Pressed += () => _control.Unload();
         column.AddChild(_unloadButton);
+
+        _fishButton = MakeToolButton("Go fishing");
+        _fishButton.Name = "go_fishing";
+        _fishButton.Icon = UiIcons.Get("fish");
+        _fishButton.ToggleMode = false;
+        _fishButton.Visible = false;
+        _fishButton.Pressed += () => _control.GoFishing();
+        column.AddChild(_fishButton);
 
         _bloomButton = MakeToolButton("Dusk Bloom [,]");
         _bloomButton.Name = "dusk_bloom";
@@ -2011,6 +2020,15 @@ public partial class Hud : CanvasLayer
 
     private void RefreshShips()
     {
+        var (boats, fishing) = _control.SelectedFishers();
+        _fishButton.Visible = boats > 0;
+        if (boats > 0)
+        {
+            _fishButton.Text = fishing == boats ? $"Fishing ({fishing})" : $"Go fishing ({fishing}/{boats} fishing)";
+            _fishButton.TooltipText = "Your selected fishing boats sail out to open water at least " + (EconomySystem.OpenReach + 1) +
+                " columns from the shore, within " + EconomySystem.FishReach + " of their nearest dock, fish there and bring the catch " +
+                "home to the dock, again and again. Right-click one of your docks to fish from it. Sending them anywhere stops them.";
+        }
         var (ships, aboard, seats) = _control.SelectedShips();
         _unloadButton.Visible = ships > 0;
         if (ships == 0) return;
@@ -2847,6 +2865,13 @@ public partial class Hud : CanvasLayer
             JobPhase.ToWork => "trading with a rival: taking food to their town hall",
             JobPhase.ToStore => "trading with a rival: bringing back gold",
             _ => "trading with a rival: waiting for a whole load in storage",
+        },
+        UnitJob.Fish => u.Phase[i] switch
+        {
+            JobPhase.ToWork => "fishing: sailing out to its fishing ground",
+            JobPhase.Working => $"fishing: {u.JobTimer[i] * 100 / Math.Max(1, _sim.Content.Units[u.Def[i]].FishTicks)}% of a catch",
+            JobPhase.ToStore => $"fishing: bringing {u.CarryAmount[i]} food home to its dock",
+            _ => "fishing: waiting for open water in reach, or storage for its catch",
         },
         _ => null,
     };

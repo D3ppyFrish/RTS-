@@ -77,8 +77,8 @@ public class SiegeTests
         Assert.DoesNotContain("catapult", content.Building("barracks").Trains);
         // Nobody else has dead ground or lobs, so nothing else changes.
         Assert.All(content.Units.Where(u => u.Id is not ("catapult" or "bombard_ship")), u => Assert.True(u.MinRange == Fix64.Zero && !u.Lobs, u.Id));
-        // The only other machines are the battering ram (see RamTests) and the ships (see BoatTests, BombardShipTests).
-        Assert.Equal(new[] { "catapult", "battering_ram", "ship", "bombard_ship" }, content.Units.Where(u => u.Machine).Select(u => u.Id));
+        // The only other machines are the battering ram (see RamTests) and the ships (see BoatTests, FishingBoatTests, BombardShipTests).
+        Assert.Equal(new[] { "catapult", "battering_ram", "ship", "fishing_boat", "bombard_ship" }, content.Units.Where(u => u.Machine).Select(u => u.Id));
     }
 
     [Fact]

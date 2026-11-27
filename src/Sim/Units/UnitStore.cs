@@ -166,6 +166,12 @@ public enum UnitJob : byte
     /// <see cref="MendCommand"/>): walk up to it and give back its hit points a step at a time, paying a share of its cost.
     /// </summary>
     Mend,
+    /// <summary>
+    /// A fishing boat fishes from the dock <see cref="UnitStore.JobTarget"/> (see <see cref="UnitDef.Catch"/>): it sails
+    /// to its fishing ground, column (<see cref="UnitStore.JobX"/>, JobZ), fishes there, and sails the catch home to the
+    /// dock, again and again.
+    /// </summary>
+    Fish,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

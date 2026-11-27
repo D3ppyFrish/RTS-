@@ -168,6 +168,26 @@ public sealed class BoatSystem
         u.Field[i] = 0;
     }
 
+    /// <summary>
+    /// Boat i sails to water column (x, z) for its job (a fishing boat to its fishing ground or its dock), keeping the
+    /// job; it stops where it gets to, or at once if there is no way there by water.
+    /// </summary>
+    internal void Steer(int i, int x, int z)
+    {
+        var u = U;
+        u.Order[i] = UnitOrder.Move;
+        u.OrderX[i] = x;
+        u.OrderZ[i] = z;
+        u.Blocked[i] = 0;
+        u.Field[i] = 0;
+    }
+
+    /// <summary>
+    /// How far every column is from water column (x, z) by water (10 a straight step, 14 a diagonal; -1 for none),
+    /// indexed z * SizeX + x, or null if (x, z) is not water. Read it at once: it is shared and may be worked out again.
+    /// </summary>
+    public int[]? WaysTo(int x, int z) => SailField(x, z)?.Dist;
+
     internal void Apply(UnloadCommand c)
     {
         var u = U;
@@ -366,7 +386,8 @@ public sealed class BoatSystem
     {
         var u = U;
         u.Order[i] = UnitOrder.Idle;
-        u.ClearJob(i);
+        // A fishing boat's job goes on: it sees for itself whether it got where it was going.
+        if (u.Job[i] != UnitJob.Fish) u.ClearJob(i);
         u.Blocked[i] = 0;
     }
 

@@ -856,6 +856,21 @@ public partial class PlayerControl : Node
     {
         float bs = ChunkMesher.BlockSize;
         var centre = new Vector3(b.X + b.Def.SizeX / 2f, b.Y, b.Z + b.Def.SizeZ / 2f) * bs;
+        if (b.Owner == LocalPlayer && b.Active)
+        {
+            // Your own dock: the fishing boats selected go fishing from it.
+            var fishers = own.FindAll(id => IsFisher(id) && EconomySystem.FishesFrom(b, _sim.Content.Units[_sim.Units.Def[_sim.Units.IndexOf(id)]]));
+            if (fishers.Count > 0)
+            {
+                _sim.Schedule(_sim.Tick, new FishCommand(LocalPlayer, fishers.ToArray(), b.Id));
+                own.RemoveAll(fishers.Contains);
+                if (own.Count == 0)
+                {
+                    _rings.ShowMarker(centre, SelectionRenderer.Work);
+                    return;
+                }
+            }
+        }
         if (b.Def.Kind == BuildingKind.Totem && _sim.Cities.TownOfTotem(b) is { } city)
         {
             // A city-state's totem: caravans trade at the town, and soldiers attack it unless it is yours.
@@ -2378,13 +2393,37 @@ public partial class PlayerControl : Node
 
     private bool IsBoat(int id) => _sim.Units.IndexOf(id) is int i and >= 0 && _sim.Content.Units[_sim.Units.Def[i]].IsBoat;
 
-    /// <summary>Your selected ships, how many units are aboard them and how many seats they have in all.</summary>
+    private bool IsFisher(int id) => _sim.Units.IndexOf(id) is int i and >= 0 && _sim.Content.Units[_sim.Units.Def[i]].IsFisher;
+
+    /// <summary>Your selected fishing boats, and how many of them are fishing.</summary>
+    public (int Boats, int Fishing) SelectedFishers()
+    {
+        int boats = 0, fishing = 0;
+        foreach (int id in OwnSelected())
+        {
+            if (!IsFisher(id)) continue;
+            boats++;
+            if (_sim.Units.Job[_sim.Units.IndexOf(id)] == UnitJob.Fish) fishing++;
+        }
+        return (boats, fishing);
+    }
+
+    /// <summary>Your selected fishing boats go fishing from their nearest dock (see <see cref="FishCommand"/>).</summary>
+    public void GoFishing()
+    {
+        var boats = OwnSelected().FindAll(IsFisher);
+        if (boats.Count == 0) return;
+        _sim.Schedule(_sim.Tick, new FishCommand(LocalPlayer, boats.ToArray()));
+        Changed?.Invoke();
+    }
+
+    /// <summary>Your selected ships that carry units (not fishing boats), how many units are aboard them and how many seats they have in all.</summary>
     public (int Ships, int Aboard, int Seats) SelectedShips()
     {
         int ships = 0, aboard = 0, seats = 0;
         foreach (int id in OwnSelected())
         {
-            if (!IsBoat(id)) continue;
+            if (!IsBoat(id) || IsFisher(id)) continue;
             int i = _sim.Units.IndexOf(id);
             ships++;
             aboard += _sim.Boats.Load(i);
@@ -2727,6 +2766,9 @@ public partial class PlayerControl : Node
                $"ships={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].IsBoat)} " +
                $"aboard={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Aboard[i] != 0)} " +
                $"ship_at={Enumerable.Range(0, u.Count).Where(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].IsBoat).Select(i => $"{u.X[i].FloorToInt()},{u.Z[i].FloorToInt()}").FirstOrDefault() ?? "none"} " +
+               $"fishing_boats={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && _sim.Content.Units[u.Def[i]].IsFisher)} " +
+               $"boats_fishing={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Job[i] == UnitJob.Fish && u.Phase[i] == JobPhase.Working)} " +
+               $"food_caught={_sim.Economy.Player(LocalPlayer).Gathered[(int)Good.Food]} " +
                $"docks={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Active && b.Def.Id == "dock")} " +
                $"unit={(first >= 0 ? _sim.Content.Units[u.Def[first]].Id : "none")} xp={(first >= 0 ? u.Xp[first] : 0)} " +
                $"can_evolve={canEvolve} evolved={evolved} heroes={heroes} auto_evolve={(autoForms.Count > 0 ? string.Join(',', autoForms) : "none")} " +

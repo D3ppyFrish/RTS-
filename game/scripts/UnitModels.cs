@@ -1015,6 +1015,24 @@ public static class UnitModels
             .Box(0, 35, 6, 0, 35, 9, Team).Box(0, 31, -6, 0, 31, -3, Team)               // pennants
             .Box(-5, -3, 8, -5, -2, 9, Dark).Box(4, -3, 8, 4, -2, 9, Dark),              // hawse holes
 
+        // A fishing boat (the harbor moodboard's boats off the beach): a small open hull with a pointed bow (+Z), one
+        // short mast with a square sail banded in its owner's colour, a fisherman at the stern, a net hung over the
+        // side and a basket of silver fish amidships.
+        "fishing_boat" => new Builder()
+            .Box(-3, -4, -6, 2, -1, 6, Hull)                                             // the hull
+            .Box(-2, -5, -6, 1, -5, 5, HullDark)                                         // the keel side, under water
+            .Box(-2, -4, 7, 1, -1, 8, Hull).Box(-1, -3, 9, 0, 0, 10, Hull)               // the bow narrowing to a stem
+            .Box(-3, -4, -8, 2, 0, -7, HullDark)                                         // the stern
+            .Box(-2, -2, -6, 1, -2, 8, Deck)                                             // the bottom boards
+            .Box(-3, -1, -6, -3, 0, 8, Team).Box(2, -1, -6, 2, 0, 8, Team)               // gunwales in its owner's colour
+            .Box(-1, -1, 3, 0, 18, 3, Wood)                                              // the mast
+            .Box(-5, 16, 3, 4, 16, 3, Wood).Box(-5, 7, 3, 4, 7, 3, Wood)                 // yards
+            .Box(-4, 8, 4, 3, 15, 4, Sailcloth).Box(-4, 11, 4, 3, 12, 4, Team)           // the sail, banded
+            .Box(-2, -1, -1, 1, 1, 1, Leather).Box(-1, 2, 0, 0, 2, 0, Steel)              // the basket, fish on top
+            .Box(-1, -1, -6, 0, 2, -5, Pants).Box(-1, 3, -6, 0, 6, -5, Cloth)            // the fisherman: legs, smock
+            .Box(-1, 7, -6, 0, 8, -5, Skin).Box(-1, 9, -6, 0, 9, -5, Hair)               // head and hat
+            .Box(3, -3, -4, 3, 0, 2, Reed).Box(3, -4, -3, 3, -4, 1, Reed),               // the net over the side
+
         // A bombard ship: the ship's hull, broader and lower, with one mast and a square sail banded in its owner's
         // colour, and on the foredeck a squat iron bombard on a timber bed, its mouth over the bow.
         "bombard_ship" => new Builder()
