@@ -68,6 +68,9 @@ public sealed class FireSystem
     private readonly List<long> _keys = new();
     private readonly SortedSet<int> _scorched = new();
     private readonly Dictionary<int, int> _scorchBy = new();
+    /// <summary>Charred stumps fires have left, by key (some may have been dug since: see <see cref="Stumps"/>).</summary>
+    private readonly SortedSet<long> _stumps = new();
+    private readonly List<long> _dug = new();
 
     public FireSystem(Simulation sim)
     {
@@ -115,6 +118,31 @@ public sealed class FireSystem
     }
 
     /// <summary>
+    /// The charred stumps fires have left that are still there, in key order (for computer players looking for
+    /// charcoal: see <c>AiPlayer.Charcoal.cs</c>).
+    /// </summary>
+    public IEnumerable<(int X, int Y, int Z)> Stumps()
+    {
+        var w = _sim.World;
+        foreach (long k in _stumps)
+        {
+            var (x, y, z) = Unkey(w, k);
+            if (w.Get(x, y, z) == BlockType.CharredWood) yield return (x, y, z);
+        }
+    }
+
+    /// <summary>How many charred stumps fires have left are still there.</summary>
+    public int StumpCount
+    {
+        get
+        {
+            int n = 0;
+            foreach (var _ in Stumps()) n++;
+            return n;
+        }
+    }
+
+    /// <summary>
     /// Sets block (x, y, z) alight, by player <paramref name="by"/> (-1 for no one), if it can burn and is not burning
     /// already. True if it caught.
     /// </summary>
@@ -159,6 +187,8 @@ public sealed class FireSystem
     /// <summary>Once a tick: on each second, every fire spreads, burns down or goes out, and scorches the buildings beside it.</summary>
     public void Step()
     {
+        // Every half minute the stumps dug since are forgotten.
+        if (_stumps.Count > 0 && _sim.Tick % (30 * Simulation.TicksPerSecond) == 0) ForgetDugStumps();
         if (_burning.Count == 0 || _sim.Tick % Simulation.TicksPerSecond != 0) return;
         var w = _sim.World;
         var weather = _sim.Conditions.Weather;
@@ -197,6 +227,7 @@ public sealed class FireSystem
             bool foot = BlockInfo.IsTrunk(block) && !BlockInfo.IsTrunk(w.Get(x, y - 1, z)) && w.Get(x, y - 1, z) != BlockType.CharredWood
                 && BlockInfo.IsSolid(w.Get(x, y - 1, z));
             w.Set(x, y, z, foot ? BlockType.CharredWood : BlockType.Air);
+            if (foot) _stumps.Add(k);
         }
         foreach (int id in _scorched)
             if (_sim.Buildings.Get(id) is { } b) _sim.Combat.Scorch(b, BuildingScorch, _scorchBy[id]);
@@ -238,6 +269,18 @@ public sealed class FireSystem
             if (_sim.Buildings.At(nx, ny, nz) is not { } b || b.State == BuildingState.Planned) continue;
             if (_scorched.Add(b.Id)) _scorchBy[b.Id] = by;
         }
+    }
+
+    private void ForgetDugStumps()
+    {
+        var w = _sim.World;
+        _dug.Clear();
+        foreach (long k in _stumps)
+        {
+            var (x, y, z) = Unkey(w, k);
+            if (w.Get(x, y, z) != BlockType.CharredWood) _dug.Add(k);
+        }
+        foreach (long k in _dug) _stumps.Remove(k);
     }
 
     /// <summary>A number 0..99 for block key k this second (a hash, so every machine rolls the same).</summary>

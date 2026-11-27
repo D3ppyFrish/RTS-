@@ -835,7 +835,7 @@ its commands played back ends the same. An order of the player's always comes fi
   of building); work a farm with a free place (or else carry an orchard's baskets in); keep a smelter going while there is something to smelt;
   otherwise gather within 40 columns what is needed most, or, once nothing is left to gather that close,
   the nearest of anything within 128 columns. Food and wood are wanted 3 parts each and
-  stone 2 (iron ore and coal 1 each once you have a smelter), spread over the workers already on each;
+  stone 2 (iron ore and coal 1 each once you have a smelter; a forest fire's charred stumps count as coal), spread over the workers already on each;
   food counts four times as much while you have less than 30 food, and a good
   you have 500 of hardly at all. A worker the player orders to move, stop or fight waits for orders
   until it is given work again or made automatic again. A job given up within 15 seconds without
@@ -1748,6 +1748,8 @@ fire runs through a forest. All the numbers are first guesses for playtesting.
 - **Burning.** A block of leaves burns 6 seconds and a block of trunk 10, then it is gone, but for the foot of each
   trunk, which is left a **charred stump** (`BlockType.CharredWood`, black). Workers dig a stump for 2 coal
   (charcoal), so a burnt forest is a coal field.
+  Automatic workers count stumps as coal: they dig them, like coal seams, once there is a smelter (or
+  whenever coal is on their priority list), moving on to the stumps round each.
 - **Spreading.** Once a second every burning block sets alight each block of tree within a column of it (a level below
   to two above) with a chance of 30% for leaves and 15% for trunk, the trunk over or under a burning trunk 50%, twice
   as likely for what is above it (fire climbs), and leaves two columns off 6% (sparks jump a small gap). So the
@@ -1774,6 +1776,12 @@ fire runs through a forest. All the numbers are first guesses for playtesting.
   town hall (its defenders would run into the fire). It sends its nearest soldier within 24 columns to
   the grove's tree nearest that soldier, leaves it out of its army's orders until the job is done, and lights at most
   one fire every 30 seconds. Classic and Easy leave fire alone.
+- **Charcoal for computer players** (`src/Sim/AI/AiPlayer.Charcoal.cs`, tests in `CharcoalTests`), from Normal up:
+  while one has a finished smelter and less than 40 coal, it keeps up to 2 workers digging the charred stumps it has
+  seen within 48 columns of its storage (`FireSystem.Stumps`), the nearest first, none with a fire beside it or a
+  rival soldier it sees within 12 columns. It sends idle workers first, then ones digging stone; they move on to the
+  stumps round it, and back to other work when the stumps or the need run out. Its automatic workers dig stumps near
+  them on their own as well; this sends them out to burnt woods further off, the ones it burnt by its rivals too.
 - Whether a block catches or goes out is a hash of the tick, the block and the seed; the burning blocks are part of the
   state hash, and the order is in the command log (`kindle`), so replays burn the same.
 

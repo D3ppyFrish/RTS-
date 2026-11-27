@@ -586,6 +586,7 @@ public sealed partial class AutomationSystem
     private static int KindOf(BlockType b)
     {
         if (BlockInfo.IsTrunk(b)) b = BlockType.Wood; // every tree is cut for wood
+        if (b == BlockType.CharredWood) b = BlockType.Coal; // a forest fire's charred stumps are dug for charcoal
         for (int k = 0; k < Gatherable.Length; k++)
             if (Gatherable[k].Block == b) return k;
         return -1;
@@ -594,12 +595,14 @@ public sealed partial class AutomationSystem
     /// <summary>
     /// True if a worker at (ux, uy, uz) can be sent to gather candidate c: the base of a trunk if it is a
     /// tree, open to the air, not under a building, not claimed or given up on, and with somewhere to stand
-    /// (for stone, ore and coal: beside it, somewhere it can walk out of again once the block is dug).
+    /// (for stone, ore and coal: beside it, somewhere it can walk out of again once the block is dug; a charred stump,
+    /// which stands on the ground, from beside it or on top).
     /// </summary>
     private bool CanSend(Candidate c, int ux, int uy, int uz, long tick)
     {
         var w = World;
         var block = Gatherable[c.Kind].Block;
+        if (w.Get(c.X, c.Y, c.Z) == BlockType.CharredWood) block = BlockType.CharredWood; // a stump, dug from beside or on top
         if (BlockInfo.IsTrunk(block) && BlockInfo.IsTrunk(w.Get(c.X, c.Y - 1, c.Z))) return false;
         if (!Harvest.Exposed(w, c.X, c.Y, c.Z, block) || Buildings.AtColumn(c.X, c.Z) != null) return false;
         if (Economy.Claimed(c.X, c.Y, c.Z) || Avoided(Harvest.Key(w, c.X, c.Y, c.Z), tick)) return false;
