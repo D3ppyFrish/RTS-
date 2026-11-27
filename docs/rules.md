@@ -2562,7 +2562,8 @@ shortened in the dark and in bad weather, except into the light (see [Day, night
 ## Day, night and weather
 
 `src/Sim/Conditions.cs`: with day, night and weather on (`Simulation.DayNight`), the time of day and the
-weather are game rules that change how far units see and how well they shoot. All the numbers are
+weather are game rules that change how far units see, how well they shoot, how fast they march and how
+fast fields grow. All the numbers are
 starting guesses to be tuned in playtests.
 
 - **Clock.** A day lasts 20 minutes of game time and a match starts at 8:00 (or at the hour set with
@@ -2586,6 +2587,17 @@ starting guesses to be tuned in playtests.
   (dusk and dawn 10%) unless the target is lit; rain adds 10%, a storm 25%, fog 15%; at least half of
   shots always land. A miss lands beside the target. Melee blows and shots at buildings always land.
   Whether a shot lands is a hash of the tick, the shooter and the seed.
+- **Wet ground.** Rain soaks the ground (a quarter of the way to soaked through in an hour) and a storm
+  soaks it faster (40% an hour); clear skies dry it (12% an hour), cloudy ones slowly (6%), and fog barely
+  (2%). From 30% wet, soft ground (grass, soil, swamp mud and gloom moss) turns to mud: units walking on it
+  off the roads lose up to 30% of their pace, the wetter the slower, and carts, catapults and rams up to
+  50%. Roads, stone, planks and sand keep their pace, so a road is worth more in a wet spell. Wet fields
+  grow more: farm work goes up to 25% faster, the wetter the faster. In a storm, felling a tree takes 25%
+  longer. The ground stays muddy for hours after the rain has passed. Its wetness is part of the state hash.
+- **Computer players** from Normal up hold a new wave at home while it rains on muddy ground (65% wet and
+  more), unless the wave is twice as strong as the enemy army they know of, and for no more than three
+  hours of the day at a time; a wave already out keeps going. The Classic player marches whatever the
+  weather.
 - **Torches and campfires** (`kind: light`) are cheap buildings: a 1-block post of planks two high, or a
   ring of stone one high, that workers build like any other.
 - **Lava** lies in a few pools up in the hills, well away from the starts. Nothing stands on it or digs

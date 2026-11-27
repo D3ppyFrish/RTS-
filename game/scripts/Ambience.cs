@@ -50,7 +50,7 @@ public partial class Ambience : Node3D
     private readonly List<(float Distance, Vector3 At, float Range, float Seed, bool Lava)> _nearFires = new();
     private readonly List<Vector3> _lava = new();
     private double _rebuild;
-    private float _wet;
+    private float _wet = -1, _mud = -1; // -1 until the first frame, which starts them where the rules say
     private float _flash, _nextFlash = 4f;
     private readonly Random _random = new(1);
 
@@ -119,10 +119,16 @@ public partial class Ambience : Node3D
             Rebuild();
         }
 
-        // Wet ground: soaks up in a few seconds of rain, dries over a minute.
-        float wetTarget = look.Rain > 0.15f ? Mathf.Min(1f, look.Rain * 1.4f) : 0f;
+        // Wet ground: the first rain darkens it in a few seconds; it then stays as wet as the rules say the ground
+        // is (Conditions.Wetness), so a muddy field still shines after the rain has passed.
+        float wetTarget = Mathf.Max(look.Rain > 0.15f ? Mathf.Min(1f, look.Rain * 1.4f) : 0f, _sim.Conditions.Wetness * 0.006f);
+        if (_wet < 0) _wet = wetTarget;
         _wet = Mathf.MoveToward(_wet, wetTarget, delta * (wetTarget > _wet ? 0.15f : 0.02f));
-        _terrain.SetWeather(look.Wind, _wet);
+        // Mud on soft ground from damp on, thickest when soaked through.
+        float mudTarget = Mathf.Clamp((_sim.Conditions.Wetness - Conditions.DampFrom) / (float)(100 - Conditions.DampFrom), 0f, 1f);
+        if (_mud < 0) _mud = mudTarget;
+        _mud = Mathf.MoveToward(_mud, mudTarget, delta * 0.05f);
+        _terrain.SetWeather(look.Wind, _wet, _mud);
         _terrain.SetNight(_lighting.Light.Lanterns);
 
         var wind = new Vector3(WindTo.X, 0, WindTo.Y);

@@ -156,6 +156,12 @@ public sealed class UnitMovement
         else if (BlockInfo.IsRubble(underfoot)) { speed /= 2; full /= 2; } // picking a way over a heap of rubble
         else if (InOrchard(u, i)) { speed /= OrchardSlow; full /= OrchardSlow; } // pushing through an orchard's branches
         else if (underfoot == BlockType.Quicksand) { speed /= Rts.Sim.World.HazardSystem.QuicksandSlow; full /= Rts.Sim.World.HazardSystem.QuicksandSlow; } // the sand grips
+        else if (_sim.Conditions.Damp)
+        {
+            var def = _sim.Content.Units[u.Def[i]];
+            int pace = _sim.Conditions.MudPace(underfoot, def.Machine || def.Role == UnitRole.Hauler);
+            if (pace < 100) { speed = speed * pace / 100; full = full * pace / 100; } // wading through mud
+        }
         if (formation)
         {
             SteerFormation(u, i, speed, full, ref vx, ref vz);

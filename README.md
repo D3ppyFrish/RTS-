@@ -111,7 +111,7 @@ ruins (see [Ancient sites and dominion](docs/rules.md#ancient-sites-and-dominion
 [The dark power](docs/rules.md#the-dark-power-the-awakening)), and `--awaken=N` starts it at stage N; the match
 runner takes `--awakening` with `--ai`. `--daynight` plays with day, night and weather, and
 `--time-of-day=H` does too, starting at hour H (8 morning, 13 noon, 19.3 dusk, 0 midnight);
-`--weather=W` makes the first day's weather W (clear, cloudy, rain, storm or fog), `--lights=N` puts N
+`--weather=W` makes the first day's weather W (clear, cloudy, rain, storm or fog), `--wet=N` starts the ground N% wet (soft ground turns to mud from 30; screenshots only, not in the command log), `--lights=N` puts N
 torches and a campfire around your town hall, and `--focus=swamp` or `--focus=lava` looks at the swamp
 or the first pool of lava (see [Day, night and weather](docs/rules.md#day-night-and-weather)).
 Generated maps grow their trees twice the size of the first ones (`RegionGenerator.DefaultTreeScale`), a

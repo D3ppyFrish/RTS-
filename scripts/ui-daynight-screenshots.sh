@@ -3,8 +3,9 @@
 # and Ambience.cs): the west start with three houses, six torches and a campfire, at morning (smoke from
 # the roofs), noon, dusk and midnight (with --time-of-day), at midnight again after clicking the time of
 # day button, which keeps it day, at dusk in a storm (torches out, rain), and at night over the lava and
-# the swamp. Saves PNGs to OUT_DIR as morning.png, noon.png, dusk.png, night.png, always-day.png,
-# storm.png, lava.png and swamp.png, and fails if a scripted step found nothing to click or a screenshot is
+# the swamp, and at noon under cloud on ground soaked through by rain (mud on the grass, see Conditions.Wetness).
+# Saves PNGs to OUT_DIR as morning.png, noon.png, dusk.png, night.png, always-day.png,
+# storm.png, lava.png, swamp.png and muddy.png, and fails if a scripted step found nothing to click or a screenshot is
 # missing.
 # Usage: scripts/ui-daynight-screenshots.sh [OUT_DIR]
 set -euo pipefail
@@ -49,6 +50,10 @@ run swamp 23 "
 wait 30
 shot $OUT/swamp.png
 " --focus=swamp --cam-pitch=30
+run muddy 13 "
+wait 10
+shot $OUT/muddy.png
+" --weather=cloudy --wet=100
 ! grep -q '^Input script' "$LOG" || fail "a scripted step found nothing to click"
-[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 8 ] || fail "missing screenshots"
+[ "$(grep -c '^Saved screenshot' "$LOG")" -eq 9 ] || fail "missing screenshots"
 echo "Day and night screenshots OK: $OUT"

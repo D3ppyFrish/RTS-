@@ -134,7 +134,8 @@ and the night is lit by a cool blue moon and stars, with a lantern glowing at th
 you can see, flames on torches and campfires, and lava glowing in the hills. A pixel sun hangs in the
 sky where the light comes from (a pixel moon at night); tilt the camera down to the horizon (F) around
 sunrise or sunset, or at night, to see it and the stars. Weather rolls in and out: clouds grey the sky,
-rain falls around the camera and darkens the ground, storms bring wind and lightning and put out torches
+rain falls around the camera and darkens the ground, and a long rain turns grass and soil to dappled brown
+mud with shining puddles that stays until the ground dries; storms bring wind and lightning and put out torches
 (they smoke instead), and a morning fog closes the distance in. The sky turns before the weather does,
 so you can see it coming. Trees sway in the wind, chimneys smoke, houses smoke at breakfast and supper,
 and the swamp has mist at night and in the morning and fireflies on clear nights.
@@ -148,6 +149,7 @@ is gone, right-click the tree with battle priests to heal it (it grows a violet 
 the Dusk Staff), or, as the Orcs, with fighters to hack it down.
 
 The time of day and the weather are beside the game clock at the top (a sun or moon, the hour, and the
-weather unless it is clear). Its tooltip says what is coming, how far units see now and how often shots
-land. Click it to keep the world lit as by day: that changes only the look, and units still see as the
+weather unless it is clear, then Damp or Muddy while the ground is wet). Its tooltip says what is coming,
+how far units see now and how often shots land, how wet the ground is and how much it slows units off the
+roads, carts and siege engines, and speeds up farms. Click it to keep the world lit as by day: that changes only the look, and units still see as the
 time and weather allow.

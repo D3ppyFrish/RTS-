@@ -124,7 +124,9 @@ public sealed partial class EconomySystem
             SetPhase(i, JobPhase.ToWork);
             return;
         }
-        if (++u.JobTimer[i] < ByWork(i, WorkTicks(u.Owner[i], block) * (topY - baseY + 1))) return;
+        int work = WorkTicks(u.Owner[i], block) * (topY - baseY + 1);
+        if (BlockInfo.IsTrunk(block) && _sim.Conditions.Weather == Weather.Storm) work = work * (100 + Conditions.StormFelling) / 100; // felling in the wind
+        if (++u.JobTimer[i] < ByWork(i, work)) return;
         u.JobTimer[i] = 0;
         if (BlockInfo.IsTrunk(block))
         {
@@ -297,7 +299,7 @@ public sealed partial class EconomySystem
             SetPhase(i, JobPhase.ToWork);
             return;
         }
-        if (++u.JobTimer[i] < ByWork(i, FarmTicks)) return;
+        if (++u.JobTimer[i] < ByWork(i, FarmTicks * 100 / _sim.Conditions.FieldPercent)) return; // wet fields grow more
         AddCarry(i, Good.Food, FarmYieldOf(u.Owner[i]));
         GoToStorage(i);
     }

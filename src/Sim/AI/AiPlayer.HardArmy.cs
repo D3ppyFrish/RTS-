@@ -264,7 +264,7 @@ public sealed partial class AiPlayer
             });
             var wave = home.GetRange(0, ready);
             long mine = PowerOf(sim, wave), seen = EnemyPower(-1), theirs = Reckon(sim);
-            if (mine * 100 >= theirs * HardEdgePercent)
+            if (mine * 100 >= theirs * HardEdgePercent && !MudHolds(sim, mine, theirs))
             {
                 // A look at their town first, unless it has just had one: a scout that has got to where their
                 // soldiers gather, or been chased off on the way, has seen more of them than one that has only

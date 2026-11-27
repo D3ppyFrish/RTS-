@@ -1221,7 +1221,8 @@ public partial class Hud : CanvasLayer
         int minutes = (int)(trueHour * 60) / 15 * 15; // a quarter of an hour at a time, so it doesn't flicker
         var weather = cycle.Weather;
         string clock = $"{minutes / 60:00}:{minutes % 60:00}";
-        _dayButton.Text = !cycle.On ? "Day" : weather == Weather.Clear ? clock : $"{clock}  {DayCycle.Name(weather)}";
+        string ground = _sim.Conditions.Wetness >= Conditions.MuddyFrom ? "  Muddy" : _sim.Conditions.Damp ? "  Damp" : "";
+        _dayButton.Text = !cycle.On ? "Day" : (weather == Weather.Clear ? clock : $"{clock}  {DayCycle.Name(weather)}") + ground;
         _dayButton.TooltipText = DescribeConditions(trueHour, weather);
         bool night = DayCycle.IsNight(hour);
         if (night != _dayIsNight)
@@ -1296,6 +1297,14 @@ public partial class Hud : CanvasLayer
         int hit = c.HitChance(-1, -1);
         sb.Append(hit < 100 ? $"\nArchers and mages hit {hit}% of their shots at targets out of the light." : "\nEvery shot lands.");
         sb.Append("\nIn the swamp, mist cuts sight by a quarter at night and in the morning.");
+        int wet = c.Wetness;
+        if (c.Damp)
+            sb.Append($"\nThe ground is {(wet >= Conditions.MuddyFrom ? "muddy" : "damp")} ({wet}% wet): off the roads, units on grass and soil "
+                + $"go {100 - c.MudPace(BlockType.Grass, false)}% slower, carts and siege engines {100 - c.MudPace(BlockType.Grass, true)}%. "
+                + $"Farms work {c.FieldPercent - 100}% faster in the wet.");
+        else
+            sb.Append(wet > 0 ? $"\nThe ground is drying ({wet}% wet). Rain turns it to mud from {Conditions.DampFrom}%." : "\nThe ground is dry. Rain turns it to mud.");
+        if (c.Weather == Weather.Storm) sb.Append($"\nFelling trees in the storm takes {Conditions.StormFelling}% longer.");
         sb.Append(cycle.AlwaysDay ? "\nAlways day (the look only): click to show the real time of day."
             : "\nClick to keep the world lit as by day (the look only: units still see as the time and weather allow).");
         return sb.ToString();
