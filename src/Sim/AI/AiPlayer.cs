@@ -258,6 +258,7 @@ public sealed partial class AiPlayer
         if ((tick + Player * 3) % ArmyTicks == 0)
         {
             if (Smart) Fell(sim, issue);
+            if (Skilled) Kindle(sim, hall, issue);
             if (Smart) Raid(sim, raw);
             Molt(sim, hall, issue);
             Bloom(sim, issue);
@@ -1105,6 +1106,7 @@ public sealed partial class AiPlayer
         var list = Soldiers(sim, Player);
         if (_molters.Count > 0) list.RemoveAll(_molters.Contains);
         if (_feller != 0) list.Remove(_feller); // felling a tree onto rivals (see AiPlayer.Fell.cs)
+        if (_kindler != 0) list.Remove(_kindler); // setting a wood alight by rivals (see AiPlayer.Fire.cs)
         if (_treeParty.Count > 0) list.RemoveAll(_treeParty.Contains); // at the dusk tree (see AiPlayer.DuskTree.cs)
         return list;
     }

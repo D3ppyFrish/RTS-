@@ -1765,6 +1765,15 @@ fire runs through a forest. All the numbers are first guesses for playtesting.
   do not burn.
 - **In the game** (`game/scripts/Ambience.cs`, `AddForestFires`): a big flickering flame on every burning block open
   to the air that you can see, smoke from some, and at night they light the ground round them.
+- **Computer players** (`src/Sim/AI/AiPlayer.Fire.cs`, tests in `AiFireTests`), from Normal up, set woods alight by
+  their rivals in dry weather (a clear or cloudy day, the ground no more than 40% wet). A grove is the trees whose
+  trunks stand within 6 columns of each other. One is worth burning when the rival wooden buildings it sees within 3
+  columns of its trees (3 each) and the rival units it sees standing in it (1 each) come to at least 3, and only if
+  none of its own buildings is within 48 columns of the grove (the woods by its town are its wood), no wooden building
+  of a side it spares within 6, and none of its own units within 6, and no enemy soldiers are within 32 columns of its
+  town hall (its defenders would run into the fire). It sends its nearest soldier within 24 columns to
+  the grove's tree nearest that soldier, leaves it out of its army's orders until the job is done, and lights at most
+  one fire every 30 seconds. Classic and Easy leave fire alone.
 - Whether a block catches or goes out is a hash of the tick, the block and the seed; the burning blocks are part of the
   state hash, and the order is in the command log (`kindle`), so replays burn the same.
 
