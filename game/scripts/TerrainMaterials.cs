@@ -37,11 +37,14 @@ vec3 fogged(vec3 c, vec2 fog) {
     // darker line along its edges, so the land reads as blocks the way the mood board's does; the lines fade
     // out when zoomed far out, where they would shimmer. The vertex colour's alpha says what a surface is
     // (see ChunkMesher.FineMark): building detail gets neither, glowing blocks shine, leaves sway in the wind
-    // (sway, from the vertex shader). In the rain the tops of blocks darken and catch the light (wet).
+    // (sway, from the vertex shader). In the rain the tops of blocks darken and catch the light (wet). On muddy
+    // ground (mud, from the rules' wet ground) the tops of grass and soil turn to patches of brown mud with
+    // shining puddles between them.
     private const string LookCode = @"
 uniform float block_size = 0.5;
 uniform float wind = 0.2;
 uniform float wet = 0.0;
+uniform float mud = 0.0;
 uniform float night_glow = 0.0;
 varying vec3 v_world;
 bool is_leaf(float mark) { return mark > 0.25 && mark < 0.5; }
@@ -126,9 +129,17 @@ void fragment() {
     vec2 fog = fog_at(v_fog_xz);
     LIGHT_VERTEX = voxel_light_vertex(VIEW_MATRIX);
     float wet_top = wet * smoothstep(0.5, 0.9, v_world_normal.y);
-    ALBEDO = fogged(block_look(COLOR.rgb, COLOR.a), fog) * (1.0 - 0.3 * wet_top);
-    SPECULAR = (0.3 + 0.3 * wet_top) * fog.x;
-    ROUGHNESS = 0.9 - 0.55 * wet_top;
+    vec3 base = block_look(COLOR.rgb, COLOR.a);
+    // Mud: only plain blocks of soft ground (greenish grass or darker brown soil, not pale sand, grey stone or roads).
+    vec3 cc = COLOR.rgb;
+    float soft = COLOR.a > 0.95 && cc.g > cc.b * 1.2 && (cc.g > cc.r || cc.r > cc.b * 1.5) && cc.r + cc.g + cc.b < 1.5 ? 1.0 : 0.0;
+    float patch = block_hash(floor(v_world / (block_size * 0.25)) + 3.7);
+    float mud_top = mud * soft * smoothstep(0.5, 0.9, v_world_normal.y) * smoothstep(0.35, 0.75, patch + mud * 0.25);
+    float puddle = mud_top * step(0.8, patch);
+    base = mix(base, vec3(0.085, 0.055, 0.03), mud_top * 0.6);
+    ALBEDO = fogged(base, fog) * (1.0 - 0.3 * wet_top);
+    SPECULAR = (0.3 + 0.3 * wet_top + 0.4 * puddle) * fog.x;
+    ROUGHNESS = 0.9 - 0.55 * wet_top - 0.3 * puddle;
     EMISSION = UNSEEN * (1.0 - fog.x) + block_glow(COLOR.rgb, COLOR.a) * fog.x;
 }
 ";
@@ -271,12 +282,13 @@ void fragment() {
 
     /// <summary>Cuts away everything above world height <paramref name="sliceY"/> (metres), or nothing if null.</summary>
     /// <summary>How hard the wind blows (0 to 1, sways the trees) and how wet the ground is (0 to 1).</summary>
-    public void SetWeather(float wind, float wet)
+    public void SetWeather(float wind, float wet, float mud = 0)
     {
-        if (Mathf.IsEqualApprox(wind, _wind) && Mathf.IsEqualApprox(wet, _wet)) return;
-        (_wind, _wet) = (wind, wet);
+        if (Mathf.IsEqualApprox(wind, _wind) && Mathf.IsEqualApprox(wet, _wet) && Mathf.IsEqualApprox(mud, _mud)) return;
+        (_wind, _wet, _mud) = (wind, wet, mud);
         Opaque.SetShaderParameter("wind", wind);
         Opaque.SetShaderParameter("wet", wet);
+        Opaque.SetShaderParameter("mud", mud);
     }
 
     /// <summary>How much windows glow with lamplight (0 by day, 1 at night).</summary>
@@ -289,7 +301,7 @@ void fragment() {
     }
 
     private float _night = -1f;
-    private float _wind = -1f, _wet = -1f;
+    private float _wind = -1f, _wet = -1f, _mud = -1f;
     private readonly System.Collections.Generic.List<ShaderMaterial> _tracked = new();
 
     /// <summary>Keeps <paramref name="m"/>'s fog of war (a shader with <see cref="FogCode"/>) in step with the terrain's.</summary>
@@ -306,6 +318,7 @@ void fragment() {
         {
             Opaque.SetShaderParameter("wind", _wind);
             Opaque.SetShaderParameter("wet", _wet);
+            Opaque.SetShaderParameter("mud", _mud);
         }
         if (_night >= 0) Opaque.SetShaderParameter("night_glow", _night);
         float y = sliceY ?? 100000f;

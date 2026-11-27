@@ -384,6 +384,9 @@ public partial class Main : Node3D
             if (_sim.DayNight) _sim.Conditions.SetWeather(w, Conditions.DayTicks);
             else cycle.WeatherOverride = w;
         }
+        // Screenshots: the ground starts this wet (percent), as after a long rain.
+        if (_args.TryGetValue("wet", out var wetArg) && int.TryParse(wetArg, out int wetPercent) && _sim.DayNight)
+            _sim.Conditions.SetWetness(wetPercent);
         _lighting = new WorldLighting(cycle);
         _match.AddChild(_lighting);
         _lighting.Init(_sim, _fog, _rig);

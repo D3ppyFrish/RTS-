@@ -675,7 +675,8 @@ public sealed partial class AiPlayer
             var wave = home.GetRange(0, ready);
             long mine = PowerOf(sim, wave), theirs = EnemyPower(enemyHall?.Owner ?? -1);
             bool fresh = enemyHall != null && sim.Tick - _hallSeen <= SpotMemoryTicks;
-            if ((ready >= size && mine * 4 >= theirs * 3) || (ready >= LeastWave && fresh && mine > 2 * theirs))
+            if (((ready >= size && mine * 4 >= theirs * 3) || (ready >= LeastWave && fresh && mine > 2 * theirs))
+                && !(Skilled && MudHolds(sim, mine, theirs)))
             {
                 Launch(sim, wave, (ex, ez), enemyHall?.Id ?? 0, issue);
                 return;

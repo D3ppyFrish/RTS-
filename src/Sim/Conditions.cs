@@ -51,6 +51,12 @@ public enum DayPart : byte
 /// in the light), in rain, a storm or fog. Melee blows and shots at buildings always land. Whether a shot
 /// lands is a hash of the tick, the shooter and the match seed, the same on every machine.
 ///
+/// Wet ground (<see cref="Wetness"/>): rain soaks the ground and a storm soaks it faster; it dries out again
+/// under clear or cloudy skies. Damp ground turns to mud: units walking on soft ground (grass, soil, swamp mud,
+/// gloom moss) off the roads go slower (<see cref="MudPace"/>), wheels and machines more so; roads, stone and
+/// planks keep their pace. Wet fields grow more: farm work goes faster on wet ground (<see cref="FieldPercent"/>).
+/// In a storm, felling trees out in the wind takes longer (<see cref="StormFelling"/>).
+///
 /// All numbers are starting guesses to be tuned in playtests.
 /// </summary>
 public sealed class Conditions
@@ -91,10 +97,31 @@ public sealed class Conditions
     /// <summary>The least chance, in percent, a ranged shot has to land.</summary>
     public const int MinHit = 50;
 
+    /// <summary>Wet ground is worked out this often: ten times an hour of the day.</summary>
+    public const int WetStepTicks = HourTicks / 10;
+    /// <summary>
+    /// How much wetter the ground gets in an hour of each weather, in tenths of a percent (1000 is soaked
+    /// through): rain and storms soak it, clear and cloudy skies dry it, fog barely does.
+    /// </summary>
+    public const int RainSoak = 250, StormSoak = 400, ClearDry = -120, CloudyDry = -60, FogDry = -20;
+    /// <summary>Wetness (percent) from which the ground is damp: soft ground starts to turn to mud.</summary>
+    public const int DampFrom = 30;
+    /// <summary>Wetness (percent) from which the ground is muddy, as the HUD says.</summary>
+    public const int MuddyFrom = 65;
+    /// <summary>Percent of their pace units lose on soaked soft ground (at 100% wet), less as it is less wet.</summary>
+    public const int MudSlow = 30;
+    /// <summary>Percent of their pace wheels and machines (carts, catapults, rams) lose on soaked soft ground.</summary>
+    public const int WheelMudSlow = 50;
+    /// <summary>Percent faster farm work goes on soaked ground (at 100% wet), less as it is less wet.</summary>
+    public const int FieldBonus = 25;
+    /// <summary>Percent longer felling a tree takes in a storm.</summary>
+    public const int StormFelling = 25;
+
     private readonly Simulation _sim;
     private DeterministicRandom? _rng;
     private Weather _weather = Weather.Clear, _next = Weather.Clear;
     private long _changesAt = FirstSpellHours * HourTicks;
+    private int _wet; // tenths of a percent
 
     public Conditions(Simulation sim)
     {
@@ -135,6 +162,32 @@ public sealed class Conditions
     /// <summary>The tick the weather turns to <see cref="Next"/>.</summary>
     public long ChangesAt => _changesAt;
 
+    /// <summary>How wet the ground is, 0 (dry) to 100 (soaked through); with day and night off, always dry.</summary>
+    public int Wetness => On ? _wet / 10 : 0;
+
+    /// <summary>True if the ground is wet enough for soft ground to turn to mud (<see cref="DampFrom"/>).</summary>
+    public bool Damp => Wetness >= DampFrom;
+
+    /// <summary>Tests and test mode: sets how wet the ground is (percent).</summary>
+    public void SetWetness(int percent) => _wet = Math.Clamp(percent, 0, 100) * 10;
+
+    /// <summary>True for ground that turns to mud when wet: grass, soil, swamp mud and gloom moss.</summary>
+    public static bool Soft(BlockType b) => b is BlockType.Grass or BlockType.Soil or BlockType.Mud or BlockType.Gloom;
+
+    /// <summary>
+    /// Percent of its pace a unit keeps standing on <paramref name="underfoot"/> now: 100 on dry ground, on a road,
+    /// stone or planks; less on wet soft ground, the wetter the slower, and slower again for wheels and machines.
+    /// </summary>
+    public int MudPace(BlockType underfoot, bool wheels)
+    {
+        int wet = Wetness;
+        if (wet < DampFrom || !Soft(underfoot)) return 100;
+        return 100 - wet * (wheels ? WheelMudSlow : MudSlow) / 100;
+    }
+
+    /// <summary>Percent of the usual pace farm work goes at now: faster the wetter the fields.</summary>
+    public int FieldPercent => 100 + Wetness * FieldBonus / 100;
+
     /// <summary>
     /// Match setup and tests: the weather is <paramref name="weather"/> for <paramref name="ticks"/> from now,
     /// then turns to <paramref name="next"/> (clear if not given).
@@ -171,7 +224,7 @@ public sealed class Conditions
     public ulong ComputeHash()
     {
         if (!On) return 0;
-        ulong h = (ulong)_weather * 31 + (ulong)_next * 7 + (ulong)_changesAt * 0x9E3779B97F4A7C15UL;
+        ulong h = (ulong)_weather * 31 + (ulong)_next * 7 + (ulong)_changesAt * 0x9E3779B97F4A7C15UL + (ulong)_wet * 0xC2B2AE3D27D4EB4FUL;
         return h ^ (_rng?.State ?? 0);
     }
 
@@ -282,6 +335,18 @@ public sealed class Conditions
                 int end = MinuteAt(_changesAt, _sim.DayStart);
                 if (end > 11 * 60) _changesAt -= (long)(end - 11 * 60) * DayTicks / 1440;
             }
+        }
+        if (_sim.Tick % WetStepTicks == 0)
+        {
+            int soak = _weather switch
+            {
+                Weather.Rain => RainSoak,
+                Weather.Storm => StormSoak,
+                Weather.Cloudy => CloudyDry,
+                Weather.Fog => FogDry,
+                _ => ClearDry,
+            };
+            _wet = Math.Clamp(_wet + soak * WetStepTicks / HourTicks, 0, 1000);
         }
         Lights.Step(Part != DayPart.Day || gloom, Weather == Weather.Storm);
     }
