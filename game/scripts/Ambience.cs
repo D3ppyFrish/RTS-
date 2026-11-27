@@ -237,6 +237,7 @@ public partial class Ambience : Node3D
             else if (cooking && def.Kind is BuildingKind.House or BuildingKind.TownHall)
                 _chimneys.Add((new Vector3(b.X + def.SizeX / 2f, b.Y + def.Height, b.Z + def.SizeZ / 2f) * Bs, 0.7f, seed));
         }
+        AddForestFires();
         var mm = _flames.Multimesh;
         if (mm.InstanceCount != _fires.Count) mm.InstanceCount = _fires.Count;
         for (int i = 0; i < _fires.Count; i++)
@@ -255,6 +256,39 @@ public partial class Ambience : Node3D
             mm.SetInstanceTransform(i, new Transform3D(Basis.Identity, at));
             // Phase, speed, how thick, and a scatter value for this puff.
             mm.SetInstanceCustomData(i, new Color((seed + k / (float)PuffsPerSource) % 1f, 0.12f + 0.03f * seed, amount, (k * 0.37f + seed) % 1f));
+        }
+    }
+
+    /// <summary>The most flames of forest fires shown at once, those nearest the camera.</summary>
+    private const int MaxForestFlames = 1500;
+    private readonly List<(float Distance, Vector3 At, float Seed, bool Smoke)> _burning = new();
+
+    /// <summary>
+    /// Forest fires (see <see cref="Rts.Sim.World.FireSystem"/>): a big flame on each burning block of a tree the player
+    /// can see that is open to the air on top or at a side, and smoke from some of them.
+    /// </summary>
+    private void AddForestFires()
+    {
+        if (_sim.Fire.Count == 0) return;
+        var w = _sim.World;
+        var focus = _rig.GlobalPosition;
+        _burning.Clear();
+        foreach (var (x, y, z) in _sim.Fire.All())
+        {
+            if (!_fog.Sees(x, z)) continue;
+            bool open = !BlockInfo.IsSolid(w.Get(x, y + 1, z)) || !BlockInfo.IsSolid(w.Get(x + 1, y, z)) || !BlockInfo.IsSolid(w.Get(x - 1, y, z))
+                || !BlockInfo.IsSolid(w.Get(x, y, z + 1)) || !BlockInfo.IsSolid(w.Get(x, y, z - 1));
+            if (!open) continue;
+            var at = new Vector3(x + 0.5f, y + 0.6f, z + 0.5f) * Bs;
+            uint h = (uint)(x * 73856093 ^ y * 19349663 ^ z * 83492791);
+            _burning.Add((at.DistanceSquaredTo(focus), at, (h % 1000) / 1000f, h % 7 == 0 && !BlockInfo.IsSolid(w.Get(x, y + 1, z))));
+        }
+        _burning.Sort((a, b) => a.Distance.CompareTo(b.Distance));
+        for (int i = 0; i < _burning.Count && i < MaxForestFlames; i++)
+        {
+            var (_, at, seed, smoke) = _burning[i];
+            _fires.Add((at, 0.95f + 0.25f * seed, seed));
+            if (smoke && _chimneys.Count < 300) _chimneys.Add((at + new Vector3(0, 0.4f, 0), 1.3f, seed));
         }
     }
 

@@ -31,7 +31,7 @@ public static class Harvest
     /// <summary>True if a worker can dig, chop or pick this block. Buildings and roads are not dug this way.</summary>
     public static bool CanGather(BlockType b) => b is BlockType.Grass or BlockType.Gloom or BlockType.Soil or BlockType.Sand
         or BlockType.Mud or BlockType.Bog or BlockType.Crust or BlockType.Quicksand or BlockType.Scree or BlockType.LooseRock or BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal
-        or BlockType.GoldOre or BlockType.BerryBush || BlockInfo.IsTrunk(b) || BlockInfo.IsLeaves(b) || BlockInfo.IsRubble(b);
+        or BlockType.GoldOre or BlockType.BerryBush or BlockType.CharredWood || BlockInfo.IsTrunk(b) || BlockInfo.IsLeaves(b) || BlockInfo.IsRubble(b);
 
     /// <summary>The good a block gives, if any. Plain ground is only dug away.</summary>
     public static bool Yields(BlockType b, out Good good)
@@ -52,6 +52,8 @@ public static class Harvest
             case BlockType.CoalRubble: good = Good.Coal; return true;
             case BlockType.WoodRubble: good = Good.Wood; return true;
             case BlockType.TreeRubble: good = Good.Wood; return true;
+            // A forest fire's charred stumps are dug for charcoal.
+            case BlockType.CharredWood: good = Good.Coal; return true;
             default: good = Good.Food; return false;
         }
     }
@@ -61,6 +63,7 @@ public static class Harvest
     {
         BlockType.BerryBush => FoodPerBush,
         BlockType.TreeRubble => WoodPerTreeRubble,
+        BlockType.CharredWood => World.FireSystem.CharcoalPerStump,
         _ => 1,
     };
 
@@ -117,7 +120,7 @@ public static class Harvest
     /// Digging plain ground is a one-off.
     /// </summary>
     public static bool Repeats(BlockType b) => b is BlockType.Stone or BlockType.IronOre or BlockType.Coal or BlockType.Crystal or BlockType.GoldOre
-        or BlockType.BerryBush || BlockInfo.IsTrunk(b) || BlockInfo.IsRubble(b);
+        or BlockType.BerryBush or BlockType.CharredWood || BlockInfo.IsTrunk(b) || BlockInfo.IsRubble(b);
 
     /// <summary>Taken whole and carried away in one load (a bush), rather than a block at a time.</summary>
     public static bool Bulk(BlockType b) => b is BlockType.BerryBush;

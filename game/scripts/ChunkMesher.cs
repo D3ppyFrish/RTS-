@@ -395,6 +395,7 @@ public static class ChunkMesher
         BlockType.Ladder => new Color(0.55f, 0.38f, 0.2f),
         BlockType.Hive => new Color(0.6f, 0.44f, 0.28f),
         BlockType.Livewood => new Color(0.55f, 0.46f, 0.33f),
+        BlockType.CharredWood => new Color(0.12f, 0.1f, 0.09f), // a forest fire's charred stump: black, a little warm
         BlockType.Lava => new Color(1f, 0.3f, 0f),
         BlockType.Ice => new Color(0.74f, 0.88f, 0.96f),
         BlockType.Floor => new Color(0.55f, 0.4f, 0.24f),

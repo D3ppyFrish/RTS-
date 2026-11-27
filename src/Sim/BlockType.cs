@@ -176,12 +176,17 @@ public enum BlockType : byte
     /// It breaks into broken timber.
     /// </summary>
     Livewood,
+    /// <summary>
+    /// A charred stump: what a forest fire leaves of the foot of a tree's trunk (see <see cref="World.FireSystem"/>).
+    /// Black and cracked; workers dig it for charcoal (<see cref="Economy.Good.Coal"/>).
+    /// </summary>
+    CharredWood,
 }
 
 public static class BlockInfo
 {
     /// <summary>The highest block type value; saved maps may contain any value up to it.</summary>
-    public const BlockType Last = BlockType.Livewood;
+    public const BlockType Last = BlockType.CharredWood;
 
     /// <summary>Anything but air, water, a ladder's rungs and an orchard's trees (which units stand in).</summary>
     public static bool IsSolid(BlockType t) => t != BlockType.Air && t != BlockType.Water && t != BlockType.Ladder && t != BlockType.Orchard;

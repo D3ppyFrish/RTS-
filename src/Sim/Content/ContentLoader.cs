@@ -835,7 +835,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -869,6 +869,7 @@ public static class ContentLoader
                 Gates = o.Int("gates", 10, 1000, 100),
                 Cover = o.Int("cover", 0, 100, 0),
                 Crater = o.Int("crater", 0, 4, 0),
+                Ignites = o.Bool("ignites"),
                 Carry = o.Int("carry", 1, 100, 0),
                 Seats = o.Int("seats", 1, 50, 0),
                 Sails = o.Bool("sails"),

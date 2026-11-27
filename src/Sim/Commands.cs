@@ -387,6 +387,18 @@ public sealed record FellCommand(int PlayerId, int[] Units, int X, int Z, int Di
 }
 
 /// <summary>
+/// The units set the tree standing in column (<paramref name="X"/>, <paramref name="Z"/>), or the nearest one within two
+/// columns of it, alight: they walk to it and work at it a moment, then it burns and the fire spreads (see
+/// <see cref="World.FireSystem"/>). Workers and soldiers on foot or horseback can; machines, boats, carts and caravans
+/// cannot, and nobody can in rain or a storm.
+/// </summary>
+public sealed record KindleCommand(int PlayerId, int[] Units, int X, int Z) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(KindleCommand? other) => base.Equals(other) && X == other!.X && Z == other.Z;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), X, Z);
+}
+
+/// <summary>
 /// The player marks their finished building <paramref name="Building"/> for salvage and sends the command's workers (if
 /// any) to take it down; automatic workers take it as building work. Once it is down, half its cost (in proportion to
 /// the hit points it has left) and the goods it held go to the player's nearest other storage. With

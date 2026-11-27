@@ -909,6 +909,7 @@ public sealed partial class CombatSystem
             HitBuilding(b, damage, i, def.Role == UnitRole.Sapper || def.Ram, def.Blast);
             Thorns(i, def, b);
             if (def.Crater > 0) CraterBeside(i, def, b);
+            if (def.Ignites) _sim.Fire.IgniteAround(Clamp(u.X[i], b.X, b.MaxX + 1).FloorToInt(), b.Y + 1, Clamp(u.Z[i], b.Z, b.MaxZ + 1).FloorToInt(), u.Owner[i]);
             u.ChargeLeft[i] = 0; // the charge's first blow is struck
             return true;
         }
@@ -926,6 +927,7 @@ public sealed partial class CombatSystem
             Fix64 side = (u.Id[i] & 1) == 0 ? Fix64.One : -Fix64.One;
             AddShot(i, def, u.X[t] + side, u.Y[t], u.Z[t] + side / 2);
             Crater(u.X[t] + side, u.Y[t], u.Z[t] + side / 2, def.Crater);
+            if (def.Ignites) _sim.Fire.IgniteAround((u.X[t] + side).FloorToInt(), u.Y[t], (u.Z[t] + side / 2).FloorToInt(), u.Owner[i]);
             Misses++;
             u.ChargeLeft[i] = 0;
             return true;
@@ -940,6 +942,7 @@ public sealed partial class CombatSystem
         _shots.Add(new Shot(_sim.Tick, u.Id[i], u.X[i], u.Y[i], u.Z[i], u.X[t], u.Y[t], u.Z[t], def.IsRanged, def.Splash > Fix64.Zero,
             part, dealt, blocked));
         Crater(u.X[t], u.Y[t], u.Z[t], def.Crater);
+        if (def.Ignites) _sim.Fire.IgniteAround(u.X[t].FloorToInt(), u.Y[t], u.Z[t].FloorToInt(), u.Owner[i]);
         u.ChargeLeft[i] = 0;
         return true;
     }

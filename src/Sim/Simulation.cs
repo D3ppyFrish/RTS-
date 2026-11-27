@@ -73,6 +73,8 @@ public sealed class Simulation
     public BloodSystem Blood { get; }
     /// <summary>Natural hazards: poison bog and the heat by lava (see <see cref="HazardSystem"/>).</summary>
     public HazardSystem Hazards { get; }
+    /// <summary>Forest fires: burning trees, spreading in dry weather (see <see cref="FireSystem"/>; stepped with the hazards).</summary>
+    public FireSystem Fire { get; }
     /// <summary>The time of day, the weather and the light, with <see cref="DayNight"/> on.</summary>
     public Conditions Conditions { get; }
     /// <summary>Test mode's tools and cheats, with <see cref="TestMode"/> on (see <see cref="Sandbox.SandboxSystem"/>).</summary>
@@ -128,6 +130,7 @@ public sealed class Simulation
         Physics = new PhysicsSystem(this);
         Blood = new BloodSystem(this);
         Hazards = new HazardSystem(this);
+        Fire = new FireSystem(this);
         Events = new EventLog(this);
         Conditions = new Conditions(this);
         Sandbox = new Sandbox.SandboxSystem(this);
@@ -489,6 +492,7 @@ public sealed class Simulation
         ^ Cities.ComputeHash() * 0xA24BAED4963EE407UL ^ Match.ComputeHash() * 0x9FB21C651E98DF25UL
         ^ Truces.ComputeHash() * 0x8CB92BA72F3D8DD7UL ^ Deals.ComputeHash() * 0xE7037ED1A0B428DBUL
         ^ Physics.ComputeHash() * 0x61C8864680B583EBUL
+        ^ (Fire.Count > 0 ? Fire.ComputeHash() * 0x4CF5AD432745937FUL : 0)
         ^ Blood.ComputeHash() * 0x9E6C63D0676A9A99UL ^ DuskTree.ComputeHash() * 0x3C6EF372FE94F82BUL
         ^ Ruins.ComputeHash() * 0xC6BC279692B5C323UL
         ^ (_dominion ? 0x2B992DDFA23249D6UL ^ Sites.ComputeHash() * 0x9E3779B185EBCA87UL : 0)
@@ -582,6 +586,7 @@ public sealed class Simulation
             case GazeCommand gz: Economy.Apply(gz); break;
             case UnpenCommand up: Combat.Apply(up); break;
             case FellCommand fl: Economy.Apply(fl); break;
+            case KindleCommand kc: Economy.Apply(kc); break;
             case ProspectCommand pr: Economy.Apply(pr); break;
             case RepairCommand rp: Economy.Apply(rp); break;
             case SalvageCommand sv: Economy.Apply(sv); break;

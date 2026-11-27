@@ -98,6 +98,11 @@ public sealed class UnitDef
     /// </summary>
     public int Crater { get; init; }
     /// <summary>
+    /// Its shots set trees alight where they land (<c>"ignites"</c> in the data: the siege engineer's fire pots; see
+    /// <see cref="World.FireSystem.IgniteAround"/>).
+    /// </summary>
+    public bool Ignites { get; init; }
+    /// <summary>
     /// Extra damage it takes from attacks by each role, in percent (indexed by <see cref="UnitRole"/>), or
     /// null if it has no weakness beyond the role table's.
     /// </summary>

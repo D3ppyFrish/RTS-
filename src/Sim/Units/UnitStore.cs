@@ -172,6 +172,11 @@ public enum UnitJob : byte
     /// dock, again and again.
     /// </summary>
     Fish,
+    /// <summary>
+    /// Set the tree standing in column (<see cref="UnitStore.JobX"/>, JobZ), its trunk starting at level JobY, alight
+    /// (see <see cref="KindleCommand"/> and <see cref="World.FireSystem"/>).
+    /// </summary>
+    Kindle,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

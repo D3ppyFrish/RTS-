@@ -250,6 +250,11 @@ public partial class Alerts : VBoxContainer
     {
         var below = _sim.World.Get(e.X, e.Y - 1, e.Z);
         if (_sim.World.Get(e.X, e.Y + 1, e.Z) == BlockType.Water) return "drowned in a flood";
+        for (int dz = -2; dz <= 2; dz++)
+        for (int dx = -2; dx <= 2; dx++)
+        for (int dy = -1; dy <= 3; dy++)
+            if (_sim.Fire.Burning(e.X + dx, e.Y + dy, e.Z + dz) || _sim.World.Get(e.X + dx, e.Y + dy, e.Z + dz) == BlockType.CharredWood)
+                return "burned in a forest fire";
         for (int dz = -1; dz <= 1; dz++)
         for (int dx = -1; dx <= 1; dx++)
         for (int dy = -1; dy <= 1; dy++)

@@ -113,7 +113,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -800,6 +800,17 @@ public partial class Hud : CanvasLayer
         _prospectButton.Visible = false;
         column.AddChild(_prospectButton);
 
+        _kindleButton = MakeToolButton("Set fire  [Ctrl+I]");
+        _kindleButton.Name = "set_fire";
+        _kindleButton.Icon = UiIcons.Get("flame");
+        _kindleButton.TooltipText = "Click a tree for the selected workers or soldiers to set it alight. In dry weather the fire spreads " +
+                                    "through the trees round it, burning the units beside it and scorching wooden buildings; rain puts it out, " +
+                                    "and a wet spell leaves the woods slow to catch. Nothing can be set alight in rain or a storm. " +
+                                    "Burnt trees leave charred stumps that workers dig for charcoal (coal).";
+        _kindleButton.Toggled += _ => _control.ToggleKindle();
+        _kindleButton.Visible = false;
+        column.AddChild(_kindleButton);
+
         _tameRow = new HBoxContainer { Visible = false };
         _tameRow.AddThemeConstantOverride("separation", 4);
         _tameLabel = MakeLabel("", 13);
@@ -1471,6 +1482,8 @@ public partial class Hud : CanvasLayer
         _fellButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Fell);
         _prospectButton.Visible = _control.OwnProspectors().Count > 0 || _control.Tool == PlayerControl.ToolMode.Prospect;
         _prospectButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Prospect);
+        _kindleButton.Visible = _control.OwnKindlers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Kindle;
+        _kindleButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Kindle);
         RefreshEvolveRows();
         RefreshTaming();
         RefreshDen();
@@ -2335,6 +2348,13 @@ public partial class Hud : CanvasLayer
                 return $"Sound for ore: click where the selected foremen sound the ground (ore shows within {_sim.Economy.ProspectRadius(PlayerControl.LocalPlayer)} blocks, at any depth)" +
                        (_control.OwnProspectors().Count == 0 ? "   (select foremen first)" : "") +
                        "\nShift: sound another spot   Right click or Esc to stop";
+            case PlayerControl.ToolMode.Kindle:
+                return (!_sim.Fire.CanKindle ? "Set fire: nothing catches in the rain"
+                           : _control.KindleTree.X < 0 ? "Set fire: click a tree for the selected units to set it alight"
+                           : _sim.Conditions.Wetness > 0 ? $"Set fire: click to set this tree alight (the ground is {_sim.Conditions.Wetness}% wet: the fire spreads slower)"
+                           : "Set fire: click to set this tree alight; the fire spreads through the trees round it") +
+                       (_control.OwnKindlers().Count == 0 ? "   (select workers or soldiers first)" : "") +
+                       "\nShift: set another alight   Right click or Esc to stop";
             case PlayerControl.ToolMode.Ladder:
             {
                 int wood = _control.LadderRungs * EconomySystem.WoodPerRung;
@@ -2411,6 +2431,7 @@ public partial class Hud : CanvasLayer
             if (u.Poisoned[i] > 0) heals += $" (poisoned, {(u.Poisoned[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
             if (hurt > 0) heals += _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] + 1, u.Z[i].FloorToInt()) == BlockType.Water ? " (drowning)"
+                : _sim.Fire.HeatAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) > 0 ? " (burning in the fire)"
                 : hurt >= Rts.Sim.World.HazardSystem.LavaDamage ? " (scorched by lava)"
                 : _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] - 1, u.Z[i].FloorToInt()) == BlockType.Quicksand ? " (caught in quicksand)" : " (poisoned by the bog)";
             string staff = _sim.DuskTree.HasStaff(i) ? " with the Dusk Staff" : "";
@@ -2853,6 +2874,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Ramp => u.Phase[i] == JobPhase.Working ? "heaping earth onto a ramp" : "going to the ramp",
         UnitJob.Dam => u.Phase[i] == JobPhase.Working ? "building a dam" : "going to the dam",
         UnitJob.Ladder => u.Phase[i] == JobPhase.Working ? "raising a ladder" : "going to the ladder",
+        UnitJob.Kindle => u.Phase[i] == JobPhase.Working ? "setting a tree alight" : "going to set a tree alight",
         UnitJob.Clean => u.Phase[i] == JobPhase.Working ? "scrubbing blood" : "cleaning blood",
         UnitJob.Post => u.Phase[i] == JobPhase.Working ? "climbing a wall" : "going to its post on a wall",
         UnitJob.Dig => u.Phase[i] switch
