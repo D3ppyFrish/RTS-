@@ -124,9 +124,13 @@ levels per block column (surface, tunnels, caves, bridges) and the steps between
 same rules units move by, and rebuilds only the columns around changed blocks. Every unit ordered to
 the same spot shares one flow field: path distances to the goal, computed outward from it with a fixed
 budget per tick (12,000 nodes) and headed toward the units, so a field covers the way there rather
-than the whole map. When blocks change under a field it is marked dirty: units that find their way
-gone get it recomputed within half a second, and otherwise it is refreshed after five seconds, which
-picks up new shortcuts such as a freshly dug tunnel. Units with no way to the goal (a wall across the
+than the whole map. The search's estimate of the way left counts the walk to the nearest road at full
+cost and only the rest at half, so roads on the map no longer widen every search. When the walk graph
+changes where a field reaches (blocks that leave every step as it was change nothing), the field is
+marked dirty and patched on the spot: the nodes around the change get their distances again, and any
+the change brought nearer the goal pass that on, so a gap knocked in a wall is used at once. A change the patch cannot vouch for (too big, or one that may let a unit into ground the search
+never reached) gets the field recomputed after five seconds; units that find their way gone get it
+recomputed within half a second. Units with no way to the goal (a wall across the
 map, a pit they fell into) give up at once instead of walking into the wall. A move order may name
 the level to go to (`MoveCommand.Y`), so units can be sent into a tunnel under a hill rather than
 onto it.
@@ -216,6 +220,15 @@ dotnet run -c Release --project tools/MatchRunner -- --log=match.log --runs=3   
 
 The replays the game saves are command logs too: `--log=FILE` plays one back, checks it replays the
 same, and prints who won and when.
+
+`--profile` with `--ai` prints, every five game minutes and at the end, where the time went: the
+simulation's systems one by one (`Simulation.Timings`), the computer players' thinking, and how many
+path nodes were searched. For example, the large map with everything on:
+
+```bash
+dotnet run -c Release --project tools/MatchRunner -- --ai --levels=hard,hard --world=1024x128x1024 \
+  --minutes=40 --fog --daynight --dominion --awakening --profile --runs=1
+```
 
 Scripted players dig and build near their home and, once a second, send a slice of their army (100
 units each by default, `--units=N`) to their start or their dig site, attack-move it to the map centre
