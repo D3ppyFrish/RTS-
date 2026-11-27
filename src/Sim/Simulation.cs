@@ -391,6 +391,25 @@ public sealed class Simulation
         list.Add(command);
     }
 
+    /// <summary>Names of the systems a tick steps, in order; <see cref="Timings"/> keeps one total for each.</summary>
+    public static readonly string[] StepNames = { "Sandbox", "Truces", "Deals", "Conditions", "Automation", "Economy", "Physics", "Hazards", "DarkPower", "Boats", "Combat", "Blood", "Evolution", "Monsters", "DuskTree", "Ruins", "Items", "Spells", "Cities", "Paths", "Movement", "Sites", "Ascendancy", "Match", "Vision", "Events" };
+
+    /// <summary>
+    /// When not null, the time each system took, summed over every tick since it was set (Stopwatch ticks,
+    /// by <see cref="StepNames"/>). For profiling only: it is never read by the rules and is not part of the hash.
+    /// </summary>
+    public long[]? Timings { get; set; }
+
+    private long _lapStart;
+
+    private void Lap(int system)
+    {
+        if (Timings == null) return;
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (system >= 0) Timings[system] += now - _lapStart;
+        _lapStart = now;
+    }
+
     public void Step()
     {
         Units.SavePrevious();
@@ -400,32 +419,59 @@ public sealed class Simulation
                 _recording?.Add(Tick, c);
                 Apply(c);
             }
+        Lap(-1);
         Sandbox.Step();
+        Lap(0);
         Truces.Step();
+        Lap(1);
         Deals.Step();
+        Lap(2);
         Conditions.Step();
+        Lap(3);
         Automation.Step();
+        Lap(4);
         Economy.Step();
+        Lap(5);
         Physics.Step();
+        Lap(6);
         Hazards.Step();
+        Lap(7);
         DarkPower.Step();
+        Lap(8);
         Boats.Step();
+        Lap(9);
         Combat.Step();
+        Lap(10);
         Blood.Step();
+        Lap(11);
         Evolution.Step();
+        Lap(12);
         Monsters.Step();
+        Lap(13);
         DuskTree.Step();
+        Lap(14);
         Ruins.Step();
+        Lap(15);
         Items.Step();
+        Lap(16);
         Spells.Step();
+        Lap(17);
         Cities.Step();
+        Lap(18);
         Paths.Step(Units, Tick);
+        Lap(19);
         _movement.Step();
+        Lap(20);
         Sites.Step();
+        Lap(21);
         Ascendancy.Step();
+        Lap(22);
         Match.Step();
+        Lap(23);
         Vision.Step();
+        Lap(24);
         Events.Step();
+        Lap(25);
         Tick++;
         if (_recording != null) _recording.Ticks = Tick;
     }

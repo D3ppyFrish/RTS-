@@ -65,8 +65,32 @@ public sealed class WalkGraph
     /// <summary>Nodes on a road. While there are none, path searches can use a stronger heuristic.</summary>
     public int RoadNodes { get; private set; }
 
+    /// <summary>Bumped every time a column gains or loses its last road (see <see cref="RoadColumn"/>).</summary>
+    public int RoadVersion { get; private set; }
+
+    /// <summary>True if a unit stands on a road at some level of the column.</summary>
+    public bool RoadColumn(int column)
+    {
+        int first = column << LevelBits;
+        for (int k = 0; k < MaxLevels; k++)
+            if (_base[first + k] == OnRoad) return true;
+        return false;
+    }
+
     /// <summary>Regions whose nodes or edges changed in the last <see cref="Update"/>, in ascending order.</summary>
     public List<int> ChangedRegions { get; } = new();
+
+    /// <summary>
+    /// Columns whose nodes (levels, ground or edges) changed in the last <see cref="Update"/>, in ascending
+    /// order. A column whose blocks changed but whose nodes came out the same is not among them.
+    /// </summary>
+    public List<int> ChangedColumns { get; } = new();
+
+    /// <summary>
+    /// The columns of <see cref="ChangedColumns"/> whose levels moved (one dug out, built on, opened or
+    /// closed), in ascending order: a slot there may now be another place than it was.
+    /// </summary>
+    public List<int> MovedColumns { get; } = new();
 
     private readonly VoxelWorld _w;
     // Shared with PathService's inner loop, which reads them directly.
@@ -82,6 +106,8 @@ public sealed class WalkGraph
     private readonly bool[] _columnDirty;
     private readonly List<int> _dirtyColumns = new();
     private readonly int[] _edgeStamp;
+    private readonly List<int> _touched = new();
+    private ulong[] _was = new ulong[64];
     private readonly int[] _regionStamp;
     private int _stamp;
 
@@ -209,14 +235,14 @@ public sealed class WalkGraph
     public void Update()
     {
         ChangedRegions.Clear();
+        ChangedColumns.Clear();
+        MovedColumns.Clear();
         if (_dirtyColumns.Count == 0) return;
+        // Every column next to a changed one has its edges rebuilt. Keep what they were, to report only the
+        // columns whose levels, ground or edges really changed: most block changes (a block mined out of a
+        // solid hillside, leaves, a block set in the air) leave the walk graph as it was.
         _stamp++;
-        // Levels first, so edges are built against up-to-date neighbours.
-        foreach (int c in _dirtyColumns)
-        {
-            _columnDirty[c] = false;
-            ComputeLevels(c);
-        }
+        _touched.Clear();
         foreach (int c in _dirtyColumns)
         {
             int x = c % SizeX, z = c / SizeX;
@@ -228,13 +254,38 @@ public sealed class WalkGraph
                 int nc = nz * SizeX + nx;
                 if (_edgeStamp[nc] == _stamp) continue;
                 _edgeStamp[nc] = _stamp;
-                ComputeEdges(nc);
-                int r = Region(nx, nz);
-                if (_regionStamp[r] != _stamp)
+                _touched.Add(nc);
+            }
+        }
+        if (_was.Length < _touched.Count * MaxLevels) _was = new ulong[Math.Max(_touched.Count * MaxLevels, 2 * _was.Length)];
+        for (int k = 0; k < _touched.Count; k++)
+            for (int s = 0, first = _touched[k] << LevelBits; s < MaxLevels; s++)
+                _was[k * MaxLevels + s] = NodeKey(first + s);
+        // Levels first, so edges are built against up-to-date neighbours.
+        foreach (int c in _dirtyColumns)
+        {
+            _columnDirty[c] = false;
+            ComputeLevels(c);
+        }
+        foreach (int c in _touched) ComputeEdges(c);
+        for (int k = 0; k < _touched.Count; k++)
+        {
+            int c = _touched[k], first = c << LevelBits;
+            bool changed = false;
+            for (int s = 0; s < MaxLevels && !changed; s++) changed = _was[k * MaxLevels + s] != NodeKey(first + s);
+            if (!changed) continue;
+            ChangedColumns.Add(c);
+            for (int s = 0; s < MaxLevels; s++)
+                if ((ushort)_was[k * MaxLevels + s] != (ushort)_level[first + s])
                 {
-                    _regionStamp[r] = _stamp;
-                    ChangedRegions.Add(r);
+                    MovedColumns.Add(c);
+                    break;
                 }
+            int r = Region(c % SizeX, c / SizeX);
+            if (_regionStamp[r] != _stamp)
+            {
+                _regionStamp[r] = _stamp;
+                ChangedRegions.Add(r);
             }
         }
         // The reverse edges of a column come from the edges of the columns around it.
@@ -254,9 +305,15 @@ public sealed class WalkGraph
             }
         }
         _dirtyColumns.Clear();
+        ChangedColumns.Sort();
+        MovedColumns.Sort();
         ChangedRegions.Sort();
-        Version++;
+        if (ChangedColumns.Count > 0) Version++;
     }
+
+    // Everything about a node a path depends on: its feet level, what stepping onto it costs and its edges.
+    // The reverse edges follow from the neighbours' edges, so a change there shows as a neighbour's change.
+    private ulong NodeKey(int n) => (ulong)(ushort)_level[n] | (ulong)_ground[n] << 16 | (ulong)_edges[n] << 24;
 
     private void OnBlockChanged(int x, int y, int z)
     {
@@ -270,8 +327,14 @@ public sealed class WalkGraph
     {
         int x = column % SizeX, z = column / SizeX;
         int first = column << LevelBits;
+        bool hadRoad = false;
         for (int k = 0; k < MaxLevels; k++)
-            if (_base[first + k] == OnRoad) RoadNodes--;
+            if (_base[first + k] == OnRoad)
+            {
+                RoadNodes--;
+                hadRoad = true;
+            }
+        bool hasRoad = false;
         int s = 0;
         _gated[column] = false;
         // Scan down from the top: a level needs solid ground, passable feet and air at head height.
@@ -287,7 +350,11 @@ public sealed class WalkGraph
                 if (ground == InGate) _gated[column] = true;
                 _base[first + s] = ground;
                 _ground[first + s] = ground;
-                if (ground == OnRoad) RoadNodes++;
+                if (ground == OnRoad)
+                {
+                    RoadNodes++;
+                    hasRoad = true;
+                }
                 s++;
             }
             above = at;
@@ -300,6 +367,7 @@ public sealed class WalkGraph
             _base[first + s] = Plain;
             _edges[first + s] = 0;
         }
+        if (hadRoad != hasRoad) RoadVersion++;
     }
 
     /// <summary>Rebuilds <see cref="_into"/> for the nodes of column (x, z) from its neighbours' edges.</summary>

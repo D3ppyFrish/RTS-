@@ -42,6 +42,14 @@ public sealed class FlowField
     internal ushort[]?[]? Next;
     /// <summary>The terrain under the field changed since it was computed.</summary>
     public bool Dirty { get; internal set; }
+    /// <summary>
+    /// A change since it was computed may have opened a shorter way than the field knows, one its patch could
+    /// not vouch for (see <see cref="PathService"/>): the field is recomputed after
+    /// <see cref="PathService.DirtyRefreshInterval"/>. Changes that only lengthen or block a way are left
+    /// until a unit runs into them (<see cref="Broken"/>).
+    /// </summary>
+    internal bool Shortcut;
+
     /// <summary>A unit following the field stands outside the area it covers.</summary>
     internal bool WantsMore;
     /// <summary>A unit found the field disagreeing with the terrain on its way (a step gone or a new shortcut).</summary>
@@ -114,8 +122,37 @@ public sealed class FlowField
         return best;
     }
 
-    internal bool Touches(int region) =>
-        (Current != null && Current[region] != null) || (Next != null && Next[region] != null);
+    /// <summary>
+    /// True if the field's table (its distances, or those of the computation in progress) got as far as any
+    /// of these columns or a column next to one. Only a change there can alter the ways it knows: a node it
+    /// reached that lost or gained a step, or a new way in from one it reached. Changes beyond are left to
+    /// the search that gets to them.
+    /// </summary>
+    internal bool Reaches(ushort[]?[] table, List<int> columns)
+    {
+        foreach (int c in columns)
+        {
+            int x = c % _g.SizeX, z = c / _g.SizeX;
+            for (int oz = -1; oz <= 1; oz++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int nx = x + ox, nz = z + oz;
+                if ((uint)nx >= (uint)_g.SizeX || (uint)nz >= (uint)_g.SizeZ) continue;
+                if (Known(table, nx, nz)) return true;
+            }
+        }
+        return false;
+    }
+
+    private bool Known(ushort[]?[] table, int x, int z)
+    {
+        var block = table[(z >> RegionShift) * _g.RegionsX + (x >> RegionShift)];
+        if (block == null) return false;
+        int first = Local(x, z, 0);
+        for (int s = 0; s < WalkGraph.MaxLevels; s++)
+            if (block[first + s] != Unknown) return true;
+        return false;
+    }
 
     internal int Get(ushort[]?[] table, int x, int z, int slot)
     {
@@ -168,8 +205,9 @@ public sealed class PathService
     /// <summary>Fewest ticks between two recomputations of the same field.</summary>
     public const int RecomputeInterval = 10;
     /// <summary>
-    /// Ticks after which a field whose terrain changed is recomputed even if no unit has run into the change
-    /// (picks up new shortcuts). Changes on a unit's way are handled sooner, see <see cref="FlowField.Broken"/>.
+    /// Ticks after which a field whose terrain changed in a way its patch could not vouch for (see Repair) is
+    /// recomputed even if no unit has run into the change, to pick up new shortcuts. Changes on a unit's way
+    /// are handled sooner, see <see cref="FlowField.Broken"/>.
     /// </summary>
     public const int DirtyRefreshInterval = 100;
     /// <summary>How far (tenths of a block) the search continues past the farthest unit following the field.</summary>
@@ -216,8 +254,13 @@ public sealed class PathService
     private int _cur, _pending, _stopAt, _wantedLeft;
     // The box around the units following the field, which the search heads for.
     private int _boxMinX, _boxMaxX, _boxMinZ, _boxMaxZ;
-    // 1 halves the heuristic, which keeps it a lower bound where roads halve step costs.
-    private int _heuristicShift;
+    // Per column: how far (tenths of a block, octile) it is to the nearest road, or NoRoad. The heuristic
+    // counts the way off the roads at full cost and only the rest at half (see ToBox), and a step onto a road
+    // costs half only where this says 0. A computation keeps the one it started with: when roads come or go
+    // it is worked out again and a computation in progress starts over.
+    private readonly ushort[] _roadDist;
+    private int _roadVersion = -1;
+    private const ushort NoRoad = ushort.MaxValue;
 
     public PathService(WalkGraph graph)
     {
@@ -228,6 +271,8 @@ public sealed class PathService
         _wantStamp = new int[graph.NodeCount];
         _wantRegion = new int[graph.RegionsX * graph.RegionsZ];
         _pocketStamp = new int[graph.NodeCount];
+        _rStamp = new int[graph.SizeX * graph.SizeZ];
+        _roadDist = new ushort[graph.SizeX * graph.SizeZ];
     }
 
     public int FieldCount => _byId.Count;
@@ -268,12 +313,36 @@ public sealed class PathService
     /// </summary>
     public void Step(UnitStore units, long tick)
     {
-        // Terrain changes mark the fields they touch for recomputation. A computation in progress keeps
-        // going (restarting it on every dig nearby could starve it) and is redone afterwards.
+        // Terrain changes where a field reaches mark it dirty and patch it (see Repair); one the patch cannot
+        // vouch for, which may have a new shorter way, is recomputed. A computation in progress keeps going
+        // (restarting it on every dig nearby could starve it) and is redone afterwards.
         _g.Update();
-        foreach (int r in _g.ChangedRegions)
+        if (_g.RoadVersion != _roadVersion)
+        {
+            // Roads came or went: work out the heuristic again, and start a computation in progress over
+            // with it (a computation must keep the heuristic it started with).
+            if (_computing is { } busy)
+            {
+                Abort();
+                busy.StartedTick = LongAgo;
+                busy.Dirty = busy.Shortcut = true;
+            }
+            UpdateRoads();
+        }
+        if (_g.ChangedColumns.Count > 0)
             foreach (var f in _byId.Values)
-                if (f.Touches(r)) f.Dirty = true;
+            {
+                if (f.Shortcut) continue; // due for a recomputation already
+                // A computation in progress keeps going and is redone afterwards.
+                if (f.Next != null && f.Reaches(f.Next, _g.ChangedColumns))
+                {
+                    f.Dirty = f.Shortcut = true;
+                    continue;
+                }
+                if (f.Current == null || !f.Reaches(f.Current, _g.ChangedColumns)) continue;
+                f.Dirty = true;
+                if (!Repair(f)) f.Shortcut = true;
+            }
 
         foreach (var f in _byId.Values) f.Users = 0;
         for (int i = 0; i < units.Count; i++)
@@ -305,7 +374,7 @@ public sealed class PathService
             if (!f.Ready) return f;
             long age = tick - f.StartedTick;
             if (age < RecomputeInterval) continue;
-            bool stale = (f.Dirty && (f.Broken || age >= DirtyRefreshInterval)) || (f.WantsMore && !f.Complete);
+            bool stale = (f.Dirty && (f.Broken || (f.Shortcut && age >= DirtyRefreshInterval))) || (f.WantsMore && !f.Complete);
             if (!stale) continue;
             if (best == null || f.StartedTick < best.StartedTick) best = f;
         }
@@ -339,12 +408,10 @@ public sealed class PathService
         _computing = f;
         f.Next = new ushort[]?[_g.RegionsX * _g.RegionsZ];
         f.Dirty = false;
+        f.Shortcut = false;
         f.WantsMore = false;
         f.Broken = false;
         f.StartedTick = tick;
-        // With roads on the map a step can cost half as much, so the heuristic must assume roads everywhere.
-        // A computation keeps the choice it starts with; roads laid meanwhile count from the next one.
-        _heuristicShift = _g.RoadNodes > 0 ? 1 : 0;
         Array.Clear(_bucketCount);
         _cur = 0;
         _pending = 0;
@@ -404,15 +471,76 @@ public sealed class PathService
     }
 
     /// <summary>
-    /// A lower bound on the path cost from column (x, z) to the nearest unit in the box. It never drops by
-    /// more than a step costs, which keeps the queue order exact (a consistent heuristic). Halved while
-    /// roads exist, since a road step costs half.
+    /// A lower bound on the path cost from column (x, z) to the nearest unit in the box, O being the octile
+    /// distance there and R the distance to the nearest road less a diagonal step (see <see cref="_roadDist"/>):
+    /// (O + min(O, R)) / 2. A way that keeps off the roads costs at least O; one that takes a road walks at
+    /// least R at full cost to get onto it, and all of it at least half. Neither O nor R changes by more than
+    /// a step's length a step, and a step onto a road (half cost) is from where R is 0, so the bound never
+    /// drops by more than the step costs: the queue order stays exact (a consistent heuristic). With no
+    /// roads anywhere it is O.
     /// </summary>
     private int ToBox(int x, int z)
     {
         int dx = x < _boxMinX ? _boxMinX - x : x > _boxMaxX ? x - _boxMaxX : 0;
         int dz = z < _boxMinZ ? _boxMinZ - z : z > _boxMaxZ ? z - _boxMaxZ : 0;
-        return (dx > dz ? 10 * dx + 4 * dz : 10 * dz + 4 * dx) >> _heuristicShift;
+        int o = dx > dz ? 10 * dx + 4 * dz : 10 * dz + 4 * dx;
+        // Less a diagonal step: the last step onto a road costs half, so it does not count at full.
+        int r = _roadDist[z * _g.SizeX + x] - 14;
+        return (o + (r < 0 ? 0 : r < o ? r : o)) >> 1;
+    }
+
+    /// <summary>The step costs onto node m: a road counts at half only once <see cref="_roadDist"/> knows it.</summary>
+    private int[] StepCostOnto(int m)
+    {
+        int kind = _g._ground[m];
+        return WalkGraph.StepCost[kind == WalkGraph.OnRoad && _roadDist[m >> WalkGraph.LevelBits] != 0 ? WalkGraph.Plain : kind];
+    }
+
+    /// <summary>
+    /// Works out <see cref="_roadDist"/> again if roads came or went since: a two-pass distance transform
+    /// over the columns, with straight steps 10 and diagonal ones 14 (the octile distance exactly).
+    /// </summary>
+    private void UpdateRoads()
+    {
+        if (_g.RoadVersion == _roadVersion) return;
+        _roadVersion = _g.RoadVersion;
+        int sx = _g.SizeX, sz = _g.SizeZ;
+        var d = _roadDist;
+        if (_g.RoadNodes == 0)
+        {
+            Array.Fill(d, NoRoad);
+            return;
+        }
+        const int Far = NoRoad - 100;
+        for (int c = 0; c < d.Length; c++) d[c] = _g.RoadColumn(c) ? (ushort)0 : (ushort)Far;
+        for (int z = 0; z < sz; z++)
+            for (int x = 0, c = z * sx; x < sx; x++, c++)
+            {
+                int v = d[c];
+                if (v == 0) continue;
+                if (x > 0) v = Math.Min(v, d[c - 1] + 10);
+                if (z > 0)
+                {
+                    v = Math.Min(v, d[c - sx] + 10);
+                    if (x > 0) v = Math.Min(v, d[c - sx - 1] + 14);
+                    if (x < sx - 1) v = Math.Min(v, d[c - sx + 1] + 14);
+                }
+                d[c] = (ushort)Math.Min(v, Far);
+            }
+        for (int z = sz - 1; z >= 0; z--)
+            for (int x = sx - 1, c = z * sx + x; x >= 0; x--, c--)
+            {
+                int v = d[c];
+                if (v == 0) continue;
+                if (x < sx - 1) v = Math.Min(v, d[c + 1] + 10);
+                if (z < sz - 1)
+                {
+                    v = Math.Min(v, d[c + sx] + 10);
+                    if (x < sx - 1) v = Math.Min(v, d[c + sx + 1] + 14);
+                    if (x > 0) v = Math.Min(v, d[c + sx - 1] + 14);
+                }
+                d[c] = (ushort)Math.Min(v, Far);
+            }
     }
 
     /// <summary>Runs the current computation for up to <paramref name="budget"/> settled nodes; returns the work done.</summary>
@@ -422,7 +550,6 @@ public sealed class PathService
         var next = f.Next!;
         int sizeX = _g.SizeX, sizeZ = _g.SizeZ, regionsX = _g.RegionsX;
         var intoEdges = _g._into;
-        var ground = _g._ground;
         var gated = _g._gated;
         var wantStamp = _wantStamp;
         var wantRegion = _wantRegion;
@@ -466,9 +593,8 @@ public sealed class PathService
                 wantStamp[m] = 0;
                 if (--_wantedLeft == 0) _stopAt = _cur + Margin;
             }
-            // The cost of stepping onto m. Roads count only if the heuristic allows for them (see Start).
-            int kind = ground[m];
-            var stepCost = WalkGraph.StepCost[kind == WalkGraph.OnRoad && _heuristicShift == 0 ? WalkGraph.Plain : kind];
+            // The cost of stepping onto m. Roads count only once the heuristic allows for them (see ToBox).
+            var stepCost = StepCostOnto(m);
 
             // Relax every node that steps onto m, in direction order then slot order: the reverse edges
             // list them, so columns with no step onto m are not looked at.
@@ -562,6 +688,185 @@ public sealed class PathService
             if (--_wantedLeft == 0) _stopAt = _cur + Margin;
         }
         return _pocket.Count;
+    }
+
+    /// <summary>Most nodes a <see cref="Repair"/> looks at; a bigger change is left to a recomputation.</summary>
+    private const int RepairNodes = 4096;
+    /// <summary>Most passes a <see cref="Repair"/> makes over its nodes before leaving it to a recomputation.</summary>
+    private const int RepairPasses = 32;
+
+    // Repair's nodes: the node, what the field held for it (Unknown for a slot whose level moved), its new
+    // estimate, and whether its slot is another place than it was.
+    private readonly List<int> _rNode = new();
+    private readonly List<int> _rOld = new();
+    private readonly List<int> _rNew = new();
+    private readonly List<bool> _rMoved = new();
+    private readonly Dictionary<int, int> _rIndex = new(); // node -> index above (looked up, never iterated)
+    private readonly int[] _rStamp;
+    private int _rId;
+
+    /// <summary>
+    /// The walk graph changed where field <paramref name="f"/> reaches (<see cref="WalkGraph.ChangedColumns"/>):
+    /// patches its distances instead of searching again. The nodes in and next to the changed columns get
+    /// their best distance through each other and through the field's distances around them. Nodes whose
+    /// levels moved (a column dug out or built on) take that distance; nodes it brings nearer the goal than
+    /// the field said (a gap knocked in a wall, a pit with a way out again) take it too and pass it on to
+    /// the nodes that step onto them (<see cref="Spread"/>). Any shorter way the change opened shows up as
+    /// such a node: a way through the change that is shorter than the field knew must leave it, onto ground
+    /// it did not change, from a node around it that the change brought nearer.
+    ///
+    /// A way the change lengthened or blocked is left as it was: the units that come to it find their step
+    /// gone and have the field recomputed (<see cref="FlowField.Broken"/>). Ground the search never reached
+    /// is left to the search. Returns false when the patch cannot vouch for the field: a field that covered
+    /// everything reachable (the change may let more in), the goal itself moved, a change too big or a
+    /// shortcut that reaches too far to patch. The field is then recomputed after
+    /// <see cref="DirtyRefreshInterval"/>.
+    /// </summary>
+    private bool Repair(FlowField f)
+    {
+        if (f.Complete) return false; // it says what cannot get there: any change may let more in
+        var table = f.Current!;
+        int sizeX = _g.SizeX, sizeZ = _g.SizeZ;
+        _rNode.Clear();
+        _rOld.Clear();
+        _rNew.Clear();
+        _rMoved.Clear();
+        _rIndex.Clear();
+        _rId++;
+        int goalColumn = f.GoalZ * sizeX + f.GoalX;
+        foreach (int c in _g.ChangedColumns)
+        {
+            int x = c % sizeX, z = c / sizeX;
+            for (int oz = -1; oz <= 1; oz++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int nx = x + ox, nz = z + oz;
+                if ((uint)nx >= (uint)sizeX || (uint)nz >= (uint)sizeZ) continue;
+                int nc = nz * sizeX + nx;
+                if (_rStamp[nc] == _rId) continue;
+                _rStamp[nc] = _rId;
+                bool moved = _g.MovedColumns.BinarySearch(nc) >= 0;
+                if (moved && nc == goalColumn) return false; // the goal itself moved
+                for (int s = 0; s < WalkGraph.MaxLevels; s++)
+                {
+                    int n = (nc << WalkGraph.LevelBits) | s;
+                    if (_g._level[n] < 0)
+                    {
+                        // A level that is gone keeps no distance.
+                        if (moved && f.Get(table, nx, nz, s) != FlowField.Unknown) f.Set(table, nx, nz, s, FlowField.Unknown, _pool);
+                        continue;
+                    }
+                    int old = moved ? FlowField.Unknown : f.Get(table, nx, nz, s);
+                    _rIndex[n] = _rNode.Count;
+                    _rNode.Add(n);
+                    _rOld.Add(old);
+                    _rNew.Add(old < FlowField.Unreachable ? old : int.MaxValue);
+                    _rMoved.Add(moved);
+                }
+            }
+            if (_rNode.Count > RepairNodes) return false;
+        }
+
+        var gated = _g._gated;
+        bool settled = false;
+        for (int pass = 0; pass < RepairPasses && !settled; pass++)
+        {
+            settled = true;
+            for (int k = 0; k < _rNode.Count; k++)
+            {
+                int n = _rNode[k];
+                int col = n >> WalkGraph.LevelBits, x = col % sizeX, z = col / sizeX;
+                // The same steps the search allows (see Continue): none out of another player's gate, and no
+                // corner cut past one.
+                if (gated[col] && !GateLets(f, x, z)) continue;
+                int best = _rNew[k];
+                for (int d = 0; d < 8; d++)
+                {
+                    int m = _g.Step(n, d);
+                    if (m < 0) continue;
+                    int mx = x + DirX[d], mz = z + DirZ[d];
+                    if (d >= 4 && ((gated[z * sizeX + mx] && !GateLets(f, mx, z)) || (gated[mz * sizeX + x] && !GateLets(f, x, mz))))
+                        continue;
+                    int dm = _rIndex.TryGetValue(m, out int mi) ? _rNew[mi] : f.Get(table, mx, mz, m & (WalkGraph.MaxLevels - 1));
+                    if (dm >= FlowField.Unreachable) continue;
+                    int nd = dm + StepCostOnto(m)[d];
+                    if (nd < best) best = nd;
+                }
+                if (best < _rNew[k])
+                {
+                    _rNew[k] = best;
+                    settled = false;
+                }
+            }
+        }
+        if (!settled) return false;
+
+        // Write what changed: moved nodes take the distance their neighbours give them, and nodes the change
+        // brought nearer the goal (or connected again, out of a pit) take their new distance and pass it on.
+        _rQueue.Clear();
+        for (int k = 0; k < _rNode.Count; k++)
+        {
+            int old = _rOld[k], now = _rNew[k];
+            // A node the search had not reached is left to it; others only change if they came nearer.
+            if (!_rMoved[k] && (old == FlowField.Unknown || now >= old)) continue;
+            int n = _rNode[k];
+            int col = n >> WalkGraph.LevelBits, x = col % sizeX, z = col / sizeX, slot = n & (WalkGraph.MaxLevels - 1);
+            int v = now >= FlowField.Unreachable ? FlowField.Unknown : now;
+            if (v != FlowField.Unknown || f.Get(table, x, z, slot) != FlowField.Unknown) f.Set(table, x, z, slot, v, _pool);
+            if (v != FlowField.Unknown) _rQueue.Enqueue(n);
+        }
+        return Spread(f, table);
+    }
+
+    /// <summary>Most distances a <see cref="Spread"/> lowers before leaving the rest to a recomputation.</summary>
+    private const int SpreadLimit = 20_000;
+    private readonly Queue<int> _rQueue = new();
+
+    /// <summary>
+    /// Passes lowered distances on from the queued nodes to every node the field reached that steps onto them
+    /// and is now nearer the goal through them, as the search would have. Returns false if that came to more
+    /// than <see cref="SpreadLimit"/> nodes: the field holds a mix of old and new distances, every one still a
+    /// way to the goal, until it is recomputed.
+    /// </summary>
+    private bool Spread(FlowField f, ushort[]?[] table)
+    {
+        int sizeX = _g.SizeX;
+        var intoEdges = _g._into;
+        var gated = _g._gated;
+        int work = 0;
+        while (_rQueue.Count > 0)
+        {
+            if (++work > SpreadLimit)
+            {
+                _rQueue.Clear();
+                return false;
+            }
+            int m = _rQueue.Dequeue();
+            int col = m >> WalkGraph.LevelBits, x = col % sizeX, z = col / sizeX;
+            int dist = f.Get(table, x, z, m & (WalkGraph.MaxLevels - 1));
+            var stepCost = StepCostOnto(m);
+            uint into = intoEdges[m];
+            while (into != 0)
+            {
+                int d = BitOperations.TrailingZeroCount(into) >> 2;
+                uint ofDir = into & (0xFu << (4 * d));
+                into &= ~ofDir;
+                int px = x - DirX[d], pz = z - DirZ[d];
+                if (gated[pz * sizeX + px] && !GateLets(f, px, pz)) continue;
+                if (d >= 4 && ((gated[pz * sizeX + x] && !GateLets(f, x, pz)) || (gated[z * sizeX + px] && !GateLets(f, px, z))))
+                    continue;
+                int nd = dist + stepCost[d];
+                for (uint slots = ofDir >> (4 * d); slots != 0; slots &= slots - 1)
+                {
+                    int sl = BitOperations.TrailingZeroCount(slots);
+                    int dp = f.Get(table, px, pz, sl);
+                    if (dp >= FlowField.Unreachable || nd >= dp) continue; // not reached, or no nearer this way
+                    f.Set(table, px, pz, sl, nd, _pool);
+                    _rQueue.Enqueue(((pz * sizeX + px) << WalkGraph.LevelBits) | sl);
+                }
+            }
+        }
+        return true;
     }
 
     private int Distance(ushort[]?[] table, int node)

@@ -23,6 +23,8 @@ using Rts.Sim.Replay;
 //     --fog               with --ai: play with fog of war
 //     --dominion          with --ai: play with dominion (holding most of the ancient sites for 3 minutes wins)
 //     --awakening         with --ai: play with the Awakening (the dark power wakes from 45 minutes and sends broods)
+//     --daynight          with --ai: play with day, night and weather
+//     --profile           with --ai: print where the time went, by system, each 5 game minutes and at the end
 //     --story             with --ai: print what each computer player from Easy up decided, as it decides
 //                         it (its journal; Hard's says the most)
 //     --trace             with --ai: print every minute what each player has (workers, soldiers and their
@@ -53,7 +55,7 @@ foreach (var a in args)
 string Opt(string key, string fallback) => opts.TryGetValue(key, out var v) ? v : fallback;
 var ci = CultureInfo.InvariantCulture;
 
-var told = new List<int>();
+List<int> told = new();
 // --trace: one line a minute for each player still in the match.
 void Trace(Simulation sim, IReadOnlyList<AiPlayer> players)
 {
@@ -113,6 +115,51 @@ void Trace(Simulation sim, IReadOnlyList<AiPlayer> players)
     }
 }
 
+// --profile: time spent in each system of the tick (Simulation.Timings); the rest of the wall time is the
+// computer players' thinking and the commands they gave.
+long[]? lastTimings = null;
+long profileWall = 0, profileStart = 0, lastExpansions = 0;
+Simulation? profiled = null;
+void Profile(Simulation sim, IReadOnlyList<AiPlayer> players, bool end = false)
+{
+    long now = Stopwatch.GetTimestamp();
+    if (sim.Timings == null) { sim.Timings = new long[Simulation.StepNames.Length]; profileStart = now; profiled = sim; return; }
+    if (!end && sim.Tick % (5 * 60 * Simulation.TicksPerSecond) != 0) return;
+    long wall = now - profileStart;
+    long[] t = sim.Timings;
+    if (end) { lastTimings = null; profileWall = 0; lastExpansions = 0; }
+    var last = lastTimings ?? new long[t.Length];
+    long sum = 0, span = wall - profileWall;
+    for (int i = 0; i < t.Length; i++) sum += t[i] - last[i];
+    double Ms(long x) => x * 1000.0 / Stopwatch.Frequency;
+    var order = new List<int>();
+    for (int i = 0; i < t.Length; i++) order.Add(i);
+    order.Sort((a, b) => (t[b] - last[b]).CompareTo(t[a] - last[a]));
+    var parts = new List<string>();
+    foreach (int i in order.GetRange(0, 6)) parts.Add(string.Create(ci, $"{Simulation.StepNames[i]} {Ms(t[i] - last[i]):F0}"));
+    int alive = 0;
+    for (int i = 0; i < sim.Units.Count; i++) if (sim.Units.Hp[i] > 0) alive++;
+    long exp = sim.Paths.Expansions - lastExpansions;
+    lastExpansions = sim.Paths.Expansions;
+    string when = end ? "total" : $"{sim.Tick / (60 * Simulation.TicksPerSecond),3}m";
+    Console.WriteLine(string.Create(ci,
+        $"{when} units {alive,5}: {Ms(span),7:F0} ms (sim {Ms(sum):F0}, AI and commands {Ms(span - sum):F0}) paths {exp / 1000}k nodes, {sim.Paths.FieldCount} fields | {string.Join(", ", parts)}"));
+    if (end)
+    {
+        var all = new List<string>();
+        foreach (int i in order) if (t[i] > 0) all.Add(string.Create(ci, $"{Simulation.StepNames[i]} {Ms(t[i]):F0}"));
+        Console.WriteLine("  by system (ms): " + string.Join(", ", all));
+        return;
+    }
+    profileWall = wall;
+    lastTimings = (long[])t.Clone();
+}
+void Watch(Simulation sim, IReadOnlyList<AiPlayer> players)
+{
+    if (opts.ContainsKey("profile")) Profile(sim, players);
+    if (opts.ContainsKey("trace") || opts.ContainsKey("story")) Trace(sim, players);
+}
+
 try
 {
     int runs = int.Parse(Opt("runs", "2"), ci);
@@ -152,8 +199,10 @@ try
                     throw new ArgumentException($"--factions: unknown faction '{id}'");
         var result = AiMatch.Play(ulong.Parse(Opt("seed", "1234"), ci),
             int.Parse(size[0], ci), int.Parse(size[1], ci), int.Parse(size[2], ci), ticks, levels: levels, fog: opts.ContainsKey("fog"),
-            watch: opts.ContainsKey("trace") || opts.ContainsKey("story") ? Trace : null, dominion: opts.ContainsKey("dominion"),
+            watch: opts.ContainsKey("trace") || opts.ContainsKey("story") || opts.ContainsKey("profile") ? Watch : null,
+            dayNight: opts.ContainsKey("daynight"), dominion: opts.ContainsKey("dominion"),
             awakening: opts.ContainsKey("awakening"), factions: factions);
+        if (profiled != null) Profile(profiled, Array.Empty<AiPlayer>(), end: true);
         log = result.Log;
         aiWinner = result.Winner;
         aiEnd = result.EndTick;
