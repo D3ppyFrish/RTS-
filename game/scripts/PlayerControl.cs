@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Fell, Prospect, Stampede, Gaze, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Fell, Prospect, Kindle, Stampede, Gaze, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -260,7 +260,7 @@ public partial class PlayerControl : Node
                         case ToolMode.Dig:
                             DigStart(mb.Position);
                             return;
-                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Stampede:
+                        case ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede:
                             WallStart(mb.Position);
                             return;
                         case ToolMode.Gaze:
@@ -282,7 +282,7 @@ public partial class PlayerControl : Node
                     _mousePos = mb.Position;
                     DigEnd(mb.ShiftPressed);
                 }
-                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Stampede && _wallDragging)
+                else if (Tool is ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede && _wallDragging)
                 {
                     _mousePos = mb.Position;
                     WallEnd(mb.ShiftPressed);
@@ -407,6 +407,7 @@ public partial class PlayerControl : Node
                 SetTool(Tool == ToolMode.Terrain ? ToolMode.Select : ToolMode.Terrain);
                 break;
             case Key.X when key.CtrlPressed: ToggleFell(); break;
+            case Key.I when key.CtrlPressed: ToggleKindle(); break;
             case Key.X when key.ShiftPressed: ToggleRamp(); break;
             case Key.X:
                 SetTool(Tool == ToolMode.Tunnel ? ToolMode.Select : ToolMode.Tunnel);
@@ -1150,7 +1151,7 @@ public partial class PlayerControl : Node
 
     private void SetTool(ToolMode tool)
     {
-        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Stampede)) _wallDragging = false;
+        if (tool != Tool || tool is not (ToolMode.Wall or ToolMode.Bridge or ToolMode.Ramp or ToolMode.Ladder or ToolMode.Dam or ToolMode.EarthWall or ToolMode.IceBridge or ToolMode.Chasm or ToolMode.GrowForest or ToolMode.Fell or ToolMode.Prospect or ToolMode.Kindle or ToolMode.Stampede)) _wallDragging = false;
         Tool = tool;
         if (tool != ToolMode.Build) BuildDef = null;
         if (tool != ToolMode.Road) _roadStarted = false;
@@ -1987,6 +1988,31 @@ public partial class PlayerControl : Node
     /// <summary>The Sound for ore button and key (Ctrl+Z): click a spot for the selected foremen to sound the ground there.</summary>
     public void ToggleProspect() => SetTool(Tool == ToolMode.Prospect ? ToolMode.Select : ToolMode.Prospect);
 
+    /// <summary>The Set fire button and key (Ctrl+I): click a tree for the selected workers and soldiers to set it alight.</summary>
+    public void ToggleKindle() => SetTool(Tool == ToolMode.Kindle ? ToolMode.Select : ToolMode.Kindle);
+
+    /// <summary>The selected units of yours that can set a tree alight (see <see cref="KindleCommand"/>).</summary>
+    public List<int> OwnKindlers()
+    {
+        var list = new List<int>();
+        foreach (int id in OwnSelected())
+            if (_sim.Economy.CanKindle(_sim.Units.IndexOf(id))) list.Add(id);
+        return list;
+    }
+
+    /// <summary>The tree the set-fire tool would set alight (its trunk's column), or (-1, -1) if there is none under the cursor.</summary>
+    public (int X, int Z) KindleTree { get; private set; } = (-1, -1);
+
+    /// <summary>Marks the trunk of the tree under the cursor that the selected units would set alight.</summary>
+    private void UpdateKindlePreview()
+    {
+        KindleTree = (-1, -1);
+        if (!GroundUnder(_mousePos, out int cx, out _, out int cz) || !_sim.Economy.FindTree(cx, cz, out int tx, out int baseY, out int tz)) return;
+        KindleTree = (tx, tz);
+        var (_, top) = Harvest.Span(World, tx, baseY, tz);
+        for (int y = baseY; y <= top; y++) _wallPreview.Add((tx, y, tz, _sim.Fire.CanKindle));
+    }
+
     /// <summary>The selected units of yours that can fell a tree the way you choose (see <see cref="FellCommand"/>).</summary>
     public List<int> OwnFellers()
     {
@@ -2008,6 +2034,20 @@ public partial class PlayerControl : Node
     /// <summary>Your units doing this job (for the status line).</summary>
     /// <summary>Your finished buildings that have lost hit points.</summary>
     private int OwnDamaged() => _sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Damaged);
+
+    /// <summary>Charred stumps on the map (for the screenshot checks).</summary>
+    private int CharredNear()
+    {
+        int n = 0;
+        var w = World;
+        for (int z = 0; z < w.SizeZ; z++)
+        for (int x = 0; x < w.SizeX; x++)
+        {
+            int y = w.SurfaceHeight(x, z);
+            if (y >= 0 && w.Get(x, y, z) == BlockType.CharredWood) n++;
+        }
+        return n;
+    }
 
     private int Jobs(UnitJob job)
     {
@@ -2141,6 +2181,8 @@ public partial class PlayerControl : Node
             }
             else if (Tool == ToolMode.Prospect)
                 _sim.Schedule(_sim.Tick, new ProspectCommand(LocalPlayer, OwnProspectors().ToArray(), x2, z2));
+            else if (Tool == ToolMode.Kindle)
+                _sim.Schedule(_sim.Tick, new KindleCommand(LocalPlayer, OwnKindlers().ToArray(), x2, z2));
             else if (Tool == ToolMode.Stampede)
             {
                 if (SelectedPen() is { } pen) _sim.Schedule(_sim.Tick, new StampedeCommand(LocalPlayer, pen.Id, _wallX, _wallZ, x2, z2));
@@ -2188,6 +2230,11 @@ public partial class PlayerControl : Node
         if (Tool == ToolMode.Prospect)
         {
             UpdateProspectPreview();
+            return;
+        }
+        if (Tool == ToolMode.Kindle)
+        {
+            UpdateKindlePreview();
             return;
         }
         if (Tool == ToolMode.Stampede)
@@ -2733,6 +2780,8 @@ public partial class PlayerControl : Node
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"fellers={OwnFellers().Count} prospectors={OwnProspectors().Count} soundings={_sim.Economy.Soundings(LocalPlayer)} " +
                $"prospected={_sim.Economy.ProspectedOre(LocalPlayer).Count} felling={Jobs(UnitJob.Fell)} prospecting={Jobs(UnitJob.Prospect)} " +
+               $"kindlers={OwnKindlers().Count} kindling={Jobs(UnitJob.Kindle)} burning={_sim.Fire.Count} burnt={_sim.Fire.BurntOut} " +
+               $"charred={CharredNear()} " +
                $"falling_trees={_sim.Physics.FallingTrees.Count} aimed_felled={_sim.Physics.AimedLanded} tree_crushed={_sim.Physics.TreeCrushed} " +
                $"auto={auto} auto_all={(_sim.Economy.AutoWorkers(LocalPlayer) ? 1 : 0)} repeat={(sel?.Repeat == true ? 1 : 0)} stance={stance} shield_wall={walled} " +
                $"rebuild={(_sim.Economy.Rebuilds(LocalPlayer) ? 1 : 0)} ruins={OwnRuins()} " +

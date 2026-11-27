@@ -31,6 +31,9 @@ namespace Rts.Sim.World;
 /// The walk graph counts every hazard as dear ground (see <see cref="WalkGraph"/>), so units on a move order
 /// walk around them where there is another way. A player's unit killed by the ground alone is reported
 /// (<see cref="GameEventKind.UnitLostToHazard"/>). The numbers are first guesses for playtesting.
+///
+/// Forest fires burn here too (see <see cref="FireSystem"/>, stepped first): a unit beside a burning tree loses
+/// <see cref="FireSystem.HeatDamage"/> a second the same way.
 /// </summary>
 public sealed class HazardSystem
 {
@@ -69,7 +72,7 @@ public sealed class HazardSystem
     }
 
     /// <summary>Hit points a second a unit with its feet at block (x, y, z) loses to the ground around it.</summary>
-    public int DamageAt(int x, int y, int z) => DamageAt(_sim.World, x, y, z);
+    public int DamageAt(int x, int y, int z) => DamageAt(_sim.World, x, y, z) + _sim.Fire.HeatAt(x, y, z);
 
     /// <summary>Hit points a second a unit with its feet at block (x, y, z) of world <paramref name="w"/> loses to the ground around it.</summary>
     public static int DamageAt(VoxelWorld w, int x, int y, int z) => DamageAt(w, x, y, z, lava: true);
@@ -102,6 +105,7 @@ public sealed class HazardSystem
     /// <summary>Before the fighting: sinkholes give way and rocks fall on whoever stands on them, then the units whose second it is take what the ground does to them.</summary>
     public void Step()
     {
+        _sim.Fire.Step();
         var u = _sim.Units;
         var w = _sim.World;
         long tick = _sim.Tick;
@@ -118,7 +122,7 @@ public sealed class HazardSystem
         {
             if ((tick + u.Id[i]) % tps != 0 || u.Hp[i] <= 0) continue;
             int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt(), y = u.Y[i];
-            int damage = DamageAt(w, x, y, z, lava: !_sim.Content.Units[u.Def[i]].CaveWise);
+            int damage = DamageAt(w, x, y, z, lava: !_sim.Content.Units[u.Def[i]].CaveWise) + _sim.Fire.HeatAt(x, y, z);
             if (damage <= 0) continue;
             _sim.Combat.Crush(i, damage);
             if (damage >= u.Hp[i]) Report(i, x, y, z);

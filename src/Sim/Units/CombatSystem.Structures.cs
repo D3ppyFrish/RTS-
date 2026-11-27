@@ -91,6 +91,16 @@ public sealed partial class CombatSystem
         HitBuildingFrom(b, damage, Fix64.FromInt(x) + Fix64.Half, Fix64.FromInt(z) + Fix64.Half, by, undermine: false);
     }
 
+    /// <summary>
+    /// A forest fire beside the building (see <see cref="World.FireSystem"/>) scorches it: it takes
+    /// <paramref name="damage"/> as from a blow at its middle, by player <paramref name="by"/> (-1 for no one).
+    /// </summary>
+    internal void Scorch(Building b, int damage, int by)
+    {
+        if (damage <= 0 || b.State == BuildingState.Planned) return;
+        HitBuildingFrom(b, damage, Fix64.FromInt(b.X + b.MaxX + 1) / 2, Fix64.FromInt(b.Z + b.MaxZ + 1) / 2, by, undermine: false);
+    }
+
     /// <summary><see cref="HitBuilding"/>, the blow coming from point (x, z) and player <paramref name="by"/>.</summary>
     private void HitBuildingFrom(Building b, int damage, Fix64 x, Fix64 z, int by, bool undermine, bool blast = false)
     {

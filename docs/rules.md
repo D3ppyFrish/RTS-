@@ -935,7 +935,7 @@ Orc units earn none.
   | From | Forms |
   | --- | --- |
   | Worker | foreman (works half as fast again), militia (line infantry, slower than a spearman; it stops working) |
-  | Spearman | knight (heavy infantry, 130 hit points and 12 damage, slow), pathfinder (speed 6, sight 14, +50% from casters), battle priest (heals the most hurt ally within 5 blocks by 4 every 2 seconds), siege engineer (siege: fire pots from 7 blocks that hit buildings at full damage, slow); at a cleared wolf den only, the Wolfheart (see [Cleared dens](#cleared-dens)) |
+  | Spearman | knight (heavy infantry, 130 hit points and 12 damage, slow), pathfinder (speed 6, sight 14, +50% from casters), battle priest (heals the most hurt ally within 5 blocks by 4 every 2 seconds), siege engineer (siege: fire pots from 7 blocks that hit buildings at full damage and set trees alight, slow); at a cleared wolf den only, the Wolfheart (see [Cleared dens](#cleared-dens)) |
   | Archer | longbowman (range 12, slower), ranger (speed 5.5, sight 13, +50% from line infantry) |
   | Rider | lancer (18 damage), outrider (speed 10, sight 14, +50% from ranged) |
   | Sapper | tunneller (digs tunnels twice as fast), demolisher (9 damage, slower) |
@@ -1734,6 +1734,39 @@ hurts the units on or near it.
   stand, has any (`HazardSystem.HazardNear`), and Hard digs no quarry within a lava's heat.
 - **Alert**: a unit of yours killed by the ground alone raises an alert, "Your worker died in the poison
   bog", "was dragged under by quicksand", "burned beside the lava", "fell into a sinkhole", "was crushed by falling rocks" or "drowned in a flood" (`GameEventKind.UnitLostToHazard`).
+
+## Forest fires
+
+`src/Sim/World/FireSystem.cs` (stepped with the hazards; tests in `FireTests`): trees burn, and in dry weather a
+fire runs through a forest. All the numbers are first guesses for playtesting.
+
+- **Lighting a fire.** Select workers or soldiers (not machines, boats, carts or caravans) and click a tree with the
+  set-fire tool (`KindleCommand`, Ctrl+I): one walks to it, works at it 3 seconds, and its trunk catches a block up
+  from its foot. Nobody can light a fire in rain or a storm; a unit that gets there as the rain comes gives up. The
+  **siege engineer's fire pots** (`ignites` in `data/units.json`) set alight every block of tree within a block of
+  where they land, so shelling an army in a wood sets the wood burning. The dusk tree and giant mushrooms do not burn.
+- **Burning.** A block of leaves burns 6 seconds and a block of trunk 10, then it is gone, but for the foot of each
+  trunk, which is left a **charred stump** (`BlockType.CharredWood`, black). Workers dig a stump for 2 coal
+  (charcoal), so a burnt forest is a coal field.
+- **Spreading.** Once a second every burning block sets alight each block of tree within a column of it (a level below
+  to two above) with a chance of 30% for leaves and 15% for trunk, the trunk over or under a burning trunk 50%, twice
+  as likely for what is above it (fire climbs), and leaves two columns off 6% (sparks jump a small gap). So the
+  crowns of a forest carry a fire on, and a lone tree six columns from the next is safe.
+- **Weather.** The chance is the weather's share of it: all of it on a clear day, three quarters cloudy, two fifths
+  in fog, none in rain or a storm, less the ground's wetness in percent (see Wet ground under
+  [Day, night and weather](#day-night-and-weather)), so the woods are slow to catch for hours after rain. Rain puts
+  out a quarter of the burning blocks each second, a storm half. With day, night and weather off it is always a clear,
+  dry day.
+- **Harm.** A unit with a burning block within a column of it, from the level under its feet to two above, loses 6
+  hit points a second, by no one (as a hazard: armour does not help; wild monsters too). Its panel says "(burning in
+  the fire)", and a unit of yours killed by it raises "Your worker burned in a forest fire". A building with timber,
+  thatch, stakes, a frame, a door, a gate, floorboards or living wood beside a burning block takes 8 damage a second
+  (once a second however many blocks burn by it), by whoever lit the fire; stone walls, towers and houses of stone
+  do not burn.
+- **In the game** (`game/scripts/Ambience.cs`, `AddForestFires`): a big flickering flame on every burning block open
+  to the air that you can see, smoke from some, and at night they light the ground round them.
+- Whether a block catches or goes out is a hash of the tick, the block and the seed; the burning blocks are part of the
+  state hash, and the order is in the command log (`kindle`), so replays burn the same.
 
 ## City-states
 
