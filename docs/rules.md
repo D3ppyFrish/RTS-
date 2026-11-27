@@ -2255,8 +2255,13 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   what it is keeping for other things. It lays none to a storehouse where the road would add fewer than 6 blocks
   (close by), would be longer than one road reaches (64), or would cross one of its own walls or towers (a gate is
   fine), a hazard, bog or quicksand, ground it keeps off near the Heartscar or (Hard) its pits; it does not look at
-  that storehouse again. Hard lays roads only while no enemies are at its buildings. The classic level never lays
-  roads. All numbers are first guesses.
+  that storehouse again. From Normal up it then lays a road from its town hall toward the front: from the column
+  just outside the hall nearest the enemy town hall it knows of, straight toward it for 40 blocks (no further than
+  halfway), the way its waves march; and a road from its nearest storage building to each of its quarries, mines,
+  smelters, fishing huts and forester's and hunter's lodges, under the same rules. While the ground is damp or it
+  rains or storms, Normal and Hard lay their roads every 10 seconds with 50 stone to spare instead, since roads keep
+  their pace in the mud (paths already prefer roads, at half the cost of other ground). Hard lays roads only while no
+  enemies are at its buildings. The classic level never lays roads. All numbers are first guesses.
 - **Bridges** (Easy, Normal and Hard; `AI/AiPlayer.Bridges.cs`, tests in `AiBridgeTests`): every 30 seconds, once it
   has 8 workers, it looks for a plank bridge on the way to the enemy town hall it knows of (or where it guesses one
   stands). When the way by land from its town hall is cut off by water (or a drop or trench), or is at least 40 steps
