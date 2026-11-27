@@ -18,6 +18,53 @@ public class UnitTests
     }
 
     [Fact]
+    public void SpatialGridForgetsColumnsUnitsLeft()
+    {
+        // Two units in neighbouring columns of one 64-column word of the grid's occupied bits, then one
+        // walks off: the column it left reads empty, the other still lists its unit, the new one lists it.
+        var store = new UnitStore();
+        int a = store.Spawn(0, 0, Fix64.FromInt(3) + Fix64.Half, 1, Fix64.FromInt(5) + Fix64.Half, 10);
+        int b = store.Spawn(0, 0, Fix64.FromInt(4) + Fix64.Half, 1, Fix64.FromInt(5) + Fix64.Half, 10);
+        var grid = new SpatialGrid(100, 100);
+        grid.Build(store);
+        Assert.Equal(store.IndexOf(a), grid.First(3, 5));
+        Assert.Equal(store.IndexOf(b), grid.First(4, 5));
+        Assert.Equal(-1, grid.First(5, 5));
+        Assert.Equal(-1, grid.First(-1, 5));
+        Assert.Equal(-1, grid.First(100, 5));
+
+        store.X[store.IndexOf(a)] = Fix64.FromInt(90) + Fix64.Half;
+        store.Z[store.IndexOf(a)] = Fix64.FromInt(70) + Fix64.Half;
+        grid.Build(store);
+        Assert.Equal(-1, grid.First(3, 5));
+        Assert.Equal(store.IndexOf(b), grid.First(4, 5));
+        Assert.Equal(store.IndexOf(a), grid.First(90, 70));
+        Assert.Equal(-1, grid.Next(store.IndexOf(a)));
+    }
+
+    [Fact]
+    public void BlockLookupsAtChunkEdgesAndOutsideTheWorld()
+    {
+        var w = new VoxelWorld(40, 20, 40);
+        w.Set(15, 15, 15, BlockType.Stone);
+        w.Set(16, 16, 16, BlockType.Grass);
+        w.Set(39, 19, 39, BlockType.Sand);
+        w.Set(0, 0, 0, BlockType.Bedrock);
+        Assert.Equal(BlockType.Stone, w.Get(15, 15, 15));
+        Assert.Equal(BlockType.Grass, w.Get(16, 16, 16));
+        Assert.Equal(BlockType.Air, w.Get(16, 15, 15));
+        Assert.Equal(BlockType.Sand, w.Get(39, 19, 39));
+        Assert.Equal(BlockType.Bedrock, w.Get(0, 0, 0));
+        Assert.Equal(BlockType.Air, w.Get(-1, 0, 0));
+        Assert.Equal(BlockType.Air, w.Get(0, -1, 0));
+        Assert.Equal(BlockType.Air, w.Get(0, 0, -16));
+        Assert.Equal(BlockType.Air, w.Get(40, 19, 39));
+        Assert.Equal(BlockType.Air, w.Get(39, 20, 39));
+        Assert.Equal(BlockType.Air, w.Get(39, 19, 40));
+        Assert.Equal(BlockType.Air, w.Get(int.MinValue, 0, 0));
+    }
+
+    [Fact]
     public void IdsStayStableWhenOthersAreRemoved()
     {
         var store = new UnitStore();
