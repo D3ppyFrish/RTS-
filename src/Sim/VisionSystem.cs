@@ -94,6 +94,7 @@ public sealed class VisionSystem
         var u = _sim.Units;
         if (u.Owner[i] == player || !_sim.Fog) return true;
         if ((uint)player < (uint)_drums.Length && _drums[player] is { Count: > 0 } drums && drums.Contains(u.Id[i])) return true;
+        if (Units.CombatSystem.Bears(u, player, i)) return true; // a grudge is never forgotten (the Dwarves' Book of Grudges)
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();
         if (Underground(i)) return Hears(player, x, z);
         if (_sim.Monsters.Submerged(i)) return Close(player, x, z);

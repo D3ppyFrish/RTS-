@@ -1012,6 +1012,8 @@ public sealed partial class CombatSystem
         if (weakness > 0) m = m * (100 + weakness) / 100;
         // Under a roof (the ram's hides), arrows and bolts mostly glance off.
         if (target.Cover > 0 && def.IsRanged && def.Attack == AttackKind.Pierce) m = m * (100 - target.Cover) / 100;
+        int grudge = GrudgeAgainst(i, t); // the Dwarves' Book of Grudges (CombatSystem.Grudges.cs)
+        if (grudge > 0) m = m * (100 + grudge) / 100;
         return Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * m).RoundToInt());
     }
 
@@ -1216,6 +1218,7 @@ public sealed partial class CombatSystem
             if (killer < 0) continue;
             Count(_kills, u.Owner[killer]);
             _sim.Evolution.Killed(killer);
+            BearGrudge(d, killer);
             if (!monsters.IsWild(d)) continue;
             monsters.Beaten(d, u.Owner[killer]);
             if (monsters.Tames(d, killer)) _tamed.Add((u.Id[d], u.Owner[killer]));

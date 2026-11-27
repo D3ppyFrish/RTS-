@@ -567,11 +567,16 @@ public partial class Hud : CanvasLayer
         if (_sim.Content.TryGetBuilding(PlayerControl.WallBuilding, out var wallDef))
         {
             var everyones = wallDef;
-            wallDef = _sim.FactionOf(PlayerControl.LocalPlayer).Own(wallDef); // your faction's own (the Elves' living wall)
+            wallDef = _sim.FactionOf(PlayerControl.LocalPlayer).Own(wallDef); // your faction's own (the Elves' living wall, the Dwarves' stonework)
             var wall = MakeToolButton("");
             wall.Name = "build_wall";
             wall.Icon = UiIcons.Get(wallDef.Icon.Length > 0 ? wallDef.Icon : wallDef.Id);
-            wall.TooltipText = wallDef != everyones
+            wall.TooltipText = wallDef != everyones && wallDef.RegrowTicks == 0
+                ? $"Drag a line for the selected workers to lay {wallDef.Name.ToLowerInvariant()}, a column at a time: a rampart of " +
+                  $"dressed stone {wallDef.WallHeight} high and thick, that archers and crossbowmen stand on, for little more than a barrier. " +
+                  "Walls join up with each other and with gates; a gate lets only your units through. It has no upgrade: it is " +
+                  "as strong as it gets from the start. Put a tower onto a wall for a strong point that sees far."
+                : wallDef != everyones
                 ? $"Drag a line for the selected workers to plant a {wallDef.Name.ToLowerInvariant()}, a column at a time: a hedge of " +
                   $"living wood {wallDef.WallHeight} high that archers stand on. Walls join up with each other and with gates; a gate " +
                   "lets only your units through. It has no upgrade, but what is knocked out of it grows back by itself while " +
@@ -2375,6 +2380,7 @@ public partial class Hud : CanvasLayer
                 : !_sim.Combat.Healing(i, out bool home) ? "" : !home ? " (healing)"
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) is { } camp
                     ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
+            if (_sim.Combat.Bears(PlayerControl.LocalPlayer, i)) heals += " (marked by your grudge)";
             if (u.Poisoned[i] > 0) heals += $" (poisoned, {(u.Poisoned[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
             if (hurt > 0) heals += _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] + 1, u.Z[i].FloorToInt()) == BlockType.Water ? " (drowning)"

@@ -229,6 +229,12 @@ public enum TechEffectType : byte
     /// time (<see cref="TechEffect.Ticks"/>) stops bleeding, grievous wounds too (see <see cref="Units.CombatSystem"/>, bleeding).
     /// </summary>
     BindWounds,
+    /// <summary>
+    /// The Dwarves' Book of Grudges: an enemy unit that kills one of the player's units is marked with a grudge for the
+    /// rest of its life (<see cref="Units.UnitStore.Grudged"/>); the player's units deal it the effect's
+    /// <see cref="TechEffect.Percent"/> more, and the player sees it through the fog of war (see <see cref="Units.CombatSystem"/>).
+    /// </summary>
+    Grudges,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

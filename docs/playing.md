@@ -11,7 +11,8 @@ Every pull request and every push to `develop` produces a Windows build. Open th
 It opens on the start screen: pick your faction, the Settlers (who start in the west), the Orcs (in the
 east) or the Deepfolk (an insect hive that hatches swarms in batches at brood chambers and burrows under walls;
 see [The Deepfolk](rules.md#the-deepfolk)) or the Elves (forest guardians with long-range archers, healing druids and
-living walls that grow back; see [The Elves](rules.md#the-elves)), and under Against the faction of the other side (the same as yours makes a mirror match), the
+living walls that grow back; see [The Elves](rules.md#the-elves)) or the Dwarves (sturdy, iron-clad soldiers who see in
+the dark, stone walls from the first day, and the Book of Grudges; see [The Dwarves](rules.md#the-dwarves)), and under Against the faction of the other side (the same as yours makes a mirror match), the
 world seed, the map size (Standard, 768 by 768 blocks, or Large, 1024 by 1024: nearly twice the land, the towns
 about 700 blocks apart instead of 520, and the land beyond the standard map's twice as thick with monster lairs; see
 [Monsters and taming](rules.md#monsters-and-taming)), whether the computer plays the other side and how well (Computer level: Easy, Normal, which
@@ -22,7 +23,7 @@ come in big waves from an open town; the Settlers (at Normal and Hard) wall thei
 stronger as the match goes on, and at Hard post their archers on it and keep a quarter of their soldiers
 at home behind it when the rest attack.
 Each faction has its own look for the menus, panels and buttons: castle stone for the Settlers, rough
-timber for the Orcs and the Elves, dark slate for the Deepfolk. The start screen changes to the look of the faction you pick. Destroy the other side's
+timber for the Orcs and the Elves, dark slate for the Deepfolk, castle stone for the Dwarves too. The start screen changes to the look of the faction you pick. Destroy the other side's
 town hall to win, or (unless switched off on the start screen) hold more than half of the old ruins, the
 ancient sites, for 3 minutes: soldiers standing alone in one for 15 seconds take it, and the sites button in the
 top bar says how many you hold and counts down when someone holds most (see

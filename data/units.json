@@ -510,5 +510,24 @@
     "speed": 4, "hp": 40, "model": "druid", "damage": 5, "attackTime": 1.5, "range": 7, "sight": 10,
     "attack": "pierce", "armor": { "torso": 1 }, "growForest": true,
     "heal": 6, "healTime": 2, "healRange": 7,
-    "cost": { "food": 50, "wood": 30 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" }
+    "cost": { "food": 50, "wood": 30 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" },
+
+  // The Dwarves' own (see "replaces" in factions.json): short, stout and iron-clad, with no horses. Their hammerers in
+  // place of spearmen and riders, crossbowmen in place of archers and runesmiths in place of mages all see in the dark.
+  // They are hard to kill and slow to arrive; with the Book of Grudges they hit back hardest at whoever killed one of theirs.
+  { "id": "ironshield", "name": "Ironshield", "faction": "dwarves", "role": "line_infantry",
+    "description": "A dwarf in plate behind a great iron-rimmed shield, swinging a war hammer. Dearer than a spearman, but much harder to bring down, and his hammer crushes through armour. Sees in the dark. The Dwarves ride no horses: he stands in for riders too.",
+    "speed": 4, "hp": 110, "model": "ironshield", "damage": 9, "attackTime": 1.2, "range": 1.5, "sight": 8,
+    "attack": "crush", "armor": { "head": 2, "torso": 2, "arms": 1, "legs": 1 }, "shield": 20, "darkSight": true,
+    "cost": { "food": 50, "wood": 25 }, "trainTime": 18, "trainedAt": "barracks" },
+  { "id": "crossbowman", "name": "Crossbowman", "faction": "dwarves", "role": "ranged",
+    "description": "A heavy crossbow on a mail-clad dwarf: shoots shorter and half as often as an archer, but each bolt hits twice as hard, and he can take a blow or two. Sees in the dark.",
+    "speed": 4, "hp": 65, "model": "crossbowman", "damage": 12, "attackTime": 2, "range": 8, "sight": 10,
+    "attack": "pierce", "armor": { "head": 1, "torso": 2 }, "darkSight": true,
+    "cost": { "food": 35, "wood": 35 }, "trainTime": 18, "trainedAt": "barracks", "requires": "archery" },
+  { "id": "runesmith", "name": "Runesmith", "faction": "dwarves", "role": "caster",
+    "description": "A smith of stone runes. Hurls rune-struck stones, raises an Earth Wall and opens a Chasm, but has no ice or forest magic. Tougher than a mage. Sees in the dark.",
+    "speed": 4, "hp": 60, "model": "runesmith", "damage": 9, "attackTime": 2, "range": 7, "sight": 9, "splash": 1.5,
+    "attack": "crush", "armor": { "head": 1, "torso": 1 }, "earthWall": true, "chasm": true, "darkSight": true,
+    "cost": { "food": 50, "stone": 30 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" }
 ]

@@ -30,6 +30,9 @@
 //                                         them from close up (see "thorns" in buildings.json)
 //   cut_webs                              the player's units cut themselves out of webs: giant spiders' bites and the spider
 //                                         silk's bearer no longer slow them (see "Monsters and taming" in docs/rules.md)
+//   grudges       { percent }             an enemy unit that kills one of the player's units is marked with a grudge for life:
+//                                         the player's units deal it that many percent more, and see it through the fog
+//                                         (see "The Dwarves" in docs/rules.md)
 //   bind_wounds   { after }               the player's units bind their own wounds: one out of the fight after seconds
 //                                         (3 if not given) stops bleeding, grievous wounds too (see "Bleeding" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
@@ -39,7 +42,7 @@
 [
   { "id": "farming", "icon": "farm", "name": "Farming", "description": "Fields of grain.",
     "cost": { "wood": 40 }, "researchTime": 20 },
-  { "id": "tools", "icon": "pick", "name": "Better tools", "description": "Iron axes and sounding rods. Militia can fell a tree the way you choose: onto enemies (heavy damage), onto a building, or across a gap or stream of one or two blocks as a log bridge. Foremen can sound the ground to show every ore, coal, gold and crystal block round them, however deep. Other factions' workers do both, but twice as slowly.",
+  { "id": "tools", "icon": "pick", "name": "Better tools", "description": "Iron axes and sounding rods. Militia can fell a tree the way you choose: onto enemies (heavy damage), onto a building, or across a gap or stream of one or two blocks as a log bridge. Foremen can sound the ground to show every ore, coal, gold and crystal block round them, however deep. Other factions' workers do both, but twice as slowly. Dwarf workers, born miners, sound the ground quicker than a foreman and further.",
     "cost": { "wood": 40, "stone": 20 }, "researchTime": 30,
     "effects": [
       { "type": "felling", "unit": "militia", "time": 4, "crush": 60 },
@@ -50,7 +53,9 @@
       { "type": "prospecting", "role": "worker", "faction": "orcs", "time": 16, "radius": 12 },
       { "type": "prospecting", "role": "worker", "faction": "deepfolk", "time": 16, "radius": 12 },
       { "type": "prospecting", "role": "worker", "faction": "elves", "time": 16, "radius": 12 },
-      { "type": "felling", "role": "worker", "faction": "elves", "time": 8, "crush": 60 } ] },
+      { "type": "felling", "role": "worker", "faction": "elves", "time": 8, "crush": 60 },
+      { "type": "felling", "role": "worker", "faction": "dwarves", "time": 8, "crush": 60 },
+      { "type": "prospecting", "role": "worker", "faction": "dwarves", "time": 6, "radius": 16 } ] },
   { "id": "roads", "icon": "road", "name": "Roads", "description": "Packed gravel paths that double walking speed.",
     "cost": { "stone": 20 }, "researchTime": 20,
     "effects": [ { "type": "roads" } ] },
@@ -101,6 +106,10 @@
     "cost": { "wood": 60, "food": 40 }, "researchTime": 40,
     "effects": [ { "type": "thorns" } ] },
 
+  { "id": "dwarf_grudges", "icon": "grudge", "name": "Book of Grudges", "faction": "dwarves", "description": "Every wrong is written down. An enemy that kills one of your units is marked with a grudge for the rest of its life, and your units deal it half as much damage again. A grudge is never forgotten: a marked enemy shows through the fog of war.",
+    "cost": { "food": 40, "stone": 40 }, "researchTime": 40,
+    "effects": [ { "type": "grudges", "percent": 50 } ] },
+
   // Each faction's final tech: it opens the faction's great work, which wins the match by Ascendancy once it has
   // stood finished in the deep caves long enough (see "Ascendancy" in docs/rules.md).
   { "id": "settler_legends", "icon": "crown", "name": "Legends' lore", "faction": "settlers",
@@ -115,6 +124,10 @@
   { "id": "elf_eldertree", "icon": "crown", "name": "Song of the Eldertree", "faction": "elves",
     "description": "The song that wakes an eldertree, to be sung up from a seed in the deep caves.",
     "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "elf_thornwood", "basic_magic", "smelting" ] },
+
+  { "id": "dwarf_king", "icon": "crown", "name": "The Mountain King's oath", "faction": "dwarves",
+    "description": "The clans swear to a king under the mountain, whose hall is to be carved in the deep caves.",
+    "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "dwarf_grudges", "masonry", "smelting" ] },
 
   // Discovery techs: opened by exploring, not by other techs.
   { "id": "wardens_charts", "icon": "chart", "name": "Wardens' charts", "discovery": "ruin",

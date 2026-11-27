@@ -533,6 +533,12 @@ public static class UiIcons
             ".....kk.....", "....kwwk....", "...kwrrwk...", "...kwrrwk...", "..kwrrrrwk..", "..kwwrrwwk..",
             ".kwwwrrwwwk.", ".kwwwkkwwwk.", "kwwwkBBkwwwk", "kwwwkBBkwwwk", "kkkkkBBkkkkk", "GGGGGGGGGGGG",
         },
+        // The Book of Grudges (the Dwarves): a heavy leather-bound book with iron corners and a red mark on its cover.
+        ["grudge"] = new[]
+        {
+            "............", ".kkkkkkkkk..", ".kSBBBBBSkw.", ".kBBBBBBBkw.", ".kBBrRrBBkw.", ".kBBRrRBBkw.",
+            ".kBBrRrBBkw.", ".kBBBBBBBkw.", ".kBBBBBBBkw.", ".kSBBBBBSkw.", ".kkkkkkkkkw.", "..wwwwwwwww.",
+        },
         // An ear: the listening post, which hears units underground (see Rts.Sim.VisionSystem).
         ["ear"] = new[]
         {
