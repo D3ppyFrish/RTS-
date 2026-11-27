@@ -108,6 +108,12 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's units cut themselves out of webs (a <see cref="TechEffectType.CutWebs"/> tech).</summary>
     public bool CutsWebs(int player) => Find(player)?.CutWebs ?? false;
 
+    /// <summary>
+    /// Ticks out of the fight after which the player's units bind their own wounds (a <see cref="TechEffectType.BindWounds"/>
+    /// tech, Field dressings), or 0 if they cannot.
+    /// </summary>
+    public int BindTicks(int player) => Find(player)?.BindTicks ?? 0;
+
     /// <summary>True if the player's buildings with thorns prick those who strike them (a <see cref="TechEffectType.Thorns"/> tech).</summary>
     public bool HasThorns(int player) => Find(player)?.Thorns ?? false;
 
@@ -188,6 +194,7 @@ public sealed partial class EconomySystem
     {
         var units = Content.Units;
         p.Roads = p.SpareWorkers = p.MurderHoles = p.Salvage = p.FieldRepairs = p.CutWebs = p.Thorns = false;
+        p.BindTicks = 0;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
@@ -210,6 +217,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.FieldRepairs: p.FieldRepairs = true; break;
                     case TechEffectType.CutWebs: p.CutWebs = true; break;
                     case TechEffectType.Thorns: p.Thorns = true; break;
+                    case TechEffectType.BindWounds: p.BindTicks = p.BindTicks == 0 ? e.Ticks : Math.Min(p.BindTicks, e.Ticks); break;
                     case TechEffectType.UnitHp:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.HpBonus[d.Index] += e.HpFor(d);

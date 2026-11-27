@@ -1451,6 +1451,14 @@ public static class ContentLoader
                         o.Keys("type");
                         effects.Add(new TechEffect { Type = type });
                         break;
+                    case TechEffectType.BindWounds:
+                    {
+                        // { "type": "bind_wounds", "after": 3 }: seconds out of the fight before a unit binds its wounds.
+                        o.Keys("type", "after");
+                        int ticks = (o.Decimal("after", Fix64.Zero, Fix64.FromInt(MaxSeconds), Fix64.FromInt(3), required: false) * Tps).RoundToInt();
+                        effects.Add(new TechEffect { Type = type, Ticks = Math.Max(1, ticks) });
+                        break;
+                    }
                     case TechEffectType.Reveal:
                         o.Keys("type", "what");
                         effects.Add(new TechEffect { Type = type, Reveal = o.Enum("what", MapFeature.Ruins, required: true) });

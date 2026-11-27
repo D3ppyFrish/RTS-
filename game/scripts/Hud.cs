@@ -523,6 +523,11 @@ public partial class Hud : CanvasLayer
                 b.TooltipText = $"A watchman listens at the ground: you see enemy units underground (sappers tunnelling, troops in " +
                                 $"caves) within {def.Hearing} columns of it. Otherwise nobody on the surface sees units under the ground " +
                                 $"unless one of theirs stands within {VisionSystem.HearClose} columns of them. Build one by your walls.";
+            if (def.Kind == BuildingKind.Infirmary)
+                b.TooltipText = $"A hut for the wounded. Your units within {_sim.Content.Combat.HomeRange} columns of it heal as at home: " +
+                                $"{_sim.Content.Combat.HomeRecoveryPercent}% of their hit points a second once they have been out of the fight " +
+                                $"{_sim.Content.Combat.RecoveryDelayTicks / Simulation.TicksPerSecond} seconds, and their wounds are bound so they stop bleeding. " +
+                                "Put one up by the front or a siege camp and a beaten army mends where it stands.";
             if (def.Lens is { } lens)
                 b.TooltipText = $"A tower with a great crystal lens on top. Select it and press Gaze (Ctrl+G), then click anywhere on the map: " +
                                 $"for {lens.Mana} mana you see {lens.Radius} columns round that spot, through the fog of war, for " +

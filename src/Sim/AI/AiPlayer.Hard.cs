@@ -68,7 +68,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "crop_rotation", "deep_warrens", "horse_breeding", "roads", "carts", "archery", "masonry",
         "settler_guilds", "orc_beast_pens", "orc_war_drums", "deep_chitin", "sapping", "basic_magic", "smelting",
-        "settler_drill", "elf_thornwood", "silk_knives",
+        "settler_drill", "elf_thornwood", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>What the player has, counted once each time Hard looks at its economy.</summary>
@@ -324,6 +324,7 @@ public sealed partial class AiPlayer
         if (calm) Roads(sim, hall, issue);
         if (calm) Bridges(sim, hall, issue);
         ListeningPosts(sim, hall, issue);
+        if (calm) Hospitals(sim, hall, issue);
         if (calm) CrystalLens(sim, hall, issue);
         if (calm) Shrine(sim, hall, issue);
         if (!armyFirst) SmartTrain(sim, issue, anyAffordable: false);

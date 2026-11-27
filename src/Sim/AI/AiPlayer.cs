@@ -103,7 +103,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
         "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
-        "settler_drill", "elf_thornwood", "silk_knives",
+        "settler_drill", "elf_thornwood", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
@@ -131,10 +131,13 @@ public sealed partial class AiPlayer
 
     /// <summary>
     /// False for a tech it has no use for yet: one that only cuts its units out of webs (Silk knives) waits until one
-    /// of its units has been caught in a web, so a match without spiders in its way costs it nothing.
+    /// of its units has been caught in a web, so a match without spiders in its way costs it nothing; Classic wants no tech
+    /// whose use is a field hospital, which it never puts up.
     /// </summary>
     private bool Wanted(Simulation sim, TechDef tech)
     {
+        // Classic puts up no field hospital, and the smart levels put theirs toward the enemy: not before they know where it is.
+        if (OpensHospital(sim, tech) && (!Smart || !KnowsFront(sim))) return false;
         if (tech.Effects.Count == 0) return true;
         foreach (var e in tech.Effects)
             if (e.Type != TechEffectType.CutWebs) return true;
@@ -463,6 +466,7 @@ public sealed partial class AiPlayer
         if (Smart) Roads(sim, hall, issue);
         if (Smart) Bridges(sim, hall, issue);
         if (Smart) ListeningPosts(sim, hall, issue);
+        if (Smart) Hospitals(sim, hall, issue);
         if (Smart) CrystalLens(sim, hall, issue);
         if (Smart) Shrine(sim, hall, issue);
         if (Smart) Fishing(sim, hall, issue);

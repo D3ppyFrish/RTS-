@@ -30,6 +30,8 @@
 //                                         them from close up (see "thorns" in buildings.json)
 //   cut_webs                              the player's units cut themselves out of webs: giant spiders' bites and the spider
 //                                         silk's bearer no longer slow them (see "Monsters and taming" in docs/rules.md)
+//   bind_wounds   { after }               the player's units bind their own wounds: one out of the fight after seconds
+//                                         (3 if not given) stops bleeding, grievous wounds too (see "Bleeding" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
 // ruin (their units searched an old ruin), lair (their unit got the last of a monster lair's pack), town
 // (they broke a city-state's totem and took the town), giant (they beat a stone giant guarding a mountain
@@ -72,6 +74,12 @@
   { "id": "silk_knives", "icon": "silk_knife", "name": "Silk knives", "description": "Hooked knives on every belt, made for spider silk. Your units cut themselves out of a web the moment it lands: the forest's giant spiders and a bearer of the spider silk no longer slow them, so a nest can be fought, or run from.",
     "cost": { "wood": 30, "stone": 30 }, "researchTime": 30, "requires": [ "tools" ],
     "effects": [ { "type": "cut_webs" } ] },
+  // Field medicine: wounds seen to in the field, away from home.
+  { "id": "field_dressings", "icon": "bandage", "name": "Field dressings", "description": "Linen and the knack of binding a wound. Your units bind their own wounds: one that has gone 3 seconds without striking or being struck stops bleeding, a grievous wound too, wherever it is. Without it a wound only stops at home, from a healer, or when it clots, and a grievous one never clots.",
+    "cost": { "food": 40, "wood": 20 }, "researchTime": 30, "requires": [ "farming" ],
+    "effects": [ { "type": "bind_wounds", "after": 3 } ] },
+  { "id": "field_hospital", "icon": "field_hospital", "name": "Field hospital", "description": "Build the field hospital, a hut for the wounded you can put up anywhere: by the front, at a siege camp, at a far mine. Your units within 12 columns of it heal as they do at home: 2% of their hit points a second once out of the fight, wounds bound, so a beaten army mends where it stands instead of walking home. It houses nobody, and the enemy can knock it down.",
+    "cost": { "food": 50, "wood": 50 }, "researchTime": 40, "requires": [ "field_dressings" ] },
   { "id": "settler_guilds", "icon": "hammer", "name": "Craft guilds", "faction": "settlers", "description": "Masters teach the trades, taking down as well as putting up. Salvage: mark one of your finished buildings to take down, and workers (automatic ones too) take it apart in half the time it took to build, bringing back half its cost (less if it is damaged) and every good it held to your nearest other storage. Field repairs: right-click a damaged catapult or battering ram of yours with workers, and they mend it where it stands, even under fire, for a share of its cost in materials. Only the Settlers have these.",
     "cost": { "wood": 80, "stone": 40 }, "researchTime": 40, "requires": [ "tools" ],
     "effects": [ { "type": "salvage" }, { "type": "field_repairs" } ] },

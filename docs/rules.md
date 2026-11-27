@@ -436,10 +436,10 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   gets the kill and the experience for the blood. Three ways to stop it sooner: a healer (the battle
   priest) stems all of a unit's bleeding at once when it heals it, and goes to a bleeding ally before any
   that is only hurt; a unit healing at home (out of the fight 10 seconds, near its own town hall or house)
-  has its wounds bound at once; and away from home it just has to clot. A **grievous wound**
+  has its wounds bound at once (a field hospital counts as home); with Field dressings a unit 3 seconds out of the fight binds its own (see Field medicine below); and otherwise it just has to clot. A **grievous wound**
   (`CombatSystem.OpenGrievousWound`, for amputations in #73; the designer, 14 Nov: "grievous wounds like
   amputations will kill a unit likely before it clots as long as they don't receive treatment") bleeds 4
-  hit points a second and never clots: only a healer or getting home stops it. Units whose type has
+  hit points a second and never clots: only a healer, getting home or Field dressings stops it. Units whose type has
   `"bleeds": false` never bleed. A beaten monster's wounds are bound so it lives to be tamed. The numbers
   are `"bleeding"` in `data/roles.json` (`"kills": false` makes bleeding stop at 1 hit point).
 - **Blood on the ground** (`World/BloodSystem.cs`): a bleeding unit drips on the top block of the column it
@@ -482,6 +482,21 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   percent of its hit points a second (from half health, full in 3 minutes 20 seconds), or 2% a second
   within 12 columns of a town hall or house of its own, or near a goblin town it holds (full in 25 seconds), so a wounded army is
   worth bringing home. Healers heal on top of this. The numbers are in `data/roles.json`.
+- **Field medicine** (a tech branch for every faction; `field_dressings` and `field_hospital` in `data/techs.json`,
+  tests in `FieldMedicineTests` and `AiHospitalTests`): wounds seen to in the field, away from home.
+  - **Field dressings** (after Farming; 40 food and 20 wood, 30 seconds; the `bind_wounds` effect,
+    `EconomySystem.BindTicks`, `CombatSystem.StepBleeding`): your units bind their own wounds. One that has gone 3
+    seconds (`"after"`) without striking or being struck stops bleeding, wherever it is, a grievous wound too. So a
+    grievous wound kills only a unit kept in the fight, and an army that wins a fight stops bleeding at once instead
+    of losing hit points on the walk home. It does not heal: hit points still come back only as below.
+  - **Field hospital** (after Field dressings; 50 food and 50 wood, 40 seconds): opens the field hospital
+    (`field_hospital` in `data/buildings.json`, kind `infirmary`, `BuildingKind.Infirmary`; 40 wood and 20 food, 20
+    seconds; 4 by 4, a low plank hut), which you put up anywhere. Your units within the home range of it (12 columns)
+    are at home for healing (`CombatSystem.AtHome`): 2% of their hit points a second once out of the fight 10
+    seconds, and their wounds are bound. It houses nobody and stores nothing, and the enemy can knock it down like
+    any building. Put one by the front, at a siege camp or by a far mine, and a beaten army mends where it stands.
+  - Computer players research both late in their orders (Classic only Field dressings), and the smart levels keep
+    one field hospital (see Field hospitals under Computer players). The numbers are first guesses for playtesting.
 - **Healers** (issue #42): every faction trains the healer at the barracks once it knows Basic magic
   (40 food and 20 wood, 15 seconds); matches start without any. Every 2 seconds it gives 5 hit points back to the most hurt ally
   within 6 blocks (a bleeding one first, and it stems the bleeding), never to itself or an enemy. It has
@@ -2206,6 +2221,12 @@ ones a player knows too: the enemy starts across the map, and there is a lair on
   further than 34 columns from its town hall), unless one of its posts already hears that spot. One at a time, as it
   can pay for each; Hard lays them out clear of its wall line and quarry pits. The classic level never builds them.
   All numbers are first guesses.
+- **Field hospitals** (Easy, Normal and Hard; `AI/AiPlayer.Hospital.cs`, tests in `AiHospitalTests`): once it knows
+  Field hospital and has a finished barracks, it keeps one field hospital 24 columns from its town hall towards the
+  enemy (the nearest enemy town hall it knows of, else the last enemy building it saw; none while it knows of
+  neither): past the hall's own healing reach, where raids come in and waves come home. As it can pay for it; Hard
+  only while no enemy is at its town, laid out like the rest of its town. It researches Field hospital only once it
+  knows where the enemy is; the classic level never researches it and never builds one.
 - **Dams** (Easy, Normal and Hard; `AI/AiPlayer.Dams.cs`, tests in `AiDamTests`): once a second it weighs what the
   water held back by a dam would do if let through (`Floods`): the water beside the gap (at the level of the highest
   water next to it) fills the open ground it reaches from the gap below that level, within 24 columns, and it counts
