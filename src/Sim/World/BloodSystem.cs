@@ -53,6 +53,8 @@ public sealed class BloodSystem
     private byte[] _fx = new byte[64];
     private byte[] _fz = new byte[64];
     private int _count;
+    // The tick blood last fell (a stain was made fresh), so a look for a trail with none fresh on the map stops at once.
+    private long _newest = long.MinValue;
     // Lookup only, never walked: the order of the list above is what counts.
     private readonly Dictionary<int, int> _slotOf = new();
 
@@ -148,6 +150,7 @@ public sealed class BloodSystem
         _y[s] = y;
         _source[s] = source;
         _fresh[s] = _sim.Tick;
+        _newest = _sim.Tick;
         _fx[s] = (byte)fx;
         _fz[s] = (byte)fz;
         Version++;
@@ -179,12 +182,31 @@ public sealed class BloodSystem
     /// </summary>
     public int FreshTrail(int x, int z, int radius, Func<int, bool> follow)
     {
-        if (_count == 0) return 0;
         long since = _sim.Tick - FreshSeconds * Tps;
+        if (_count == 0 || _newest < since) return 0;
         int best = 0, bestD = 0, bestColumn = 0;
         long bestFresh = long.MinValue;
         var world = _sim.World;
         int r2 = radius * radius;
+        // The best stain passing follow is the same whichever order the stains are looked at (the freshest, then the
+        // nearest, then the lowest column), so look at whichever is fewer: the stains, or the columns round (x, z).
+        if (_count < (2 * radius + 1) * (2 * radius + 1))
+        {
+            for (int s = 0; s < _count; s++)
+            {
+                if (_fresh[s] < since || _source[s] == 0) continue;
+                int column = _column[s], cx = column / _sizeZ, cz = column % _sizeZ;
+                int dx = cx - x, dz = cz - z, d = dx * dx + dz * dz;
+                if (d > r2) continue;
+                bool better = _fresh[s] > bestFresh || (_fresh[s] == bestFresh && (d < bestD || (d == bestD && column < bestColumn)));
+                if (!better || !follow(_source[s])) continue;
+                best = _source[s];
+                bestFresh = _fresh[s];
+                bestD = d;
+                bestColumn = column;
+            }
+            return best;
+        }
         for (int dx = -radius; dx <= radius; dx++)
         for (int dz = -radius; dz <= radius; dz++)
         {

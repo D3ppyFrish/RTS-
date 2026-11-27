@@ -63,6 +63,36 @@ public class VisionTests
     }
 
     [Fact]
+    public void EachLookPutsBackOnlyWhatTheLastOneSawAndEveryPlayerKeepsTheirOwn()
+    {
+        var sim = Flat();
+        var vision = sim.Vision;
+        int a = sim.SpawnUnit(0, "spearman", 20, 20);
+        sim.SpawnUnit(1, "spearman", 70, 70);
+        sim.Step();
+        Assert.True(vision.Close(0, 20, 20));
+        Assert.True(vision.Hears(0, 20, 20));
+        Assert.Equal(Sight.Visible, vision.At(1, 70, 70));
+        Assert.Equal(Sight.Unseen, vision.At(0, 70, 70));
+
+        // Player 0's unit walks off: where it stood is seen, no longer in sight, heard or close; player 1's view holds.
+        sim.Schedule(sim.Tick, new MoveCommand(0, new[] { a }, 50, 20));
+        for (int t = 0; t < 30 * Tps && vision.At(0, 50, 20) != Sight.Visible; t++) sim.Step();
+        sim.Run(VisionSystem.UpdateTicks);
+        Assert.Equal(Sight.Seen, vision.At(0, 20, 20));
+        Assert.False(vision.Close(0, 20, 20));
+        Assert.False(vision.Hears(0, 20, 20));
+        Assert.Equal(Sight.Visible, vision.At(1, 70, 70));
+        Assert.True(vision.Close(1, 70, 70));
+        // Nothing of player 0's is in sight far beyond its unit's eight columns (it may have moved a step since the look).
+        int x = sim.Units.X[sim.Units.IndexOf(a)].FloorToInt(), z = sim.Units.Z[sim.Units.IndexOf(a)].FloorToInt();
+        for (int cx = 0; cx < 96; cx++)
+        for (int cz = 0; cz < 96; cz++)
+            if (vision.At(0, cx, cz) == Sight.Visible)
+                Assert.True((cx - x) * (cx - x) + (cz - z) * (cz - z) <= 100, $"({cx}, {cz}) still in sight");
+    }
+
+    [Fact]
     public void BuildingsSeeAroundThemAndEnemiesAreSeenOnlyInSight()
     {
         var sim = Flat();

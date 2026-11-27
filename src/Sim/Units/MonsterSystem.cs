@@ -1181,13 +1181,19 @@ public sealed class MonsterSystem
     private int Intruder(Lair lair)
     {
         var u = U;
-        Fix64 guard = Fix64.FromInt(lair.Monster.Lair!.Guard);
+        int g = lair.Monster.Lair!.Guard;
+        Fix64 guard = Fix64.FromInt(g);
         Fix64 r2 = guard * guard;
         int best = -1;
         Fix64 bestD = Fix64.MaxValue;
-        for (int j = 0; j < u.Count; j++)
+        // Only the squares round where the pack is at home can hold a unit within its guard radius.
+        var grid = Players();
+        var (x0, z0, x1, z1) = grid.Cells(lair.HomeX - g - 1, lair.HomeZ - g - 1, lair.HomeX + g + 1, lair.HomeZ + g + 1);
+        for (int cz = z0; cz <= z1; cz++)
+        for (int cx = x0; cx <= x1; cx++)
+        for (int j = grid.First(cx, cz); j >= 0; j = grid.Next(j))
         {
-            if (IsWild(j) || u.Subdued[j] || Spared(j) || Math.Abs(u.Y[j] - lair.HomeY) > GuardHeight) continue;
+            if (u.Subdued[j] || Spared(j) || Math.Abs(u.Y[j] - lair.HomeY) > GuardHeight) continue;
             Fix64 d = Distance2(j, lair);
             if (d > r2) continue;
             if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
@@ -1197,6 +1203,24 @@ public sealed class MonsterSystem
             }
         }
         return best;
+    }
+
+    // Players' units (every unit that is not wild) by where they stand, built at most once a tick when a pack first looks
+    // for intruders. A tick's guarding moves nobody and removes nobody, and the units born in it are wild.
+    private CoarseGrid? _players;
+    private long _playersTick = -1;
+    private Func<int, bool>? _notWild;
+
+    private CoarseGrid Players()
+    {
+        _players ??= new CoarseGrid(World.SizeX, World.SizeZ);
+        if (_playersTick != _sim.Tick)
+        {
+            _notWild ??= j => !IsWild(j);
+            _players.Build(U, _notWild);
+            _playersTick = _sim.Tick;
+        }
+        return _players;
     }
 
     /// <summary>True if unit i, the k-th of a lurking lair's pack, is walking back to its pool.</summary>

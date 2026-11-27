@@ -57,6 +57,11 @@ public sealed class VisionSystem
     private readonly byte[]?[] _heard = new byte[]?[Simulation.WildPlayer];
     // Per player, 1 for each column within SpotSubmerged of one of their units: where they spot monsters lying in the water.
     private readonly byte[]?[] _close = new byte[]?[Simulation.WildPlayer];
+    // Per player, the stretches of each of those three grids written since the last look, so a look puts back only
+    // those (sight in them fades to seen, hearing and spotting are cleared) instead of going over the whole map.
+    private readonly Stretches?[] _gridMarks = new Stretches?[Simulation.WildPlayer];
+    private readonly Stretches?[] _heardMarks = new Stretches?[Simulation.WildPlayer];
+    private readonly Stretches?[] _closeMarks = new Stretches?[Simulation.WildPlayer];
     // Per player, the war drummers (unit ids) they hear drumming at the last look (see Units.DrumDef.Heard); null until any.
     private readonly List<int>?[] _drums = new List<int>?[Simulation.WildPlayer];
     // Per unit slot, 1 if the unit was underground at the last look (only players' units, not wild monsters).
@@ -169,12 +174,13 @@ public sealed class VisionSystem
     public void Step()
     {
         if (!_sim.Fog || _sim.Tick % UpdateTicks != 0) return;
-        foreach (var g in _grids)
-            if (g != null) g.AsSpan().Replace((byte)Sight.Visible, (byte)Sight.Seen);
-        foreach (var g in _heard)
-            if (g != null) Array.Clear(g);
-        foreach (var g in _close)
-            if (g != null) Array.Clear(g);
+        // Only Stamp makes a column visible and only Fill hears or spots one, and both mark what they write.
+        for (int p = 0; p < _grids.Length; p++)
+        {
+            if (_grids[p] is { } g) _gridMarks[p]!.Fade(g);
+            if (_heard[p] is { } h) _heardMarks[p]!.Clear(h);
+            if (_close[p] is { } k) _closeMarks[p]!.Clear(k);
+        }
 
         _sim.Economy.Screens(_screens);
         var u = _sim.Units;
@@ -201,7 +207,7 @@ public sealed class VisionSystem
             Stamp(p, x, z, x, z, (s * s).FloorToInt());
             int hear = Math.Max(HearClose, def.Hearing);
             Hear(p, x, z, x, z, under ? Math.Max((s * s).FloorToInt(), hear * hear) : hear * hear);
-            if (!under) Fill(_close[p] ??= new byte[_sizeX * _sizeZ], x, z, x, z, SpotSubmerged * SpotSubmerged);
+            if (!under) Fill(_close[p] ??= new byte[_sizeX * _sizeZ], _closeMarks[p] ??= new Stretches(_sizeX, _sizeZ), x, z, x, z, SpotSubmerged * SpotSubmerged);
             int lit = lights ? c.SightPercent(x, z, true) : dark;
             if (lit > dark)
             {
@@ -330,6 +336,7 @@ public sealed class VisionSystem
     {
         var lights = _sim.Conditions.Lights;
         var g = _grids[player] ??= new byte[_sizeX * _sizeZ];
+        var marks = _gridMarks[player] ??= new Stretches(_sizeX, _sizeZ);
         var half = Disc(r2);
         int r = half.Length - 1;
         long seen = 0;
@@ -340,6 +347,7 @@ public sealed class VisionSystem
             int h = half[dz];
             int from = Math.Max(0, x0 - h), to = Math.Min(_sizeX - 1, x1 + h);
             var row = g.AsSpan(z * _sizeX + from, to - from + 1);
+            marks.Mark(z, from, to);
             for (int k = 0; k < row.Length; k++)
             {
                 if (litOnly && !lights.Lit(from + k, z)) continue;
@@ -414,10 +422,10 @@ public sealed class VisionSystem
     /// the square root of <paramref name="r2"/> of it.
     /// </summary>
     private void Hear(int player, int x0, int z0, int x1, int z1, int r2) =>
-        Fill(_heard[player] ??= new byte[_sizeX * _sizeZ], x0, z0, x1, z1, r2);
+        Fill(_heard[player] ??= new byte[_sizeX * _sizeZ], _heardMarks[player] ??= new Stretches(_sizeX, _sizeZ), x0, z0, x1, z1, r2);
 
     /// <summary>Marks the rectangle of columns (x0, z0)-(x1, z1) in grid g, and every column within the square root of r2 of it.</summary>
-    private void Fill(byte[] g, int x0, int z0, int x1, int z1, int r2)
+    private void Fill(byte[] g, Stretches marks, int x0, int z0, int x1, int z1, int r2)
     {
         var half = Disc(r2);
         int r = half.Length - 1;
@@ -427,6 +435,73 @@ public sealed class VisionSystem
             int h = half[dz];
             int from = Math.Max(0, x0 - h), to = Math.Min(_sizeX - 1, x1 + h);
             g.AsSpan(z * _sizeX + from, to - from + 1).Fill(1);
+            marks.Mark(z, from, to);
+        }
+    }
+
+    /// <summary>
+    /// The stretches of a per-column grid written since it was last put back: for each row, which runs of
+    /// <see cref="Run"/> columns. Putting back only those leaves the grid as going over all of it would.
+    /// </summary>
+    private sealed class Stretches
+    {
+        private const int Shift = 6, Run = 1 << Shift;
+        private readonly int _sizeX, _words;
+        private readonly ulong[] _bits;
+        private readonly bool[] _rows;
+        private readonly List<int> _marked = new();
+
+        public Stretches(int sizeX, int sizeZ)
+        {
+            _sizeX = sizeX;
+            int runs = (sizeX + Run - 1) >> Shift;
+            _words = (runs + 63) >> 6;
+            _bits = new ulong[_words * sizeZ];
+            _rows = new bool[sizeZ];
+        }
+
+        /// <summary>Columns from..to of row z were written.</summary>
+        public void Mark(int z, int from, int to)
+        {
+            if (from > to) return;
+            if (!_rows[z])
+            {
+                _rows[z] = true;
+                _marked.Add(z);
+            }
+            int baseWord = z * _words;
+            for (int k = from >> Shift; k <= to >> Shift; k++) _bits[baseWord + (k >> 6)] |= 1UL << (k & 63);
+        }
+
+        /// <summary>Every visible column written fades to seen.</summary>
+        public void Fade(byte[] g) => PutBack(g, fade: true);
+
+        /// <summary>Every column written is cleared.</summary>
+        public void Clear(byte[] g) => PutBack(g, fade: false);
+
+        private void PutBack(byte[] g, bool fade)
+        {
+            foreach (int z in _marked)
+            {
+                _rows[z] = false;
+                int baseWord = z * _words;
+                for (int w = 0; w < _words; w++)
+                {
+                    ulong bits = _bits[baseWord + w];
+                    if (bits == 0) continue;
+                    _bits[baseWord + w] = 0;
+                    while (bits != 0)
+                    {
+                        int k = (w << 6) + System.Numerics.BitOperations.TrailingZeroCount(bits);
+                        bits &= bits - 1;
+                        int from = k << Shift, len = Math.Min(Run, _sizeX - from);
+                        var span = g.AsSpan(z * _sizeX + from, len);
+                        if (fade) span.Replace((byte)Sight.Visible, (byte)Sight.Seen);
+                        else span.Clear();
+                    }
+                }
+            }
+            _marked.Clear();
         }
     }
 

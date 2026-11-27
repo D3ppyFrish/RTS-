@@ -363,4 +363,25 @@ public class BleedingTests
         Assert.Equal(0, sim.Blood.FreshTrail(10, 10, 4, _ => true));
         Assert.True(sim.Units.Exists(worker));
     }
+
+    [Fact]
+    public void AFreshTrailIsTheSameWhetherFewOrManyStainsLie()
+    {
+        var sim = Flat();
+        int near = sim.SpawnUnit(Settlers, "worker", 10, 10);
+        int far = sim.SpawnUnit(Settlers, "worker", 12, 12);
+        int skipped = sim.SpawnUnit(Settlers, "worker", 14, 14);
+        sim.Blood.Spill(11, Ground, 10, 20, near);
+        sim.Run(Tps);
+        sim.Blood.Spill(12, Ground, 12, 20, far); // fresher, so followed before the nearer one
+        sim.Blood.Spill(10, Ground, 13, 20, skipped); // freshest, but ruled out
+        bool Follow(int id) => id != skipped;
+        // Few stains: the look goes over the stains themselves.
+        Assert.Equal(far, sim.Blood.FreshTrail(10, 10, 4, Follow));
+        // Many stains, all out of reach: the look goes over the columns round the spot, with the same answer.
+        for (int k = 0; k < 100; k++) sim.Blood.Spill(40 + k % 10, Ground, 40 + k / 10, 20, near);
+        Assert.True(sim.Blood.Count > 81);
+        Assert.Equal(far, sim.Blood.FreshTrail(10, 10, 4, Follow));
+        Assert.Equal(near, sim.Blood.FreshTrail(10, 10, 4, id => id == near));
+    }
 }
