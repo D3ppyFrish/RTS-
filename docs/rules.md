@@ -1476,7 +1476,7 @@ numbers are first guesses to be tuned in playtests.
 
 Clan Kage is the seventh faction, the design doc's ratfolk ninja clan: scouts and assassins who vanish while they stand
 still and strike from hiding, at home in the dark and weaker in bright daylight (`KageTests`; `CombatSystem.Shadows.cs`).
-Their hidden villages, wall climbing and clan honour are still to come.
+Their hidden villages and clan honour are still to come.
 
 - **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **kunoichi** instead of spearmen,
   **shinobi** instead of riders (the clan rides no horses), **shuriken throwers** instead of archers and **shadow
@@ -1542,13 +1542,28 @@ Their hidden villages, wall climbing and clan honour are still to come.
   (`UnitStore.SabotageWait`). A saboteur that is hit drops the work and fights, as a raider does; beaten, running away,
   aboard a ship or in a pen it cannot sabotage. A building's panel says how far a sabotage has got and how long it lies
   wrecked.
+- **Wall climbing** (`kage_wall_climbing`, after Smoke bombs; the `wall_climbing` tech effect,
+  `Economy/EconomySystem.Climb.cs`; numbers in `climb` in `data/roles.json`): their kunoichi, shinobi and shuriken
+  throwers scale walls and cliffs with no ladder (`ClimbCommand`, Ctrl+K or the Climb button, then click the top of a
+  wall, gate, tower or cliff, or the ground under one to climb down). Each of those selected that is free to takes the
+  face nearest it within 2 columns of the spot clicked (`EconomySystem.PlanClimb`): it walks to the foot of it, the
+  ground beside it (`UnitJob.Climb`), and climbs 1 second a level onto the top; a climber on a top climbs down to the
+  ground beside it the same way. A climb goes 2 to 10 levels (one is a step), and the column it climbs up must be open
+  from the ground to a head over the top (`EconomySystem.Climbable`). A spot at about the level the climber stands at is
+  no climb. Up on anyone's wall it holds its ground there and fights as anyone posted on one does, and sent on it climbs
+  down the side it is going to (`UnitMovement.ClimbDown`), so a town's walls do not keep the clan out. A climber that is
+  hit lets go and fights, as a raider does; beaten, running away, aboard a ship or in a pen it cannot climb.
 - **Their final tech** is the Moonless Night (after Strike from the shadows, Basic magic and Smelting), which opens
   their great work, the **Shrine of the Moonless Night**, a dark timber pagoda (see
   [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers they hack the dusk tree down, as the
   Orcs do (see [The dusk tree](#the-dusk-tree)).
 
 Computer players play Clan Kage as a waves faction and research Strike from the shadows, Smoke bombs and Shadow step
-after their other techs, then Saboteurs. From Easy up, a wave out against a rival with a ready saboteur in it that is not
+after their other techs, then Saboteurs and Wall climbing. From Easy up, a wave within siege reach of its target that
+knows of a rival wall, gate or tower near it sends up to 6 of its climbers that are free and not fighting up the face
+of it nearest the wave; each one up on top attack-moves on at the target (fighting the defenders up there, then
+climbing down inside). The wave's orders leave the climbers be while they climb, up to 40 seconds; more go 20 seconds
+later, up to 3 times a wave (`AiPlayer.Climb.cs`). From Easy up, a wave out against a rival with a ready saboteur in it that is not
 fighting sends that one to sabotage a rival building it sees within 20 columns of it with no rival soldier it sees by
 it: one training units or the town hall while its owner researches first, then a smelter, workshop or shrine, then
 one holding 40 goods or more, the nearest first (`AiPlayer.Sabotage.cs`). The wave's orders leave it alone until the

@@ -195,6 +195,12 @@ public static class UiIcons
             "....vvvv....", "..vvkcckvv..", ".vkcCCCCckv.", ".vcCkkkkCcv.", "vkCkkkkkkCkv", ".vcCkkkkCcv.",
             ".vkcCCCCckv.", "..vvkcckvv..", "....vvvv....", "kk..........", "...kk.......", "kk....kk....",
         },
+        // Wall climbing: a clawed grapnel hooked over a battlement, its cord hanging down the wall.
+        ["climb"] = new[]
+        {
+            "...i...i....", "...ilyli....", "SSS..y..SSS.", "sSs..y..sSs.", "SSSSSySSSSSS", "ssSssysSsssS",
+            "SSSSSySSSSSS", "sSsssysssSss", "SSSSSySSSSSS", "ssSssyssSsss", "SSSSSySSSSSS", "sssSsyssssSs",
+        },
         // Saboteurs: a ninja's dagger stuck in a cog, sparks flying.
         ["sabotage"] = new[]
         {

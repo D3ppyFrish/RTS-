@@ -114,7 +114,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _stepButton = null!, _sabotageButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _stepButton = null!, _sabotageButton = null!, _climbButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -777,6 +777,17 @@ public partial class Hud : CanvasLayer
         _sabotageButton.Pressed += () => _control.ToggleSabotage();
         _sabotageButton.Visible = false;
         column.AddChild(_sabotageButton);
+        var climb = _sim.Content.Combat.Climb;
+        _climbButton = MakeToolButton("Climb  [Ctrl+K]");
+        _climbButton.Name = "climb";
+        _climbButton.Icon = UiIcons.Get("climb");
+        _climbButton.TooltipText = $"Click the top of a wall, gate, tower or cliff: the selected climbers walk to the foot of it and climb its face, " +
+            $"2 to {climb.Height} levels, {climb.TicksPerLevel / (float)Simulation.TicksPerSecond:0.#} seconds a level, with no ladder. Click the ground below to climb down. " +
+            "One that is hit while climbing lets go and fights. Up on a wall, send them on and they climb down the side they are going to. " +
+            "(Clan Kage's kunoichi, shinobi and shuriken throwers, needs Wall climbing.)";
+        _climbButton.Pressed += () => _control.ToggleClimb();
+        _climbButton.Visible = false;
+        column.AddChild(_climbButton);
 
         _moltButton = MakeToolButton("Molt  [Ctrl+M]");
         _moltButton.Name = "molt";
@@ -1489,6 +1500,16 @@ public partial class Hud : CanvasLayer
             : "Sabotage  [Ctrl+N]";
     }
 
+    /// <summary>The Climb button: shown with climbers selected, greyed out while none of them is free to climb.</summary>
+    private void RefreshClimb()
+    {
+        int climbers = _control.OwnClimbers().Count;
+        bool tool = _control.Tool == PlayerControl.ToolMode.Climb;
+        _climbButton.Visible = climbers > 0 || tool;
+        _climbButton.SetPressedNoSignal(tool);
+        _climbButton.Disabled = climbers > 0 && _control.ReadyClimbers().Count == 0 && !tool;
+    }
+
     /// <summary>The Gaze button: shown with your finished crystal lens selected, greyed out until it is ready and you have the mana.</summary>
     private void RefreshLens()
     {
@@ -1594,6 +1615,7 @@ public partial class Hud : CanvasLayer
         RefreshSmoke();
         RefreshShadowStep();
         RefreshSabotage();
+        RefreshClimb();
         RefreshPen();
         RefreshLens();
         _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
@@ -2503,6 +2525,14 @@ public partial class Hud : CanvasLayer
                            : "Sabotage: click an enemy building") +
                        $"\nIt works while no soldier of the owner's stands within {_sim.Content.Combat.Sabotage.Guard} columns   Right click or Esc to stop";
             }
+            case PlayerControl.ToolMode.Climb:
+            {
+                var route = _control.ClimbHere(out bool any);
+                return (route is { } r ? $"Climb: click to climb {(r.ToY > r.FootY ? "up" : "down")} {r.Levels} levels here ({r.Levels * _sim.Content.Combat.Climb.TicksPerLevel / Simulation.TicksPerSecond}s)"
+                           : any ? $"Climb: no face here (click the top of a wall, gate, tower or cliff 2 to {_sim.Content.Combat.Climb.Height} levels high, or the ground under one)"
+                           : "Climb: click the top of a wall, gate, tower or cliff") +
+                       "\nRight click or Esc to stop";
+            }
             case PlayerControl.ToolMode.ShadowStep:
             {
                 var rules = _sim.Content.Combat.ShadowStep;
@@ -2566,7 +2596,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   Ctrl+Y: flood   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+B: smoke bomb   Ctrl+H: shadow step   Ctrl+N: sabotage   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+B: smoke bomb   Ctrl+H: shadow step   Ctrl+N: sabotage   Ctrl+K: climb   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
         }
     }
 
@@ -3059,6 +3089,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Capture => "capturing a storehouse",
         UnitJob.Burn => "burning a storehouse",
         UnitJob.Sabotage => u.Phase[i] == JobPhase.Working ? "wrecking an enemy building's works" : "slipping into an enemy building",
+        UnitJob.Climb => u.Phase[i] == JobPhase.Working ? (u.JobY[i] > u.Y[i] ? "climbing the wall" : "climbing down") : "going to the foot of the wall",
         UnitJob.Tunnel => "tunnelling",
         UnitJob.Ramp => u.Phase[i] == JobPhase.Working ? "heaping earth onto a ramp" : "going to the ramp",
         UnitJob.Dam => u.Phase[i] == JobPhase.Working ? "building a dam" : "going to the dam",

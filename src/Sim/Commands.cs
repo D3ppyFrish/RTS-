@@ -133,6 +133,14 @@ public sealed record SabotageCommand(int PlayerId, int[] Units, int Building) : 
     public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building);
 }
 
+/// <summary>
+/// Wall climbing (Clan Kage's climbers, see <see cref="Content.TechEffectType.WallClimbing"/>): those of the units that can
+/// climb walk to the foot of the wall, gate, tower or cliff nearest column (<paramref name="X"/>, <paramref name="Z"/>)
+/// and climb its face onto the top there, or down from the top to the ground clicked (see
+/// <c>Economy/EconomySystem.Climb.cs</c>).
+/// </summary>
+public sealed record ClimbCommand(int PlayerId, int[] Units, int X, int Z) : UnitsCommand(PlayerId, Units);
+
 /// <summary>The units go to an enemy storehouse and burn it with its goods, once nobody defends it.</summary>
 public sealed record BurnCommand(int PlayerId, int[] Units, int Building) : UnitsCommand(PlayerId, Units)
 {

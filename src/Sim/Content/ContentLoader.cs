@@ -1198,7 +1198,7 @@ public static class ContentLoader
                 return;
             }
             var table = new Obj(_errors, file, "table", "the table", doc.RootElement);
-            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "molt", "smoke", "shadowStep", "sabotage", "roles");
+            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "molt", "smoke", "shadowStep", "sabotage", "climb", "roles");
             var combat = _db.Combat;
             combat.Strong = table.Decimal("strong", Fix64.One, Fix64.FromInt(10), Fix64.FromInt(2));
             combat.Structures = table.Decimal("structures", Fix64.Zero, Fix64.One, Fix64.FromRatio(1, 4));
@@ -1278,6 +1278,16 @@ public static class ContentLoader
                     StallTicks = (sab.Decimal("stall", Fix64.One, Fix64.FromInt(3600), Fix64.FromInt(45), required: false) * Tps).RoundToInt(),
                     Spoil = sab.Int("spoil", 0, 100, 25),
                     WaitTicks = (sab.Decimal("wait", Fix64.Zero, Fix64.FromInt(3600), Fix64.FromInt(60), required: false) * Tps).RoundToInt(),
+                };
+            }
+            if (Part(table, "climb", "{ \"time\": 1, \"height\": 10, \"reach\": 2 }") is { } climb)
+            {
+                climb.Keys("time", "height", "reach");
+                combat.Climb = new ClimbRules
+                {
+                    TicksPerLevel = Math.Max(1, (climb.Decimal("time", Fix64.Zero, Fix64.FromInt(60), Fix64.One, required: false) * Tps).RoundToInt()),
+                    Height = climb.Int("height", 2, 32, 10),
+                    Reach = climb.Int("reach", 0, 8, 2),
                 };
             }
             if (!doc.RootElement.TryGetProperty("roles", out var list) || list.ValueKind != JsonValueKind.Array)
@@ -1455,6 +1465,7 @@ public static class ContentLoader
                     case TechEffectType.SmokeBombs:
                     case TechEffectType.ShadowStep:
                     case TechEffectType.Sabotage:
+                    case TechEffectType.WallClimbing:
                     {
                         o.Keys("type", "role", "unit");
                         UnitRole? role = o.Has("role") ? o.Enum("role", UnitRole.Worker, required: true) : null;
@@ -1470,6 +1481,7 @@ public static class ContentLoader
                                 TechEffectType.SmokeBombs => "needs a \"role\" or a \"unit\": which units can throw smoke bombs",
                                 TechEffectType.ShadowStep => "needs a \"role\" or a \"unit\": which units can step through the shadows",
                                 TechEffectType.Sabotage => "needs a \"role\" or a \"unit\": which units can sabotage enemy buildings",
+                                TechEffectType.WallClimbing => "needs a \"role\" or a \"unit\": which units can climb walls",
                                 _ => "needs a \"role\" or a \"unit\": which units can form the wall",
                             });
                         effects.Add(new TechEffect { Type = type, Role = role, Unit = unit });

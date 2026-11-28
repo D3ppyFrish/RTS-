@@ -78,6 +78,9 @@ public sealed class CombatRules
     /// <summary>How Clan Kage's saboteurs wreck enemy buildings (see <see cref="SabotageRules"/>).</summary>
     public SabotageRules Sabotage { get; internal set; } = new();
 
+    /// <summary>How Clan Kage's climbers scale walls and cliffs (see <see cref="ClimbRules"/>).</summary>
+    public ClimbRules Climb { get; internal set; } = new();
+
     public bool StrongAgainst(UnitRole attacker, UnitRole target) => _strong[(int)attacker * RoleCount + (int)target];
 
     public bool StrongAgainstStructures(UnitRole role) => _structures[(int)role];
@@ -174,6 +177,21 @@ public sealed class SabotageRules
     public int Spoil { get; internal set; } = 25;
     /// <summary>Ticks a saboteur waits, from the sabotage, before the next.</summary>
     public int WaitTicks { get; internal set; } = 60 * Simulation.TicksPerSecond;
+}
+
+/// <summary>
+/// Wall climbing (a tech's <see cref="TechEffectType.WallClimbing"/> effect, Clan Kage's Wall climbing): a climber at the
+/// foot of a wall, gate, tower or cliff climbs its face onto the top, or down it, with no ladder (see
+/// <c>Economy/EconomySystem.Climb.cs</c>).
+/// </summary>
+public sealed class ClimbRules
+{
+    /// <summary>Ticks a climber takes for each level it climbs.</summary>
+    public int TicksPerLevel { get; internal set; } = Simulation.TicksPerSecond;
+    /// <summary>Most levels a climb goes up or down (at least 2: a single level is a step).</summary>
+    public int Height { get; internal set; } = 10;
+    /// <summary>Columns round the spot clicked within which a climber looks for a face to climb.</summary>
+    public int Reach { get; internal set; } = 2;
 }
 
 public sealed class MoltRules

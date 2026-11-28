@@ -569,6 +569,7 @@ public sealed class Simulation
             case CaptureCommand c: Economy.Apply(c); break;
             case BurnCommand b: Economy.Apply(b); break;
             case SabotageCommand sb: Economy.Apply(sb); break;
+            case ClimbCommand cl: Economy.Apply(cl); break;
             case RoadCommand r: Economy.Apply(r); break;
             case WallCommand wc: Economy.Apply(wc); break;
             case UpgradeCommand up: Economy.Apply(up); break;

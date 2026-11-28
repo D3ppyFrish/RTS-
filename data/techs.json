@@ -28,6 +28,8 @@
 //                                         their side has seen, out of the daylight (numbers: shadowStep in roles.json)
 //   sabotage      { role or unit }        those units can sabotage an enemy building: it does no work for a while and
 //                                         goods in it spoil (numbers: sabotage in roles.json)
+//   wall_climbing { role or unit }        those units can climb up (and down) a wall, gate, tower or cliff without a
+//                                         ladder (numbers: climb in roles.json)
 //   salvage                               workers can take down the player's own finished buildings for half their cost back
 //                                         and the goods they held (see "Salvage" in docs/rules.md)
 //   field_repairs                         workers can mend the player's damaged catapults and battering rams in the field
@@ -131,6 +133,9 @@
   { "id": "kage_saboteurs", "icon": "sabotage", "name": "Saboteurs", "faction": "kage", "description": "Kunoichi and shinobi slip into enemy buildings to wreck their works. A saboteur works 6 seconds at an enemy building while none of its owner's soldiers stands within 3 columns: then it trains, researches, smelts and makes nothing for 45 seconds, and a quarter of the goods in it spoil. Each saboteur then needs 60 seconds.",
     "cost": { "food": 50, "wood": 40 }, "researchTime": 40, "requires": [ "kage_shadow_strike" ],
     "effects": [ { "type": "sabotage", "unit": "kunoichi" }, { "type": "sabotage", "unit": "shinobi" } ] },
+  { "id": "kage_wall_climbing", "icon": "climb", "name": "Wall climbing", "faction": "kage", "description": "Kunoichi, shinobi and shuriken throwers learn to scale walls with claws and cord. They climb up a wall, gate, tower or cliff 2 to 10 levels high from the ground beside it, a second a level, without a ladder (and down again the same way), so a town's walls do not keep them out. One that is hit while climbing lets go and fights.",
+    "cost": { "food": 50, "wood": 40 }, "researchTime": 40, "requires": [ "kage_smoke_bombs" ],
+    "effects": [ { "type": "wall_climbing", "unit": "kunoichi" }, { "type": "wall_climbing", "unit": "shinobi" }, { "type": "wall_climbing", "unit": "shuriken_thrower" } ] },
 
   { "id": "dwarf_grudges", "icon": "grudge", "name": "Book of Grudges", "faction": "dwarves", "description": "Every wrong is written down. An enemy that kills one of your units is marked with a grudge for the rest of its life, and your units deal it half as much damage again. A grudge is never forgotten: a marked enemy shows through the fog of war.",
     "cost": { "food": 40, "stone": 40 }, "researchTime": 40,

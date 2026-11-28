@@ -56,7 +56,7 @@ public sealed partial class AiPlayer
     public int TunnelsDug => _tunnelsDug;
 
     /// <summary>True if the unit is at the wave's ladder or tunnel, so the wave's other orders leave it be.</summary>
-    private bool Crewed(int id) => _ladderCrew.Contains(id) || _tunnelCrew.Contains(id);
+    private bool Crewed(int id) => _ladderCrew.Contains(id) || _tunnelCrew.Contains(id) || _climbCrew.Contains(id);
 
     /// <summary>True if the sapper bursts out of the ground (the Deepfolk's burrower): its wave tunnels under walls.</summary>
     private static bool Burrows(UnitDef def) => def.Role == UnitRole.Sapper && def.Burst > 0;

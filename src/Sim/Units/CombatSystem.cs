@@ -339,8 +339,8 @@ public sealed partial class CombatSystem
         if (!def.CanAttack) return;
         if (u.Job[i] != UnitJob.None)
         {
-            // Units at work do not fight, but a soldier on a raid or a sabotage answers an attack: it drops the job.
-            if (u.HitBy[i] == 0 || u.Job[i] is not (UnitJob.Capture or UnitJob.Burn or UnitJob.Sabotage) || def.Role == UnitRole.Worker) return;
+            // Units at work do not fight, but a soldier on a raid, a sabotage or a climb answers an attack: it drops the job.
+            if (u.HitBy[i] == 0 || u.Job[i] is not (UnitJob.Capture or UnitJob.Burn or UnitJob.Sabotage or UnitJob.Climb) || def.Role == UnitRole.Worker) return;
             u.ClearJob(i);
             Halt(i);
         }
