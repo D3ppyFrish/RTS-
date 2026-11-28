@@ -673,6 +673,7 @@ public sealed partial class EconomySystem
         U.ClearJob(i);
         U.ClearCombat(i);
         Halt(i);
+        if (U.Illusion[i] > 0) return; // an illusion works, captures and burns nothing (CombatSystem.Glamour.cs)
         U.Job[i] = job;
         U.JobTarget[i] = target;
     }

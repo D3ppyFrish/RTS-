@@ -24,6 +24,8 @@
 //                                         soft a while (numbers: molt in roles.json)
 //   smoke_bombs   { role or unit }        those units can throw a smoke bomb at their feet: a cloud no enemy sees into
 //                                         through the fog and nobody fights in (numbers: smoke in roles.json)
+//   glamour       { role or unit }        those units can weave illusions round them: decoys that deal nothing and fade at
+//                                         the first blow (numbers: glamour in roles.json)
 //   shadow_step   { role or unit }        those units can step through the shadows with the units round them to a spot
 //                                         their side has seen, out of the daylight (numbers: shadowStep in roles.json)
 //   sabotage      { role or unit }        those units can sabotage an enemy building: it does no work for a while and
@@ -165,6 +167,10 @@
   { "id": "fey_wild_woods", "icon": "fairy_ring", "name": "Wild woods", "faction": "fey", "description": "The old magic runs deeper in the woods than anyone knew. Each of your fairy rings draws on twice as many trees round it at most (24 instead of 12), so a ring deep in a forest channels twice the mana.",
     "cost": { "food": 40, "wood": 40 }, "researchTime": 40,
     "effects": [ { "type": "wild_woods", "percent": 100 } ] },
+
+  { "id": "fey_glamour", "icon": "glamour", "name": "Glamour", "faction": "fey", "description": "Enchanters learn to weave glamours. An enchanter weaves 3 illusory sprites round itself for 15 mana: the enemy cannot tell them from the real thing and fights them as it would, but they strike for nothing and fade at the first blow, or after 20 seconds. Each enchanter needs 40 seconds before the next.",
+    "cost": { "food": 40, "wood": 40 }, "researchTime": 40, "requires": [ "basic_magic" ],
+    "effects": [ { "type": "glamour", "unit": "enchanter" } ] },
 
   { "id": "fey_high_court", "icon": "crown", "name": "The High Court", "faction": "fey",
     "description": "The fey lords hold court again, under a hollow hill to be sung up in the deep caves, where the oldest magic sleeps.",

@@ -503,6 +503,14 @@ public sealed record ChargeCommand(int PlayerId, int[] Units) : UnitsCommand(Pla
 public sealed record SmokeCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
 
 /// <summary>
+/// The units that can weave illusions (see <see cref="Content.TechEffectType.Glamour"/>, the Fey's) and are ready weave
+/// them round themselves: decoys that look like one of their side's units to everyone, walk and strike as it does but
+/// deal no damage, and fade at the first blow or after a while (see <c>Units/CombatSystem.Glamour.cs</c>). Each weaving
+/// costs mana; then the caster waits a while before the next.
+/// </summary>
+public sealed record GlamourCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
+
+/// <summary>
 /// Shadow step (Clan Kage's shadow casters, see <see cref="Content.TechEffectType.ShadowStep"/>): the first ready caster
 /// among the units takes itself and the others of them standing round it through the shadows to column
 /// (<paramref name="X"/>, <paramref name="Z"/>), a spot its side has seen, out of the daylight (see

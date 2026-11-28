@@ -342,6 +342,13 @@ void fragment() {
                 pale = 0.75f;
             }
             else if (u.Soft[i] > 0) pale = 0.6f;
+            // An illusion of yours (the Fey's Glamour) shimmers pale, so you know it from the real thing; to the enemy it
+            // looks like any other.
+            else if (u.Illusion[i] > 0 && u.Owner[i] == PlayerControl.LocalPlayer)
+            {
+                pale = 0.45f + 0.2f * (0.5f + 0.5f * Mathf.Sin(_time * 6f + id));
+                y += 0.06f * Mathf.Sin(_time * 3f + id);
+            }
             float s = Mathf.Sin(yaw), c = Mathf.Cos(yaw);
             var team = TeamColors[u.Owner[i] & 7];
 

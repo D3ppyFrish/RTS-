@@ -164,7 +164,7 @@ public sealed class RuinSystem
     {
         var u = U;
         return i >= 0 && i < u.Count && u.Hp[i] > 0 && u.Owner[i] >= 0 && u.Owner[i] < Simulation.WildPlayer
-            && !u.Subdued[i] && u.Rout[i] == 0 && u.Town[i] == 0;
+            && !u.Subdued[i] && u.Rout[i] == 0 && u.Town[i] == 0 && u.Illusion[i] == 0; // an illusion searches and holds nothing
     }
 
     /// <summary>True if the player can send any of these units (indexes) to search the ruin (index) now.</summary>

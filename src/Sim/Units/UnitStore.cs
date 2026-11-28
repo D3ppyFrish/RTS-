@@ -433,6 +433,12 @@ public sealed class UnitStore
     /// </summary>
     public int[] StepWait = Array.Empty<int>();
 
+    /// <summary>
+    /// Glamour (the Fey's, see <see cref="GlamourCommand"/>): for an illusion, the ticks it has left before it fades (0 for
+    /// a real unit); for a caster, <see cref="GlamourWait"/> is the ticks it waits before it can weave the next.
+    /// </summary>
+    public int[] Illusion = Array.Empty<int>(), GlamourWait = Array.Empty<int>();
+
     /// <summary>Sabotage (Clan Kage's, see <see cref="SabotageCommand"/>): ticks the saboteur waits before the next.</summary>
     public int[] SabotageWait = Array.Empty<int>();
     /// <summary>
@@ -556,6 +562,7 @@ public sealed class UnitStore
         Stunned[i] = 0;
         DrumLeft[i] = DrumWait[i] = ChargeMark[i] = ChargeLeft[i] = ChargeBlow[i] = 0;
         SmokeWait[i] = StepWait[i] = SabotageWait[i] = 0;
+        Illusion[i] = GlamourWait[i] = 0;
         Penned[i] = PenFor[i] = RunStage[i] = RunDef[i] = Tired[i] = Webbed[i] = WebPace[i] = Poisoned[i] = PoisonRate[i] = SpitWait[i] = 0;
         Molting[i] = Soft[i] = 0;
         RunAX[i] = RunAZ[i] = RunBX[i] = RunBZ[i] = RunLeft[i] = Fix64.Zero;
@@ -657,6 +664,7 @@ public sealed class UnitStore
             Mix(ShieldWall[i] ? 1 : 0); Mix(WallX[i].Raw); Mix(WallZ[i].Raw); Mix(Stunned[i]);
             Mix(DrumLeft[i]); Mix(DrumWait[i]); Mix(ChargeMark[i]); Mix(ChargeLeft[i]); Mix(ChargeBlow[i]);
             Mix(SmokeWait[i]); Mix(StepWait[i]); Mix(SabotageWait[i]);
+            Mix(Illusion[i]); Mix(GlamourWait[i]);
             Mix(Penned[i]); Mix(PenFor[i]); Mix(RunStage[i]); Mix(RunDef[i]); Mix(Tired[i]); Mix(Webbed[i]); Mix(WebPace[i]); Mix(Poisoned[i]); Mix(PoisonRate[i]); Mix(SpitWait[i]);
             Mix(Molting[i]); Mix(Soft[i]);
             Mix(RunAX[i].Raw); Mix(RunAZ[i].Raw); Mix(RunBX[i].Raw); Mix(RunBZ[i].Raw); Mix(RunLeft[i].Raw);
@@ -694,6 +702,7 @@ public sealed class UnitStore
         ShieldWall[to] = ShieldWall[from]; WallX[to] = WallX[from]; WallZ[to] = WallZ[from]; Stunned[to] = Stunned[from];
         DrumLeft[to] = DrumLeft[from]; DrumWait[to] = DrumWait[from];
         SmokeWait[to] = SmokeWait[from]; StepWait[to] = StepWait[from]; SabotageWait[to] = SabotageWait[from];
+        Illusion[to] = Illusion[from]; GlamourWait[to] = GlamourWait[from];
         ChargeMark[to] = ChargeMark[from]; ChargeLeft[to] = ChargeLeft[from]; ChargeBlow[to] = ChargeBlow[from];
         Penned[to] = Penned[from]; PenFor[to] = PenFor[from]; RunStage[to] = RunStage[from]; RunDef[to] = RunDef[from]; Tired[to] = Tired[from]; Webbed[to] = Webbed[from]; WebPace[to] = WebPace[from]; Poisoned[to] = Poisoned[from]; PoisonRate[to] = PoisonRate[from]; SpitWait[to] = SpitWait[from];
         Molting[to] = Molting[from]; Soft[to] = Soft[from];
@@ -738,6 +747,7 @@ public sealed class UnitStore
         Array.Resize(ref Stunned, capacity);
         Array.Resize(ref DrumLeft, capacity); Array.Resize(ref DrumWait, capacity);
         Array.Resize(ref SmokeWait, capacity); Array.Resize(ref StepWait, capacity); Array.Resize(ref SabotageWait, capacity);
+        Array.Resize(ref Illusion, capacity); Array.Resize(ref GlamourWait, capacity);
         Array.Resize(ref ChargeMark, capacity); Array.Resize(ref ChargeLeft, capacity); Array.Resize(ref ChargeBlow, capacity);
         Array.Resize(ref Penned, capacity); Array.Resize(ref PenFor, capacity); Array.Resize(ref RunStage, capacity);
         Array.Resize(ref RunDef, capacity); Array.Resize(ref Tired, capacity); Array.Resize(ref Webbed, capacity); Array.Resize(ref WebPace, capacity); Array.Resize(ref Poisoned, capacity); Array.Resize(ref PoisonRate, capacity); Array.Resize(ref SpitWait, capacity);

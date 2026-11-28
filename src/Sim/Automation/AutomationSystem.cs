@@ -873,6 +873,7 @@ public sealed partial class AutomationSystem
         for (int i = 0; i < u.Count; i++)
         {
             var s = _stats[u.Owner[i]];
+            if (u.Illusion[i] > 0) continue; // an illusion takes no housing and does no work (CombatSystem.Glamour.cs)
             s.Population++;
             if (IsCart(i))
             {

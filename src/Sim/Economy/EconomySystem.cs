@@ -41,6 +41,7 @@ public sealed class PlayerEconomy
         Molt = new bool[content.Units.Count];
         Smoke = new bool[content.Units.Count];
         ShadowStep = new bool[content.Units.Count];
+        Glamour = new bool[content.Units.Count];
         Sabotage = new bool[content.Units.Count];
         Climb = new bool[content.Units.Count];
         FellTicks = new int[content.Units.Count];
@@ -111,6 +112,8 @@ public sealed class PlayerEconomy
     internal readonly bool[] Smoke;
     /// <summary>Which unit types (by index) can step through the shadows (see <see cref="TechEffectType.ShadowStep"/>).</summary>
     internal readonly bool[] ShadowStep;
+    /// <summary>Which unit types (by index) can weave illusions (see <see cref="TechEffectType.Glamour"/>).</summary>
+    internal readonly bool[] Glamour;
     /// <summary>Which unit types (by index) can sabotage enemy buildings (see <see cref="TechEffectType.Sabotage"/>).</summary>
     internal readonly bool[] Sabotage;
     /// <summary>Which unit types (by index) can climb walls and cliffs (see <see cref="TechEffectType.WallClimbing"/>).</summary>
@@ -223,12 +226,12 @@ public sealed partial class EconomySystem
 
     public int Stock(int player, Good good) => Stockpile(player)[(int)good];
 
-    /// <summary>Units the player has (a city-state's guards and tribute caravans, which need no housing, left out).</summary>
+    /// <summary>Units the player has (a city-state's guards and tribute caravans, which need no housing, and illusions left out).</summary>
     public int Population(int player)
     {
         int n = 0;
         for (int i = 0; i < U.Count; i++)
-            if (U.Owner[i] == player && U.Town[i] == 0) n++;
+            if (U.Owner[i] == player && U.Town[i] == 0 && U.Illusion[i] == 0) n++;
         return n;
     }
 
@@ -391,7 +394,7 @@ public sealed partial class EconomySystem
         if (_population.Length < players) _population = new int[players];
         Array.Clear(_population);
         for (int i = 0; i < U.Count; i++)
-            if (U.Town[i] == 0) _population[U.Owner[i]]++; // a city-state's own take no housing
+            if (U.Town[i] == 0 && U.Illusion[i] == 0) _population[U.Owner[i]]++; // a city-state's own and illusions take no housing
     }
 
     /// <summary>Once a second: what each player gathered in food since the same second a minute ago.</summary>

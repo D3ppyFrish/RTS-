@@ -1620,8 +1620,8 @@ honour and the goods for it and none living or queued; it then fights in the arm
 ## The Fey
 
 The Fey are the eighth faction, the design doc's tricksters of old magic: cheap, frail units, strong spells, and mana
-drawn from nature instead of crystal (`FeyTests`; `Economy/EconomySystem.Nature.cs`). This is the first piece of them;
-their illusions and teleporting are still to come, and the design doc leaves them to be refined as they are built.
+drawn from nature instead of crystal (`FeyTests`; `Economy/EconomySystem.Nature.cs`). Their illusions came
+next (Glamour, below); their teleporting is still to come, and the design doc leaves them to be refined as they are built.
 
 - **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **sprites** instead of spearmen and
   riders, **wisps** instead of archers and **enchanters** instead of mages. Sappers, healers, workers and the rest are
@@ -1651,6 +1651,22 @@ their illusions and teleporting are still to come, and the design doc leaves the
   sent by hand still does.
 - **Wild woods** (`fey_wild_woods`, the `wild_woods` tech effect with a `percent`; `EconomySystem.MostTrees`): each of
   their fairy rings counts up to twice as many trees, 24, so a ring deep in a forest channels twice the mana.
+- **Glamour** (`fey_glamour`, after Basic magic; the `glamour` tech effect, `Units/CombatSystem.Glamour.cs`; numbers in
+  `glamour` in `data/roles.json`; `GlamourTests`): their enchanters weave illusions (`GlamourCommand`, Ctrl+L or the
+  Glamour button). Each ready enchanter selected weaves 3 illusory sprites round itself, on the standing spots within 2
+  columns of it (nearest first), for 15 mana a weaving; with too little mana left it weaves none. It then waits 40
+  seconds (from the weaving) before the next (`UnitStore.GlamourWait`); beaten, running away, aboard a ship or in a pen
+  it cannot weave. An illusion (`UnitStore.Illusion`, the ticks it has left) is a sprite with full hit points that its
+  side orders like any other, and its enemies, computer players too, cannot tell from the real thing: they see it, pick
+  it and fight it as they would a sprite. But:
+  - its blows strike for nothing, at units and buildings alike (it goes through the motions);
+  - the first blow, shot or splash that lands on it, or any other harm, ends it: it fades, leaving no blood, no loss, no
+    kill, no experience, no grudge and no fear behind (`CombatSystem.IllusionsBroken`);
+  - it fades by itself after 20 seconds;
+  - it takes no housing, works no job, captures and burns nothing, searches and holds no ruin, and picks nothing up.
+  Its own side sees it shimmer pale, and its panel says "an illusion" and the seconds it has left; the enemy sees a
+  sprite. So an enchanter caught by a charge can turn the first blows, and the illusions can draw a rival's archers off
+  the real line.
 - **Their final tech** is the High Court (after Wild woods, Basic magic and Smelting), which opens their great work, **the Hollow
   Hill**, the fey court under a living hill (see [Ascendancy and great works](#ascendancy-and-great-works)). They tend
   the dusk tree and take up the Dusk Staff, as the Settlers and Elves do (see [The dusk tree](#the-dusk-tree)).
@@ -1658,7 +1674,10 @@ their illusions and teleporting are still to come, and the design doc leaves the
 Computer players play the Fey as a waves faction. At every level, with no crystal needed, they lay out a fairy ring in
 the woods near their town hall as soon as they can pay for one: of the spots every 4 columns out to 48 from the hall,
 the one whose ring would count the most trees, at least 4, the nearest of those (`AI/AiPlayer.Nature.cs`,
-`FairyRing`); a second in other woods once the first is finished. They research Wild woods after their other techs. They train wisps and enchanters only with the mana
+`FairyRing`); a second in other woods once the first is finished. They research Glamour, then Wild woods, after their other techs. At every level, each of their enchanters that is
+ready to weave, with the mana for it, weaves its illusions as soon as it sees a rival soldier within 10 columns; their
+illusions standing idle with nothing to fight are sent on (an attack-move) at the nearest rival soldier they see within
+16 columns, and are never counted in their army (`AI/AiPlayer.Glamour.cs`). They train wisps and enchanters only with the mana
 for them (`Weight` in `AiPlayer.Smart.cs`; the Classic level's barracks choice too), and the town governor likewise.
 All numbers are first guesses to be tuned in playtests.
 

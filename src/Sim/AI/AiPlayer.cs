@@ -103,7 +103,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
         "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
-        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "kage_shadow_step", "kage_saboteurs", "kage_wall_climbing", "fey_wild_woods", "silk_knives", "field_dressings", "field_hospital",
+        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "kage_shadow_step", "kage_saboteurs", "kage_wall_climbing", "fey_glamour", "fey_wild_woods", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
@@ -264,6 +264,7 @@ public sealed partial class AiPlayer
             if (Smart) Sabotage(sim, raw);
             Molt(sim, hall, issue);
             Smoke(sim, hall, issue);
+            Glamour(sim, issue); // the Fey's illusions (AiPlayer.Glamour.cs)
             Bloom(sim, issue);
             if (Hard) HardArmy(sim, hall, issue);
             else if (Smart) SmartArmy(sim, hall, issue);
@@ -1137,6 +1138,7 @@ public sealed partial class AiPlayer
         for (int i = 0; i < u.Count; i++)
         {
             if (u.Owner[i] != player || u.Subdued[i] || u.Town[i] != 0 || u.Penned[i] != 0 || u.RunStage[i] != 0) continue;
+            if (u.Illusion[i] > 0) continue; // the Fey's illusions are no army (AiPlayer.Glamour.cs)
             var def = sim.Content.Units[u.Def[i]];
             if (def.CanAttack && !def.IsBoat && def.Role is not (UnitRole.Worker or UnitRole.Trader)) list.Add(u.Id[i]);
         }

@@ -75,6 +75,9 @@ public sealed class CombatRules
     /// <summary>How far and with how many Clan Kage's shadow casters step through the shadows (see <see cref="ShadowStepRules"/>).</summary>
     public ShadowStepRules ShadowStep { get; internal set; } = new();
 
+    /// <summary>How the Fey's enchanters weave illusions (see <see cref="GlamourRules"/>).</summary>
+    public GlamourRules Glamour { get; internal set; } = new();
+
     /// <summary>How Clan Kage's saboteurs wreck enemy buildings (see <see cref="SabotageRules"/>).</summary>
     public SabotageRules Sabotage { get; internal set; } = new();
 
@@ -145,6 +148,26 @@ public sealed class SmokeRules
 /// Shadow step (a tech's <see cref="TechEffectType.ShadowStep"/> effect, Clan Kage's shadow casters): a caster takes the
 /// units of its side round it through the shadows to a spot its side has seen (see <c>Units/CombatSystem.ShadowStep.cs</c>).
 /// </summary>
+/// <summary>
+/// Glamour (a tech's <see cref="TechEffectType.Glamour"/> effect, the Fey's): a caster weaves illusions of a unit round it,
+/// decoys that strike for nothing and fade at the first blow (see <c>Units/CombatSystem.Glamour.cs</c>).
+/// </summary>
+public sealed class GlamourRules
+{
+    /// <summary>Illusions a caster weaves at once.</summary>
+    public int Count { get; internal set; } = 3;
+    /// <summary>The unit (id in <c>data/units.json</c>) the illusions look like.</summary>
+    public string Unit { get; internal set; } = "sprite";
+    /// <summary>Columns round the caster within which they appear.</summary>
+    public int Spread { get; internal set; } = 2;
+    /// <summary>Ticks an illusion lasts, if no blow ends it first.</summary>
+    public int Ticks { get; internal set; } = 20 * Simulation.TicksPerSecond;
+    /// <summary>Mana a weaving costs.</summary>
+    public int Mana { get; internal set; } = 15;
+    /// <summary>Ticks a caster waits, from the weaving, before it can weave again.</summary>
+    public int WaitTicks { get; internal set; } = 40 * Simulation.TicksPerSecond;
+}
+
 public sealed class ShadowStepRules
 {
     /// <summary>Most columns from the caster to where it steps.</summary>

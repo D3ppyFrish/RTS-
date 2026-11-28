@@ -1245,7 +1245,7 @@ public static class ContentLoader
                 return;
             }
             var table = new Obj(_errors, file, "table", "the table", doc.RootElement);
-            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "molt", "smoke", "shadowStep", "sabotage", "climb", "roles");
+            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "molt", "smoke", "shadowStep", "glamour", "sabotage", "climb", "roles");
             var combat = _db.Combat;
             combat.Strong = table.Decimal("strong", Fix64.One, Fix64.FromInt(10), Fix64.FromInt(2));
             combat.Structures = table.Decimal("structures", Fix64.Zero, Fix64.One, Fix64.FromRatio(1, 4));
@@ -1313,6 +1313,21 @@ public static class ContentLoader
                     Spread = step.Int("spread", 1, 16, 3),
                     Mana = step.Int("mana", 0, 1000, 30),
                     WaitTicks = (step.Decimal("wait", Fix64.Zero, Fix64.FromInt(3600), Fix64.FromInt(90), required: false) * Tps).RoundToInt(),
+                };
+            }
+            if (Part(table, "glamour", "{ \"count\": 3, \"unit\": \"sprite\", \"spread\": 2, \"time\": 20, \"mana\": 15, \"wait\": 40 }") is { } glam)
+            {
+                glam.Keys("count", "unit", "spread", "time", "mana", "wait");
+                var glamUnit = glam.Str("unit", false) ?? "sprite";
+                if (!_db.TryGetUnit(glamUnit, out _)) glam.Error($"\"unit\" is \"{glamUnit}\", which is not a unit");
+                combat.Glamour = new GlamourRules
+                {
+                    Count = glam.Int("count", 1, 16, 3),
+                    Unit = glamUnit,
+                    Spread = glam.Int("spread", 1, 8, 2),
+                    Ticks = (glam.Decimal("time", Fix64.One, Fix64.FromInt(600), Fix64.FromInt(20), required: false) * Tps).RoundToInt(),
+                    Mana = glam.Int("mana", 0, 1000, 15),
+                    WaitTicks = (glam.Decimal("wait", Fix64.Zero, Fix64.FromInt(3600), Fix64.FromInt(40), required: false) * Tps).RoundToInt(),
                 };
             }
             if (Part(table, "sabotage", "{ \"time\": 6, \"guard\": 3, \"stall\": 45, \"spoil\": 25, \"wait\": 60 }") is { } sab)
@@ -1513,6 +1528,7 @@ public static class ContentLoader
                     case TechEffectType.ShadowStep:
                     case TechEffectType.Sabotage:
                     case TechEffectType.WallClimbing:
+                    case TechEffectType.Glamour:
                     {
                         o.Keys("type", "role", "unit");
                         UnitRole? role = o.Has("role") ? o.Enum("role", UnitRole.Worker, required: true) : null;
@@ -1529,6 +1545,7 @@ public static class ContentLoader
                                 TechEffectType.ShadowStep => "needs a \"role\" or a \"unit\": which units can step through the shadows",
                                 TechEffectType.Sabotage => "needs a \"role\" or a \"unit\": which units can sabotage enemy buildings",
                                 TechEffectType.WallClimbing => "needs a \"role\" or a \"unit\": which units can climb walls",
+                                TechEffectType.Glamour => "needs a \"role\" or a \"unit\": which units can weave illusions",
                                 _ => "needs a \"role\" or a \"unit\": which units can form the wall",
                             });
                         effects.Add(new TechEffect { Type = type, Role = role, Unit = unit });

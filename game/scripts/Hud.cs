@@ -115,7 +115,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _stepButton = null!, _sabotageButton = null!, _climbButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _glamourButton = null!, _stepButton = null!, _sabotageButton = null!, _climbButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -765,6 +765,17 @@ public partial class Hud : CanvasLayer
         _smokeButton.Pressed += () => _control.ThrowSmoke();
         _smokeButton.Visible = false;
         column.AddChild(_smokeButton);
+        var glamour = _sim.Content.Combat.Glamour;
+        _glamourButton = MakeToolButton("Glamour  [Ctrl+L]");
+        _glamourButton.Name = "glamour";
+        _glamourButton.ToggleMode = false;
+        _glamourButton.Icon = UiIcons.Get("glamour");
+        _glamourButton.TooltipText = $"The selected enchanters each weave {glamour.Count} illusory sprites round them, for {glamour.Mana} mana a weaving. " +
+            "The enemy cannot tell them from the real thing and fights them, but they strike for nothing and fade at the first blow, " +
+            $"or after {glamour.Ticks / Simulation.TicksPerSecond} seconds. Each enchanter then needs {glamour.WaitTicks / Simulation.TicksPerSecond} seconds before the next. (The Fey, needs Glamour.)";
+        _glamourButton.Pressed += () => _control.WeaveGlamour();
+        _glamourButton.Visible = false;
+        column.AddChild(_glamourButton);
         var step = _sim.Content.Combat.ShadowStep;
         _stepButton = MakeToolButton("Shadow step  [Ctrl+H]");
         _stepButton.Name = "shadow_step";
@@ -1425,6 +1436,29 @@ public partial class Hud : CanvasLayer
     }
 
     /// <summary>
+    /// The Glamour button: shown with enchanters that can weave illusions selected, greyed out with the seconds left until
+    /// one of them is ready, or while there is too little mana.
+    /// </summary>
+    private void RefreshGlamour()
+    {
+        var casters = _control.OwnGlamourers();
+        _glamourButton.Visible = casters.Count > 0;
+        if (casters.Count == 0) return;
+        var u = _sim.Units;
+        int ready = 0, wait = int.MaxValue;
+        foreach (int id in casters)
+        {
+            int i = u.IndexOf(id);
+            if (_sim.Combat.ReadyToGlamour(i)) ready++;
+            else if (u.GlamourWait[i] > 0) wait = Math.Min(wait, u.GlamourWait[i]);
+        }
+        _glamourButton.Disabled = ready == 0;
+        _glamourButton.Text = ready > 0 ? "Glamour  [Ctrl+L]"
+            : wait != int.MaxValue ? $"Glamour ready in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s"
+            : $"Glamour (needs {_sim.Content.Combat.Glamour.Mana} mana)";
+    }
+
+    /// <summary>
     /// The Molt button: shown with hive units that can molt selected, greyed out while none of them is hurt enough;
     /// says how many are molting.
     /// </summary>
@@ -1626,6 +1660,7 @@ public partial class Hud : CanvasLayer
         RefreshCharge();
         RefreshMolt();
         RefreshSmoke();
+        RefreshGlamour();
         RefreshShadowStep();
         RefreshSabotage();
         RefreshClimb();
@@ -2659,6 +2694,9 @@ public partial class Hud : CanvasLayer
             if (_sim.Combat.Bears(PlayerControl.LocalPlayer, i)) heals += " (marked by your grudge)";
             if (u.Owner[i] == PlayerControl.LocalPlayer && _sim.Combat.Lurking(i)) heals += _sim.Combat.Hiding(i) ? " (hidden)" : " (hidden in the water)";
             if (_sim.Combat.InSmoke(i)) heals += " (in smoke)";
+            // Only its own side knows an illusion for what it is.
+            if (u.Owner[i] == PlayerControl.LocalPlayer && u.Illusion[i] > 0)
+                heals += $" (an illusion, fades in {(u.Illusion[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)";
             if (u.Poisoned[i] > 0) heals += $" (poisoned, {(u.Poisoned[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
             if (hurt > 0) heals += _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] + 1, u.Z[i].FloorToInt()) == BlockType.Water ? " (drowning)"
