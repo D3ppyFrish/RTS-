@@ -484,6 +484,14 @@ public sealed record ChargeCommand(int PlayerId, int[] Units) : UnitsCommand(Pla
 public sealed record SmokeCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
 
 /// <summary>
+/// Shadow step (Clan Kage's shadow casters, see <see cref="Content.TechEffectType.ShadowStep"/>): the first ready caster
+/// among the units takes itself and the others of them standing round it through the shadows to column
+/// (<paramref name="X"/>, <paramref name="Z"/>), a spot its side has seen, out of the daylight (see
+/// <c>Units/CombatSystem.ShadowStep.cs</c>). They come out of the shadows there at once, with no orders.
+/// </summary>
+public sealed record ShadowStepCommand(int PlayerId, int[] Units, int X, int Z) : UnitsCommand(PlayerId, Units);
+
+/// <summary>
 /// The player's tamed beasts among the units (<see cref="Units.UnitDef.Pennable"/>) walk into their beast pen
 /// <paramref name="Building"/> and are kept there, as many as it has room for (see <c>Units/CombatSystem.Stampede.cs</c>).
 /// </summary>

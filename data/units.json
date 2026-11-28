@@ -584,7 +584,7 @@
     "attack": "pierce", "shadowborn": true,
     "cost": { "food": 30, "wood": 25 }, "trainTime": 14, "trainedAt": "barracks", "requires": "archery" },
   { "id": "shadow_caster", "name": "Shadow caster", "faction": "kage", "role": "caster",
-    "description": "An old ratfolk sorcerer in a hooded robe. Hurls bolts of shadow that curse whoever they strike with dread, breaking their nerve. No terrain magic. Weaker in bright daylight, stronger in the shadowed wilds.",
+    "description": "An old ratfolk sorcerer in a hooded robe. Hurls bolts of shadow that curse whoever they strike with dread, breaking their nerve. No terrain magic, but with Shadow step it takes your units through the shadows across the map. Weaker in bright daylight, stronger in the shadowed wilds.",
     "speed": 4, "hp": 45, "model": "shadow_caster", "damage": 9, "attackTime": 2, "range": 8, "sight": 9,
     "attack": "crush", "fear": 8, "shadowborn": true,
     "cost": { "food": 50, "wood": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" }

@@ -103,7 +103,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
         "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
-        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "silk_knives", "field_dressings", "field_hospital",
+        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "kage_shadow_step", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
@@ -950,6 +950,8 @@ public sealed partial class AiPlayer
         }
         if (far > SiegeRadius && !MostAt(sim, tx, tz))
         {
+            // Clan Kage's shadow casters step the wave through the shadows towards the target (AiPlayer.ShadowStep.cs).
+            if (ShadowStep(sim, far, tx, tz, issue)) return;
             // On the way: units that have stopped (they fought something, or gave up) set out again, every
             // few seconds; a wave that has not got any nearer for a minute is sent again from where it is.
             _siegeDefenders = int.MaxValue;

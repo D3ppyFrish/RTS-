@@ -1198,7 +1198,7 @@ public static class ContentLoader
                 return;
             }
             var table = new Obj(_errors, file, "table", "the table", doc.RootElement);
-            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "molt", "smoke", "roles");
+            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "molt", "smoke", "shadowStep", "roles");
             var combat = _db.Combat;
             combat.Strong = table.Decimal("strong", Fix64.One, Fix64.FromInt(10), Fix64.FromInt(2));
             combat.Structures = table.Decimal("structures", Fix64.Zero, Fix64.One, Fix64.FromRatio(1, 4));
@@ -1253,6 +1253,19 @@ public static class ContentLoader
                     Height = smoke.Int("height", 0, 8, 2),
                     Ticks = (smoke.Decimal("time", Fix64.One, Fix64.FromInt(120), Fix64.FromInt(8), required: false) * Tps).RoundToInt(),
                     WaitTicks = (smoke.Decimal("wait", Fix64.Zero, Fix64.FromInt(600), Fix64.FromInt(45), required: false) * Tps).RoundToInt(),
+                };
+            }
+            if (Part(table, "shadowStep", "{ \"range\": 80, \"gather\": 5, \"carry\": 8, \"spread\": 3, \"mana\": 30, \"wait\": 90 }") is { } step)
+            {
+                step.Keys("range", "gather", "carry", "spread", "mana", "wait");
+                combat.ShadowStep = new ShadowStepRules
+                {
+                    Range = step.Int("range", 1, 1000, 80),
+                    Gather = step.Int("gather", 0, 32, 5),
+                    Carry = step.Int("carry", 1, 64, 8),
+                    Spread = step.Int("spread", 1, 16, 3),
+                    Mana = step.Int("mana", 0, 1000, 30),
+                    WaitTicks = (step.Decimal("wait", Fix64.Zero, Fix64.FromInt(3600), Fix64.FromInt(90), required: false) * Tps).RoundToInt(),
                 };
             }
             if (!doc.RootElement.TryGetProperty("roles", out var list) || list.ValueKind != JsonValueKind.Array)
@@ -1428,6 +1441,7 @@ public static class ContentLoader
                     case TechEffectType.ShieldWall:
                     case TechEffectType.Molt:
                     case TechEffectType.SmokeBombs:
+                    case TechEffectType.ShadowStep:
                     {
                         o.Keys("type", "role", "unit");
                         UnitRole? role = o.Has("role") ? o.Enum("role", UnitRole.Worker, required: true) : null;
@@ -1441,6 +1455,7 @@ public static class ContentLoader
                             {
                                 TechEffectType.Molt => "needs a \"role\" or a \"unit\": which units can molt",
                                 TechEffectType.SmokeBombs => "needs a \"role\" or a \"unit\": which units can throw smoke bombs",
+                                TechEffectType.ShadowStep => "needs a \"role\" or a \"unit\": which units can step through the shadows",
                                 _ => "needs a \"role\" or a \"unit\": which units can form the wall",
                             });
                         effects.Add(new TechEffect { Type = type, Role = role, Unit = unit });

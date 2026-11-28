@@ -189,6 +189,12 @@ public static class UiIcons
             "..........l.", ".........li.", "..kkkkk.li..", ".kcccccli...", "kcccccclkc..", "kcrcccrckc..",
             "kccccccckc..", "kCCCCCCCkc..", ".kCCCCCCk...", "..kkkkkk....", "............", "............",
         },
+        // Shadow step: a dark rift rimmed in violet, and footprints going into it.
+        ["shadow_step"] = new[]
+        {
+            "....vvvv....", "..vvkcckvv..", ".vkcCCCCckv.", ".vcCkkkkCcv.", "vkCkkkkkkCkv", ".vcCkkkkCcv.",
+            ".vkcCCCCckv.", "..vvkcckvv..", "....vvvv....", "kk..........", "...kk.......", "kk....kk....",
+        },
         // Smoke bombs: a black bomb, its fuse alight, and puffs of smoke.
         ["smoke_bomb"] = new[]
         {

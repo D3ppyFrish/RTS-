@@ -1476,7 +1476,7 @@ numbers are first guesses to be tuned in playtests.
 
 Clan Kage is the seventh faction, the design doc's ratfolk ninja clan: scouts and assassins who vanish while they stand
 still and strike from hiding, at home in the dark and weaker in bright daylight (`KageTests`; `CombatSystem.Shadows.cs`).
-Their hidden villages, shadow step, saboteurs, wall climbing and clan honour are still to come.
+Their hidden villages, saboteurs, wall climbing and clan honour are still to come.
 
 - **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **kunoichi** instead of spearmen,
   **shinobi** instead of riders (the clan rides no horses), **shuriken throwers** instead of archers and **shadow
@@ -1518,13 +1518,28 @@ Their hidden villages, shadow step, saboteurs, wall climbing and clan honour are
   The thrower then waits 45 seconds (from the throw) before the next (`UnitStore.SmokeWait`). Throwing it can be running
   away, but not beaten, aboard a ship or in a pen. The game draws the cloud as grey voxel puffs (`SmokeRenderer.cs`),
   and a unit's panel says "in smoke".
+- **Shadow step** (`kage_shadow_step`, after Basic magic; the `shadow_step` tech effect, `CombatSystem.ShadowStep.cs`;
+  numbers in `shadowStep` in `data/roles.json`): their shadow casters step units through the shadows across the map, as
+  the design doc has it (`ShadowStepCommand`, Ctrl+H or the Shadow step button, then click the spot). The first ready
+  caster among those selected takes itself and the selected units standing within 5 columns of it (up to 8 in all, the
+  nearest first; no ships or siege engines) to a spot up to 80 columns off that their side has seen. They come out of
+  the shadows there at once, within 3 columns of it, each on a standing spot of its own where there are enough, with no
+  orders. Both where the caster stands and the spot must be **in shadow** (`CombatSystem.Shadowed`): out of the daylight
+  (at dawn, dusk or night, underground, under trees or a roof; `Conditions.InDaylight`) or in the shadowed wilds at any
+  hour. The spot needs ground to stand on: not water, a building or a hazard. A step costs 30 mana, and the caster then
+  waits 90 seconds (`UnitStore.StepWait`); beaten, running away, aboard a ship or in a pen it cannot step. The game draws
+  a swirl of dark violet smoke where they went in and where they came out (`SmokeRenderer.cs`), and while you pick the
+  spot the hint says why a spot will not do.
 - **Their final tech** is the Moonless Night (after Strike from the shadows, Basic magic and Smelting), which opens
   their great work, the **Shrine of the Moonless Night**, a dark timber pagoda (see
   [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers they hack the dusk tree down, as the
   Orcs do (see [The dusk tree](#the-dusk-tree)).
 
-Computer players play Clan Kage as a waves faction and research Strike from the shadows and Smoke bombs after their
-other techs. At every level, a unit of theirs that can throw a smoke bomb and is badly hurt (down to the retreat share
+Computer players play Clan Kage as a waves faction and research Strike from the shadows, Smoke bombs and Shadow step
+after their other techs. At every level, a wave on its way to a target more than 40 columns off with a shadow caster
+of its own that is ready to step steps through the shadows: to the furthest spot along the way, at least 12 columns
+short of the target and within the caster's range, that the step can be made to, if it saves at least 20 columns of
+walking; then the whole wave sets out for the target again (`AiPlayer.ShadowStep.cs`). At every level, a unit of theirs that can throw a smoke bomb and is badly hurt (down to the retreat share
 of its hit points) with a rival soldier it sees within 4 columns throws one and walks home to the town hall in it, and
 is left out of the army for 20 seconds (`AiPlayer.Smoke.cs`). All numbers are first guesses to be tuned in playtests.
 

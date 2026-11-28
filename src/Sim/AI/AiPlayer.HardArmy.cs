@@ -231,7 +231,7 @@ public sealed partial class AiPlayer
                 }
                 Micro(sim, _wave, issue);
                 Reinforce(sim, home, issue);
-                if (IceCross(sim, issue) || Ferry(sim, issue) || Marching(sim) || Seeking(sim, hall, issue)) return;
+                if (IceCross(sim, issue) || Ferry(sim, issue) || ShadowStepWave(sim, issue) || Marching(sim) || Seeking(sim, hall, issue)) return;
             }
             else Doing = "lair";
             StepWave(sim, hall, issue);

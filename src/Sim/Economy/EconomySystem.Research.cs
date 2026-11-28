@@ -147,6 +147,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's units of this type can throw smoke bombs (a <see cref="TechEffectType.SmokeBombs"/> tech).</summary>
     public bool CanSmoke(int player, UnitDef def) => Find(player)?.Smoke[def.Index] ?? false;
 
+    /// <summary>True if the player's units of this type can step through the shadows (a <see cref="TechEffectType.ShadowStep"/> tech).</summary>
+    public bool CanShadowStep(int player, UnitDef def) => Find(player)?.ShadowStep[def.Index] ?? false;
+
     /// <summary>The player's first finished town hall, where research happens; null if they have none.</summary>
     public Building? TownHall(int player)
     {
@@ -215,6 +218,7 @@ public sealed partial class EconomySystem
         Array.Clear(p.ShieldWall);
         Array.Clear(p.Molt);
         Array.Clear(p.Smoke);
+        Array.Clear(p.ShadowStep);
         Array.Clear(p.FellTicks);
         Array.Clear(p.ProspectTicks);
         p.FellCrush = p.ProspectRadius = 0;
@@ -251,6 +255,10 @@ public sealed partial class EconomySystem
                     case TechEffectType.SmokeBombs:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.Smoke[d.Index] = true;
+                        break;
+                    case TechEffectType.ShadowStep:
+                        foreach (var d in units)
+                            if (e.AppliesTo(d)) p.ShadowStep[d.Index] = true;
                         break;
                     case TechEffectType.Felling:
                     case TechEffectType.Prospecting:
