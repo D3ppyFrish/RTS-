@@ -75,6 +75,9 @@ public sealed class CombatRules
     /// <summary>How far and with how many Clan Kage's shadow casters step through the shadows (see <see cref="ShadowStepRules"/>).</summary>
     public ShadowStepRules ShadowStep { get; internal set; } = new();
 
+    /// <summary>How Clan Kage's saboteurs wreck enemy buildings (see <see cref="SabotageRules"/>).</summary>
+    public SabotageRules Sabotage { get; internal set; } = new();
+
     public bool StrongAgainst(UnitRole attacker, UnitRole target) => _strong[(int)attacker * RoleCount + (int)target];
 
     public bool StrongAgainstStructures(UnitRole role) => _structures[(int)role];
@@ -153,6 +156,24 @@ public sealed class ShadowStepRules
     public int Mana { get; internal set; } = 30;
     /// <summary>Ticks a caster waits, from the step, before it can step again.</summary>
     public int WaitTicks { get; internal set; } = 90 * Simulation.TicksPerSecond;
+}
+
+/// <summary>
+/// Sabotage (a tech's <see cref="TechEffectType.Sabotage"/> effect, Clan Kage's Saboteurs): a saboteur at an enemy
+/// building wrecks its works, and it does no work for a while (see <c>Economy/EconomySystem.Sabotage.cs</c>).
+/// </summary>
+public sealed class SabotageRules
+{
+    /// <summary>Ticks of work at the building a sabotage takes.</summary>
+    public int Ticks { get; internal set; } = 6 * Simulation.TicksPerSecond;
+    /// <summary>Columns round the building within which a soldier of its owner's holds the saboteurs off.</summary>
+    public int Guard { get; internal set; } = 3;
+    /// <summary>Ticks a sabotaged building does no work.</summary>
+    public int StallTicks { get; internal set; } = 45 * Simulation.TicksPerSecond;
+    /// <summary>Percent of each good inside it that is spoiled.</summary>
+    public int Spoil { get; internal set; } = 25;
+    /// <summary>Ticks a saboteur waits, from the sabotage, before the next.</summary>
+    public int WaitTicks { get; internal set; } = 60 * Simulation.TicksPerSecond;
 }
 
 public sealed class MoltRules

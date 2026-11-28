@@ -41,6 +41,7 @@ public sealed class PlayerEconomy
         Molt = new bool[content.Units.Count];
         Smoke = new bool[content.Units.Count];
         ShadowStep = new bool[content.Units.Count];
+        Sabotage = new bool[content.Units.Count];
         FellTicks = new int[content.Units.Count];
         ProspectTicks = new int[content.Units.Count];
         AutoForm = new int[content.Units.Count];
@@ -97,6 +98,8 @@ public sealed class PlayerEconomy
     internal readonly bool[] Smoke;
     /// <summary>Which unit types (by index) can step through the shadows (see <see cref="TechEffectType.ShadowStep"/>).</summary>
     internal readonly bool[] ShadowStep;
+    /// <summary>Which unit types (by index) can sabotage enemy buildings (see <see cref="TechEffectType.Sabotage"/>).</summary>
+    internal readonly bool[] Sabotage;
     /// <summary>
     /// Ticks of work for each unit type (by index) to fell a tree the way it chooses, or to sound the ground; 0 if it
     /// cannot (see <see cref="TechEffectType.Felling"/>, <see cref="TechEffectType.Prospecting"/>).
@@ -299,6 +302,8 @@ public sealed partial class EconomySystem
         MixTools(ref h);
         MixSaplings(ref h);
         MixLenses(ref h);
+        h = (h ^ (ulong)Sabotages) * 1099511628211UL;
+        h = (h ^ (ulong)GoodsSpoiled) * 1099511628211UL;
         return h;
     }
 
@@ -308,6 +313,7 @@ public sealed partial class EconomySystem
     {
         CountPopulation();
         _raiders.Clear();
+        _saboteurs.Clear();
         for (int i = 0; i < U.Count; i++)
             if (U.Job[i] != UnitJob.None) StepJob(i);
         PruneDigAreas();
@@ -327,6 +333,7 @@ public sealed partial class EconomySystem
                 StepDue(b);
                 StepSite(b);
             }
+            else if (b.Active && Stalled(b)) { } // sabotaged: it does no work (EconomySystem.Sabotage.cs)
             else if (b.Active)
             {
                 if (b.Upgrade != null) StepUpgrade(b);
@@ -341,10 +348,16 @@ public sealed partial class EconomySystem
                     else BringYield(b);
                 }
             }
-            if (b.Def.Raidable && !b.Planned && StepRaid(b)) k--; // burned down
+            if (b.Def.Raidable && !b.Planned && StepRaid(b))
+            {
+                k--; // burned down
+                continue;
+            }
+            StepSabotage(b);
         }
 
         StepResearch();
+        StepSaboteurWaits();
         StepLenses();
         StepDeepFinds();
         if (_sim.Tick % Tps == 0) SampleFood();
@@ -896,6 +909,8 @@ public sealed partial class EconomySystem
             Array.Clear(b.Supply); // the old owner's supply rules go with it
             b.Governor = GovernorFocus.None; // and so does their governor
             b.Salvaging = false; // and their mark to take it down
+            b.Sabotaged = b.SabotageWork = 0; // a sabotage is the old owner's trouble
+            b.SabotagePlayer = -1;
             b.Salvaged = 0;
             return false;
         }

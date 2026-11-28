@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Flood, Fell, Prospect, Kindle, Stampede, Gaze, ShadowStep, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Flood, Fell, Prospect, Kindle, Stampede, Gaze, ShadowStep, Sabotage, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -271,6 +271,10 @@ public partial class PlayerControl : Node
                             StepAt(mb.Position);
                             GetViewport().SetInputAsHandled();
                             return;
+                        case ToolMode.Sabotage:
+                            SabotageAt(mb.Position);
+                            GetViewport().SetInputAsHandled();
+                            return;
                         case ToolMode.Test:
                             if (GroundUnder(mb.Position, out int tx, out int ty, out int tz)) TestPlace?.Invoke(tx, ty - 1, tz);
                             GetViewport().SetInputAsHandled();
@@ -398,6 +402,7 @@ public partial class PlayerControl : Node
             case Key.S when key.CtrlPressed: ToggleStampede(); break;
             case Key.G when key.CtrlPressed: ToggleGaze(); break;
             case Key.H when key.CtrlPressed: ToggleShadowStep(); break;
+            case Key.N when key.CtrlPressed: ToggleSabotage(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
             case Key.K when key.ShiftPressed: ToggleLadder(); break;
@@ -1428,6 +1433,57 @@ public partial class PlayerControl : Node
         if (ready.Count == 0) return;
         _sim.Schedule(_sim.Tick, new SmokeCommand(LocalPlayer, ready.ToArray()));
         Changed?.Invoke();
+    }
+
+    /// <summary>The selected units of yours that can sabotage enemy buildings (see <see cref="Rts.Sim.Content.TechEffectType.Sabotage"/>), ready or not.</summary>
+    public List<int> OwnSaboteurs()
+    {
+        var list = OwnSelected();
+        list.RemoveAll(id => !_sim.Economy.CanSabotage(_sim.Units.IndexOf(id)));
+        return list;
+    }
+
+    /// <summary>The selected saboteurs of yours that are ready to set out.</summary>
+    public List<int> ReadySaboteurs()
+    {
+        var list = OwnSaboteurs();
+        list.RemoveAll(id => !_sim.Economy.ReadyToSabotage(_sim.Units.IndexOf(id)));
+        return list;
+    }
+
+    /// <summary>The building under the mouse if the selected saboteurs can wreck it, else null; false with nothing under the mouse.</summary>
+    public Building? SabotageHere(out bool any)
+    {
+        var b = BuildingUnder(_mousePos);
+        any = b != null;
+        return b != null && _sim.Economy.Sabotageable(LocalPlayer, b) ? b : null;
+    }
+
+    /// <summary>The Sabotage button and key (Ctrl+N): with a ready saboteur selected, click the enemy building to wreck.</summary>
+    public void ToggleSabotage()
+    {
+        if (Tool == ToolMode.Sabotage) SetTool(ToolMode.Select);
+        else if (ReadySaboteurs().Count > 0) SetTool(ToolMode.Sabotage);
+    }
+
+    /// <summary>
+    /// The ready saboteurs selected go to wreck the enemy building under the mouse; then the tool is put away. A building
+    /// they cannot wreck keeps the tool out.
+    /// </summary>
+    private void SabotageAt(Vector2 screen)
+    {
+        var ready = ReadySaboteurs();
+        if (ready.Count == 0)
+        {
+            SetTool(ToolMode.Select);
+            return;
+        }
+        var b = BuildingUnder(screen);
+        if (b == null || !_sim.Economy.Sabotageable(LocalPlayer, b)) return;
+        _sim.Schedule(_sim.Tick, new SabotageCommand(LocalPlayer, ready.ToArray(), b.Id));
+        _rings.ShowMarker(new Vector3(b.X + b.Def.SizeX / 2f, b.Y, b.Z + b.Def.SizeZ / 2f) * ChunkMesher.BlockSize, SelectionRenderer.Other);
+        Changed?.Invoke();
+        SetTool(ToolMode.Select);
     }
 
     /// <summary>The selected shadow casters of yours that can step through the shadows (see <see cref="Rts.Sim.Content.TechEffectType.ShadowStep"/>), ready or not.</summary>
@@ -2858,6 +2914,7 @@ public partial class PlayerControl : Node
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
                $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} smoke_clouds={_sim.Combat.Clouds.Count} smoke_bombs={_sim.Combat.SmokeBombs} shadow_steps={_sim.Combat.StepsMade} units_stepped={_sim.Combat.UnitsStepped} step_casters={OwnSteppers().Count} " +
+               $"saboteurs={OwnSaboteurs().Count} sabotaging={Jobs(UnitJob.Sabotage)} sabotages={_sim.Economy.Sabotages} goods_spoiled={_sim.Economy.GoodsSpoiled} stalled={_sim.Buildings.All.Count(b => _sim.Economy.Stalled(b))} " +
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"ramps={OwnRamps()} ramp_top={RampTop} ramp_blocks={RampBlocks} ramp_builders={RampBuilders()} " +

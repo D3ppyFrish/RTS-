@@ -1476,7 +1476,7 @@ numbers are first guesses to be tuned in playtests.
 
 Clan Kage is the seventh faction, the design doc's ratfolk ninja clan: scouts and assassins who vanish while they stand
 still and strike from hiding, at home in the dark and weaker in bright daylight (`KageTests`; `CombatSystem.Shadows.cs`).
-Their hidden villages, saboteurs, wall climbing and clan honour are still to come.
+Their hidden villages, wall climbing and clan honour are still to come.
 
 - **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **kunoichi** instead of spearmen,
   **shinobi** instead of riders (the clan rides no horses), **shuriken throwers** instead of archers and **shadow
@@ -1530,13 +1530,29 @@ Their hidden villages, saboteurs, wall climbing and clan honour are still to com
   waits 90 seconds (`UnitStore.StepWait`); beaten, running away, aboard a ship or in a pen it cannot step. The game draws
   a swirl of dark violet smoke where they went in and where they came out (`SmokeRenderer.cs`), and while you pick the
   spot the hint says why a spot will not do.
+- **Saboteurs** (`kage_saboteurs`, after Strike from the shadows; the `sabotage` tech effect,
+  `Economy/EconomySystem.Sabotage.cs`; numbers in `sabotage` in `data/roles.json`): their kunoichi and shinobi slip into
+  enemy buildings to wreck their works (`SabotageCommand`, Ctrl+N or the Sabotage button, then click the building). The
+  ready saboteurs among those selected walk to it (`UnitJob.Sabotage`) and work there 6 seconds while no soldier of its
+  owner's stands within 3 columns of it (workers, caravans and carts do not stop them; `EconomySystem.Watched`). Then the
+  building is **sabotaged** (`Building.Sabotaged`, `EconomySystem.Stalled`): for 45 seconds it does no work (no training,
+  upgrading, smelting, channelling, making or yield, and research stalls while it is its owner's town hall), and a
+  quarter of each good in it spoils. Any finished building of a rival's can be sabotaged but walls, gates, towers,
+  bridges and totems, and one lying wrecked cannot be again until it works. Each saboteur then waits 60 seconds
+  (`UnitStore.SabotageWait`). A saboteur that is hit drops the work and fights, as a raider does; beaten, running away,
+  aboard a ship or in a pen it cannot sabotage. A building's panel says how far a sabotage has got and how long it lies
+  wrecked.
 - **Their final tech** is the Moonless Night (after Strike from the shadows, Basic magic and Smelting), which opens
   their great work, the **Shrine of the Moonless Night**, a dark timber pagoda (see
   [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers they hack the dusk tree down, as the
   Orcs do (see [The dusk tree](#the-dusk-tree)).
 
 Computer players play Clan Kage as a waves faction and research Strike from the shadows, Smoke bombs and Shadow step
-after their other techs. At every level, a wave on its way to a target more than 40 columns off with a shadow caster
+after their other techs, then Saboteurs. From Easy up, a wave out against a rival with a ready saboteur in it that is not
+fighting sends that one to sabotage a rival building it sees within 20 columns of it with no rival soldier it sees by
+it: one training units or the town hall while its owner researches first, then a smelter, workshop or shrine, then
+one holding 40 goods or more, the nearest first (`AiPlayer.Sabotage.cs`). The wave's orders leave it alone until the
+work is done or 30 seconds pass; one saboteur is out at a time. At every level, a wave on its way to a target more than 40 columns off with a shadow caster
 of its own that is ready to step steps through the shadows: to the furthest spot along the way, at least 12 columns
 short of the target and within the caster's range, that the step can be made to, if it saves at least 20 columns of
 walking; then the whole wave sets out for the target again (`AiPlayer.ShadowStep.cs`). At every level, a unit of theirs that can throw a smoke bomb and is badly hurt (down to the retreat share

@@ -150,6 +150,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's units of this type can step through the shadows (a <see cref="TechEffectType.ShadowStep"/> tech).</summary>
     public bool CanShadowStep(int player, UnitDef def) => Find(player)?.ShadowStep[def.Index] ?? false;
 
+    /// <summary>True if the player's units of this type can sabotage enemy buildings (a <see cref="TechEffectType.Sabotage"/> tech).</summary>
+    public bool CanSabotage(int player, UnitDef def) => Find(player)?.Sabotage[def.Index] ?? false;
+
     /// <summary>The player's first finished town hall, where research happens; null if they have none.</summary>
     public Building? TownHall(int player)
     {
@@ -177,7 +180,7 @@ public sealed partial class EconomySystem
         for (int player = 0; player < _players.Count; player++)
         {
             var p = _players[player];
-            if (p.Researching < 0 || TownHall(player) == null) continue;
+            if (p.Researching < 0 || TownHall(player) is not { } hall || Stalled(hall)) continue; // a sabotaged hall researches nothing
             var tech = Content.Techs[p.Researching];
             if (++p.ResearchTicks < tech.ResearchTicks) continue;
             Complete(player, tech);
@@ -219,6 +222,7 @@ public sealed partial class EconomySystem
         Array.Clear(p.Molt);
         Array.Clear(p.Smoke);
         Array.Clear(p.ShadowStep);
+        Array.Clear(p.Sabotage);
         Array.Clear(p.FellTicks);
         Array.Clear(p.ProspectTicks);
         p.FellCrush = p.ProspectRadius = 0;
@@ -259,6 +263,10 @@ public sealed partial class EconomySystem
                     case TechEffectType.ShadowStep:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.ShadowStep[d.Index] = true;
+                        break;
+                    case TechEffectType.Sabotage:
+                        foreach (var d in units)
+                            if (e.AppliesTo(d)) p.Sabotage[d.Index] = true;
                         break;
                     case TechEffectType.Felling:
                     case TechEffectType.Prospecting:

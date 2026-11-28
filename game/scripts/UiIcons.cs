@@ -195,6 +195,12 @@ public static class UiIcons
             "....vvvv....", "..vvkcckvv..", ".vkcCCCCckv.", ".vcCkkkkCcv.", "vkCkkkkkkCkv", ".vcCkkkkCcv.",
             ".vkcCCCCckv.", "..vvkcckvv..", "....vvvv....", "kk..........", "...kk.......", "kk....kk....",
         },
+        // Saboteurs: a ninja's dagger stuck in a cog, sparks flying.
+        ["sabotage"] = new[]
+        {
+            "..y......l..", ".y.y....li..", "..y....li...", "..kkkkli.k..", ".kcckli.kck.", "kcckli.kcck.",
+            "kckliCCkcck.", "kclikkCkcck.", ".kkckkkcck..", "..kcccccck..", "...kkckkk...", "....kk......",
+        },
         // Smoke bombs: a black bomb, its fuse alight, and puffs of smoke.
         ["smoke_bomb"] = new[]
         {

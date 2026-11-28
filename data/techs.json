@@ -26,6 +26,8 @@
 //                                         through the fog and nobody fights in (numbers: smoke in roles.json)
 //   shadow_step   { role or unit }        those units can step through the shadows with the units round them to a spot
 //                                         their side has seen, out of the daylight (numbers: shadowStep in roles.json)
+//   sabotage      { role or unit }        those units can sabotage an enemy building: it does no work for a while and
+//                                         goods in it spoil (numbers: sabotage in roles.json)
 //   salvage                               workers can take down the player's own finished buildings for half their cost back
 //                                         and the goods they held (see "Salvage" in docs/rules.md)
 //   field_repairs                         workers can mend the player's damaged catapults and battering rams in the field
@@ -126,6 +128,9 @@
   { "id": "kage_shadow_step", "icon": "shadow_step", "name": "Shadow step", "faction": "kage", "description": "Shadow casters learn to walk the shadows. A caster takes up to 7 of your units standing within 5 columns of it through the shadows to any spot up to 80 columns off that you have seen, and they step out there at once. Both ends must lie out of the daylight: at dusk, by night, underground, under the trees or in the shadowed wilds. 30 mana; each caster then needs 90 seconds.",
     "cost": { "food": 50, "wood": 40 }, "researchTime": 45, "requires": [ "basic_magic" ],
     "effects": [ { "type": "shadow_step", "unit": "shadow_caster" } ] },
+  { "id": "kage_saboteurs", "icon": "sabotage", "name": "Saboteurs", "faction": "kage", "description": "Kunoichi and shinobi slip into enemy buildings to wreck their works. A saboteur works 6 seconds at an enemy building while none of its owner's soldiers stands within 3 columns: then it trains, researches, smelts and makes nothing for 45 seconds, and a quarter of the goods in it spoil. Each saboteur then needs 60 seconds.",
+    "cost": { "food": 50, "wood": 40 }, "researchTime": 40, "requires": [ "kage_shadow_strike" ],
+    "effects": [ { "type": "sabotage", "unit": "kunoichi" }, { "type": "sabotage", "unit": "shinobi" } ] },
 
   { "id": "dwarf_grudges", "icon": "grudge", "name": "Book of Grudges", "faction": "dwarves", "description": "Every wrong is written down. An enemy that kills one of your units is marked with a grudge for the rest of its life, and your units deal it half as much damage again. A grudge is never forgotten: a marked enemy shows through the fog of war.",
     "cost": { "food": 40, "stone": 40 }, "researchTime": 40,

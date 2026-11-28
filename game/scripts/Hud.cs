@@ -114,7 +114,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _stepButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _stepButton = null!, _sabotageButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -766,6 +766,17 @@ public partial class Hud : CanvasLayer
         _stepButton.Pressed += () => _control.ToggleShadowStep();
         _stepButton.Visible = false;
         column.AddChild(_stepButton);
+        var sabotage = _sim.Content.Combat.Sabotage;
+        _sabotageButton = MakeToolButton("Sabotage  [Ctrl+N]");
+        _sabotageButton.Name = "sabotage";
+        _sabotageButton.Icon = UiIcons.Get("sabotage");
+        _sabotageButton.TooltipText = $"Click an enemy building: the selected saboteurs slip in and work {sabotage.Ticks / Simulation.TicksPerSecond} seconds " +
+            $"to wreck its works while no soldier of its owner's stands within {sabotage.Guard} columns. Then it trains, researches, smelts and " +
+            $"makes nothing for {sabotage.StallTicks / Simulation.TicksPerSecond} seconds, and {sabotage.Spoil}% of the goods in it spoil. Not walls, " +
+            $"gates, towers or bridges. Each saboteur then needs {sabotage.WaitTicks / Simulation.TicksPerSecond} seconds. (Clan Kage's kunoichi and shinobi, needs Saboteurs.)";
+        _sabotageButton.Pressed += () => _control.ToggleSabotage();
+        _sabotageButton.Visible = false;
+        column.AddChild(_sabotageButton);
 
         _moltButton = MakeToolButton("Molt  [Ctrl+M]");
         _moltButton.Name = "molt";
@@ -1454,6 +1465,30 @@ public partial class Hud : CanvasLayer
             : "Shadow step  [Ctrl+H]";
     }
 
+    /// <summary>
+    /// The Sabotage button: shown with saboteurs selected, greyed out with the seconds left until the first is ready.
+    /// </summary>
+    private void RefreshSabotage()
+    {
+        var saboteurs = _control.OwnSaboteurs();
+        bool tool = _control.Tool == PlayerControl.ToolMode.Sabotage;
+        _sabotageButton.Visible = saboteurs.Count > 0 || tool;
+        _sabotageButton.SetPressedNoSignal(tool);
+        if (saboteurs.Count == 0) return;
+        var u = _sim.Units;
+        int wait = int.MaxValue, ready = 0;
+        foreach (int id in saboteurs)
+        {
+            int i = u.IndexOf(id);
+            if (_sim.Economy.ReadyToSabotage(i)) ready++;
+            else wait = Math.Min(wait, Math.Max(1, u.SabotageWait[i]));
+        }
+        _sabotageButton.Disabled = ready == 0 && !tool;
+        _sabotageButton.Text = ready == 0 && wait != int.MaxValue
+            ? $"Sabotage ready in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s"
+            : "Sabotage  [Ctrl+N]";
+    }
+
     /// <summary>The Gaze button: shown with your finished crystal lens selected, greyed out until it is ready and you have the mana.</summary>
     private void RefreshLens()
     {
@@ -1558,6 +1593,7 @@ public partial class Hud : CanvasLayer
         RefreshMolt();
         RefreshSmoke();
         RefreshShadowStep();
+        RefreshSabotage();
         RefreshPen();
         RefreshLens();
         _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
@@ -2459,6 +2495,14 @@ public partial class Hud : CanvasLayer
                        (kept == 0 ? "   (no beasts in the pen)" : "") +
                        "\nRight click or Esc to stop";
             }
+            case PlayerControl.ToolMode.Sabotage:
+            {
+                var target = _control.SabotageHere(out bool any);
+                return (target != null ? $"Sabotage: click to wreck the works of this {target.Def.Name.ToLowerInvariant()}"
+                           : any ? "Sabotage: not this one (only an enemy's finished building, not a wall, gate, tower or bridge, nor one wrecked already)"
+                           : "Sabotage: click an enemy building") +
+                       $"\nIt works while no soldier of the owner's stands within {_sim.Content.Combat.Sabotage.Guard} columns   Right click or Esc to stop";
+            }
             case PlayerControl.ToolMode.ShadowStep:
             {
                 var rules = _sim.Content.Combat.ShadowStep;
@@ -2522,7 +2566,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   Ctrl+Y: flood   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+B: smoke bomb   Ctrl+H: shadow step   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+B: smoke bomb   Ctrl+H: shadow step   Ctrl+N: sabotage   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
         }
     }
 
@@ -2774,6 +2818,10 @@ public partial class Hud : CanvasLayer
                     text.Append($": {b.Owed.Count} to queue again when there are goods (and a minute's food) for {(b.Owed.Count == 1 ? "it" : "them")}");
             }
         }
+        if (b.Sabotaged > 0)
+            text.Append($"\nSabotaged: no work for {(b.Sabotaged + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s");
+        else if (b.SabotagePlayer >= 0 && b.SabotageWork > 0)
+            text.Append($"\nBeing sabotaged by {PlayerName(b.SabotagePlayer)}: {100L * b.SabotageWork / Math.Max(1, _sim.Content.Combat.Sabotage.Ticks)}%");
         if (b.Raid != RaidKind.None && b.RaidPlayer >= 0)
         {
             int total = b.Raid == RaidKind.Capture ? EconomySystem.CaptureTicks : EconomySystem.BurnTicks;
@@ -3010,6 +3058,7 @@ public partial class Hud : CanvasLayer
         UnitJob.Deliver => "taking goods to storage",
         UnitJob.Capture => "capturing a storehouse",
         UnitJob.Burn => "burning a storehouse",
+        UnitJob.Sabotage => u.Phase[i] == JobPhase.Working ? "wrecking an enemy building's works" : "slipping into an enemy building",
         UnitJob.Tunnel => "tunnelling",
         UnitJob.Ramp => u.Phase[i] == JobPhase.Working ? "heaping earth onto a ramp" : "going to the ramp",
         UnitJob.Dam => u.Phase[i] == JobPhase.Working ? "building a dam" : "going to the dam",

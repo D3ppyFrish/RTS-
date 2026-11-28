@@ -88,6 +88,16 @@ public sealed class Building
     public RaidKind Raid { get; internal set; }
     public int RaidTicks { get; internal set; }
 
+    /// <summary>
+    /// Ticks it still does no work, sabotaged (see <see cref="SabotageCommand"/>): no training, research, smelting,
+    /// making or yield. 0 when it works.
+    /// </summary>
+    public int Sabotaged { get; internal set; }
+    /// <summary>Ticks of sabotage work done at it so far by <see cref="SabotagePlayer"/>'s saboteurs.</summary>
+    public int SabotageWork { get; internal set; }
+    /// <summary>The player sabotaging it, or -1.</summary>
+    public int SabotagePlayer { get; internal set; } = -1;
+
     /// <summary>Ticks left on the ingot being smelted (at a shrine, the crystal being channelled), or 0.</summary>
     public int SmeltTicks { get; internal set; }
 
@@ -295,6 +305,7 @@ public sealed class BuildingStore
             foreach (int s in b.Supply) Mix(s);
             foreach (int s in b.Due) Mix(s);
             Mix(b.RaidPlayer); Mix((int)b.Raid); Mix(b.RaidTicks); Mix(b.SmeltTicks);
+            Mix(b.Sabotaged); Mix(b.SabotageWork); Mix(b.SabotagePlayer);
             Mix(b.Queue.Count);
             foreach (int q in b.Queue) Mix(q);
             Mix(b.TrainTicks);

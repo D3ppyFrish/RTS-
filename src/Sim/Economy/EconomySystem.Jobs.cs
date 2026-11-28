@@ -31,6 +31,7 @@ public sealed partial class EconomySystem
             case UnitJob.Deliver: StepDeliver(i); break;
             case UnitJob.Capture:
             case UnitJob.Burn: StepRaider(i); break;
+            case UnitJob.Sabotage: StepSaboteur(i); break;
             case UnitJob.Trade: StepTrade(i); break;
             case UnitJob.Market: StepMarket(i); break;
             case UnitJob.Dig: StepDig(i); break;

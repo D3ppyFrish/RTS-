@@ -43,13 +43,13 @@ public class ContentTests
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "master_builder", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
             "bowmaster", "ranger", "lancer", "horselord", "outrider", "tunneller", "demolisher", "breachmaster", "battle_mage", "archmage", "seer", "wolfheart" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
-        Assert.Equal(39, db.Techs.Count);
+        Assert.Equal(40, db.Techs.Count);
 
         // A branching tree: shared roots, techs that lead to more than one, long chains, a few per faction.
         Assert.True(db.Techs.Count(t => t.Requires.Count == 0 && t.Faction == null) >= 3);
         Assert.True(db.Techs.Count(t => db.LeadsTo(t).Count >= 2) >= 2);
         Assert.Equal(4, db.Techs.Max(t => t.Depth)); // the final techs
-        foreach (var f in db.Factions) Assert.InRange(db.Techs.Count(t => t.Faction == f), 2, 4);
+        foreach (var f in db.Factions) Assert.InRange(db.Techs.Count(t => t.Faction == f), 2, 6); // Clan Kage has the most: a ninja clan of many tricks
 
         // What the loader works out.
         Assert.Equal(new[] { "worker", "delver", "caravan", "cart", "pack_pony" }, db.Building("town_hall").Trains);
