@@ -144,6 +144,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's units of this type can molt (a <see cref="TechEffectType.Molt"/> tech).</summary>
     public bool CanMolt(int player, UnitDef def) => Find(player)?.Molt[def.Index] ?? false;
 
+    /// <summary>True if the player's units of this type can throw smoke bombs (a <see cref="TechEffectType.SmokeBombs"/> tech).</summary>
+    public bool CanSmoke(int player, UnitDef def) => Find(player)?.Smoke[def.Index] ?? false;
+
     /// <summary>The player's first finished town hall, where research happens; null if they have none.</summary>
     public Building? TownHall(int player)
     {
@@ -211,6 +214,7 @@ public sealed partial class EconomySystem
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
         Array.Clear(p.Molt);
+        Array.Clear(p.Smoke);
         Array.Clear(p.FellTicks);
         Array.Clear(p.ProspectTicks);
         p.FellCrush = p.ProspectRadius = 0;
@@ -243,6 +247,10 @@ public sealed partial class EconomySystem
                     case TechEffectType.Molt:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.Molt[d.Index] = true;
+                        break;
+                    case TechEffectType.SmokeBombs:
+                        foreach (var d in units)
+                            if (e.AppliesTo(d)) p.Smoke[d.Index] = true;
                         break;
                     case TechEffectType.Felling:
                     case TechEffectType.Prospecting:

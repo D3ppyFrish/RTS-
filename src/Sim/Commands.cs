@@ -475,6 +475,15 @@ public sealed record MoltCommand(int PlayerId, int[] Units) : UnitsCommand(Playe
 public sealed record ChargeCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
 
 /// <summary>
+/// The units that can throw smoke bombs (see <see cref="Content.TechEffectType.SmokeBombs"/>, Clan Kage's) and are ready
+/// to throw one at their feet: for a few seconds a cloud of smoke hangs there, and nobody in it is seen through the fog
+/// of war by its enemies, nor fights or is fought unit to unit, so they can slip out of a losing fight
+/// (see <c>Units/CombatSystem.Smoke.cs</c>). Then each thrower waits a while before it can throw the next. A thrower
+/// already standing in a cloud of its side thrown this tick keeps its bomb.
+/// </summary>
+public sealed record SmokeCommand(int PlayerId, int[] Units) : UnitsCommand(PlayerId, Units);
+
+/// <summary>
 /// The player's tamed beasts among the units (<see cref="Units.UnitDef.Pennable"/>) walk into their beast pen
 /// <paramref name="Building"/> and are kept there, as many as it has room for (see <c>Units/CombatSystem.Stampede.cs</c>).
 /// </summary>

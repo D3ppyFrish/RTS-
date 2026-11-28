@@ -1476,8 +1476,7 @@ numbers are first guesses to be tuned in playtests.
 
 Clan Kage is the seventh faction, the design doc's ratfolk ninja clan: scouts and assassins who vanish while they stand
 still and strike from hiding, at home in the dark and weaker in bright daylight (`KageTests`; `CombatSystem.Shadows.cs`).
-This is the first piece of them; their hidden villages, shadow step, smoke bombs, saboteurs, wall climbing and clan
-honour are still to come.
+Their hidden villages, shadow step, saboteurs, wall climbing and clan honour are still to come.
 
 - **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **kunoichi** instead of spearmen,
   **shinobi** instead of riders (the clan rides no horses), **shuriken throwers** instead of archers and **shadow
@@ -1507,13 +1506,27 @@ honour are still to come.
   Lurkers' strike has): once researched, a unit of theirs hiding deals twice the damage with its first blow out of
   hiding (`CombatSystem.LyingInWait`, `SpringLurker`). A kunoichi left by a road is a trap for the first worker or
   caster to pass.
+- **Smoke bombs** (`kage_smoke_bombs`, the `smoke_bombs` tech effect, `CombatSystem.Smoke.cs`; numbers in `smoke` in
+  `data/roles.json`): their kunoichi, shinobi and shuriken throwers carry smoke bombs (`SmokeCommand`, Ctrl+B or the
+  Smoke bomb button). A ready thrower throws one at its feet: a cloud hangs there for 8 seconds, 3 columns round and 2
+  levels up and down (`CombatSystem.InSmoke`, `Clouds`). Of those selected, one standing in a cloud of its side thrown
+  that same moment keeps its bomb, so a group standing together throws one. Anyone in a cloud, of any side:
+  - is not seen through the fog of war by its enemies, even from close by (`VisionSystem.SeesUnit`);
+  - is not fought unit to unit: nobody picks it, keeps it or answers it as a target, and an order to attack it is lost
+    in the smoke (`CombatSystem.Veiled`, in `FindTarget` and `Nearest`);
+  - fights no unit itself, so it can be walked out of a losing fight. Buildings are fought as ever, and wounds bleed.
+  The thrower then waits 45 seconds (from the throw) before the next (`UnitStore.SmokeWait`). Throwing it can be running
+  away, but not beaten, aboard a ship or in a pen. The game draws the cloud as grey voxel puffs (`SmokeRenderer.cs`),
+  and a unit's panel says "in smoke".
 - **Their final tech** is the Moonless Night (after Strike from the shadows, Basic magic and Smelting), which opens
   their great work, the **Shrine of the Moonless Night**, a dark timber pagoda (see
   [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers they hack the dusk tree down, as the
   Orcs do (see [The dusk tree](#the-dusk-tree)).
 
-Computer players play Clan Kage as a waves faction and research Strike from the shadows after their other techs. All
-numbers are first guesses to be tuned in playtests.
+Computer players play Clan Kage as a waves faction and research Strike from the shadows and Smoke bombs after their
+other techs. At every level, a unit of theirs that can throw a smoke bomb and is badly hurt (down to the retreat share
+of its hit points) with a rival soldier it sees within 4 columns throws one and walks home to the town hall in it, and
+is left out of the army for 20 seconds (`AiPlayer.Smoke.cs`). All numbers are first guesses to be tuned in playtests.
 
 ## Dropped relics and the Dusk Staff
 

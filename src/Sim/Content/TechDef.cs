@@ -241,6 +241,12 @@ public enum TechEffectType : byte
     /// effect's <see cref="TechEffect.Percent"/> more with its first blow out of hiding at someone.
     /// </summary>
     Ambush,
+    /// <summary>
+    /// Clan Kage's Smoke bombs: matching units can throw a smoke bomb at their feet (see <see cref="SmokeCommand"/>):
+    /// for a few seconds nobody in the cloud can be seen through the fog of war by its enemies, nor fight or be fought
+    /// unit to unit. The numbers are in the role table (<see cref="CombatRules.Smoke"/>).
+    /// </summary>
+    SmokeBombs,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

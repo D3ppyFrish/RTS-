@@ -507,17 +507,17 @@ public sealed class Simulation
     {
         if (Sandbox.Apply(command)) return;
         // Any other order stops units working on the dusk tree.
-        if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or ShieldWallCommand or ChargeCommand or AutomateCommand or PriorityCommand))
+        if (command is UnitsCommand released and not (DuskTreeCommand or BloomCommand or StanceCommand or ShieldWallCommand or ChargeCommand or SmokeCommand or AutomateCommand or PriorityCommand))
             DuskTree.Release(this, released);
-        if (command is UnitsCommand left and not (SearchRuinCommand or BloomCommand or StanceCommand or ShieldWallCommand or ChargeCommand or AutomateCommand or PriorityCommand))
+        if (command is UnitsCommand left and not (SearchRuinCommand or BloomCommand or StanceCommand or ShieldWallCommand or ChargeCommand or SmokeCommand or AutomateCommand or PriorityCommand))
             Ruins.Release(left);
-        if (command is UnitsCommand stopped and not (EarthWallCommand or IceBridgeCommand or ChasmCommand or GrowForestCommand or FloodCommand or StanceCommand or ShieldWallCommand or ChargeCommand or AutomateCommand or PriorityCommand))
+        if (command is UnitsCommand stopped and not (EarthWallCommand or IceBridgeCommand or ChasmCommand or GrowForestCommand or FloodCommand or StanceCommand or ShieldWallCommand or ChargeCommand or SmokeCommand or AutomateCommand or PriorityCommand))
             Spells.Release(stopped);
         // An order to go somewhere or fight lowers a shield wall first (see CombatSystem.ShieldWall.cs).
-        if (command is UnitsCommand lowered and not (ShieldWallCommand or ChargeCommand or StanceCommand or AutomateCommand or PriorityCommand or StopCommand or EvolveCommand))
+        if (command is UnitsCommand lowered and not (ShieldWallCommand or ChargeCommand or SmokeCommand or StanceCommand or AutomateCommand or PriorityCommand or StopCommand or EvolveCommand))
             Combat.LowerWalls(lowered);
         // Any other order to go somewhere calls off a beast's way into a pen (see CombatSystem.Stampede.cs).
-        if (command is UnitsCommand unpenned and not (PenCommand or StanceCommand or ShieldWallCommand or ChargeCommand or AutomateCommand or PriorityCommand))
+        if (command is UnitsCommand unpenned and not (PenCommand or StanceCommand or ShieldWallCommand or ChargeCommand or SmokeCommand or AutomateCommand or PriorityCommand))
             Combat.CallOffPen(unpenned);
         switch (command)
         {
@@ -581,6 +581,7 @@ public sealed class Simulation
             case ShieldWallCommand sw: Combat.Apply(sw); break;
             case MoltCommand mo: Combat.Apply(mo); break;
             case ChargeCommand ch: Combat.Apply(ch); break;
+            case SmokeCommand sm: Combat.Apply(sm); break;
             case PenCommand pn: ApplyPen(pn); break;
             case StampedeCommand sd: Combat.Apply(sd); break;
             case GazeCommand gz: Economy.Apply(gz); break;

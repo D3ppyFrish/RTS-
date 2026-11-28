@@ -22,6 +22,8 @@
 //   murder_holes                          stone gates drop stones on enemies at them while held (murderHoles in buildings.json)
 //   molt          { role or unit }        those units can molt when badly hurt: heal to full standing still, then stay
 //                                         soft a while (numbers: molt in roles.json)
+//   smoke_bombs   { role or unit }        those units can throw a smoke bomb at their feet: a cloud no enemy sees into
+//                                         through the fog and nobody fights in (numbers: smoke in roles.json)
 //   salvage                               workers can take down the player's own finished buildings for half their cost back
 //                                         and the goods they held (see "Salvage" in docs/rules.md)
 //   field_repairs                         workers can mend the player's damaged catapults and battering rams in the field
@@ -116,6 +118,9 @@
   { "id": "kage_shadow_strike", "icon": "shadow_strike", "name": "Strike from the shadows", "faction": "kage", "description": "The clan learns to wait unseen. A unit of yours hiding (a shinobi or kunoichi standing still) strikes twice as hard with its first blow out of hiding, so a kunoichi left by a road is a trap for the first worker or caster to pass.",
     "cost": { "food": 40, "wood": 40 }, "researchTime": 40,
     "effects": [ { "type": "ambush", "percent": 100 } ] },
+  { "id": "kage_smoke_bombs", "icon": "smoke_bomb", "name": "Smoke bombs", "faction": "kage", "description": "Kunoichi, shinobi and shuriken throwers carry smoke bombs. One thrown at a unit's feet hangs in a cloud 3 columns round for 8 seconds: nobody in it is seen by the enemy through the fog, and nobody in it fights or is fought unit to unit, so your units can slip out of a losing fight. Each thrower needs 45 seconds before the next.",
+    "cost": { "food": 40, "wood": 30 }, "researchTime": 40,
+    "effects": [ { "type": "smoke_bombs", "unit": "kunoichi" }, { "type": "smoke_bombs", "unit": "shinobi" }, { "type": "smoke_bombs", "unit": "shuriken_thrower" } ] },
 
   { "id": "dwarf_grudges", "icon": "grudge", "name": "Book of Grudges", "faction": "dwarves", "description": "Every wrong is written down. An enemy that kills one of your units is marked with a grudge for the rest of its life, and your units deal it half as much damage again. A grudge is never forgotten: a marked enemy shows through the fog of war.",
     "cost": { "food": 40, "stone": 40 }, "researchTime": 40,

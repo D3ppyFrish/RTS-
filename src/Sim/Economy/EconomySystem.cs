@@ -39,6 +39,7 @@ public sealed class PlayerEconomy
         HpBonus = new int[content.Units.Count];
         ShieldWall = new bool[content.Units.Count];
         Molt = new bool[content.Units.Count];
+        Smoke = new bool[content.Units.Count];
         FellTicks = new int[content.Units.Count];
         ProspectTicks = new int[content.Units.Count];
         AutoForm = new int[content.Units.Count];
@@ -91,6 +92,8 @@ public sealed class PlayerEconomy
     internal readonly bool[] ShieldWall;
     /// <summary>Which unit types (by index) can molt (see <see cref="TechEffectType.Molt"/>).</summary>
     internal readonly bool[] Molt;
+    /// <summary>Which unit types (by index) can throw smoke bombs (see <see cref="TechEffectType.SmokeBombs"/>).</summary>
+    internal readonly bool[] Smoke;
     /// <summary>
     /// Ticks of work for each unit type (by index) to fell a tree the way it chooses, or to sound the ground; 0 if it
     /// cannot (see <see cref="TechEffectType.Felling"/>, <see cref="TechEffectType.Prospecting"/>).

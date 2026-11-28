@@ -390,6 +390,7 @@ public partial class PlayerControl : Node
             case Key.V when key.CtrlPressed: ToggleShieldWall(); break;
             case Key.C when key.CtrlPressed: BeatCharge(); break;
             case Key.M when key.CtrlPressed: Molt(); break;
+            case Key.B when key.CtrlPressed: ThrowSmoke(); break;
             case Key.S when key.CtrlPressed: ToggleStampede(); break;
             case Key.G when key.CtrlPressed: ToggleGaze(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
@@ -1403,6 +1404,24 @@ public partial class PlayerControl : Node
         ready.RemoveAll(id => !_sim.Combat.CanCharge(_sim.Units.IndexOf(id)));
         if (ready.Count == 0) return;
         _sim.Schedule(_sim.Tick, new ChargeCommand(LocalPlayer, ready.ToArray()));
+        Changed?.Invoke();
+    }
+
+    /// <summary>The selected units of yours that can throw smoke bombs (see <see cref="Rts.Sim.Content.TechEffectType.SmokeBombs"/>), ready or not.</summary>
+    public List<int> OwnSmokers()
+    {
+        var list = OwnSelected();
+        list.RemoveAll(id => !_sim.Combat.CanSmoke(_sim.Units.IndexOf(id)));
+        return list;
+    }
+
+    /// <summary>The selected units that are ready throw a smoke bomb at their feet (one to a cloud's worth of them).</summary>
+    public void ThrowSmoke()
+    {
+        var ready = OwnSmokers();
+        ready.RemoveAll(id => !_sim.Combat.ReadyToSmoke(_sim.Units.IndexOf(id)));
+        if (ready.Count == 0) return;
+        _sim.Schedule(_sim.Tick, new SmokeCommand(LocalPlayer, ready.ToArray()));
         Changed?.Invoke();
     }
 
@@ -2775,7 +2794,7 @@ public partial class PlayerControl : Node
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
-               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} " +
+               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} smoke_clouds={_sim.Combat.Clouds.Count} smoke_bombs={_sim.Combat.SmokeBombs} " +
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"ramps={OwnRamps()} ramp_top={RampTop} ramp_blocks={RampBlocks} ramp_builders={RampBuilders()} " +

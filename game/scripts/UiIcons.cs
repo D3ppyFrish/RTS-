@@ -189,6 +189,12 @@ public static class UiIcons
             "..........l.", ".........li.", "..kkkkk.li..", ".kcccccli...", "kcccccclkc..", "kcrcccrckc..",
             "kccccccckc..", "kCCCCCCCkc..", ".kCCCCCCk...", "..kkkkkk....", "............", "............",
         },
+        // Smoke bombs: a black bomb, its fuse alight, and puffs of smoke.
+        ["smoke_bomb"] = new[]
+        {
+            "......ss.ll.", ".....slls.ls", "..f...ss..s.", ".fyf........", "..fk........", "...k........",
+            "..kkkkk.....", ".kcCCcck....", "kcCcccccks..", "kcccccccksl.", ".kcccccksll.", "..kkkkk..ss.",
+        },
         // Lurkers' strike: a lizard's yellow eyes just above the water.
         ["lurk"] = new[]
         {

@@ -98,6 +98,7 @@ public sealed class VisionSystem
     {
         var u = _sim.Units;
         if (u.Owner[i] == player || !_sim.Fog) return true;
+        if (_sim.Combat.InSmoke(i)) return false; // a cloud of smoke hides whoever is in it (Units/CombatSystem.Smoke.cs)
         if ((uint)player < (uint)_drums.Length && _drums[player] is { Count: > 0 } drums && drums.Contains(u.Id[i])) return true;
         if (Units.CombatSystem.Bears(u, player, i)) return true; // a grudge is never forgotten (the Dwarves' Book of Grudges)
         int x = u.X[i].FloorToInt(), z = u.Z[i].FloorToInt();

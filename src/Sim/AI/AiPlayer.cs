@@ -103,7 +103,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
         "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
-        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "silk_knives", "field_dressings", "field_hospital",
+        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
@@ -262,6 +262,7 @@ public sealed partial class AiPlayer
             if (Skilled) Kindle(sim, hall, issue);
             if (Smart) Raid(sim, raw);
             Molt(sim, hall, issue);
+            Smoke(sim, hall, issue);
             Bloom(sim, issue);
             if (Hard) HardArmy(sim, hall, issue);
             else if (Smart) SmartArmy(sim, hall, issue);
@@ -1101,11 +1102,13 @@ public sealed partial class AiPlayer
     // --- What it sees ------------------------------------------------------------------------------
 
     /// <summary>Its soldiers (units that fight and are not workers, caravans, ships, beaten monsters or a city-state's guards), by id in index order.</summary>
-    /// <remarks>Units pulled back to molt (see <see cref="Molters"/>) are left out until they are ready again.</remarks>
+    /// <remarks>Units pulled back to molt (see <see cref="Molters"/>) are left out until they are ready again, and units
+    /// slipping away in their smoke (see <see cref="Slipping"/>) for a while.</remarks>
     private List<int> Soldiers(Simulation sim)
     {
         var list = Soldiers(sim, Player);
         if (_molters.Count > 0) list.RemoveAll(_molters.Contains);
+        if (_slipping.Count > 0) list.RemoveAll(id => _slipping.Exists(s => s.Id == id)); // slipping away in smoke (AiPlayer.Smoke.cs)
         if (_feller != 0) list.Remove(_feller); // felling a tree onto rivals (see AiPlayer.Fell.cs)
         if (_kindler != 0) list.Remove(_kindler); // setting a wood alight by rivals (see AiPlayer.Fire.cs)
         if (_treeParty.Count > 0) list.RemoveAll(_treeParty.Contains); // at the dusk tree (see AiPlayer.DuskTree.cs)
