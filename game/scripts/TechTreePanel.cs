@@ -156,7 +156,7 @@ public partial class TechTreePanel : PanelContainer
                 State.Researched => "Researched",
                 State.Researching => $"Researching {100L * econ.ResearchTicks(player) / tech.ResearchTicks}%",
                 _ when can == ResearchResult.NotDiscovered => DiscoveryText(tech.Discovery),
-                _ => $"{Hud.CostText(tech.Cost)}   {tech.ResearchTicks / Simulation.TicksPerSecond} s",
+                _ => $"{Hud.CostText(tech.Cost, tech.Honour)}   {tech.ResearchTicks / Simulation.TicksPerSecond} s",
             };
             button.Text = $"{tech.Name}\n{second}";
             button.Disabled = state != State.Available;

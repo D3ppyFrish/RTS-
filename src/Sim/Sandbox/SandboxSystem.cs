@@ -211,6 +211,8 @@ public sealed class SandboxSystem
         // Mana too, so spells can be tried without a shrine.
         var p = _sim.Economy.Player(c.Owner);
         p.Mana = (int)Math.Min(int.MaxValue / 2, (long)p.Mana + amount);
+        // And clan honour, a tenth as much, for a faction that keeps it, so the master ninja can be tried.
+        if (_sim.Economy.HonourOf(c.Owner) != null) p.Honour = (int)Math.Min(int.MaxValue / 2, (long)p.Honour + amount / 10);
     }
 
     private void Tech(SandboxTechCommand c)

@@ -68,6 +68,16 @@ public sealed class PlayerEconomy
     /// through shrines and spells.
     /// </summary>
     public int Mana { get; set; } = EconomySystem.StartingMana;
+    /// <summary>
+    /// Clan honour (Clan Kage's; see <see cref="Content.FactionDef.Honour"/>), earned by contracts carried out, lost by
+    /// dishonourable defeats and spent on what costs honour (see <see cref="EconomySystem.Honour"/>). Not a good: nobody
+    /// carries it, and it cannot be raided. Tests and match setup may set it directly.
+    /// </summary>
+    public int Honour { get; set; }
+    /// <summary>Clan honour earned this match, before any was lost or spent.</summary>
+    public int HonourEarned { get; internal set; }
+    /// <summary>Clan honour lost to dishonour this match.</summary>
+    public int HonourLost { get; internal set; }
     /// <summary>Mana channelled at the player's shrines this match.</summary>
     public int ManaChannelled { get; internal set; }
     /// <summary>Food gathered in the last minute (see <see cref="EconomySystem.FoodPerMinute"/>).</summary>
@@ -293,6 +303,7 @@ public sealed partial class EconomySystem
             Mix(p.Researching);
             Mix(p.ResearchTicks);
             Mix(p.Mana);
+            Mix(p.Honour);
             Mix(p.Discoveries);
             for (int t = 0; t < p.Researched.Length; t++)
                 if (p.Researched[t]) Mix(t);
@@ -308,6 +319,7 @@ public sealed partial class EconomySystem
         h = (h ^ (ulong)Sabotages) * 1099511628211UL;
         h = (h ^ (ulong)GoodsSpoiled) * 1099511628211UL;
         h = (h ^ (ulong)Climbs) * 1099511628211UL;
+        MixHonour(ref h);
         return h;
     }
 
@@ -362,6 +374,7 @@ public sealed partial class EconomySystem
 
         StepResearch();
         StepSaboteurWaits();
+        StepHonour();
         StepLenses();
         StepDeepFinds();
         if (_sim.Tick % Tps == 0) SampleFood();
@@ -855,7 +868,7 @@ public sealed partial class EconomySystem
         }
         b.Queue.RemoveAt(0);
         b.TrainTicks = 0;
-        if (b.Repeat) b.Owed.Add(def.Index);
+        if (b.Repeat && !def.Hero) b.Owed.Add(def.Index); // a hero is one of a kind: not again
     }
 
     /// <summary>
@@ -904,6 +917,7 @@ public sealed partial class EconomySystem
         }
         if (kind == RaidKind.Capture)
         {
+            BuildingLost(b);
             b.Owner = player;
             b.Queue.Clear();
             b.RallyX = -1;
@@ -919,6 +933,7 @@ public sealed partial class EconomySystem
             return false;
         }
         // Burned: the goods are lost and what is left of it crumbles.
+        BuildingLost(b);
         _sim.Automation.Destroyed(b);
         _sim.Physics.Crumble(b);
         Buildings.Remove(b);
@@ -1258,7 +1273,9 @@ public sealed partial class EconomySystem
         if (b == null || b.Owner != c.PlayerId || !b.Active || b.Queue.Count >= MaxQueue) return;
         if (Array.IndexOf(b.Def.Trains, c.Unit) < 0 || !_sim.Content.TryGetUnit(c.Unit, out var def)) return;
         if (!Unlocked(c.PlayerId, def) || Faction(c.PlayerId).Replaces(b.Def)) return;
+        if (Player(c.PlayerId).Honour < def.Honour || (def.Hero && HeroTaken(c.PlayerId, def))) return;
         if (!TrySpend(c.PlayerId, def.Cost, b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2)) return;
+        Player(c.PlayerId).Honour -= def.Honour;
         b.Queue.Add(def.Index);
         b.Owed.Remove(def.Index); // a unit owed to a repeating queue is paid for now
     }

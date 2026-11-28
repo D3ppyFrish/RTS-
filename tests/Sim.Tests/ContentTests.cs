@@ -39,7 +39,7 @@ public class ContentTests
         var db = ContentLoader.LoadEmbedded();
         Assert.Equal(new[] { "settlers", "orcs", "deepfolk", "elves", "dwarves", "reptilians", "kage" }, db.Factions.Select(f => f.Id));
         Assert.Equal(new[] { "town_hall", "great_hall", "castle_keep", "storehouse", "warehouse", "house", "large_house", "manor", "farm", "large_farm", "orchard", "barracks", "great_barracks", "siege_workshop", "dock", "smelter", "foundry", "sawmill", "mason_yard", "shrine", "sanctum", "quarry", "mine", "fishing_hut", "forester_lodge", "hunting_lodge", "barrier", "wooden_wall", "stone_wall", "stone_facing", "barrier_gate", "wooden_gate", "stone_gate", "stone_gate_facing", "watchtower", "stone_tower", "listening_post", "field_hospital", "crystal_lens", "torch", "campfire", "wolf_lodge", "boar_pen", "beast_pen", "crab_pots", "hall_of_legends", "beast_throne", "queens_chamber", "goblin_totem", "ogre_idol", "kobold_crystal", "troll_stone", "centaur_standard", "merfolk_conch", "spider_totem", "hornet_hive", "bridge", "brood_chamber", "living_wall", "eldertree", "stonework", "mountain_hall", "spawning_mound", "moonless_shrine" }, db.Buildings.Select(b => b.Id));
-        Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "catapult", "battering_ram", "healer", "war_drummer", "delver", "skitterling", "spitter", "burrower", "glade_warden", "elf_archer", "druid", "ironshield", "crossbowman", "runesmith", "scale_guard", "blowpiper", "marsh_shaman", "kunoichi", "shinobi", "shuriken_thrower", "shadow_caster" }, db.BaseUnits.Select(u => u.Id));
+        Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage", "catapult", "battering_ram", "healer", "war_drummer", "delver", "skitterling", "spitter", "burrower", "glade_warden", "elf_archer", "druid", "ironshield", "crossbowman", "runesmith", "scale_guard", "blowpiper", "marsh_shaman", "kunoichi", "shinobi", "shuriken_thrower", "shadow_caster", "master_ninja" }, db.BaseUnits.Select(u => u.Id));
         Assert.Equal(new[] { "worker", "spearman", "archer", "rider", "sapper", "mage" }, db.StartUnits.Select(u => u.Id)); // healers are only trained
         Assert.Equal(new[] { "foreman", "master_builder", "militia", "knight", "marshal", "pathfinder", "battle_priest", "siege_engineer", "longbowman",
             "bowmaster", "ranger", "lancer", "horselord", "outrider", "tunneller", "demolisher", "breachmaster", "battle_mage", "archmage", "seer", "wolfheart" }, db.Units.Where(u => u.IsForm).Select(u => u.Id));
@@ -53,7 +53,7 @@ public class ContentTests
 
         // What the loader works out.
         Assert.Equal(new[] { "worker", "delver", "caravan", "cart", "pack_pony" }, db.Building("town_hall").Trains);
-        Assert.Equal(new[] { "spearman", "archer", "rider", "sapper", "mage", "healer", "war_drummer", "glade_warden", "elf_archer", "druid", "ironshield", "crossbowman", "runesmith", "scale_guard", "blowpiper", "marsh_shaman", "kunoichi", "shinobi", "shuriken_thrower", "shadow_caster" }, db.Building("barracks").Trains);
+        Assert.Equal(new[] { "spearman", "archer", "rider", "sapper", "mage", "healer", "war_drummer", "glade_warden", "elf_archer", "druid", "ironshield", "crossbowman", "runesmith", "scale_guard", "blowpiper", "marsh_shaman", "kunoichi", "shinobi", "shuriken_thrower", "shadow_caster", "master_ninja" }, db.Building("barracks").Trains);
         Assert.True(db.RoadsNeedTech);
         Assert.Equal(2, db.Tech("smelting").Depth);
         Assert.Equal(new[] { "Farm" }, db.UnlockedBy(db.Tech("farming")));

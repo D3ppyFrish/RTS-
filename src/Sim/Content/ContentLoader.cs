@@ -227,7 +227,7 @@ public static class ContentLoader
         private void ReadFaction(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "duskTree", "aiStyle", "look", "replaces", "hiddenVillage");
+            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "duskTree", "aiStyle", "look", "replaces", "hiddenVillage", "honour");
             if (id == null) return;
             if (_db.TryGetFaction(id, out _) || id == _db.Wild.Id)
             {
@@ -246,6 +246,7 @@ public static class ContentLoader
                 AiStyle = o.Enum("aiStyle", AiStyle.Waves, required: false),
                 Look = o.Enum("look", BuildingLook.Standard, required: false),
                 HiddenVillage = o.Int("hiddenVillage", 0, 40, 0),
+                Honour = Honour(o),
             };
             _db.Add(faction);
             Replacements(o, faction);
@@ -393,6 +394,33 @@ public static class ContentLoader
                 PerKill = o.Int("perKill", 0, 100000, 0),
                 PerBuildSecond = o.Int("perBuildSecond", 0, 1000, 0),
                 PerMinute = o.Int("perMinute", 0, 100000, 0),
+            };
+        }
+
+        /// <summary>
+        /// A faction's clan honour, <c>"honour": { "assassination": 2, "heroSlain": 10, "sabotage": 10, "scouting": 15,
+        /// "scoutRange": 12, "buildingLost": 5, "hallLost": 20, "heroLost": 20 }</c>, or null if it keeps none.
+        /// </summary>
+        private HonourRules? Honour(Obj faction)
+        {
+            if (!faction.E.TryGetProperty("honour", out var e)) return null;
+            var o = new Obj(_errors, faction.File, "honour", $"{faction.Where}, honour", e);
+            if (e.ValueKind != JsonValueKind.Object)
+            {
+                o.Error("should be an object: { \"assassination\": 2, \"sabotage\": 10, ... }");
+                return null;
+            }
+            o.Keys("assassination", "heroSlain", "sabotage", "scouting", "scoutRange", "buildingLost", "hallLost", "heroLost");
+            return new HonourRules
+            {
+                Assassination = o.Int("assassination", 0, 10000, 2),
+                HeroSlain = o.Int("heroSlain", 0, 10000, 10),
+                Sabotage = o.Int("sabotage", 0, 10000, 10),
+                Scouting = o.Int("scouting", 0, 10000, 15),
+                ScoutRange = o.Int("scoutRange", 1, 64, 12),
+                BuildingLost = o.Int("buildingLost", 0, 10000, 5),
+                HallLost = o.Int("hallLost", 0, 10000, 20),
+                HeroLost = o.Int("heroLost", 0, 10000, 20),
             };
         }
 
@@ -592,7 +620,7 @@ public static class ContentLoader
         private void ReadTech(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "icon", "faction", "cost", "researchTime", "requires", "effects", "discovery");
+            o.Keys("id", "name", "description", "icon", "faction", "cost", "honour", "researchTime", "requires", "effects", "discovery");
             if (id == null) return;
             if (_db.TryGetTech(id, out _))
             {
@@ -606,6 +634,7 @@ public static class ContentLoader
                 Description = o.Str("description", false) ?? "",
                 Icon = o.Str("icon", false) ?? id,
                 Cost = o.Cost("cost"),
+                Honour = o.Int("honour", 0, 100000, 0),
                 ResearchTicks = o.Int("researchTime", 1, MaxSeconds, 20, required: true) * Tps,
                 Discovery = o.Enum("discovery", Discovery.None, required: false),
             };
@@ -617,6 +646,7 @@ public static class ContentLoader
                 def.Faction = Faction(o, faction);
                 def.Requires = Techs(o, "requires", requires);
                 def.Effects = Effects(o);
+                if (def.Honour > 0 && def.Faction?.Honour == null) o.Error("\"honour\": only a faction that keeps clan honour (\"honour\" in factions.json) can pay it");
             });
         }
 
@@ -836,7 +866,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear", "flood", "amphibious", "coldBlooded", "camouflage", "shadowborn", "assassin");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear", "flood", "amphibious", "coldBlooded", "camouflage", "shadowborn", "assassin", "honour");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -857,6 +887,7 @@ public static class ContentLoader
                 MaxHp = o.Int("hp", 1, 100000, 50, required: true),
                 Model = o.Str("model", false) ?? id,
                 Cost = o.Cost("cost"),
+                Honour = o.Int("honour", 0, 100000, 0),
                 TrainTicks = o.Int("trainTime", 1, MaxSeconds, 10) * Tps,
                 Damage = o.Int("damage", 0, 100000, 0),
                 AttackTicks = Math.Max(1, (attackTime * Tps).RoundToInt()),
@@ -1011,6 +1042,7 @@ public static class ContentLoader
                 }
                 def.Faction = Faction(o, faction);
                 def.Requires = Techs(o, "requires", requires);
+                if (def.Honour > 0 && def.Faction?.Honour == null) o.Error("\"honour\": only a faction that keeps clan honour (\"honour\" in factions.json) can pay it");
                 if (hiredFrom != null)
                 {
                     if (_db.TryGetCityState(hiredFrom, out var city)) def.HiredFrom = city;
@@ -1785,6 +1817,12 @@ public static class ContentLoader
                 h.Add((int)f.Look);
                 foreach (var (from, to) in f.UnitReplacements) { h.Add(from.Id); h.Add(to.Id); }
                 foreach (var (from, to) in f.BuildingReplacements) { h.Add(from.Id); h.Add(to.Id); }
+                if (f.Honour is { } hon)
+                {
+                    h.Add(3200);
+                    h.Add(hon.Assassination); h.Add(hon.HeroSlain); h.Add(hon.Sabotage); h.Add(hon.Scouting);
+                    h.Add(hon.ScoutRange); h.Add(hon.BuildingLost); h.Add(hon.HallLost); h.Add(hon.HeroLost);
+                }
                 if (f.Experience is not { } x)
                 {
                     h.Add(-1);
@@ -1803,6 +1841,7 @@ public static class ContentLoader
                 h.Add(t.Id);
                 h.Add(t.Faction?.Index ?? -1);
                 h.Add(t.Cost);
+                if (t.Honour > 0) h.Add(3300 + t.Honour);
                 h.Add(t.ResearchTicks);
                 h.Add((int)t.Discovery);
                 h.Add(t.Requires);
@@ -1932,6 +1971,7 @@ public static class ContentLoader
                 if (u.Camouflage) h.Add(193);
                 if (u.Shadowborn) h.Add(194);
                 if (u.Assassin > 0) h.Add(2000 + u.Assassin);
+                if (u.Honour > 0) h.Add(3400 + u.Honour);
                 if (u.Drums is { } drums)
                 {
                     h.Add(drums.Speed);

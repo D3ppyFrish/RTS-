@@ -1057,9 +1057,16 @@ public sealed partial class AiPlayer
     private void Train(Simulation sim, Action<Command> issue)
     {
         Keep(sim);
+        bool hero = false;
         foreach (var b in sim.Buildings.All)
         {
             if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2 || Docks(sim, b.Def)) continue;
+            // A hero paid for in clan honour first, once it has the honour (see AiPlayer.Honour.cs).
+            if (!hero && TrainHonourHero(sim, b, issue))
+            {
+                hero = true;
+                continue;
+            }
             // A war drummer first, if it can train one and has none (one goes with each wave).
             if (Drummer(sim, b) is { } drummer)
             {
@@ -1068,12 +1075,12 @@ public sealed partial class AiPlayer
             }
             int total = 0;
             foreach (string id in b.Def.Trains)
-                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && !d.Ram && d.Drums == null) total += RoleWeight(d.Role);
+                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && !d.Ram && d.Drums == null && d.Honour == 0) total += RoleWeight(d.Role);
             if (total == 0) continue;
             int roll = _rng.Range(0, total);
             foreach (string id in b.Def.Trains)
             {
-                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d) || d.Ram || d.Drums != null) continue;
+                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d) || d.Ram || d.Drums != null || d.Honour > 0) continue;
                 roll -= RoleWeight(d.Role);
                 if (roll >= 0) continue;
                 if (Affordable(sim, d.Cost)) issue(new TrainCommand(Player, b.Id, d.Id));
