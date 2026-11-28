@@ -1016,6 +1016,7 @@ public sealed partial class AiPlayer
         int before = walled.Count;
         Chasms(sim, ids, enemies, walled, issue); // mages that open a chasm are left to it, like a shield wall
         if (walled.Count == before) EarthWalls(sim, ids, enemies, walled, issue); // or raise a wall before a charge
+        Floods(sim, ids, enemies, walled, issue); // shamans flood the ground under them
         var orders = new SortedDictionary<int, List<int>>();
         foreach (int id in ids)
         {

@@ -1465,8 +1465,12 @@ and flood the ground on purpose, but grow sluggish in the cold (`ReptiliansTests
   [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers the Reptilians hack the dusk tree
   down, as the Orcs do (see [The dusk tree](#the-dusk-tree)).
 
-Computer players play the Reptilians as a waves faction and research Lurkers' strike after their other techs. They do
-not cast Flood yet. All numbers are first guesses to be tuned in playtests.
+Computer players play the Reptilians as a waves faction and research Lurkers' strike after their other techs. From
+Normal up their marsh shamans cast Flood in the fighting (`AiPlayer.Floods.cs`): under the enemy soldiers near them
+who are not amphibious, along the line (across or along, through one of them) that catches the most, if it catches
+at least 2 (`FloodLeast`), with as many ready shamans in range as the mana pays for (up to 3). They flood no line
+with anyone on it who is not amphibious and not their rival, so none of their own workers or allies is slowed. All
+numbers are first guesses to be tuned in playtests.
 
 ## Dropped relics and the Dusk Staff
 

@@ -187,4 +187,102 @@ public class AiSpellTests
         AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
         Assert.DoesNotContain(log, c => c is EarthWallCommand);
     }
+
+    /// <summary>
+    /// A computer player's town with two marsh shamans before it, and enemy soldiers standing in a row ahead (and,
+    /// when asked, one of its own workers standing in that row between them, out of their reach).
+    /// </summary>
+    private static (Simulation Sim, int[] Shamans, int[] Enemies) Marsh(string enemy, int count, bool worker = false, bool wide = false)
+    {
+        var sim = AiTests.WithStarts(96, (30, 48));
+        var hall = sim.Economy.TownHall(0)!;
+        var shamans = new[] { sim.SpawnUnit(0, "marsh_shaman", hall.X + 2, hall.MaxZ + 4), sim.SpawnUnit(0, "marsh_shaman", hall.X + 4, hall.MaxZ + 4) };
+        var foes = Enumerable.Range(0, count).Select(k => sim.SpawnUnit(1, enemy, hall.X + 1 + (worker || wide ? 6 : 2) * k, hall.MaxZ + 12)).ToArray();
+        sim.Schedule(0, new StanceCommand(1, foes, UnitStance.Hold));
+        if (worker)
+        {
+            int w = sim.SpawnUnit(0, "worker", hall.X + 4, hall.MaxZ + 12);
+            sim.Schedule(0, new StanceCommand(0, new[] { w }, UnitStance.Hold));
+        }
+        return (sim, shamans, foes);
+    }
+
+    [Theory]
+    [InlineData(AiLevel.Normal)]
+    [InlineData(AiLevel.Hard)]
+    public void ShamansFloodTheGroundUnderEnemySoldiers(AiLevel level)
+    {
+        var (sim, shamans, foes) = Marsh("spearman", 3);
+        var ai = new AiPlayer(0, 1, level);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => sim.Spells.Floods.Count > 0, 10 * Tps);
+        var cast = log.OfType<FloodCommand>().FirstOrDefault();
+        Assert.True(cast != null, $"{level}: a flood under the enemy");
+        Assert.All(cast!.Units, id => Assert.Contains(id, shamans));
+        Assert.Single(sim.Spells.Floods);
+        Assert.Equal(0, sim.Spells.Floods[0].Owner);
+        Assert.Equal(1, ai.FloodsCast);
+        sim.Run(Tps);
+        var u = sim.Units;
+        int wading = foes.Count(id => u.Exists(id) && sim.Combat.InWater(u.IndexOf(id)));
+        Assert.True(wading >= AiPlayer.FloodLeast, $"{level}: {wading} enemies wading");
+        Assert.True(sim.Economy.Player(0).Mana < EconomySystem.StartingMana, "it paid mana");
+    }
+
+    [Fact]
+    public void NoFloodForALoneEnemy()
+    {
+        var (sim, _, _) = Marsh("spearman", AiPlayer.FloodLeast - 1);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is FloodCommand);
+        Assert.Empty(sim.Spells.Floods);
+    }
+
+    [Fact]
+    public void NoFloodUnderEnemiesAtHomeInTheWater()
+    {
+        var (sim, _, _) = Marsh("scale_guard", 3);
+        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is FloodCommand);
+    }
+
+    [Fact]
+    public void NoFloodOverItsOwnWorker()
+    {
+        // Without the worker, the same two enemies are flooded...
+        var (open, _, _) = Marsh("spearman", 2, wide: true);
+        var log = new List<Command>();
+        AiTests.PlayLogged(open, new[] { new AiPlayer(0, 1, AiLevel.Normal) }, log, () => open.Spells.Floods.Count > 0, 6 * Tps);
+        Assert.Contains(log, c => c is FloodCommand);
+        // ...but not with its own worker standing between them.
+        var (sim, _, _) = Marsh("spearman", 2, worker: true);
+        log.Clear();
+        AiTests.PlayLogged(sim, new[] { new AiPlayer(0, 1, AiLevel.Normal) }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is FloodCommand);
+    }
+
+    [Fact]
+    public void NoFloodWithoutTheMana()
+    {
+        var (sim, _, _) = Marsh("spearman", 3);
+        sim.Economy.Player(0).Mana = SpellSystem.ManaCost(Spell.Flood) - 1;
+        var ai = new AiPlayer(0, 1, AiLevel.Normal);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is FloodCommand);
+    }
+
+    [Fact]
+    public void EasyShamansFloodNothing()
+    {
+        var (sim, _, _) = Marsh("spearman", 3);
+        var ai = new AiPlayer(0, 1, AiLevel.Easy);
+        var log = new List<Command>();
+        AiTests.PlayLogged(sim, new[] { ai }, log, () => false, 6 * Tps);
+        Assert.DoesNotContain(log, c => c is FloodCommand);
+    }
 }
