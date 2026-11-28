@@ -1198,7 +1198,7 @@ public static class ContentLoader
                 return;
             }
             var table = new Obj(_errors, file, "table", "the table", doc.RootElement);
-            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "molt", "roles");
+            table.Keys("strong", "structures", "thick", "recovery", "bleeding", "shieldWall", "molt", "smoke", "roles");
             var combat = _db.Combat;
             combat.Strong = table.Decimal("strong", Fix64.One, Fix64.FromInt(10), Fix64.FromInt(2));
             combat.Structures = table.Decimal("structures", Fix64.Zero, Fix64.One, Fix64.FromRatio(1, 4));
@@ -1242,6 +1242,17 @@ public static class ContentLoader
                     SoftTicks = (molt.Decimal("soft", Fix64.Zero, Fix64.FromInt(600), Fix64.FromInt(30), required: false) * Tps).RoundToInt(),
                     Pace = molt.Int("pace", 1, 100, 60),
                     Tender = molt.Int("tender", 100, 1000, 150),
+                };
+            }
+            if (Part(table, "smoke", "{ \"radius\": 3, \"height\": 2, \"time\": 8, \"wait\": 45 }") is { } smoke)
+            {
+                smoke.Keys("radius", "height", "time", "wait");
+                combat.Smoke = new SmokeRules
+                {
+                    Radius = smoke.Int("radius", 1, 16, 3),
+                    Height = smoke.Int("height", 0, 8, 2),
+                    Ticks = (smoke.Decimal("time", Fix64.One, Fix64.FromInt(120), Fix64.FromInt(8), required: false) * Tps).RoundToInt(),
+                    WaitTicks = (smoke.Decimal("wait", Fix64.Zero, Fix64.FromInt(600), Fix64.FromInt(45), required: false) * Tps).RoundToInt(),
                 };
             }
             if (!doc.RootElement.TryGetProperty("roles", out var list) || list.ValueKind != JsonValueKind.Array)
@@ -1416,6 +1427,7 @@ public static class ContentLoader
                     }
                     case TechEffectType.ShieldWall:
                     case TechEffectType.Molt:
+                    case TechEffectType.SmokeBombs:
                     {
                         o.Keys("type", "role", "unit");
                         UnitRole? role = o.Has("role") ? o.Enum("role", UnitRole.Worker, required: true) : null;
@@ -1425,7 +1437,12 @@ public static class ContentLoader
                             o.Error($"\"unit\" is \"{unitId}\", which is not a unit");
                         if (role != null && unitId != null) o.Error("give a \"role\" or a \"unit\", not both");
                         if (role == null && unitId == null)
-                            o.Error(type == TechEffectType.Molt ? "needs a \"role\" or a \"unit\": which units can molt" : "needs a \"role\" or a \"unit\": which units can form the wall");
+                            o.Error(type switch
+                            {
+                                TechEffectType.Molt => "needs a \"role\" or a \"unit\": which units can molt",
+                                TechEffectType.SmokeBombs => "needs a \"role\" or a \"unit\": which units can throw smoke bombs",
+                                _ => "needs a \"role\" or a \"unit\": which units can form the wall",
+                            });
                         effects.Add(new TechEffect { Type = type, Role = role, Unit = unit });
                         break;
                     }

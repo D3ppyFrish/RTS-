@@ -69,6 +69,9 @@ public sealed class CombatRules
     /// <summary>How molting heals a hive unit and leaves it soft (see <see cref="MoltRules"/>).</summary>
     public MoltRules Molt { get; internal set; } = new();
 
+    /// <summary>How Clan Kage's smoke bombs hang about (see <see cref="SmokeRules"/>).</summary>
+    public SmokeRules Smoke { get; internal set; } = new();
+
     public bool StrongAgainst(UnitRole attacker, UnitRole target) => _strong[(int)attacker * RoleCount + (int)target];
 
     public bool StrongAgainstStructures(UnitRole role) => _structures[(int)role];
@@ -113,6 +116,22 @@ public sealed class ShieldWallRules
 /// The numbers of molting (<c>molt</c> in <c>data/roles.json</c>; see <see cref="CombatSystem"/>): first guesses, for
 /// playtesting.
 /// </summary>
+/// <summary>
+/// Smoke bombs (a tech's <see cref="TechEffectType.SmokeBombs"/> effect, Clan Kage's): a cloud thrown at the thrower's
+/// feet hides everyone in it and keeps them out of the fight (see <c>Units/CombatSystem.Smoke.cs</c>).
+/// </summary>
+public sealed class SmokeRules
+{
+    /// <summary>How far (columns) the cloud spreads round where it was thrown.</summary>
+    public int Radius { get; internal set; } = 3;
+    /// <summary>How many levels up or down from where it was thrown the cloud reaches.</summary>
+    public int Height { get; internal set; } = 2;
+    /// <summary>Ticks the cloud hangs about.</summary>
+    public int Ticks { get; internal set; } = 8 * Simulation.TicksPerSecond;
+    /// <summary>Ticks a thrower waits, from the throw, before it can throw the next.</summary>
+    public int WaitTicks { get; internal set; } = 45 * Simulation.TicksPerSecond;
+}
+
 public sealed class MoltRules
 {
     /// <summary>A unit can molt only with at most this percent of its most hit points left.</summary>

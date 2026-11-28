@@ -158,6 +158,7 @@ public partial class Main : Node3D
     private BloodRenderer _bloodRenderer = null!;
     private CorruptionRenderer _corruptionRenderer = null!;
     private IceRenderer _iceRenderer = null!;
+    private SmokeRenderer _smokeRenderer = null!;
     private ItemRenderer _itemRenderer = null!;
     private PenRenderer _penRenderer = null!;
     private OreRenderer _oreRenderer = null!;
@@ -432,6 +433,9 @@ public partial class Main : Node3D
         _iceRenderer = new IceRenderer();
         _match.AddChild(_iceRenderer);
         _iceRenderer.Init(_sim, _fog);
+        _smokeRenderer = new SmokeRenderer();
+        _match.AddChild(_smokeRenderer);
+        _smokeRenderer.Init(_sim, _fog);
         _itemRenderer = new ItemRenderer();
         _match.AddChild(_itemRenderer);
         _itemRenderer.Init(_sim, _fog);
@@ -533,6 +537,7 @@ public partial class Main : Node3D
         _bloodRenderer.UpdateFrame(alpha);
         _corruptionRenderer.UpdateFrame();
         _iceRenderer.UpdateFrame();
+        _smokeRenderer.UpdateFrame();
         _itemRenderer.UpdateFrame((float)delta);
         _penRenderer.UpdateFrame();
         _oreRenderer.UpdateFrame((float)delta);
@@ -898,6 +903,7 @@ public partial class Main : Node3D
         _bloodRenderer.Material.SetShaderParameter("slice_y", y);
         _corruptionRenderer.Material.SetShaderParameter("slice_y", y);
         _iceRenderer.Material.SetShaderParameter("slice_y", y);
+        _smokeRenderer.Material.SetShaderParameter("slice_y", y);
         _itemRenderer.SetSlice(y);
         _penRenderer.SetSlice(y);
         _oreRenderer.SetSlice(y);

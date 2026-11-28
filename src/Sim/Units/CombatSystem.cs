@@ -212,6 +212,7 @@ public sealed partial class CombatSystem
         HashStampedes(Mix);
         Mix(_lurkers.Count);
         foreach (int id in _lurkers) Mix(id);
+        HashSmoke(Mix);
         return h;
     }
 
@@ -267,6 +268,7 @@ public sealed partial class CombatSystem
         StepPens();
         StepWebs();
         StepLurkers();
+        StepSmoke();
         BuildGrid();
         Rally();
         StepDrums();
@@ -415,7 +417,8 @@ public sealed partial class CombatSystem
             if (t >= 0 && Hostile(u.Owner[i], u.Owner[t]) && (!guard || _sim.Cities.Repels(i, t)) && !TooClose(i, def, t)
                 && (order == CombatOrder.Attack || (!u.Subdued[t] && (Within(i, t, hold ? Reach(i, def, t) : Sight(i, def, t) * Leash)
                     || order == CombatOrder.Guard && !hold && TownGuard(i) && _sim.Vision.SeesUnit(u.Owner[i], t))))
-                && (order != CombatOrder.Guard || NearCharge(i, t, LeashOf(i))))
+                && (order != CombatOrder.Guard || NearCharge(i, t, LeashOf(i)))
+                && !Veiled(i, t)) // lost in the smoke (CombatSystem.Smoke.cs)
                 return true;
             t = -1;
             u.Target[i] = 0;
@@ -444,6 +447,7 @@ public sealed partial class CombatSystem
         }
         if (guarding && t >= 0 && t != by && !NearCharge(i, t, RangeOf(i)) && t != ChargeAttacker(i)) t = -1;
         if (t >= 0 && hold && !Within(i, t, Reach(i, def, t))) t = -1;
+        if (t >= 0 && Veiled(i, t)) t = -1; // nobody fights in the smoke (CombatSystem.Smoke.cs)
         if (t < 0) return false;
         u.Target[i] = u.Id[t];
         u.ChaseRetry[i] = 0;
@@ -467,6 +471,9 @@ public sealed partial class CombatSystem
         // A Reptilian lying in the water lies in wait: it springs only at enemies that come close (CombatSystem.Swamp.cs).
         // Clan Kage hiding as they stand still go after whoever they see, and show once they move (CombatSystem.Shadows.cs).
         bool lying = Lurking(i) && !Def(i).Camouflage;
+        // In a cloud of smoke it sees nobody to fight, and nobody in one is picked (CombatSystem.Smoke.cs).
+        if (InSmoke(i)) return -1;
+        bool smoke = _clouds.Count > 0;
         // In the dark it sees less far, but a target in the light as far as by day (see Conditions).
         var cond = _sim.Conditions;
         int ox = x.FloorToInt(), oz = z.FloorToInt();
@@ -504,6 +511,7 @@ public sealed partial class CombatSystem
                     if (d > s * s || d < closest) continue;
                     // A monster lying in the water goes unnoticed until it is close (see MonsterSystem.Submerged).
                     if (d > Spot2 && (lying || _sim.Monsters.Submerged(j) || Lurking(j))) continue;
+                    if (smoke && InSmoke(j)) continue;
                     if (d < bestD || (d == bestD && u.Id[j] < u.Id[best]))
                     {
                         best = j;

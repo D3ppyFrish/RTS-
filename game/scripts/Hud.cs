@@ -114,7 +114,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -745,6 +745,17 @@ public partial class Hud : CanvasLayer
         _chargeButton.Visible = false;
         column.AddChild(_chargeButton);
 
+        _smokeButton = MakeToolButton("Smoke bomb  [Ctrl+B]");
+        _smokeButton.Name = "smoke_bomb";
+        _smokeButton.ToggleMode = false;
+        _smokeButton.Icon = UiIcons.Get("smoke_bomb");
+        _smokeButton.TooltipText = "The selected units throw a smoke bomb at their feet (one for each group standing together): for 8 seconds " +
+            "nobody in the cloud is seen by the enemy through the fog, and nobody in it fights or is fought, so walk them out of a losing fight. " +
+            "Each thrower then needs 45 seconds before the next. (Clan Kage, needs Smoke bombs.)";
+        _smokeButton.Pressed += () => _control.ThrowSmoke();
+        _smokeButton.Visible = false;
+        column.AddChild(_smokeButton);
+
         _moltButton = MakeToolButton("Molt  [Ctrl+M]");
         _moltButton.Name = "molt";
         _moltButton.ToggleMode = false;
@@ -1349,6 +1360,28 @@ public partial class Hud : CanvasLayer
     }
 
     /// <summary>
+    /// The Smoke bomb button: shown with units that can throw smoke bombs selected, greyed out with the seconds left until
+    /// one of them is ready; says how many are ready.
+    /// </summary>
+    private void RefreshSmoke()
+    {
+        var smokers = _control.OwnSmokers();
+        _smokeButton.Visible = smokers.Count > 0;
+        if (smokers.Count == 0) return;
+        var u = _sim.Units;
+        int ready = 0, wait = int.MaxValue;
+        foreach (int id in smokers)
+        {
+            int i = u.IndexOf(id);
+            if (_sim.Combat.ReadyToSmoke(i)) ready++;
+            else wait = Math.Min(wait, Math.Max(1, u.SmokeWait[i]));
+        }
+        _smokeButton.Disabled = ready == 0;
+        _smokeButton.Text = ready > 0 ? "Smoke bomb  [Ctrl+B]"
+            : $"Smoke ready in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s";
+    }
+
+    /// <summary>
     /// The Molt button: shown with hive units that can molt selected, greyed out while none of them is hurt enough;
     /// says how many are molting.
     /// </summary>
@@ -1485,6 +1518,7 @@ public partial class Hud : CanvasLayer
         _shieldWallButton.SetPressedNoSignal(walls.Count > 0 && walls.TrueForAll(id => _sim.Units.ShieldWall[_sim.Units.IndexOf(id)]));
         RefreshCharge();
         RefreshMolt();
+        RefreshSmoke();
         RefreshPen();
         RefreshLens();
         _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
@@ -2433,7 +2467,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   Ctrl+Y: flood   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+B: smoke bomb   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
         }
     }
 
@@ -2478,6 +2512,7 @@ public partial class Hud : CanvasLayer
                     ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
             if (_sim.Combat.Bears(PlayerControl.LocalPlayer, i)) heals += " (marked by your grudge)";
             if (u.Owner[i] == PlayerControl.LocalPlayer && _sim.Combat.Lurking(i)) heals += _sim.Combat.Hiding(i) ? " (hidden)" : " (hidden in the water)";
+            if (_sim.Combat.InSmoke(i)) heals += " (in smoke)";
             if (u.Poisoned[i] > 0) heals += $" (poisoned, {(u.Poisoned[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
             if (hurt > 0) heals += _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] + 1, u.Z[i].FloorToInt()) == BlockType.Water ? " (drowning)"
