@@ -121,6 +121,12 @@ public static class UnitModels
     private static readonly Color LizardBelly = new(0.72f, 0.7f, 0.42f);
     private static readonly Color LizardEye = new(1f, 0.78f, 0.15f);
     private static readonly Color Obsidian = new(0.1f, 0.09f, 0.13f);
+    private static readonly Color RatFur = new(0.5f, 0.45f, 0.4f);
+    private static readonly Color RatFurDark = new(0.36f, 0.32f, 0.29f);
+    private static readonly Color RatPink = new(0.88f, 0.6f, 0.6f);
+    private static readonly Color RatEye = new(0.95f, 0.2f, 0.15f);
+    private static readonly Color NinjaCloth = new(0.13f, 0.13f, 0.17f);
+    private static readonly Color NinjaClothLight = new(0.22f, 0.22f, 0.28f);
     private static readonly Color Team = new(1f, 0f, 0f, 0f);      // full-strength team colour
     private static readonly Color TeamDark = new(0.7f, 0f, 0f, 0f); // shaded team colour
 
@@ -444,6 +450,35 @@ public static class UnitModels
             return this;
         }
 
+        /// <summary>
+        /// A ratfolk of Clan Kage: grey-brown fur, a little shorter than a person, with big round pink-lined ears, a long
+        /// snout with a pink nose and red eyes, a long bare tail, and dark ninja wrappings with a sash and headband of its
+        /// owner's colour. Hands at x = -3 and 2, at y = 5.
+        /// </summary>
+        public Builder Rat(bool legs = true)
+        {
+            if (legs)
+            {
+                Box(-2, 0, -1, -1, 4, 0, NinjaCloth);
+                Box(0, 0, -1, 1, 4, 0, NinjaCloth);
+                Box(-2, 0, 1, -1, 0, 1, RatPink).Box(0, 0, 1, 1, 0, 1, RatPink); // bare feet
+            }
+            Box(-2, 5, -1, 1, 9, 0, NinjaCloth);                                   // wrapped body
+            Box(-1, 6, 1, 0, 8, 1, NinjaClothLight);                               // crossed front of the jacket
+            Box(-2, 5, -1, 1, 5, 0, Team).Box(1, 6, -1, 1, 9, 0, TeamDark);        // sash and its tail
+            Box(-3, 6, -1, -3, 9, 0, NinjaCloth);                                  // arms
+            Box(2, 6, -1, 2, 9, 0, NinjaCloth);
+            Box(-3, 5, -1, -3, 5, 0, RatPink).Box(2, 5, -1, 2, 5, 0, RatPink);     // hands
+            Box(-2, 10, -2, 1, 12, 1, RatFur);                                     // head
+            Box(-1, 10, 2, 0, 11, 3, RatFur).Box(-1, 11, 4, 0, 11, 4, RatPink);    // snout and nose
+            Box(-2, 12, 1, -2, 12, 1, RatEye).Box(1, 12, 1, 1, 12, 1, RatEye);     // eyes either side
+            Box(-2, 12, -2, 1, 12, 0, Team);                                       // headband
+            Box(-3, 13, -1, -2, 14, -1, RatFurDark).Box(1, 13, -1, 2, 14, -1, RatFurDark); // round ears
+            Box(-3, 13, 0, -2, 13, 0, RatPink).Box(1, 13, 0, 2, 13, 0, RatPink);
+            Box(-1, 4, -2, 0, 4, -3, RatPink).Box(-1, 3, -4, -1, 3, -6, RatPink).Box(-1, 2, -7, -1, 2, -8, RatPink); // bare tail
+            return this;
+        }
+
         /// <summary>The mage's robe and pointed hat.</summary>
         public Builder Robe() => Humanoid(legs: false).Box(-2, 0, -1, 1, 4, 0, TeamDark);
     }
@@ -537,6 +572,32 @@ public static class UnitModels
         "reptilians/sapper" => new Builder().Lizard()
             .Box(-2, 12, -2, 1, 12, 1, Hide)                                                                     // hide cap
             .Box(2, 2, 0, 2, 9, 0, Wood).Box(2, 0, -1, 2, 1, 1, Bone),                                           // bone shovel
+        // Clan Kage's own: ratfolk ninja in dark wrappings, with their owner's colour on sash and headband.
+        // A kunoichi: a mask over the snout and two short blades.
+        "kunoichi" => new Builder().Rat()
+            .Box(-1, 10, 2, 0, 10, 3, NinjaCloth)                                                                // mask over the jaw
+            .Box(-3, 4, 1, -3, 8, 1, Steel).Box(-3, 4, 0, -3, 4, 0, Dark)                                       // blade in the left hand
+            .Box(2, 4, 1, 2, 8, 1, Steel).Box(2, 4, 0, 2, 4, 0, Dark),                                          // and the right
+        // A shinobi: a hood, a short sword across the back and a grappling hook coiled at the hip.
+        "shinobi" => new Builder().Rat()
+            .Box(-2, 13, -2, 1, 13, 1, NinjaCloth)                                                               // hood
+            .Box(-2, 7, -2, 1, 11, -2, Dark).Box(1, 11, -2, 2, 11, -2, Steel)                                    // sword on the back
+            .Box(-3, 6, 0, -3, 7, 1, Iron).Box(-4, 7, 1, -4, 7, 1, Iron),                                        // grappling hook
+        // A shuriken thrower: a bandolier of throwing stars and one ready in the hand.
+        "shuriken_thrower" => new Builder().Rat()
+            .Box(-2, 9, 1, -2, 9, 1, Steel).Box(-1, 8, 1, -1, 8, 1, Steel).Box(0, 7, 1, 0, 7, 1, Steel).Box(1, 6, 1, 1, 6, 1, Steel) // bandolier
+            .Box(2, 6, 1, 3, 7, 1, Steel).Box(3, 6, 2, 3, 6, 2, Steel),                                          // a star in the hand
+        // A shadow caster: a long hooded robe and a crooked staff topped with a violet shadow flame.
+        "shadow_caster" => new Builder().Rat(legs: false).Box(-2, 0, -1, 1, 4, 0, NinjaCloth).Box(-2, 0, -1, 1, 0, 0, TeamDark)
+            .Box(-2, 13, -2, 1, 13, 1, NinjaClothLight).Box(-1, 14, -2, 0, 14, -1, NinjaClothLight)               // hood
+            .Box(3, 0, 1, 3, 14, 1, DeadWood).Box(4, 14, 1, 4, 14, 1, DeadWood).Box(4, 15, 1, 4, 16, 1, BlightVein), // staff and shadow flame
+        // Clan Kage's versions of everyone's: a worker with a basket and sickle, a sapper with a pick and a mask.
+        "kage/worker" => new Builder().Rat()
+            .Box(2, 3, 1, 2, 8, 1, Wood).Box(2, 8, 2, 2, 8, 3, Steel)                                            // sickle
+            .Box(-2, 6, -3, 1, 9, -2, Reed),                                                                     // basket on the back
+        "kage/sapper" => new Builder().Rat()
+            .Box(-1, 10, 2, 0, 10, 3, Leather)                                                                   // dust mask
+            .Box(2, 2, 0, 2, 10, 0, Wood).Box(1, 10, -1, 3, 10, 1, Iron),                                        // pick
         "rider" => new Builder().Mount(Horse)
             .Box(-3, 5, -4, 2, 9, 1, TeamDark)                                           // caparison down the flanks
             .Humanoid(lift: 6, legs: false)

@@ -2477,6 +2477,7 @@ public partial class Hud : CanvasLayer
                 : _sim.Cities.HealingTown(u.Owner[i], u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt()) is { } camp
                     ? $" (healing fast, at {camp.Def.Name.ToLowerInvariant()})" : " (healing fast, at home)";
             if (_sim.Combat.Bears(PlayerControl.LocalPlayer, i)) heals += " (marked by your grudge)";
+            if (u.Owner[i] == PlayerControl.LocalPlayer && _sim.Combat.Lurking(i)) heals += _sim.Combat.Hiding(i) ? " (hidden)" : " (hidden in the water)";
             if (u.Poisoned[i] > 0) heals += $" (poisoned, {(u.Poisoned[i] + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s)";
             int hurt = _sim.Hazards.DamageAt(u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt());
             if (hurt > 0) heals += _sim.World.Get(u.X[i].FloorToInt(), u.Y[i] + 1, u.Z[i].FloorToInt()) == BlockType.Water ? " (drowning)"

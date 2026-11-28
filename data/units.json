@@ -20,6 +20,9 @@
 // and lying in the water with nothing to fight it is hidden until an enemy comes close (the Reptilians).
 // coldBlooded (optional): at night and up in the hills it walks and strikes a quarter slower and softer, and its regen
 // stops (the Reptilians; see "The Reptilians" in docs/rules.md).
+// camouflage (optional): standing still with nothing to fight it is hidden until an enemy comes close, and lies in wait
+// (Clan Kage). shadowborn (optional): out in the daylight it strikes a fifth softer, and in the shadowed wilds a quarter
+// harder. assassin (optional): that many percent more damage to workers, casters and heroes (see "Clan Kage" in docs/rules.md).
 // darkSight (optional): night, weather and mist do not shorten its sight, and underground it sees twice as far.
 // hearing (optional): columns round it in which it hears units underground, as a listening post does. caveWise
 // (optional): lava's heat does not hurt it, and in the deep caves wild monsters do not go after it (the delver).
@@ -561,5 +564,28 @@
     "description": "An old lizard hung with reeds and frog skulls. Spits gobs of swamp bile and calls the water up out of the ground: Flood turns a line of soft ground into a shallow pool for 40 seconds, which everyone else wades slowly and the brood swims and hides in. No other spells. Regenerates; cold-blooded.",
     "speed": 4, "hp": 45, "model": "marsh_shaman", "damage": 8, "attackTime": 2, "range": 8, "sight": 9, "splash": 1,
     "attack": "crush", "armor": { "torso": 1 }, "flood": true, "regen": 1, "amphibious": true, "coldBlooded": true,
+    "cost": { "food": 50, "wood": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" },
+
+  // Clan Kage's own (see "replaces" in factions.json): ratfolk ninja, natives of the continent. Frail in open battle, they
+  // hide while they stand still (shinobi and kunoichi), strike harder in the shadowed wilds and softer in the daylight.
+  { "id": "kunoichi", "name": "Kunoichi", "faction": "kage", "role": "line_infantry",
+    "description": "A ratfolk assassin in dark wrappings with a pair of short blades. Strikes hard and often, and twice as hard at workers, casters and heroes, but has few hit points. Hidden while she stands still, until an enemy comes close. Weaker in bright daylight, stronger in the shadowed wilds.",
+    "speed": 5, "hp": 70, "model": "kunoichi", "damage": 9, "attackTime": 0.8, "range": 1.5, "sight": 9,
+    "attack": "slash", "armor": { "torso": 1 }, "assassin": 100, "camouflage": true, "shadowborn": true,
+    "cost": { "food": 40, "wood": 20 }, "trainTime": 16, "trainedAt": "barracks" },
+  { "id": "shinobi", "name": "Shinobi", "faction": "kage", "role": "cavalry",
+    "description": "A quick ratfolk scout who sees far, cheaper and lighter than a rider. Hidden while he stands still, until an enemy comes close, so he can watch a road unseen. Clan Kage ride no horses: he stands in for riders. Weaker in bright daylight, stronger in the shadowed wilds.",
+    "speed": 7, "hp": 90, "model": "shinobi", "damage": 9, "attackTime": 1, "range": 1.5, "sight": 13,
+    "attack": "slash", "camouflage": true, "shadowborn": true,
+    "cost": { "food": 40, "wood": 15 }, "trainTime": 14, "trainedAt": "barracks" },
+  { "id": "shuriken_thrower", "name": "Shuriken thrower", "faction": "kage", "role": "ranged",
+    "description": "A nimble ratfolk skirmisher with a bandolier of throwing stars. Throws only two thirds as far as an archer, but quickly, and runs faster, to hit and fade. Weaker in bright daylight, stronger in the shadowed wilds.",
+    "speed": 5, "hp": 45, "model": "shuriken_thrower", "damage": 4, "attackTime": 0.6, "range": 6, "sight": 9,
+    "attack": "pierce", "shadowborn": true,
+    "cost": { "food": 30, "wood": 25 }, "trainTime": 14, "trainedAt": "barracks", "requires": "archery" },
+  { "id": "shadow_caster", "name": "Shadow caster", "faction": "kage", "role": "caster",
+    "description": "An old ratfolk sorcerer in a hooded robe. Hurls bolts of shadow that curse whoever they strike with dread, breaking their nerve. No terrain magic. Weaker in bright daylight, stronger in the shadowed wilds.",
+    "speed": 4, "hp": 45, "model": "shadow_caster", "damage": 9, "attackTime": 2, "range": 8, "sight": 9,
+    "attack": "crush", "fear": 8, "shadowborn": true,
     "cost": { "food": 50, "wood": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" }
 ]

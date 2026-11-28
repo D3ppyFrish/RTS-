@@ -32,15 +32,16 @@ public sealed partial class CombatSystem
     }
 
     /// <summary>
-    /// True if unit i is a player's amphibious unit lying in the water: its feet in water, nothing to fight, not
-    /// running, not aboard a ship. Its enemies see it only from close by (<see cref="VisionSystem.SpotSubmerged"/>, as a
+    /// True if unit i is a player's amphibious unit lying in the water (its feet in water), or a unit of theirs with
+    /// camouflage standing still (see <see cref="Hiding"/>): either way with nothing to fight, not running, not aboard a ship. Its enemies see it only from close by (<see cref="VisionSystem.SpotSubmerged"/>, as a
     /// bog horror lying in its pool), and their soldiers do not go after it from further off; the game draws it sunk.
     /// </summary>
     public bool Lurking(int i)
     {
         var u = U;
         if ((uint)i >= (uint)u.Count || u.Owner[i] >= Simulation.WildPlayer || u.Target[i] != 0 || u.Rout[i] != 0 || u.Aboard[i] != 0) return false;
-        return Def(i).Amphibious && InWater(i);
+        var def = Def(i);
+        return (def.Amphibious && InWater(i)) || (def.Camouflage && StandsStill(i)); // or Clan Kage hiding (CombatSystem.Shadows.cs)
     }
 
     /// <summary>True if unit i is cold-blooded and in the cold now (see <see cref="Conditions.Cold"/>).</summary>

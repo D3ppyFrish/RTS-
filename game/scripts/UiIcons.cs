@@ -183,6 +183,12 @@ public static class UiIcons
             "t.........v.", "....t.......", "..........t.", "kkkk....kkkk", "gggknnnnkggg", "GgGkntnnkGgG",
             "bbbknnnnkbbb", "bBbkkkkkkbBb", "bbBbbbbbbBbb", "bbbbbbBbbbbb", "BbbbbbbbbbbB", "kkkkkkkkkkkk",
         },
+        // Strike from the shadows: a ninja's masked face, red eyes in the dark, and a blade drawn.
+        ["shadow_strike"] = new[]
+        {
+            "..........l.", ".........li.", "..kkkkk.li..", ".kcccccli...", "kcccccclkc..", "kcrcccrckc..",
+            "kccccccckc..", "kCCCCCCCkc..", ".kCCCCCCk...", "..kkkkkk....", "............", "............",
+        },
         // Lurkers' strike: a lizard's yellow eyes just above the water.
         ["lurk"] = new[]
         {

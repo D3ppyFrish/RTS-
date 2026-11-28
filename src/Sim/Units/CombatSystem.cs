@@ -465,7 +465,8 @@ public sealed partial class CombatSystem
         bool guard = u.Town[i] != 0;
         bool monster = !guard && u.Owner[i] == Simulation.WildPlayer;
         // A Reptilian lying in the water lies in wait: it springs only at enemies that come close (CombatSystem.Swamp.cs).
-        bool lying = Lurking(i);
+        // Clan Kage hiding as they stand still go after whoever they see, and show once they move (CombatSystem.Shadows.cs).
+        bool lying = Lurking(i) && !Def(i).Camouflage;
         // In the dark it sees less far, but a target in the light as far as by day (see Conditions).
         var cond = _sim.Conditions;
         int ox = x.FloorToInt(), oz = z.FloorToInt();
@@ -1023,6 +1024,8 @@ public sealed partial class CombatSystem
         int grudge = GrudgeAgainst(i, t); // the Dwarves' Book of Grudges (CombatSystem.Grudges.cs)
         if (grudge > 0) m = m * (100 + grudge) / 100;
         if (Chilled(i)) m = m * ColdPercent / 100; // cold-blooded in the cold (CombatSystem.Swamp.cs)
+        if (def.Shadowborn) m = m * ShadowPercent(i) / 100; // Clan Kage, out in the light or in the wilds (CombatSystem.Shadows.cs)
+        if (def.Assassin > 0 && Marked(target)) m = m * (100 + def.Assassin) / 100; // a kunoichi on a worker, caster or hero
         return Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * m).RoundToInt());
     }
 

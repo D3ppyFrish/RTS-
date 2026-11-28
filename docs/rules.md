@@ -1472,6 +1472,49 @@ at least 2 (`FloodLeast`), with as many ready shamans in range as the mana pays 
 with anyone on it who is not amphibious and not their rival, so none of their own workers or allies is slowed. All
 numbers are first guesses to be tuned in playtests.
 
+## Clan Kage
+
+Clan Kage is the seventh faction, the design doc's ratfolk ninja clan: scouts and assassins who vanish while they stand
+still and strike from hiding, at home in the dark and weaker in bright daylight (`KageTests`; `CombatSystem.Shadows.cs`).
+This is the first piece of them; their hidden villages, shadow step, smoke bombs, saboteurs, wall climbing and clan
+honour are still to come.
+
+- **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **kunoichi** instead of spearmen,
+  **shinobi** instead of riders (the clan rides no horses), **shuriken throwers** instead of archers and **shadow
+  casters** instead of mages. Sappers, healers, workers and the rest are everyone's. They start with as many units as
+  anyone, their own in place of those they replace.
+  - The **kunoichi** (line infantry, 70 hit points, speed 5, 9 slashing damage every 0.8 seconds) is an **assassin**
+    (`"assassin"`, `UnitDef.Assassin`): her blows deal workers, casters and heroes twice as much
+    (`CombatSystem.Marked`). She hides while she stands still. 40 food and 20 wood.
+  - The **shinobi** (cavalry, 90 hit points, speed 7, 9 damage a second, sight 13) is a quick scout who sees further
+    than anyone's rider, lighter and cheaper than one, and hides while he stands still, so he can watch a road unseen
+    (told to hold his ground, he stays put). 40 food and 15 wood.
+  - The **shuriken thrower** (ranged, 45 hit points, speed 5, 4 piercing damage every 0.6 seconds at 6 blocks) throws
+    two thirds as far as an archer but quickly, and runs faster, to hit and fade. 30 food and 25 wood; needs Archery.
+  - The **shadow caster** (caster, 45 hit points) hurls bolts of shadow (9 crushing damage at 8 blocks) that curse
+    whoever they strike with dread: each that lands takes 8 morale, as a hornet's sting (`fear`). No terrain magic.
+    50 food and 20 wood; needs Basic magic.
+- **Hiding** (`"camouflage"`, `UnitDef.Camouflage`): a shinobi or kunoichi standing still (no order to go anywhere, no
+  job, nothing to fight, no attack, attack-move, patrol or guard order, not running, not aboard a ship) is hidden, as a
+  Reptilian lying in the water (`CombatSystem.Hiding`, `Lurking`): with fog of war on, its enemies see it only within 3
+  columns of one of their units, and their soldiers do not go after it from further off. Unlike a Reptilian in the water
+  it does not lie in wait: it goes after the enemies it sees as any soldier does, and shows as it moves; told to hold its
+  ground it stays put and hidden. Walking, it shows. The game draws it crouched, and its panel says "hidden".
+- **Shadowborn** (`"shadowborn"`, `UnitDef.Shadowborn`, `CombatSystem.ShadowPercent`): all four strike for 80% of their
+  damage out in the daylight (by day under the open sky, `Conditions.InDaylight`; not at dawn, dusk or night, nor
+  underground) and for 125% in the shadowed wilds at any hour. With day and night off it is never day.
+- **Strike from the shadows** (`kage_shadow_strike`, the `ambush` tech effect with a `percent` the Reptilians'
+  Lurkers' strike has): once researched, a unit of theirs hiding deals twice the damage with its first blow out of
+  hiding (`CombatSystem.LyingInWait`, `SpringLurker`). A kunoichi left by a road is a trap for the first worker or
+  caster to pass.
+- **Their final tech** is the Moonless Night (after Strike from the shadows, Basic magic and Smelting), which opens
+  their great work, the **Shrine of the Moonless Night**, a dark timber pagoda (see
+  [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers they hack the dusk tree down, as the
+  Orcs do (see [The dusk tree](#the-dusk-tree)).
+
+Computer players play Clan Kage as a waves faction and research Strike from the shadows after their other techs. All
+numbers are first guesses to be tuned in playtests.
+
 ## Dropped relics and the Dusk Staff
 
 Issue #73. A unit that dies bearing a relic or the Dusk Staff drops it in the block where it fell

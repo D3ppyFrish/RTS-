@@ -29,6 +29,8 @@ public partial class UnitRenderer : Node3D
     /// </summary>
     /// <summary>How far (blocks) a lurking monster lying in the water sinks below where it stands: to its shoulders, feet already in the water.</summary>
     private const float SubmergedSink = 0.7f;
+    /// <summary>How far a unit hiding as it stands still (Clan Kage) crouches.</summary>
+    private const float HidingCrouch = 0.2f;
     private float[] _sinkById = new float[256];
 
     public static float DeckOffset(Simulation sim, int i) =>
@@ -310,7 +312,8 @@ void fragment() {
             if (id >= _yawById.Length) Array.Resize(ref _yawById, Math.Max(id + 1, _yawById.Length * 2));
             // A lurking monster lying in the water sinks to its eyes, and rises as it comes out at someone.
             if (id >= _sinkById.Length) Array.Resize(ref _sinkById, Math.Max(id + 1, _sinkById.Length * 2));
-            float sinkTo = _sim.Monsters.Submerged(i) || _sim.Combat.Lurking(i) ? SubmergedSink : 0f; // a Reptilian lying in the water too
+            // A Reptilian lying in the water sinks too; Clan Kage's shinobi and kunoichi hiding crouch low.
+            float sinkTo = _sim.Combat.Hiding(i) ? HidingCrouch : _sim.Monsters.Submerged(i) || _sim.Combat.Lurking(i) ? SubmergedSink : 0f;
             _sinkById[id] = Mathf.MoveToward(_sinkById[id], sinkTo, delta * 3f);
             y -= _sinkById[id];
             float dx = cx - px, dz = cz - pz;

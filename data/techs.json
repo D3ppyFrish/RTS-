@@ -33,8 +33,9 @@
 //   grudges       { percent }             an enemy unit that kills one of the player's units is marked with a grudge for life:
 //                                         the player's units deal it that many percent more, and see it through the fog
 //                                         (see "The Dwarves" in docs/rules.md)
-//   ambush        { percent }             a unit of the player's lying hidden in the water deals that many percent more with
-//                                         its first blow coming up out of it (see "The Reptilians" in docs/rules.md)
+//   ambush        { percent }             a unit of the player's lying hidden (in the water, or still with camouflage) deals
+//                                         that many percent more with its first blow out of hiding (see "The Reptilians"
+//                                         and "Clan Kage" in docs/rules.md)
 //   bind_wounds   { after }               the player's units bind their own wounds: one out of the fight after seconds
 //                                         (3 if not given) stops bleeding, grievous wounds too (see "Bleeding" in docs/rules.md)
 // discovery (optional) makes it a discovery tech, researched only once the player has explored for it:
@@ -112,6 +113,10 @@
     "cost": { "food": 40, "wood": 40 }, "researchTime": 40,
     "effects": [ { "type": "ambush", "percent": 100 } ] },
 
+  { "id": "kage_shadow_strike", "icon": "shadow_strike", "name": "Strike from the shadows", "faction": "kage", "description": "The clan learns to wait unseen. A unit of yours hiding (a shinobi or kunoichi standing still) strikes twice as hard with its first blow out of hiding, so a kunoichi left by a road is a trap for the first worker or caster to pass.",
+    "cost": { "food": 40, "wood": 40 }, "researchTime": 40,
+    "effects": [ { "type": "ambush", "percent": 100 } ] },
+
   { "id": "dwarf_grudges", "icon": "grudge", "name": "Book of Grudges", "faction": "dwarves", "description": "Every wrong is written down. An enemy that kills one of your units is marked with a grudge for the rest of its life, and your units deal it half as much damage again. A grudge is never forgotten: a marked enemy shows through the fog of war.",
     "cost": { "food": 40, "stone": 40 }, "researchTime": 40,
     "effects": [ { "type": "grudges", "percent": 50 } ] },
@@ -134,6 +139,10 @@
   { "id": "reptile_mother", "icon": "crown", "name": "The Brood Mother's call", "faction": "reptilians",
     "description": "The brood answers the call of a mother of eggs, whose spawning mound is to be raised over a warm pool in the deep caves.",
     "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "reptile_lurkers", "basic_magic", "smelting" ] },
+
+  { "id": "kage_moonless", "icon": "crown", "name": "The Moonless Night", "faction": "kage",
+    "description": "The clan's elders swear to bring the long night, whose shrine is to be raised in the deep caves, far from any light.",
+    "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "kage_shadow_strike", "basic_magic", "smelting" ] },
 
   { "id": "dwarf_king", "icon": "crown", "name": "The Mountain King's oath", "faction": "dwarves",
     "description": "The clans swear to a king under the mountain, whose hall is to be carved in the deep caves.",
