@@ -58,7 +58,7 @@ public partial class PenRenderer : Node3D
         foreach (var b in _sim.Buildings.All)
         {
             if (b.Def.Kind != BuildingKind.Pen || !b.Active || b.Y * s > _sliceY) continue;
-            if (!_fog.HasSeen(b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2)) continue;
+            if (!_fog.HasSeen(b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2) || _fog.Hidden(b)) continue;
             shown.Add(b);
             key.Append(b.Id).Append(',');
         }

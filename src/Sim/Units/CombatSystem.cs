@@ -1715,6 +1715,7 @@ public sealed partial class CombatSystem
         var b = Buildings.Get(c.Building);
         // A player may knock out their own bridge, to cut the way across behind them.
         if (b == null || b.Planned || (b.Owner == c.PlayerId ? !b.Def.IsBridge : !Hostile(c.PlayerId, b.Owner))) return;
+        if (_sim.Vision.HiddenFrom(c.PlayerId, b)) return; // a hidden village's building it has not found (VisionSystem.Villages.cs)
         foreach (int i in _sim.OwnedUnits(c))
         {
             if (!Def(i).CanAttack) continue;

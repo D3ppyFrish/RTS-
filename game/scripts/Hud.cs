@@ -2739,6 +2739,14 @@ public partial class Hud : CanvasLayer
                 ? $"Being repaired by {repairers} worker{(repairers == 1 ? "" : "s")}{(_sim.Economy.UnderFire(b) ? ", slowly under fire" : "")}\n"
                 : "Damaged: right click it with workers to repair it\n");
         }
+        if (b.Owner == PlayerControl.LocalPlayer && _sim.Vision.Concealed(b) && !b.Planned)
+        {
+            // Clan Kage's hidden village (VisionSystem.Villages.cs).
+            int found = _sim.Vision.FoundBy(b), reach = _sim.Vision.HiddenReach(b);
+            text.Append(found == 0
+                ? $"Hidden: rivals see it only from within {reach} columns\n"
+                : $"Hidden, but found by {found} rival{(found == 1 ? "" : "s")}\n");
+        }
         if (b.Owner == PlayerControl.LocalPlayer && b.Salvaging)
         {
             int takers = 0;

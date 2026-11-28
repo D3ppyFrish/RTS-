@@ -33,6 +33,12 @@ public sealed class FactionDef
     /// </summary>
     public BuildingLook Look { get; init; }
     /// <summary>
+    /// Clan Kage's hidden villages (<c>"hiddenVillage"</c> in the data, columns; 0 for none): with fog of war on, a rival
+    /// sees its players' buildings (but walls, gates, towers, bridges and great works) only once one of the rival's units or
+    /// buildings has come within this many columns of one (see <see cref="VisionSystem.HiddenFrom"/>).
+    /// </summary>
+    public int HiddenVillage { get; init; }
+    /// <summary>
     /// The units it has its own in place of (<c>"replaces"</c> in the data), from the replaced one to its own, in data
     /// order: its players cannot train the replaced one, and its matches start with its own instead (see
     /// <see cref="StartUnits"/>).

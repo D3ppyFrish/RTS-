@@ -49,5 +49,5 @@
     "duskTree": "raze", "aiStyle": "waves" },
   { "id": "kage", "name": "Clan Kage", "uiLook": "crystal", "description": "Ratfolk ninja: scouts and assassins who vanish while they stand still, weaker in bright daylight.",
     "replaces": { "spearman": "kunoichi", "rider": "shinobi", "archer": "shuriken_thrower", "mage": "shadow_caster" },
-    "duskTree": "raze", "aiStyle": "waves" }
+    "hiddenVillage": 5, "duskTree": "raze", "aiStyle": "waves" }
 ]

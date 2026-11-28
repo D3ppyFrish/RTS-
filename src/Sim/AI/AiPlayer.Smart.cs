@@ -227,6 +227,7 @@ public sealed partial class AiPlayer
         foreach (var b in sim.Buildings.All)
         {
             if (!Rival(b.Owner) || b.Planned) continue; // others' plans are not seen
+            if (vision.HiddenFrom(Player, b)) continue; // a hidden village's, not found yet (VisionSystem.Villages.cs)
             var (mx, mz) = Middle(b);
             if (!vision.Sees(Player, mx, mz) && !vision.Sees(Player, b.X, b.Z) && !vision.Sees(Player, b.MaxX, b.Z)
                 && !vision.Sees(Player, b.X, b.MaxZ) && !vision.Sees(Player, b.MaxX, b.MaxZ)) continue;
@@ -389,19 +390,49 @@ public sealed partial class AiPlayer
     {
         var w = sim.World;
         var guesses = HallGuesses(sim, hx, hz);
+        // A rival's hidden village is not seen from afar: a place is looked at only by going there.
+        bool hidden = RivalHides(sim);
         foreach (var g in guesses)
-            if (!_scouted.Contains(g) && sim.Vision.At(Player, g.X, g.Z) == Sight.Unseen) return g;
+            if (!_scouted.Contains(g) && (hidden || sim.Vision.At(Player, g.X, g.Z) == Sight.Unseen)) return g;
         var near = _lastFoe ?? (guesses.Count > 0 ? guesses[0] : (hx, hz));
         (int X, int Z)? best = null;
         long bestD = long.MaxValue;
         for (int gz = ScoutGrid / 2; gz < w.SizeZ; gz += ScoutGrid)
         for (int gx = ScoutGrid / 2; gx < w.SizeX; gx += ScoutGrid)
         {
-            if (_scouted.Contains((gx, gz)) || sim.Vision.At(Player, gx, gz) != Sight.Unseen) continue;
+            if (_scouted.Contains((gx, gz)) || (!hidden && sim.Vision.At(Player, gx, gz) != Sight.Unseen)) continue;
             long d = 2 * Dist2(near.X, near.Z, gx, gz) + Dist2(x, z, gx, gz);
             if (d < bestD) (bestD, best) = (d, (gx, gz));
         }
         return best;
+    }
+
+    /// <summary>
+    /// True if, with fog of war on, a rival plays a faction whose buildings are hidden until a unit comes close (Clan
+    /// Kage's hidden villages, see <see cref="VisionSystem.HiddenFrom"/>): its scout then goes right to each place it
+    /// looks for their town at, instead of being done with it once it has seen it from afar.
+    /// </summary>
+    private bool RivalHides(Simulation sim)
+    {
+        if (!sim.Fog) return false;
+        foreach (var s in sim.Map.Starts)
+            if (Rival(s.Player) && sim.FactionOf(s.Player).HiddenVillage > 0) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Columns within which a scout looking for a hidden village (see <see cref="RivalHides"/>) has to pass a place to
+    /// be done with it: half the <see cref="ScoutGrid"/>, so the places it passes cover the ground between them.
+    /// </summary>
+    public const int HiddenLook = ScoutGrid / 2;
+
+    /// <summary>Looking for a hidden village: every place of the <see cref="ScoutGrid"/> within <see cref="HiddenLook"/> of (x, z) is done.</summary>
+    private void PassBy(int x, int z)
+    {
+        int h = ScoutGrid / 2;
+        for (int gz = (z - HiddenLook - h) / ScoutGrid * ScoutGrid + h; gz <= z + HiddenLook; gz += ScoutGrid)
+        for (int gx = (x - HiddenLook - h) / ScoutGrid * ScoutGrid + h; gx <= x + HiddenLook; gx += ScoutGrid)
+            if (gx >= 0 && gz >= 0 && Dist2(x, z, gx, gz) <= (long)HiddenLook * HiddenLook && !_scouted.Contains((gx, gz))) _scouted.Add((gx, gz));
     }
 
     /// <summary>The worth of the units by id, as they are now.</summary>
@@ -452,7 +483,12 @@ public sealed partial class AiPlayer
             home.Remove(_scout);
             int ux = u.X[i].FloorToInt(), uz = u.Z[i].FloorToInt();
             // Looking for their town, a place is done once it has been seen (or the town found); looking at it again, once the scout is there.
-            bool there = Dist2(ux, uz, gx, gz) <= 16 || (_scoutSearch && (KnowsEnemyHall || sim.Vision.At(Player, gx, gz) != Sight.Unseen));
+            // A rival's hidden village is found only from close by: a place is done once the scout has passed within
+            // HiddenLook of it (and so has every other place it passes that near on the way).
+            bool hides = _scoutSearch && RivalHides(sim);
+            if (hides) PassBy(ux, uz);
+            bool there = Dist2(ux, uz, gx, gz) <= (hides ? (long)HiddenLook * HiddenLook : 16)
+                || (_scoutSearch && (KnowsEnemyHall || !hides && sim.Vision.At(Player, gx, gz) != Sight.Unseen));
             bool hurt = Hurt(sim, i, Hard ? HardScoutHurtPercent : ScoutHurtPercent);
             // Given up when it takes too long, or the scout keeps stopping short (there is no way there).
             if (u.Order[i] == UnitOrder.Idle && u.Rout[i] == 0) _scoutStops++;
@@ -460,7 +496,7 @@ public sealed partial class AiPlayer
             {
                 if (u.Order[i] == UnitOrder.Idle && u.Rout[i] == 0)
                 {
-                    var (mx, mz) = LookFrom(sim, gx, gz, ux, uz, _scoutSearch, _scoutStops);
+                    var (mx, mz) = LookFrom(sim, gx, gz, ux, uz, _scoutSearch && !hides, _scoutStops);
                     issue(new MoveCommand(Player, new[] { _scout }, mx, mz));
                 }
                 return;
