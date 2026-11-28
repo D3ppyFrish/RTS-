@@ -160,6 +160,25 @@ public sealed class UnitDef
     /// </summary>
     public bool ColdBlooded { get; init; }
 
+    /// <summary>
+    /// It hides while it stands still (<c>"camouflage"</c> in the data; Clan Kage's shinobi and kunoichi): a player's unit
+    /// with no order to go anywhere, nothing to fight and not running is hidden, as an amphibious unit lying in the water
+    /// is, seen by its enemies only from close by (see <c>CombatSystem.Lurking</c>, <c>CombatSystem.Hiding</c>).
+    /// </summary>
+    public bool Camouflage { get; init; }
+
+    /// <summary>
+    /// It is at home in the dark (<c>"shadowborn"</c> in the data; Clan Kage): out in the daylight it strikes softer, and
+    /// in the shadowed wilds harder, at any hour (see <c>CombatSystem.ShadowPercent</c>).
+    /// </summary>
+    public bool Shadowborn { get; init; }
+
+    /// <summary>
+    /// How much more (percent) its blows deal workers, casters and heroes (<c>"assassin"</c> in the data; Clan Kage's
+    /// kunoichi); 0 for none.
+    /// </summary>
+    public int Assassin { get; init; }
+
     /// <summary>Hit points it gives back to the most hurt ally near it (<see cref="HealRange"/>) every <see cref="HealTicks"/>; 0 if it does not heal.</summary>
     public int Heal { get; init; }
     public int HealTicks { get; init; } = 2 * Simulation.TicksPerSecond;

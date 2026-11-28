@@ -1023,6 +1023,8 @@ public sealed partial class CombatSystem
         int grudge = GrudgeAgainst(i, t); // the Dwarves' Book of Grudges (CombatSystem.Grudges.cs)
         if (grudge > 0) m = m * (100 + grudge) / 100;
         if (Chilled(i)) m = m * ColdPercent / 100; // cold-blooded in the cold (CombatSystem.Swamp.cs)
+        if (def.Shadowborn) m = m * ShadowPercent(i) / 100; // Clan Kage, out in the light or in the wilds (CombatSystem.Shadows.cs)
+        if (def.Assassin > 0 && Marked(target)) m = m * (100 + def.Assassin) / 100; // a kunoichi on a worker, caster or hero
         return Math.Max(1, (Fix64.FromInt(AttackOf(i, def)) * m).RoundToInt());
     }
 

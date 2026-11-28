@@ -2775,7 +2775,7 @@ public partial class PlayerControl : Node
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
-               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} " +
+               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} " +
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"ramps={OwnRamps()} ramp_top={RampTop} ramp_blocks={RampBlocks} ramp_builders={RampBuilders()} " +
@@ -2888,6 +2888,15 @@ public partial class PlayerControl : Node
             foreach (var (x, y, z) in pool.Blocks)
                 if (_sim.World.Get(x, y, z) == BlockType.Water) water++;
         }
+        return n;
+    }
+
+    /// <summary>Units of yours hiding as they stand still (Clan Kage's shinobi and kunoichi).</summary>
+    private int OwnHiding()
+    {
+        int n = 0;
+        for (int i = 0; i < _sim.Units.Count; i++)
+            if (_sim.Units.Owner[i] == LocalPlayer && _sim.Combat.Hiding(i)) n++;
         return n;
     }
 

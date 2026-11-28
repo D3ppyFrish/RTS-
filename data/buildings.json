@@ -277,5 +277,10 @@
   { "id": "spawning_mound", "name": "Brood Mother's mound", "kind": "great_work", "size": [7, 7], "wallHeight": 4,
     "wall": "thatch", "mound": true, "icon": "crown", "faction": "reptilians",
     "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
-    "requires": "reptile_mother", "sight": 10, "light": 6 }
+    "requires": "reptile_mother", "sight": 10, "light": 6 },
+  // Clan Kage's great work: the shrine of the Moonless Night, a dark timber pagoda raised in the deep caves.
+  { "id": "moonless_shrine", "name": "Shrine of the Moonless Night", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
+    "wall": "planks", "footing": "rampart", "roof": "roof_tile", "icon": "crown", "faction": "kage",
+    "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "requires": "kage_moonless", "sight": 10, "light": 6 }
 ]

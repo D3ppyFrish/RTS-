@@ -835,7 +835,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear", "flood", "amphibious", "coldBlooded");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear", "flood", "amphibious", "coldBlooded", "camouflage", "shadowborn", "assassin");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -894,6 +894,9 @@ public static class ContentLoader
                 Flood = o.Bool("flood"),
                 Amphibious = o.Bool("amphibious"),
                 ColdBlooded = o.Bool("coldBlooded"),
+                Camouflage = o.Bool("camouflage"),
+                Shadowborn = o.Bool("shadowborn"),
+                Assassin = o.Int("assassin", 0, 1000, 0),
                 GrowForest = o.Bool("growForest"),
                 Heal = o.Int("heal", 0, 100000, 0),
                 HealTicks = Math.Max(1, (healTime * Tps).RoundToInt()),
@@ -1867,6 +1870,9 @@ public static class ContentLoader
                 if (u.Flood) h.Add(190);
                 if (u.Amphibious) h.Add(191);
                 if (u.ColdBlooded) h.Add(192);
+                if (u.Camouflage) h.Add(193);
+                if (u.Shadowborn) h.Add(194);
+                if (u.Assassin > 0) h.Add(2000 + u.Assassin);
                 if (u.Drums is { } drums)
                 {
                     h.Add(drums.Speed);

@@ -46,5 +46,8 @@
     "duskTree": "raze", "aiStyle": "balanced" },
   { "id": "reptilians", "name": "Reptilians", "uiLook": "timber", "description": "The swamp brood: scaled warriors who regenerate, wade and hide in the water and flood the ground on purpose, but grow sluggish at night and in the hills.",
     "replaces": { "spearman": "scale_guard", "rider": "scale_guard", "archer": "blowpiper", "mage": "marsh_shaman" },
+    "duskTree": "raze", "aiStyle": "waves" },
+  { "id": "kage", "name": "Clan Kage", "uiLook": "crystal", "description": "Ratfolk ninja: scouts and assassins who vanish while they stand still, weaker in bright daylight.",
+    "replaces": { "spearman": "kunoichi", "rider": "shinobi", "archer": "shuriken_thrower", "mage": "shadow_caster" },
     "duskTree": "raze", "aiStyle": "waves" }
 ]

@@ -236,9 +236,9 @@ public enum TechEffectType : byte
     /// </summary>
     Grudges,
     /// <summary>
-    /// The Reptilians' Lurkers' strike: a unit of the player's lying in wait in the water (see
-    /// <see cref="Units.CombatSystem.Lurking"/>) deals the effect's <see cref="TechEffect.Percent"/> more with its first
-    /// blow coming up out of it at someone.
+    /// The Reptilians' Lurkers' strike and Clan Kage's Strike from the shadows: a unit of the player's lying in wait,
+    /// hidden in the water or standing still with camouflage (see <see cref="Units.CombatSystem.Lurking"/>), deals the
+    /// effect's <see cref="TechEffect.Percent"/> more with its first blow out of hiding at someone.
     /// </summary>
     Ambush,
 }
