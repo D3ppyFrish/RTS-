@@ -72,6 +72,9 @@ public sealed class CombatRules
     /// <summary>How Clan Kage's smoke bombs hang about (see <see cref="SmokeRules"/>).</summary>
     public SmokeRules Smoke { get; internal set; } = new();
 
+    /// <summary>How far and with how many Clan Kage's shadow casters step through the shadows (see <see cref="ShadowStepRules"/>).</summary>
+    public ShadowStepRules ShadowStep { get; internal set; } = new();
+
     public bool StrongAgainst(UnitRole attacker, UnitRole target) => _strong[(int)attacker * RoleCount + (int)target];
 
     public bool StrongAgainstStructures(UnitRole role) => _structures[(int)role];
@@ -130,6 +133,26 @@ public sealed class SmokeRules
     public int Ticks { get; internal set; } = 8 * Simulation.TicksPerSecond;
     /// <summary>Ticks a thrower waits, from the throw, before it can throw the next.</summary>
     public int WaitTicks { get; internal set; } = 45 * Simulation.TicksPerSecond;
+}
+
+/// <summary>
+/// Shadow step (a tech's <see cref="TechEffectType.ShadowStep"/> effect, Clan Kage's shadow casters): a caster takes the
+/// units of its side round it through the shadows to a spot its side has seen (see <c>Units/CombatSystem.ShadowStep.cs</c>).
+/// </summary>
+public sealed class ShadowStepRules
+{
+    /// <summary>Most columns from the caster to where it steps.</summary>
+    public int Range { get; internal set; } = 80;
+    /// <summary>Columns round the caster within which its side's units step with it.</summary>
+    public int Gather { get; internal set; } = 5;
+    /// <summary>Most units that step at once, the caster too.</summary>
+    public int Carry { get; internal set; } = 8;
+    /// <summary>Columns round the spot within which they come out of the shadows.</summary>
+    public int Spread { get; internal set; } = 3;
+    /// <summary>Mana a step costs.</summary>
+    public int Mana { get; internal set; } = 30;
+    /// <summary>Ticks a caster waits, from the step, before it can step again.</summary>
+    public int WaitTicks { get; internal set; } = 90 * Simulation.TicksPerSecond;
 }
 
 public sealed class MoltRules

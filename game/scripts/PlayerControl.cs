@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Flood, Fell, Prospect, Kindle, Stampede, Gaze, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Flood, Fell, Prospect, Kindle, Stampede, Gaze, ShadowStep, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -267,6 +267,10 @@ public partial class PlayerControl : Node
                             GazeAt(mb.Position);
                             GetViewport().SetInputAsHandled();
                             return;
+                        case ToolMode.ShadowStep:
+                            StepAt(mb.Position);
+                            GetViewport().SetInputAsHandled();
+                            return;
                         case ToolMode.Test:
                             if (GroundUnder(mb.Position, out int tx, out int ty, out int tz)) TestPlace?.Invoke(tx, ty - 1, tz);
                             GetViewport().SetInputAsHandled();
@@ -393,6 +397,7 @@ public partial class PlayerControl : Node
             case Key.B when key.CtrlPressed: ThrowSmoke(); break;
             case Key.S when key.CtrlPressed: ToggleStampede(); break;
             case Key.G when key.CtrlPressed: ToggleGaze(); break;
+            case Key.H when key.CtrlPressed: ToggleShadowStep(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
             case Key.K when key.ShiftPressed: ToggleLadder(); break;
@@ -1423,6 +1428,64 @@ public partial class PlayerControl : Node
         if (ready.Count == 0) return;
         _sim.Schedule(_sim.Tick, new SmokeCommand(LocalPlayer, ready.ToArray()));
         Changed?.Invoke();
+    }
+
+    /// <summary>The selected shadow casters of yours that can step through the shadows (see <see cref="Rts.Sim.Content.TechEffectType.ShadowStep"/>), ready or not.</summary>
+    public List<int> OwnSteppers()
+    {
+        var list = OwnSelected();
+        list.RemoveAll(id => !_sim.Combat.CanStep(_sim.Units.IndexOf(id)));
+        return list;
+    }
+
+    /// <summary>The first of the selected shadow casters that is ready to step, as a unit index, or -1.</summary>
+    public int ReadyStepper()
+    {
+        foreach (int id in OwnSteppers())
+        {
+            int i = _sim.Units.IndexOf(id);
+            if (_sim.Combat.ReadyToStep(i)) return i;
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// Whether the selected units can step through the shadows to the ground under the mouse, and if not why; null with
+    /// no ready caster selected or no ground under the mouse.
+    /// </summary>
+    public StepResult? StepHere()
+    {
+        int i = ReadyStepper();
+        if (i < 0 || !GroundUnder(_mousePos, out int x, out _, out int z)) return null;
+        return _sim.Combat.CanShadowStep(i, x, z);
+    }
+
+    /// <summary>The Shadow step button and key (Ctrl+H): with a ready shadow caster selected, click where they step to.</summary>
+    public void ToggleShadowStep()
+    {
+        if (Tool == ToolMode.ShadowStep) SetTool(ToolMode.Select);
+        else if (ReadyStepper() >= 0) SetTool(ToolMode.ShadowStep);
+    }
+
+    /// <summary>
+    /// The selected units step through the shadows to the ground under the mouse, the first ready caster taking those
+    /// round it; then the tool is put away. A spot they cannot step to keeps the tool out.
+    /// </summary>
+    private void StepAt(Vector2 screen)
+    {
+        int i = ReadyStepper();
+        if (i < 0)
+        {
+            SetTool(ToolMode.Select);
+            return;
+        }
+        if (!GroundUnder(screen, out int x, out _, out int z) || _sim.Combat.CanShadowStep(i, x, z) != StepResult.Ok) return;
+        var ids = new List<int> { _sim.Units.Id[i] };
+        foreach (int id in OwnSelected())
+            if (id != _sim.Units.Id[i]) ids.Add(id);
+        _sim.Schedule(_sim.Tick, new ShadowStepCommand(LocalPlayer, ids.ToArray(), x, z));
+        Changed?.Invoke();
+        SetTool(ToolMode.Select);
     }
 
     /// <summary>The selected units of yours that can molt (see <see cref="Rts.Sim.Content.TechEffectType.Molt"/>), hurt or not.</summary>
@@ -2794,7 +2857,7 @@ public partial class PlayerControl : Node
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
-               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} smoke_clouds={_sim.Combat.Clouds.Count} smoke_bombs={_sim.Combat.SmokeBombs} " +
+               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} smoke_clouds={_sim.Combat.Clouds.Count} smoke_bombs={_sim.Combat.SmokeBombs} shadow_steps={_sim.Combat.StepsMade} units_stepped={_sim.Combat.UnitsStepped} step_casters={OwnSteppers().Count} " +
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"ramps={OwnRamps()} ramp_top={RampTop} ramp_blocks={RampBlocks} ramp_builders={RampBuilders()} " +

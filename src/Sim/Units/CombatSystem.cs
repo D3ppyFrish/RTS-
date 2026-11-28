@@ -213,6 +213,7 @@ public sealed partial class CombatSystem
         Mix(_lurkers.Count);
         foreach (int id in _lurkers) Mix(id);
         HashSmoke(Mix);
+        HashShadowSteps(Mix);
         return h;
     }
 
@@ -269,6 +270,7 @@ public sealed partial class CombatSystem
         StepWebs();
         StepLurkers();
         StepSmoke();
+        StepShadowSteps();
         BuildGrid();
         Rally();
         StepDrums();

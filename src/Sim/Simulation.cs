@@ -582,6 +582,7 @@ public sealed class Simulation
             case MoltCommand mo: Combat.Apply(mo); break;
             case ChargeCommand ch: Combat.Apply(ch); break;
             case SmokeCommand sm: Combat.Apply(sm); break;
+            case ShadowStepCommand ss: Combat.Apply(ss); break;
             case PenCommand pn: ApplyPen(pn); break;
             case StampedeCommand sd: Combat.Apply(sd); break;
             case GazeCommand gz: Economy.Apply(gz); break;

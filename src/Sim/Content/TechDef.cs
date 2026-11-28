@@ -247,6 +247,12 @@ public enum TechEffectType : byte
     /// unit to unit. The numbers are in the role table (<see cref="CombatRules.Smoke"/>).
     /// </summary>
     SmokeBombs,
+    /// <summary>
+    /// Clan Kage's Shadow step: matching units can step through the shadows, with the units of theirs round them, to a
+    /// spot their side has seen (see <see cref="ShadowStepCommand"/>). The numbers are in the role table
+    /// (<see cref="CombatRules.ShadowStep"/>).
+    /// </summary>
+    ShadowStep,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

@@ -114,7 +114,7 @@ public partial class Hud : CanvasLayer
     private Label _researchLabel = null!;
     private Button _techButton = null!;
     private TechTreePanel _techPanel = null!;
-    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
+    private Button _prioritiesButton = null!, _workerPrioritiesButton = null!, _defendTownButton = null!, _shieldWallButton = null!, _chargeButton = null!, _smokeButton = null!, _stepButton = null!, _moltButton = null!, _stampedeButton = null!, _letOutButton = null!, _gazeButton = null!, _fellButton = null!, _prospectButton = null!, _kindleButton = null!;
     private Label _townGuardLabel = null!;
     private PrioritiesPanel _prioritiesPanel = null!;
     private Label _toolLabel = null!;
@@ -755,6 +755,17 @@ public partial class Hud : CanvasLayer
         _smokeButton.Pressed += () => _control.ThrowSmoke();
         _smokeButton.Visible = false;
         column.AddChild(_smokeButton);
+        var step = _sim.Content.Combat.ShadowStep;
+        _stepButton = MakeToolButton("Shadow step  [Ctrl+H]");
+        _stepButton.Name = "shadow_step";
+        _stepButton.Icon = UiIcons.Get("shadow_step");
+        _stepButton.TooltipText = $"Click a spot you have seen, up to {step.Range} columns off: the shadow caster takes itself and up to " +
+            $"{step.Carry - 1} of the selected units within {step.Gather} columns of it through the shadows, and they step out there at once. " +
+            "Both ends must lie out of the daylight: at dusk, by night, underground, under the trees or in the shadowed wilds. " +
+            $"{step.Mana} mana; each caster then needs {step.WaitTicks / Simulation.TicksPerSecond} seconds. (Clan Kage, needs Shadow step.)";
+        _stepButton.Pressed += () => _control.ToggleShadowStep();
+        _stepButton.Visible = false;
+        column.AddChild(_stepButton);
 
         _moltButton = MakeToolButton("Molt  [Ctrl+M]");
         _moltButton.Name = "molt";
@@ -1416,6 +1427,33 @@ public partial class Hud : CanvasLayer
         _letOutButton.Disabled = kept == 0;
     }
 
+    /// <summary>
+    /// The Shadow step button: shown with shadow casters that can step selected, greyed out with the seconds left until
+    /// the first is ready, or the mana it needs.
+    /// </summary>
+    private void RefreshShadowStep()
+    {
+        var steppers = _control.OwnSteppers();
+        bool tool = _control.Tool == PlayerControl.ToolMode.ShadowStep;
+        _stepButton.Visible = steppers.Count > 0 || tool;
+        _stepButton.SetPressedNoSignal(tool);
+        if (steppers.Count == 0) return;
+        var u = _sim.Units;
+        int wait = int.MaxValue, ready = 0;
+        foreach (int id in steppers)
+        {
+            int i = u.IndexOf(id);
+            if (_sim.Combat.ReadyToStep(i)) ready++;
+            else wait = Math.Min(wait, Math.Max(1, u.StepWait[i]));
+        }
+        int mana = _sim.Content.Combat.ShadowStep.Mana;
+        bool poor = _sim.Economy.Player(PlayerControl.LocalPlayer).Mana < mana;
+        _stepButton.Disabled = (ready == 0 || poor) && !tool;
+        _stepButton.Text = ready == 0 && wait != int.MaxValue ? $"Step ready in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s"
+            : poor ? $"Shadow step: needs {mana} mana"
+            : "Shadow step  [Ctrl+H]";
+    }
+
     /// <summary>The Gaze button: shown with your finished crystal lens selected, greyed out until it is ready and you have the mana.</summary>
     private void RefreshLens()
     {
@@ -1519,6 +1557,7 @@ public partial class Hud : CanvasLayer
         RefreshCharge();
         RefreshMolt();
         RefreshSmoke();
+        RefreshShadowStep();
         RefreshPen();
         RefreshLens();
         _fellButton.Visible = _control.OwnFellers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Fell;
@@ -2420,6 +2459,22 @@ public partial class Hud : CanvasLayer
                        (kept == 0 ? "   (no beasts in the pen)" : "") +
                        "\nRight click or Esc to stop";
             }
+            case PlayerControl.ToolMode.ShadowStep:
+            {
+                var rules = _sim.Content.Combat.ShadowStep;
+                return (_control.StepHere() switch
+                       {
+                           StepResult.Ok => "Shadow step: click to step through the shadows to here",
+                           StepResult.TooFar => $"Shadow step: too far (at most {rules.Range} columns from the caster)",
+                           StepResult.Unseen => "Shadow step: you have never seen this ground",
+                           StepResult.LitThere => "Shadow step: the daylight lies there; step into shadow (under the trees, underground, in the wilds, or after dusk)",
+                           StepResult.InTheLight => "Shadow step: the caster stands in the daylight; it needs shadow to step from",
+                           StepResult.NoGround => "Shadow step: nowhere to stand there",
+                           StepResult.NoMana => $"Shadow step: needs {rules.Mana} mana",
+                           _ => "Shadow step: click a spot you have seen, out of the daylight",
+                       }) +
+                       $"\nThe caster takes up to {rules.Carry - 1} of the selected units within {rules.Gather} columns of it   Right click or Esc to stop";
+            }
             case PlayerControl.ToolMode.Gaze:
             {
                 var lens = _control.SelectedLens();
@@ -2467,7 +2522,7 @@ public partial class Hud : CanvasLayer
             default:
                 return "Left: select   Right: move, attack, gather, build, work, clean blood, capture, trade   Right-drag: line up   Ctrl+Right: attack-move, burn   Alt+Right: patrol, guard   Ctrl+1-9: groups\n" +
                        $"Space: pause   -/+: speed   PgUp/PgDn: slice   {(PlayerControl.TerrainTool ? "T: terrain   " : "")}X: tunnel   Z: dig   Shift+Z: chasm   Ctrl+Y: flood   H G C B M N O I ;: build   / \\: towers   Tab: plan   Y: wall   Shift+Y: earth wall   ': bridge   Shift+': ice bridge   Shift+X: ramp   Shift+K: ladder   Shift+O: dam   L: road   U: train   K: techs\n" +
-                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+B: smoke bomb   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
+                       "J: automatic workers (Shift+J: all)   P: repeat training (Shift+P: rebuild)   V: stance   Ctrl+V: shield wall   Ctrl+C: beat the charge   Ctrl+B: smoke bomb   Ctrl+H: shadow step   Ctrl+X: fell tree   Ctrl+Z: sound for ore   Shift+L: grow forest";
         }
     }
 

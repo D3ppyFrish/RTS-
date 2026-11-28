@@ -68,7 +68,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "crop_rotation", "deep_warrens", "horse_breeding", "roads", "carts", "archery", "masonry",
         "settler_guilds", "orc_beast_pens", "orc_war_drums", "deep_chitin", "sapping", "basic_magic", "smelting",
-        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "silk_knives", "field_dressings", "field_hospital",
+        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "kage_shadow_step", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>What the player has, counted once each time Hard looks at its economy.</summary>

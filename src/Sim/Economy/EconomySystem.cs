@@ -40,6 +40,7 @@ public sealed class PlayerEconomy
         ShieldWall = new bool[content.Units.Count];
         Molt = new bool[content.Units.Count];
         Smoke = new bool[content.Units.Count];
+        ShadowStep = new bool[content.Units.Count];
         FellTicks = new int[content.Units.Count];
         ProspectTicks = new int[content.Units.Count];
         AutoForm = new int[content.Units.Count];
@@ -94,6 +95,8 @@ public sealed class PlayerEconomy
     internal readonly bool[] Molt;
     /// <summary>Which unit types (by index) can throw smoke bombs (see <see cref="TechEffectType.SmokeBombs"/>).</summary>
     internal readonly bool[] Smoke;
+    /// <summary>Which unit types (by index) can step through the shadows (see <see cref="TechEffectType.ShadowStep"/>).</summary>
+    internal readonly bool[] ShadowStep;
     /// <summary>
     /// Ticks of work for each unit type (by index) to fell a tree the way it chooses, or to sound the ground; 0 if it
     /// cannot (see <see cref="TechEffectType.Felling"/>, <see cref="TechEffectType.Prospecting"/>).
