@@ -25,6 +25,9 @@ public sealed class WorldMemory
         _player = player;
         World = sim.World.Clone();
         _isStale = new bool[sim.World.SizeX * sim.World.SizeZ];
+        // Buildings of a hidden village it has not found are not in the world it knows (VisionSystem.Villages.cs).
+        foreach (var b in sim.Buildings.All)
+            if (sim.Vision.HiddenFrom(player, b)) Conceal(b);
         sim.World.BlockChanged += OnBlockChanged;
     }
 
@@ -46,7 +49,7 @@ public sealed class WorldMemory
         for (int k = _stale.Count - 1; k >= 0; k--)
         {
             int c = _stale[k];
-            if (!_sim.Vision.Sees(_player, c % sx, c / sx)) continue;
+            if (!Known(c % sx, c / sx)) continue;
             CopyColumn(c);
             _stale[k] = _stale[^1];
             _stale.RemoveAt(_stale.Count - 1);
@@ -68,7 +71,7 @@ public sealed class WorldMemory
     private void OnBlockChanged(int x, int y, int z)
     {
         int c = x + z * _sim.World.SizeX;
-        if (_lifted || _sim.Vision.Sees(_player, x, z))
+        if (_lifted || Known(x, z))
         {
             World.Set(x, y, z, _sim.World.Get(x, y, z));
             return;
@@ -76,6 +79,26 @@ public sealed class WorldMemory
         if (_isStale[c]) return;
         _isStale[c] = true;
         _stale.Add(c);
+    }
+
+    // True if what is in column (x, z) is known as it is: it is in sight, and not under a building hidden from the player.
+    private bool Known(int x, int z) => _sim.Vision.Sees(_player, x, z) && !_sim.Vision.HiddenAt(_player, x, z);
+
+    // Takes building b out of the world known, as if it had never been built there: its blocks are air, and those
+    // under the ground soil. Its columns are brought up to date once the player finds it and sees them.
+    private void Conceal(Economy.Building b)
+    {
+        int sx = World.SizeX;
+        foreach (var t in b.Shape.Blocks)
+        {
+            int x = b.X + t.X, y = b.Y + t.Y, z = b.Z + t.Z;
+            if (!World.InBounds(x, y, z) || World.Get(x, y, z) != t.Block) continue;
+            World.Set(x, y, z, t.Y < 0 ? BlockType.Soil : BlockType.Air);
+            int c = x + z * sx;
+            if (_isStale[c]) continue;
+            _isStale[c] = true;
+            _stale.Add(c);
+        }
     }
 
     private void CopyColumn(int c)

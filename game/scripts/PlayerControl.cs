@@ -1042,7 +1042,9 @@ public partial class PlayerControl : Node
     }
 
     /// <summary>The building whose blocks (or levelled site, or field, or plan) are under the cursor, or null.</summary>
-    public Building? BuildingUnder(Vector2 screen)
+    public Building? BuildingUnder(Vector2 screen) => SeenBuildingUnder(screen) is { } b && !Fog.Hidden(b) ? b : null; // not a hidden village's
+
+    private Building? SeenBuildingUnder(Vector2 screen)
     {
         if (!VoxelRay.FromScreen(_rig.Camera, screen, World, HiddenFrom, out var hit, out _) || !Fog.HasSeen(hit.X, hit.Z)) return null;
         var b = _sim.Buildings.At(hit.X, hit.Y, hit.Z);
@@ -2794,6 +2796,9 @@ public partial class PlayerControl : Node
         return n;
     }
 
+    /// <summary>For scripted tests: rivals' buildings of a hidden village (Clan Kage's) you have not found yet.</summary>
+    private int HiddenBuildings() => _sim.Buildings.All.Count(b => Fog.Hidden(b));
+
     /// <summary>One line describing the UI state, for scripted screenshot tests.</summary>
     /// <summary>For scripted tests: how many of your units of each type that hatches in batches you have, as id:count.</summary>
     private string Batches()
@@ -3003,7 +3008,7 @@ public partial class PlayerControl : Node
                $"near_dam={NearDam()?.Id ?? 0} sluice_open={(NearDam()?.Open == true ? 1 : 0)} sluice_water={SluiceWater()} " +
                $"tier1={OwnTier(1)} tier2={OwnTier(2)} upgrading={OwnUpgrading()} posted={OwnPosted()} " +
                $"facings={OwnFacings()} towers={OwnWalls(BuildingKind.Tower)} posted_on_towers={OwnPosted(towers: true)} " +
-               $"health={sel?.Health ?? 0} max_health={sel?.MaxHealth ?? 0} damaged={OwnDamaged()} repairing={Jobs(UnitJob.Repair)} salvaging={Jobs(UnitJob.Salvage)} mending={Jobs(UnitJob.Mend)} salvage_marked={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Salvaging)} enemy_buildings={EnemyBuildings()} stones_dropped={_sim.Combat.StonesDropped} " +
+               $"health={sel?.Health ?? 0} max_health={sel?.MaxHealth ?? 0} damaged={OwnDamaged()} repairing={Jobs(UnitJob.Repair)} salvaging={Jobs(UnitJob.Salvage)} mending={Jobs(UnitJob.Mend)} salvage_marked={_sim.Buildings.All.Count(b => b.Owner == LocalPlayer && b.Salvaging)} enemy_buildings={EnemyBuildings()} hidden_buildings={HiddenBuildings()} stones_dropped={_sim.Combat.StonesDropped} " +
                $"blood={_sim.Blood.Count} bleeding={Bleeding()} bled_out={_sim.Combat.BledOut} cleaning={cleaning} " +
                $"fellers={OwnFellers().Count} prospectors={OwnProspectors().Count} soundings={_sim.Economy.Soundings(LocalPlayer)} " +
                $"prospected={_sim.Economy.ProspectedOre(LocalPlayer).Count} felling={Jobs(UnitJob.Fell)} prospecting={Jobs(UnitJob.Prospect)} " +

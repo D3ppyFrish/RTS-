@@ -99,7 +99,7 @@ public sealed partial class AiPlayer
         {
             if (!b.Def.Storage || !b.Def.Raidable || b.Planned || !Rival(b.Owner) || b.Owner >= Simulation.WildPlayer) continue;
             var (cx, cz) = Middle(b);
-            if (!sim.Vision.Sees(Player, cx, cz)) continue;
+            if (!sim.Vision.Sees(Player, cx, cz) || sim.Vision.HiddenFrom(Player, b)) continue;
             long d = long.MaxValue;
             foreach (int id in free)
             {

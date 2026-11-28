@@ -83,7 +83,7 @@ public sealed partial class AiPlayer
         foreach (var b in sim.Buildings.All)
         {
             if (b.Planned || !Rival(b.Owner) || b.Owner >= Simulation.WildPlayer || !Wooden(w, b)) continue;
-            if (sim.Vision.Sees(Player, (b.X + b.MaxX) / 2, (b.Z + b.MaxZ) / 2)) targets.Add(b);
+            if (sim.Vision.Sees(Player, (b.X + b.MaxX) / 2, (b.Z + b.MaxZ) / 2) && !sim.Vision.HiddenFrom(Player, b)) targets.Add(b);
         }
         var rivals = new SortedDictionary<long, int>();
         var fighters = new List<(int X, int Z)>();

@@ -1476,7 +1476,7 @@ numbers are first guesses to be tuned in playtests.
 
 Clan Kage is the seventh faction, the design doc's ratfolk ninja clan: scouts and assassins who vanish while they stand
 still and strike from hiding, at home in the dark and weaker in bright daylight (`KageTests`; `CombatSystem.Shadows.cs`).
-Their hidden villages and clan honour are still to come.
+Their clan honour is still to come.
 
 - **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **kunoichi** instead of spearmen,
   **shinobi** instead of riders (the clan rides no horses), **shuriken throwers** instead of archers and **shadow
@@ -1553,12 +1553,27 @@ Their hidden villages and clan honour are still to come.
   no climb. Up on anyone's wall it holds its ground there and fights as anyone posted on one does, and sent on it climbs
   down the side it is going to (`UnitMovement.ClimbDown`), so a town's walls do not keep the clan out. A climber that is
   hit lets go and fights, as a raider does; beaten, running away, aboard a ship or in a pen it cannot climb.
+- **Hidden villages** (`"hiddenVillage": 5` in `data/factions.json`, `FactionDef.HiddenVillage`;
+  `VisionSystem.Villages.cs`): a trait of the clan's from the start, not a tech. With fog of war on, a rival does not see
+  a building of theirs, finished, a site or a plan, even where its columns are in the rival's sight, until the rival has
+  **found** it: one of the rival's units, or a building of the rival's, is within 5 columns of its footprint at a look
+  (`VisionSystem.HiddenFrom`, `Found`, `FindVillages`). So a scout passing at the edge of its sight sees bare ground
+  where their town stands, and has to walk right up to it. Once found it stays found for that rival. Walls, gates,
+  towers, bridges and the great work are never hidden (`VisionSystem.Concealable`). Until it is found, the rival's world
+  (`WorldMemory`) shows the ground without it, its smoke, lights and health bar do not show and it cannot be clicked
+  (`FogOfWar.Hidden`), an order to attack it is lost (`CombatSystem.Apply(AttackBuildingCommand)`), and computer
+  players know nothing of it: they neither send waves at it nor raid, sabotage or burn it. Who has found what is part
+  of the state hash. The clan's own building panel says "Hidden" and how many rivals have found it. With fog of war off
+  nothing is hidden.
 - **Their final tech** is the Moonless Night (after Strike from the shadows, Basic magic and Smelting), which opens
   their great work, the **Shrine of the Moonless Night**, a dark timber pagoda (see
   [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers they hack the dusk tree down, as the
   Orcs do (see [The dusk tree](#the-dusk-tree)).
 
-Computer players play Clan Kage as a waves faction and research Strike from the shadows, Smoke bombs and Shadow step
+Computer players go by hidden villages as anyone does: they know only the buildings they have found. From Easy up,
+while a rival plays Clan Kage under fog of war, a scout looking for its town goes right up to each place it looks at
+(within 8 columns, half the scouting grid) instead of being done with it once it has seen it from afar, and every place
+it passes that near on the way is done too (`AiPlayer.RivalHides`, `HiddenLook`, `PassBy`). Computer players play Clan Kage as a waves faction and research Strike from the shadows, Smoke bombs and Shadow step
 after their other techs, then Saboteurs and Wall climbing. From Easy up, a wave within siege reach of its target that
 knows of a rival wall, gate or tower near it sends up to 6 of its climbers that are free and not fighting up the face
 of it nearest the wave; each one up on top attack-moves on at the target (fighting the defenders up there, then
@@ -2760,7 +2775,8 @@ player sees a unit underground only where they *hear* it, whether or not the col
 over the digging), within the sight of one of their own units that is underground too (in the same tunnels or
 caves), or within a finished **listening post**'s hearing. So sappers tunnel under a wall unseen, the town guard
 and computer players do not see them coming, and the way to watch for them is a listening post by the wall
-(computer players build them: see Listening posts under Computer players).
+(computer players build them: see Listening posts under Computer players). Clan Kage's buildings are hidden too until
+a rival comes close to them (see Hidden villages under [Clan Kage](#clan-kage)).
 The listening post (`listening_post` in `data/buildings.json`, kind `listening_post`) is a small 2 by 2 hut for
 20 wood and 10 stone, with no tech needed; it sees only 3 columns round it but hears units underground 20
 columns beyond its walls (`hearing`). A post still being built hears nothing. What is heard is worked out with

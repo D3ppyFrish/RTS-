@@ -16,7 +16,8 @@ the dark, stone walls from the first day, and the Book of Grudges; see [The Dwar
 (a swamp brood that regenerates, wades and hides in the water and floods the ground, but is sluggish at night and in the
 hills; see [The Reptilians](rules.md#the-reptilians)) or Clan Kage (ratfolk ninja whose shinobi and kunoichi hide while
 they stand still and whose kunoichi cut down workers, casters and heroes, weaker in bright daylight and stronger in the
-shadowed wilds; see [Clan Kage](rules.md#clan-kage)), and under Against the faction of the other side (the same as yours makes a mirror match), the
+shadowed wilds, and whose town, but its walls and towers, is hidden under fog of war until you come within 5 columns
+of it; see [Clan Kage](rules.md#clan-kage)), and under Against the faction of the other side (the same as yours makes a mirror match), the
 world seed, the map size (Standard, 768 by 768 blocks, or Large, 1024 by 1024: nearly twice the land, the towns
 about 700 blocks apart instead of 520, and the land beyond the standard map's twice as thick with monster lairs; see
 [Monsters and taming](rules.md#monsters-and-taming)), whether the computer plays the other side and how well (Computer level: Easy, Normal, which

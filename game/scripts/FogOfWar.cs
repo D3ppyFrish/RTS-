@@ -55,10 +55,17 @@ public sealed class FogOfWar
     /// <summary>True if unit i is drawn: it is yours, or it stands where you can see.</summary>
     public bool Shows(int i) => !Enabled || _sim.Vision.SeesUnit(_player, i);
 
-    /// <summary>True if any column of the building's footprint is in sight.</summary>
+    /// <summary>
+    /// True if the building is of a rival's hidden village (Clan Kage's) and you have not found it yet: it is not drawn
+    /// or picked, however near its columns are in sight (see <see cref="VisionSystem.HiddenFrom"/>).
+    /// </summary>
+    public bool Hidden(Rts.Sim.Economy.Building b) => Enabled && _sim.Vision.HiddenFrom(_player, b);
+
+    /// <summary>True if any column of the building's footprint is in sight, and it is not hidden from you.</summary>
     public bool Shows(Rts.Sim.Economy.Building b)
     {
         if (!Enabled || b.Owner == _player) return true;
+        if (Hidden(b)) return false;
         for (int z = b.Z; z <= b.MaxZ; z++)
         for (int x = b.X; x <= b.MaxX; x++)
             if (_sim.Vision.Sees(_player, x, z)) return true;

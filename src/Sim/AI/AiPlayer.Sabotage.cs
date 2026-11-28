@@ -63,7 +63,7 @@ public sealed partial class AiPlayer
             int worth = SabotageWorth(sim, b);
             if (worth == 0 || worth < bestWorth) continue;
             var (cx, cz) = Middle(b);
-            if (!sim.Vision.Sees(Player, cx, cz)) continue;
+            if (!sim.Vision.Sees(Player, cx, cz) || sim.Vision.HiddenFrom(Player, b)) continue;
             foreach (int id in free)
             {
                 int i = u.IndexOf(id);

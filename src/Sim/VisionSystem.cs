@@ -35,7 +35,7 @@ public enum Sight : byte
 /// wall unseen, unless its owner keeps a listening post near it.
 /// </para>
 /// </summary>
-public sealed class VisionSystem
+public sealed partial class VisionSystem
 {
     /// <summary>Ticks between looks: a unit at a gallop moves two columns in that time.</summary>
     public const int UpdateTicks = 4;
@@ -168,7 +168,7 @@ public sealed class VisionSystem
     {
         ulong h = 14695981039346656037UL;
         foreach (long n in _seen) h = (h ^ (ulong)n) * 1099511628211UL;
-        return h;
+        return HashFound(h);
     }
 
     /// <summary>Once every <see cref="UpdateTicks"/> ticks, with fog of war on: what everyone sees now.</summary>
@@ -254,6 +254,7 @@ public sealed class VisionSystem
         foreach (var g in _sim.Economy.Gazes)
             if ((uint)g.Player < (uint)_grids.Length) Stamp(g.Player, g.X, g.Z, g.X, g.Z, g.Radius * g.Radius);
         HearDrums();
+        FindVillages(); // Clan Kage's hidden villages (VisionSystem.Villages.cs)
         Version++;
     }
 

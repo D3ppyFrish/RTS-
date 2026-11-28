@@ -227,7 +227,7 @@ public static class ContentLoader
         private void ReadFaction(Obj o)
         {
             var id = o.Id();
-            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "duskTree", "aiStyle", "look", "replaces");
+            o.Keys("id", "name", "description", "uiLook", "experience", "tamesMonsters", "duskTree", "aiStyle", "look", "replaces", "hiddenVillage");
             if (id == null) return;
             if (_db.TryGetFaction(id, out _) || id == _db.Wild.Id)
             {
@@ -245,6 +245,7 @@ public static class ContentLoader
                 DuskTree = o.Enum("duskTree", DuskTreeUse.None, required: false),
                 AiStyle = o.Enum("aiStyle", AiStyle.Waves, required: false),
                 Look = o.Enum("look", BuildingLook.Standard, required: false),
+                HiddenVillage = o.Int("hiddenVillage", 0, 40, 0),
             };
             _db.Add(faction);
             Replacements(o, faction);
