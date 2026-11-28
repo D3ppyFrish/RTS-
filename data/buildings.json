@@ -282,5 +282,17 @@
   { "id": "moonless_shrine", "name": "Shrine of the Moonless Night", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
     "wall": "planks", "footing": "rampart", "roof": "roof_tile", "icon": "crown", "faction": "kage",
     "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
-    "requires": "kage_moonless", "sight": 10, "light": 6 }
+    "requires": "kage_moonless", "sight": 10, "light": 6 },
+  // The Fey's shrine (see "replaces" in factions.json): a ring of living wood grown up out of a hillock in the woods. It
+  // channels mana from the living trees round it (nature: reach in columns beyond its footprint, the most trees counted)
+  // with no keeper and no crystal: mana for each tree every channelTime seconds (a big tree counts for each column of its trunk).
+  { "id": "fairy_ring", "name": "Fairy ring", "kind": "shrine", "size": [3, 3], "wallHeight": 2,
+    "wall": "livewood", "mound": true, "icon": "fairy_ring", "faction": "fey",
+    "cost": { "wood": 30, "food": 20 }, "buildTime": 20, "light": 3,
+    "mana": 1, "channelTime": 4, "nature": { "reach": 8, "trees": 12 } },
+  // The Fey's great work: the Hollow Hill, the high court of the fey under a living hill, sung up in the deep caves.
+  { "id": "hollow_hill", "name": "The Hollow Hill", "kind": "great_work", "size": [7, 7], "wallHeight": 5,
+    "wall": "livewood", "mound": true, "icon": "crown", "faction": "fey",
+    "cost": { "stone": 150, "cut_stone": 150, "wood": 150, "iron": 40, "crystal": 30, "gold": 30 }, "buildTime": 300,
+    "requires": "fey_high_court", "sight": 10, "light": 6 }
 ]

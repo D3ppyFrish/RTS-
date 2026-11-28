@@ -215,8 +215,13 @@ public sealed class BuildingDef
     /// fog of war (see <see cref="BuildingKind.ListeningPost"/>, <see cref="VisionSystem"/>); 0 for other buildings.
     /// </summary>
     public int Hearing { get; init; }
-    /// <summary>A shrine: mana each crystal it channels gives its owner; 0 for every other building.</summary>
+    /// <summary>A shrine: mana each crystal it channels gives its owner (for a <see cref="Nature"/> shrine, each living tree near it); 0 for every other building.</summary>
     public int Mana { get; init; }
+    /// <summary>
+    /// A shrine that channels mana from the living trees round it instead of crystal (<c>"nature"</c> in the data; the
+    /// Fey's fairy ring): no keeper and no crystal; null for every other building (see <see cref="NatureDef"/>).
+    /// </summary>
+    public NatureDef? Nature { get; init; }
     /// <summary>A shrine: ticks it takes to channel one crystal (before its <see cref="Speed"/>); 0 for every other building.</summary>
     public int ChannelTicks { get; init; }
     /// <summary>A workshop's ticks to work one good into one (see <see cref="BuildingKind.Workshop"/>); 0 for anything else.</summary>
@@ -666,4 +671,18 @@ public sealed class PenDef
     public int Run { get; init; }
     public int TiredTicks { get; init; }
     public int Slow { get; init; }
+}
+
+/// <summary>
+/// How a shrine channels mana from nature (the Fey's fairy ring; <c>"nature"</c> in <c>data/buildings.json</c>): every
+/// <see cref="BuildingDef.ChannelTicks"/> (at its <see cref="BuildingDef.Speed"/>) it gives its owner
+/// <see cref="BuildingDef.Mana"/> for each living tree standing within <see cref="Reach"/> columns of its footprint, up to
+/// <see cref="Trees"/> trees, with no keeper and no crystal (see <c>EconomySystem.StepNature</c>).
+/// </summary>
+public sealed class NatureDef
+{
+    /// <summary>Columns beyond the footprint in which its trees stand.</summary>
+    public int Reach { get; init; }
+    /// <summary>Most trees counted: more give no more.</summary>
+    public int Trees { get; init; }
 }

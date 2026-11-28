@@ -1181,6 +1181,7 @@ public sealed partial class AiPlayer
         if (def.Ram) return KnowsWalls(sim) && Rams(sim) < RamsWanted ? 3 : 0;
         if (def.Drums != null) return Drummers(sim) < DrummersWanted ? 3 : 0; // one goes with each wave
         if (def.Honour > 0) return 0; // trained for honour on its own (see TrainHonourHero)
+        if (def.Mana > sim.Economy.Player(Player).Mana) return 0; // the Fey's wisps and enchanters: once it has the mana
         if (def.Role == UnitRole.Siege) return mine[(int)UnitRole.Siege] - Rams(sim) < 2 ? 2 : 0;
         long w = Weight(sim, def.Role, seen, mine);
         if (!Hard || w == 0 || def.Role is UnitRole.Sapper or UnitRole.Siege) return w;

@@ -117,7 +117,8 @@ player's own pool, channelled from crystal at a shrine (see Crystal, shrines and
   (`StepShrine`; `mana` and `channelTime` in the data). It upgrades to a **crystal sanctum** (5 by 5, 80 stone and
   30 wood) that takes two keepers and channels twice as fast. Mana (`PlayerEconomy.Mana`) is a number for the
   player, not a good: nobody carries it, it cannot be captured or burned, and every player starts with 50,
-  enough for a spell or two before the first shrine. Spells spend it (see Terrain magic). Automatic workers keep
+  enough for a spell or two before the first shrine. The Fey build no shrine and dig no crystal for it: their fairy
+  ring channels mana from the trees round it (see [The Fey](#the-fey)). Spells spend it (see Terrain magic). Automatic workers keep
   a shrine when there is crystal in storage, but do not dig crystal on their own: the caverns are dangerous, so
   sending workers there is the player's call. Test mode's goods cheat and `--goods` also give mana; both sides
   of a `--battle` have 500. From Easy up, computer players lay out one shrine by their town hall once they can build one and have 10
@@ -1615,6 +1616,51 @@ workers and casters, their saboteurs sabotage, their scouts find rival town hall
 the usual weights, and train their master ninja at a barracks, before anything else there, as soon as they have the
 honour and the goods for it and none living or queued; it then fights in the army as any soldier does
 (`AiPlayer.Honour.cs`). All numbers are first guesses to be tuned in playtests.
+
+## The Fey
+
+The Fey are the eighth faction, the design doc's tricksters of old magic: cheap, frail units, strong spells, and mana
+drawn from nature instead of crystal (`FeyTests`; `Economy/EconomySystem.Nature.cs`). This is the first piece of them;
+their illusions and teleporting are still to come, and the design doc leaves them to be refined as they are built.
+
+- **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **sprites** instead of spearmen and
+  riders, **wisps** instead of archers and **enchanters** instead of mages. Sappers, healers, workers and the rest are
+  everyone's. They start with as many units as anyone, their own in place of those they replace.
+  - The **sprite** (line infantry, 60 hit points, speed 6, 6 piercing damage every 0.8 seconds) is a little winged fey
+    with a thorn for a spear: cheap (25 food and 10 wood), trained in 8 seconds and quick on its feet, but no match for
+    a spearman or a rider one to one.
+    The Fey win by numbers and magic, not in the melee.
+  - The **wisp** (ranged, 40 hit points, speed 5, 7 crushing damage every 1.2 seconds at 10 blocks) throws sparks of
+    witchfire a block further than an archer shoots. 25 food and 5 mana; it needs no Archery.
+  - The **enchanter** (caster, 40 hit points, 12 crushing damage every 2 seconds at 9 blocks, splashing 1.5 blocks)
+    knows every terrain spell, Earth Wall, Ice Bridge, Chasm and Grow Forest (see Terrain magic). 40 food, 10 wood
+    and 20 mana; needs Basic magic.
+- **Paid in mana** (`"mana"` on a unit in `data/units.json`, `UnitDef.Mana`): a unit that costs mana is queued only
+  while its player has the mana as well as the goods, and the mana is taken from their pool then, as the goods are
+  (`EconomySystem.Apply(TrainCommand)`). The train buttons show it.
+- **Mana from nature** (`"nature"` on a shrine in `data/buildings.json`, `BuildingDef.Nature`; `StepNature`,
+  `NatureTrees`): the Fey build a **fairy ring** instead of a shrine, a hillock of living wood (3 by 3, 30 wood and 20
+  food, no tech). It needs no keeper and no crystal: every 4 seconds it gives its owner 1 mana for each living tree
+  whose trunk stands within 8 columns of its footprint, up to 12 trees (a big tree counts for as many as its trunk is
+  columns thick: one of the map's trees, two columns square, for four), so a ring deep in the woods channels 3 mana a second, a little more than a crystal shrine, and one in the open
+  nothing. Trees felled, burned or dug up round it are mana lost, so a rival's woodcutters or a forest fire hurt the
+  Fey's magic, and an enchanter's Grow Forest gives a ring its trees back. A ring channels only once it is finished.
+  Its panel says how many trees it counts and the mana they give.
+- **The rings' trees are spared** (`EconomySystem.NatureRings`, `Spared`): the Fey's automatic workers do not fell a
+  tree within a ring's reach (finished, being built or planned), nor do their computer players' woodcutters. A worker
+  sent by hand still does.
+- **Wild woods** (`fey_wild_woods`, the `wild_woods` tech effect with a `percent`; `EconomySystem.MostTrees`): each of
+  their fairy rings counts up to twice as many trees, 24, so a ring deep in a forest channels twice the mana.
+- **Their final tech** is the High Court (after Wild woods, Basic magic and Smelting), which opens their great work, **the Hollow
+  Hill**, the fey court under a living hill (see [Ascendancy and great works](#ascendancy-and-great-works)). They tend
+  the dusk tree and take up the Dusk Staff, as the Settlers and Elves do (see [The dusk tree](#the-dusk-tree)).
+
+Computer players play the Fey as a waves faction. At every level, with no crystal needed, they lay out a fairy ring in
+the woods near their town hall as soon as they can pay for one: of the spots every 4 columns out to 48 from the hall,
+the one whose ring would count the most trees, at least 4, the nearest of those (`AI/AiPlayer.Nature.cs`,
+`FairyRing`); a second in other woods once the first is finished. They research Wild woods after their other techs. They train wisps and enchanters only with the mana
+for them (`Weight` in `AiPlayer.Smart.cs`; the Classic level's barracks choice too), and the town governor likewise.
+All numbers are first guesses to be tuned in playtests.
 
 ## Dropped relics and the Dusk Staff
 

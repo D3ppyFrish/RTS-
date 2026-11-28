@@ -155,7 +155,9 @@ replay made with different data says so instead of drifting apart.
   `"coldBlooded"` in `data/units.json`, floods the ground with `"flood"`, and has an `ambush` tech effect; see
   [The Reptilians](docs/rules.md#the-reptilians)) and Clan Kage (ratfolk ninja with `"camouflage"`, `"shadowborn"` and
   `"assassin"` in `data/units.json`, and the same `ambush` tech effect for a first blow out of hiding; see
-  [Clan Kage](docs/rules.md#clan-kage)). Player 0 plays the first
+  [Clan Kage](docs/rules.md#clan-kage)) and the Fey (units paid in mana too, `"mana"` in `data/units.json`, and a
+  shrine channelling from the trees round it, `"nature"` in `data/buildings.json`; see [The Fey](docs/rules.md#the-fey)).
+  Player 0 plays the first
   faction, player 1 the second, and so on; picking a faction on the start screen picks the player who
   has it.
 - **Techs** (`ResearchCommand`): researched at your town hall, one at a time, paid for when started. 33

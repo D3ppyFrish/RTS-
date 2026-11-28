@@ -28,6 +28,8 @@ public class FactionChoiceTests
         Assert.Equal("dwarves", sim.FactionOf(4).Id);
         Assert.Equal("reptilians", sim.FactionOf(5).Id);
         Assert.Equal("kage", sim.FactionOf(6).Id);
+        // The Fey, the eighth, are played only when chosen: player 7 is the wild monsters'.
+        Assert.Equal(7, Simulation.WildPlayer);
         Assert.Same(sim.Content.Wild, sim.FactionOf(Simulation.WildPlayer));
         Assert.Same(sim.FactionOf(1), sim.Economy.Player(1).Faction);
         Assert.Same(sim.FactionOf(1), sim.Economy.Faction(1));

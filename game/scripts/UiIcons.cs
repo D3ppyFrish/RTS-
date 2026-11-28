@@ -279,6 +279,12 @@ public static class UiIcons
             ".....kk.....", ".....kvk....", "....kvvk....", "...kvvvvk...", "...kvwvvk...", "..kvwtvvvk..",
             "..kvttvvvk..", ".kvvtvvvvvk.", ".kvvvvvvvvk.", "..kvvvvvvk..", "...kkvvkk...", ".....kk.....",
         },
+        // Fairy ring: a ring of red-capped toadstools in the grass, sparks of old magic rising in the middle.
+        ["fairy_ring"] = new[]
+        {
+            "............", "....v..t....", "..rr..v..rr.", ".rwrr...rwrr", "..kk.tv..kk.", "rr..v.t...rr",
+            "rwr..wv..rwr", ".k..t.v...k.", "..rr....rr..", ".rwrr..rwrr.", "gGkkgggGkkgg", "GGGGGGGGGGGG",
+        },
         // Shrine: a stone plinth under a pointed roof, a crystal glowing in it.
         ["shrine"] = new[]
         {

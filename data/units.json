@@ -594,5 +594,23 @@
     "speed": 6, "hp": 160, "model": "master_ninja", "damage": 14, "attackTime": 0.7, "range": 1.5, "sight": 11,
     "attack": "slash", "armor": { "head": 1, "torso": 2 }, "assassin": 100, "camouflage": true, "shadowborn": true,
     "hero": true, "rally": 10, "steady": 30, "inspire": 2,
-    "cost": { "food": 80, "wood": 40, "iron": 10 }, "honour": 40, "trainTime": 30, "trainedAt": "barracks" }
+    "cost": { "food": 80, "wood": 40, "iron": 10 }, "honour": 40, "trainTime": 30, "trainedAt": "barracks" },
+
+  // The Fey's own (see "replaces" in factions.json): tricksters of old magic. Cheap and frail, poor in melee; their wisps
+  // and enchanters are paid in mana as well as goods ("mana": taken from the player's pool when one is queued).
+  { "id": "sprite", "name": "Sprite", "faction": "fey", "role": "line_infantry",
+    "description": "A little winged fey with a thorn for a spear. Cheap and quick to train, and quick on its feet, but no match for a spearman or a rider one to one: the Fey win by numbers and magic, not in the melee. They stand in for spearmen and riders.",
+    "speed": 6, "hp": 60, "model": "sprite", "damage": 6, "attackTime": 0.8, "range": 1.5, "sight": 9,
+    "attack": "pierce",
+    "cost": { "food": 25, "wood": 10 }, "trainTime": 8, "trainedAt": "barracks" },
+  { "id": "wisp", "name": "Wisp", "faction": "fey", "role": "ranged",
+    "description": "A drifting mote of old magic with a small fey at its heart. Throws sparks of witchfire a little further than an archer shoots, but has few hit points. Costs mana to call up.",
+    "speed": 5, "hp": 40, "model": "wisp", "damage": 7, "attackTime": 1.2, "range": 10, "sight": 11,
+    "attack": "crush",
+    "cost": { "food": 25 }, "mana": 5, "trainTime": 10, "trainedAt": "barracks" },
+  { "id": "enchanter", "name": "Enchanter", "faction": "fey", "role": "caster",
+    "description": "A tall fey in a cloak of leaves, crowned with antlers. Hurls bursts of wild magic that hit everyone near where they land, and knows every terrain spell: Earth Wall, Ice Bridge, Chasm and Grow Forest. Costs mana to call up.",
+    "speed": 4, "hp": 40, "model": "enchanter", "damage": 12, "attackTime": 2, "range": 9, "sight": 10, "splash": 1.5,
+    "attack": "crush", "earthWall": true, "iceBridge": true, "chasm": true, "growForest": true,
+    "cost": { "food": 40, "wood": 10 }, "mana": 20, "trainTime": 18, "trainedAt": "barracks", "requires": "basic_magic" }
 ]

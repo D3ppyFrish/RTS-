@@ -50,5 +50,8 @@
   { "id": "kage", "name": "Clan Kage", "uiLook": "crystal", "description": "Ratfolk ninja: scouts and assassins who vanish while they stand still, weaker in bright daylight.",
     "replaces": { "spearman": "kunoichi", "rider": "shinobi", "archer": "shuriken_thrower", "mage": "shadow_caster" },
     "hiddenVillage": 5, "duskTree": "raze", "aiStyle": "waves",
-    "honour": { "assassination": 2, "heroSlain": 10, "sabotage": 10, "scouting": 15, "scoutRange": 12, "buildingLost": 5, "hallLost": 20, "heroLost": 20 } }
+    "honour": { "assassination": 2, "heroSlain": 10, "sabotage": 10, "scouting": 15, "scoutRange": 12, "buildingLost": 5, "hallLost": 20, "heroLost": 20 } },
+  { "id": "fey", "name": "Fey", "uiLook": "crystal", "description": "Tricksters of old magic: cheap, frail sprites and wisps, enchanters with strong spells, and mana drawn from the living woods instead of crystal.",
+    "replaces": { "spearman": "sprite", "rider": "sprite", "archer": "wisp", "mage": "enchanter", "shrine": "fairy_ring" },
+    "duskTree": "heal", "aiStyle": "waves" }
 ]
