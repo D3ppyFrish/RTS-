@@ -153,6 +153,9 @@ public sealed partial class EconomySystem
     /// <summary>True if the player's units of this type can sabotage enemy buildings (a <see cref="TechEffectType.Sabotage"/> tech).</summary>
     public bool CanSabotage(int player, UnitDef def) => Find(player)?.Sabotage[def.Index] ?? false;
 
+    /// <summary>True if the player's units of this type can climb walls and cliffs (a <see cref="TechEffectType.WallClimbing"/> tech).</summary>
+    public bool CanClimb(int player, UnitDef def) => Find(player)?.Climb[def.Index] ?? false;
+
     /// <summary>The player's first finished town hall, where research happens; null if they have none.</summary>
     public Building? TownHall(int player)
     {
@@ -267,6 +270,10 @@ public sealed partial class EconomySystem
                     case TechEffectType.Sabotage:
                         foreach (var d in units)
                             if (e.AppliesTo(d)) p.Sabotage[d.Index] = true;
+                        break;
+                    case TechEffectType.WallClimbing:
+                        foreach (var d in units)
+                            if (e.AppliesTo(d)) p.Climb[d.Index] = true;
                         break;
                     case TechEffectType.Felling:
                     case TechEffectType.Prospecting:

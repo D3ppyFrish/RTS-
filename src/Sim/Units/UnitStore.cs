@@ -182,6 +182,12 @@ public enum UnitJob : byte
     /// wreck its works. Clan Kage's saboteurs.
     /// </summary>
     Sabotage,
+    /// <summary>
+    /// Climb a wall, gate, tower or cliff without a ladder (see <see cref="ClimbCommand"/>): walk to its foot, column
+    /// <see cref="UnitStore.JobTarget"/> (x * SizeZ + z), and climb its face onto column (<see cref="UnitStore.JobX"/>,
+    /// JobZ) at level JobY. Clan Kage's climbers.
+    /// </summary>
+    Climb,
 }
 
 /// <summary>Where a unit is in its job's cycle.</summary>

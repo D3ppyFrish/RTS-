@@ -303,7 +303,7 @@ public sealed partial class AutomationSystem
         switch (c)
         {
             case MoveCommand or AttackMoveCommand or FormationMoveCommand or StopCommand or AttackCommand or AttackBuildingCommand
-                or CaptureCommand or BurnCommand or SabotageCommand or TunnelCommand or SearchRuinCommand:
+                or CaptureCommand or BurnCommand or SabotageCommand or ClimbCommand or TunnelCommand or SearchRuinCommand:
                 held = true;
                 break;
             case GatherCommand or WorkCommand or BuildCommand or DigAreaCommand or WallCommand or BridgeCommand or RepairCommand:

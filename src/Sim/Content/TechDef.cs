@@ -258,6 +258,11 @@ public enum TechEffectType : byte
     /// it spoil (see <see cref="SabotageCommand"/>). The numbers are in the role table (<see cref="CombatRules.Sabotage"/>).
     /// </summary>
     Sabotage,
+    /// <summary>
+    /// Clan Kage's Wall climbing: matching units can climb up or down a wall, gate, tower or cliff without a ladder (see
+    /// <see cref="ClimbCommand"/>). The numbers are in the role table (<see cref="CombatRules.Climb"/>).
+    /// </summary>
+    WallClimbing,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

@@ -76,7 +76,7 @@ public partial class PlayerControl : Node
     private const float DragThreshold = 6f;
     private const ulong DoubleTapMs = 350;
 
-    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Flood, Fell, Prospect, Kindle, Stampede, Gaze, ShadowStep, Sabotage, Test }
+    public enum ToolMode { Select, Terrain, Build, Road, Tunnel, Dig, Wall, Bridge, Ramp, Ladder, Dam, EarthWall, IceBridge, Chasm, GrowForest, Flood, Fell, Prospect, Kindle, Stampede, Gaze, ShadowStep, Sabotage, Climb, Test }
 
     /// <summary>Building hotkeys, in the order the HUD lists them; Key.None for a building placed from its button only.</summary>
     public static readonly (Key Key, string Building)[] BuildKeys =
@@ -275,6 +275,10 @@ public partial class PlayerControl : Node
                             SabotageAt(mb.Position);
                             GetViewport().SetInputAsHandled();
                             return;
+                        case ToolMode.Climb:
+                            ClimbAt(mb.Position);
+                            GetViewport().SetInputAsHandled();
+                            return;
                         case ToolMode.Test:
                             if (GroundUnder(mb.Position, out int tx, out int ty, out int tz)) TestPlace?.Invoke(tx, ty - 1, tz);
                             GetViewport().SetInputAsHandled();
@@ -403,6 +407,7 @@ public partial class PlayerControl : Node
             case Key.G when key.CtrlPressed: ToggleGaze(); break;
             case Key.H when key.CtrlPressed: ToggleShadowStep(); break;
             case Key.N when key.CtrlPressed: ToggleSabotage(); break;
+            case Key.K when key.CtrlPressed: ToggleClimb(); break;
             case Key.V when key.ShiftPressed: DefendTown(); break;
             case Key.V: CycleStance(); break;
             case Key.K when key.ShiftPressed: ToggleLadder(); break;
@@ -1486,6 +1491,70 @@ public partial class PlayerControl : Node
         SetTool(ToolMode.Select);
     }
 
+    /// <summary>The selected units of yours that can climb walls (see <see cref="Rts.Sim.Content.TechEffectType.WallClimbing"/>), free to or not.</summary>
+    public List<int> OwnClimbers()
+    {
+        var list = OwnSelected();
+        list.RemoveAll(id => !_sim.Economy.CanClimb(_sim.Units.IndexOf(id)));
+        return list;
+    }
+
+    /// <summary>The selected climbers of yours that are free to climb now.</summary>
+    public List<int> ReadyClimbers()
+    {
+        var list = OwnClimbers();
+        list.RemoveAll(id => !_sim.Economy.ReadyToClimb(_sim.Units.IndexOf(id)));
+        return list;
+    }
+
+    /// <summary>
+    /// The climb the first ready climber selected would make to the spot under the mouse, or null if none; false in
+    /// <paramref name="any"/> with nothing under the mouse.
+    /// </summary>
+    public EconomySystem.ClimbRoute? ClimbHere(out bool any)
+    {
+        any = GroundUnder(_mousePos, out int x, out _, out int z);
+        var ready = ReadyClimbers();
+        if (!any || ready.Count == 0) return null;
+        int i = _sim.Units.IndexOf(ready[0]);
+        var u = _sim.Units;
+        return _sim.Economy.PlanClimb(x, z, u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt(), out var r) ? r : null;
+    }
+
+    /// <summary>The Climb button and key (Ctrl+K): with a climber selected, click the top of a wall or cliff (or the ground under one) to climb to.</summary>
+    public void ToggleClimb()
+    {
+        if (Tool == ToolMode.Climb) SetTool(ToolMode.Select);
+        else if (ReadyClimbers().Count > 0) SetTool(ToolMode.Climb);
+    }
+
+    /// <summary>
+    /// The ready climbers selected climb to the spot under the mouse, each up (or down) the face nearest it; then the tool
+    /// is put away. A spot none can climb to keeps the tool out.
+    /// </summary>
+    private void ClimbAt(Vector2 screen)
+    {
+        var ready = ReadyClimbers();
+        if (ready.Count == 0)
+        {
+            SetTool(ToolMode.Select);
+            return;
+        }
+        if (!GroundUnder(screen, out int x, out int y, out int z)) return;
+        var u = _sim.Units;
+        bool any = false;
+        foreach (int id in ready)
+        {
+            int i = u.IndexOf(id);
+            if (_sim.Economy.PlanClimb(x, z, u.X[i].FloorToInt(), u.Y[i], u.Z[i].FloorToInt(), out _)) { any = true; break; }
+        }
+        if (!any) return;
+        _sim.Schedule(_sim.Tick, new ClimbCommand(LocalPlayer, ready.ToArray(), x, z));
+        _rings.ShowMarker(new Vector3(x + 0.5f, y, z + 0.5f) * ChunkMesher.BlockSize, SelectionRenderer.Other);
+        Changed?.Invoke();
+        SetTool(ToolMode.Select);
+    }
+
     /// <summary>The selected shadow casters of yours that can step through the shadows (see <see cref="Rts.Sim.Content.TechEffectType.ShadowStep"/>), ready or not.</summary>
     public List<int> OwnSteppers()
     {
@@ -2185,6 +2254,16 @@ public partial class PlayerControl : Node
             int y = w.SurfaceHeight(x, z);
             if (y >= 0 && w.Get(x, y, z) == BlockType.CharredWood) n++;
         }
+        return n;
+    }
+
+    /// <summary>Units of yours standing on top of a wall, gate or tower (anyone's).</summary>
+    private int OnWalls()
+    {
+        int n = 0;
+        var u = _sim.Units;
+        for (int i = 0; i < u.Count; i++)
+            if (u.Owner[i] == LocalPlayer && _sim.Economy.WallUnder(i) != null) n++;
         return n;
     }
 
@@ -2915,6 +2994,7 @@ public partial class PlayerControl : Node
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
                $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} smoke_clouds={_sim.Combat.Clouds.Count} smoke_bombs={_sim.Combat.SmokeBombs} shadow_steps={_sim.Combat.StepsMade} units_stepped={_sim.Combat.UnitsStepped} step_casters={OwnSteppers().Count} " +
                $"saboteurs={OwnSaboteurs().Count} sabotaging={Jobs(UnitJob.Sabotage)} sabotages={_sim.Economy.Sabotages} goods_spoiled={_sim.Economy.GoodsSpoiled} stalled={_sim.Buildings.All.Count(b => _sim.Economy.Stalled(b))} " +
+               $"climbers={OwnClimbers().Count} climbing={Jobs(UnitJob.Climb)} climbs={_sim.Economy.Climbs} on_walls={OnWalls()} " +
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
                $"walls={OwnWalls(BuildingKind.Wall)} gates={OwnWalls(BuildingKind.Gate)} bridges={OwnWalls(BuildingKind.Bridge)} wall_preview={_wallPreview.Count} " +
                $"ramps={OwnRamps()} ramp_top={RampTop} ramp_blocks={RampBlocks} ramp_builders={RampBuilders()} " +

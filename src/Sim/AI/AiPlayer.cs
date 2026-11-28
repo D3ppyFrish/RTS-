@@ -103,7 +103,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
         "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
-        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "kage_shadow_step", "kage_saboteurs", "silk_knives", "field_dressings", "field_hospital",
+        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "kage_shadow_step", "kage_saboteurs", "kage_wall_climbing", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
@@ -948,6 +948,7 @@ public sealed partial class AiPlayer
             Bombard(sim, foe, issue);
             // A wave of burrowers tunnels under a wall; a ladder goes up only where no tunnel will do.
             if (!Undermine(sim, foe, cx, cz, issue)) Escalade(sim, foe, cx, cz, far, issue);
+            ClimbWalls(sim, foe, cx, cz, issue); // Clan Kage's climbers go up the wall (AiPlayer.Climb.cs)
         }
         if (far > SiegeRadius && !MostAt(sim, tx, tz))
         {
@@ -1046,6 +1047,7 @@ public sealed partial class AiPlayer
         _waveBest = int.MaxValue;
         _siegeDefenders = int.MaxValue;
         ResetLadders();
+        ResetClimbs();
         ResetTunnels();
         ResetFerry();
         ResetIce();

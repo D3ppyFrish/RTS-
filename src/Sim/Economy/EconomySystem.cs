@@ -42,6 +42,7 @@ public sealed class PlayerEconomy
         Smoke = new bool[content.Units.Count];
         ShadowStep = new bool[content.Units.Count];
         Sabotage = new bool[content.Units.Count];
+        Climb = new bool[content.Units.Count];
         FellTicks = new int[content.Units.Count];
         ProspectTicks = new int[content.Units.Count];
         AutoForm = new int[content.Units.Count];
@@ -100,6 +101,8 @@ public sealed class PlayerEconomy
     internal readonly bool[] ShadowStep;
     /// <summary>Which unit types (by index) can sabotage enemy buildings (see <see cref="TechEffectType.Sabotage"/>).</summary>
     internal readonly bool[] Sabotage;
+    /// <summary>Which unit types (by index) can climb walls and cliffs (see <see cref="TechEffectType.WallClimbing"/>).</summary>
+    internal readonly bool[] Climb;
     /// <summary>
     /// Ticks of work for each unit type (by index) to fell a tree the way it chooses, or to sound the ground; 0 if it
     /// cannot (see <see cref="TechEffectType.Felling"/>, <see cref="TechEffectType.Prospecting"/>).
@@ -304,6 +307,7 @@ public sealed partial class EconomySystem
         MixLenses(ref h);
         h = (h ^ (ulong)Sabotages) * 1099511628211UL;
         h = (h ^ (ulong)GoodsSpoiled) * 1099511628211UL;
+        h = (h ^ (ulong)Climbs) * 1099511628211UL;
         return h;
     }
 
