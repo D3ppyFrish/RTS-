@@ -211,7 +211,7 @@ public partial class Hud : CanvasLayer
             _foodRateLabel.MouseFilter = Control.MouseFilterEnum.Pass;
             _stockLabels[(int)good].GetParent().AddChild(_foodRateLabel);
         }
-        _manaLabel = Stat(row, UiIcons.Get("mana"), "Mana: channelled from crystal at your shrines, and spent on spells");
+        _manaLabel = Stat(row, UiIcons.Get("mana"), "Mana: channelled from crystal at your shrines (the Fey: from the woods round their fairy rings), and spent on spells (and the Fey's wisps and enchanters)");
         _honourLabel = Stat(row, UiIcons.Get("honour"), "Clan honour: earned by contracts (assassinating rival workers, casters and heroes, " +
             "sabotage, scouting rival town halls), lost when a building of yours falls or is taken or your hero dies, " +
             "and spent on the master ninja and the Moonless Night");
@@ -539,7 +539,12 @@ public partial class Hud : CanvasLayer
                 b.TooltipText = $"A tower with a great crystal lens on top. Select it and press Gaze (Ctrl+G), then click anywhere on the map: " +
                                 $"for {lens.Mana} mana you see {lens.Radius} columns round that spot, through the fog of war, for " +
                                 $"{lens.Ticks / Simulation.TicksPerSecond} seconds. It can gaze once every {lens.EveryTicks / Simulation.TicksPerSecond / 60} minutes.";
-            if (def.Kind == BuildingKind.Shrine)
+            if (def.Nature is { } nature)
+                b.TooltipText = $"A ring of living wood grown up in the woods. It needs no keeper and no crystal: every " +
+                                $"{def.ChannelTicks / Simulation.TicksPerSecond} seconds it channels {def.Mana} mana for each living tree " +
+                                $"within {nature.Reach} columns of it, up to {nature.Trees} trees. Fell or burn those trees and it channels less. " +
+                                "Your automatic workers leave them standing. Spells, wisps and enchanters cost mana.";
+            else if (def.Kind == BuildingKind.Shrine)
                 b.TooltipText = $"Right click it with a worker: they bring it crystal from storage, and it channels each crystal " +
                                 $"into {def.Mana} mana in {def.ChannelTicks / Simulation.TicksPerSecond} seconds. Spells cost mana. " +
                                 "Crystal grows on the cavern walls: send workers to dig it. Automatic workers keep it once you have crystal.";
@@ -1607,8 +1612,8 @@ public partial class Hud : CanvasLayer
             string what = unit.Batch > 1 ? $"Hatch {unit.Batch} {unit.Name.ToLowerInvariant()}s" : $"Train {unit.Name.ToLowerInvariant()}";
             // A hero is one of a kind (the master ninja): not while one lives or is queued.
             if (needs == null && unit.Hero && econ.HeroTaken(player, unit)) needs = "one of a kind, you have one";
-            button.Text = needs != null ? $"{unit.Name}: {needs}" : $"{what}{key}   {CostText(unit.Cost, unit.Honour)}";
-            button.Disabled = needs != null || !econ.CanAfford(player, unit.Cost) || !econ.HasHonour(player, unit.Honour)
+            button.Text = needs != null ? $"{unit.Name}: {needs}" : $"{what}{key}   {CostText(unit.Cost, unit.Honour)}{(unit.Mana > 0 ? $", {unit.Mana} mana" : "")}";
+            button.Disabled = needs != null || !econ.CanAfford(player, unit.Cost) || !econ.HasHonour(player, unit.Honour) || !econ.HasMana(player, unit.Mana)
                               || b!.Queue.Count >= EconomySystem.MaxQueue;
         }
         _digButton.Visible = _control.OwnDiggers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Dig;
@@ -2832,12 +2837,19 @@ public partial class Hud : CanvasLayer
                 parts.Add(gazing ? "gazing" : wait > 0 ? $"ready to gaze in {(wait + Simulation.TicksPerSecond - 1) / Simulation.TicksPerSecond}s"
                     : $"ready to gaze ({lensDef.Mana} mana)" + (b.Owner == PlayerControl.LocalPlayer ? ": Ctrl+G" : ""));
             }
-            if (b.Def.Kind == BuildingKind.Shrine)
+            if (b.Def.Nature is { } ring)
+            {
+                int trees = _sim.Economy.NatureTrees(b);
+                parts.Add(trees == 0 ? $"no trees within {ring.Reach} columns: it channels nothing (plant some with Grow Forest)"
+                    : $"channels {trees * b.Def.Mana} mana every {b.Def.ChannelTicks / Simulation.TicksPerSecond}s from {trees} trees" +
+                      (trees >= _sim.Economy.MostTrees(b.Def, b.Owner) ? " (the most it counts)" : $" (up to {_sim.Economy.MostTrees(b.Def, b.Owner)})"));
+            }
+            else if (b.Def.Kind == BuildingKind.Shrine)
                 parts.Add(b.SmeltTicks > 0
                     ? $"channelling a crystal {100 - 100L * b.SmeltTicks / Math.Max(1, b.Def.ChannelTicks)}% ({b.Def.Mana} mana each)"
                     : $"no crystal to channel ({b.Def.Mana} mana each; dig crystal in the caverns)");
             text.Append(string.Join("    ", parts));
-            if (b.Def.Storage || b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine or BuildingKind.Workshop or BuildingKind.Orchard)
+            if (b.Def.Storage || (b.Def.Kind is BuildingKind.Smelter or BuildingKind.Shrine or BuildingKind.Workshop or BuildingKind.Orchard && b.Def.Nature == null))
             {
                 var goods = new List<string>();
                 foreach (var g in Goods.All)

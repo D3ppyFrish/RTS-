@@ -344,7 +344,7 @@ public sealed partial class AutomationSystem
     {
         var options = new List<UnitDef>();
         foreach (var id in b.Def.Trains)
-            if (_sim.Content.TryGetUnit(id, out var d) && Fights(d.Role) && d.Honour == 0 && Economy.Unlocked(p, d)) options.Add(d); // nothing paid for in honour
+            if (_sim.Content.TryGetUnit(id, out var d) && Fights(d.Role) && d.Honour == 0 && d.Mana <= Economy.Player(p).Mana && Economy.Unlocked(p, d)) options.Add(d); // nothing paid for in honour, nor mana it has not got
         if (focus == GovernorFocus.Defence)
         {
             var ranged = options.FindAll(d => d.Role == UnitRole.Ranged);

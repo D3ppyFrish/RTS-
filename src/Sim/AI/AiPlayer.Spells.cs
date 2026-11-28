@@ -216,10 +216,16 @@ public sealed partial class AiPlayer
     /// </summary>
     private void Shrine(Simulation sim, Building hall, Action<Command> issue)
     {
-        if (!Smart || !hall.Active) return;
-        if (sim.Economy.Stock(Player, Good.Crystal) < ShrineCrystal) return;
+        if (!hall.Active) return;
         var def = FirstBuilding(sim, BuildingKind.Shrine);
         if (def == null) return;
+        if (def.Nature != null)
+        {
+            FairyRing(sim, hall, def, issue); // the Fey channel from the woods, at every level (AiPlayer.Nature.cs)
+            return;
+        }
+        if (!Smart) return;
+        if (sim.Economy.Stock(Player, Good.Crystal) < ShrineCrystal) return;
         foreach (var b in sim.Buildings.All)
             if (b.Owner == Player && b.Def.Kind == BuildingKind.Shrine) return; // one is enough (or on its way)
         if (!Affordable(sim, def.Cost)) return;

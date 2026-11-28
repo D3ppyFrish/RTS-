@@ -96,6 +96,8 @@ public sealed class PlayerEconomy
     internal int BindTicks;
     /// <summary>How much more (percent) the player's units deal units they bear a grudge against, 0 for no grudges (<see cref="TechEffectType.Grudges"/>).</summary>
     internal int GrudgePercent;
+    /// <summary>How many more trees (percent) the player's fairy rings count at most, 0 for none (<see cref="TechEffectType.WildWoods"/>).</summary>
+    internal int WildWoodsPercent;
     /// <summary>How much more (percent) the first blow of the player's units lying in wait in the water deals, 0 for none (<see cref="TechEffectType.Ambush"/>).</summary>
     internal int AmbushPercent;
     // The discoveries made (bit 1 << Discovery), which open discovery techs.
@@ -355,7 +357,7 @@ public sealed partial class EconomySystem
                 if (b.Upgrade != null) StepUpgrade(b);
                 if (b.Def.RegrowTicks > 0 && (_sim.Tick + b.Id) % b.Def.RegrowTicks == 0) Regrow(b);
                 if (b.Def.Kind == BuildingKind.Smelter) StepSmelter(b);
-                else if (b.Def.Kind == BuildingKind.Shrine) StepShrine(b);
+                else if (b.Def.Kind == BuildingKind.Shrine) { if (b.Def.Nature != null) StepNature(b); else StepShrine(b); }
                 else if (b.Def.Kind == BuildingKind.Workshop) StepWorkshop(b);
                 if (b.Queue.Count > 0) StepTraining(b);
                 if (b.Def.YieldTicks > 0 && (_sim.Tick + b.Id) % b.Def.YieldTicks == 0)
@@ -1274,8 +1276,10 @@ public sealed partial class EconomySystem
         if (Array.IndexOf(b.Def.Trains, c.Unit) < 0 || !_sim.Content.TryGetUnit(c.Unit, out var def)) return;
         if (!Unlocked(c.PlayerId, def) || Faction(c.PlayerId).Replaces(b.Def)) return;
         if (Player(c.PlayerId).Honour < def.Honour || (def.Hero && HeroTaken(c.PlayerId, def))) return;
+        if (Player(c.PlayerId).Mana < def.Mana) return; // the Fey's wisps and enchanters are paid in mana too
         if (!TrySpend(c.PlayerId, def.Cost, b.X + b.Def.SizeX / 2, b.Z + b.Def.SizeZ / 2)) return;
         Player(c.PlayerId).Honour -= def.Honour;
+        Player(c.PlayerId).Mana -= def.Mana;
         b.Queue.Add(def.Index);
         b.Owed.Remove(def.Index); // a unit owed to a repeating queue is paid for now
     }

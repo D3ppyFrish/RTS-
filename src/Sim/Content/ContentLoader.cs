@@ -655,7 +655,7 @@ public static class ContentLoader
             var id = o.Id();
             o.Keys("id", "name", "kind", "size", "wallHeight", "wall", "footing", "roof", "chimney", "mound", "cost", "buildTime",
                 "housing", "storage", "raidable", "workerSlots", "sight", "light", "requires", "faction", "icon", "fromDen", "yield", "yieldTime", "grow",
-                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mends", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen", "lens", "regrow", "thorns");
+                "sturdy", "thick", "walkway", "upgrade", "facing", "aim", "speed", "works", "workTime", "shore", "plants", "hunts", "mends", "mana", "channelTime", "takes", "makes", "makeTime", "keep", "hearing", "murderHoles", "pen", "lens", "nature", "regrow", "thorns");
             if (id == null) return;
             if (_db.TryGetBuilding(id, out _))
             {
@@ -705,12 +705,23 @@ public static class ContentLoader
                     Mana = ln.Int("mana", 0, 1000, 0, required: true),
                 };
             }
+            NatureDef? nature = null;
+            if (Part(o, "nature", "{ \"reach\": 8, \"trees\": 12 }") is { } nt)
+            {
+                nt.Keys("reach", "trees");
+                if (kind != BuildingKind.Shrine) o.Error("only a shrine has \"nature\"");
+                nature = new NatureDef
+                {
+                    Reach = nt.Int("reach", 1, 32, 8, required: true),
+                    Trees = nt.Int("trees", 1, 256, 12, required: true),
+                };
+            }
             if ((kind == BuildingKind.Lens) != (lens != null))
                 o.Error(kind == BuildingKind.Lens ? "a lens needs \"lens\" (how often it gazes, how far round, for how long and for how much mana)" : "only a lens has \"lens\"");
             if ((kind == BuildingKind.Pen) != (pen != null))
                 o.Error(kind == BuildingKind.Pen ? "a pen needs \"pen\" (how many beasts it keeps, and its stampede's numbers)" : "only a pen has \"pen\"");
             int slots = o.Int("workerSlots", 0, 20, 0);
-            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop or BuildingKind.Orchard && slots == 0)
+            if (kind is BuildingKind.Farm or BuildingKind.Smelter or BuildingKind.Quarry or BuildingKind.Shrine or BuildingKind.Workshop or BuildingKind.Orchard && slots == 0 && nature == null)
                 o.Error($"a {SnakeName(kind)} needs \"workerSlots\" of 1 or more, or nobody can work it");
             int wallHeight = o.Int("wallHeight", 1, 12, 3);
             if (kind is BuildingKind.Wall or BuildingKind.Tower && wallHeight <= Walk.MaxClimb)
@@ -768,7 +779,9 @@ public static class ContentLoader
                 MurderHoles = holes,
                 Pen = pen,
                 Lens = lens,
+                Nature = nature,
             };
+            if (nature != null && slots > 0) o.Error("a shrine that channels from \"nature\" needs no keeper: no \"workerSlots\"");
             if (kind == BuildingKind.ListeningPost && def.Hearing == 0)
                 o.Error("a listening post needs \"hearing\" (how many columns round it it hears units underground)");
             if (kind != BuildingKind.ListeningPost && def.Hearing > 0)
@@ -866,7 +879,7 @@ public static class ContentLoader
             o.Keys("id", "name", "description", "role", "speed", "hp", "model", "cost", "trainTime", "trainedAt", "requires",
                 "faction", "damage", "attackTime", "range", "sight", "splash", "weakTo", "heal", "healTime", "healRange",
                 "regen", "work", "evolvesFrom", "lair", "ride", "hiredFrom", "fromDen", "attack", "body", "armor", "shield",
-                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear", "flood", "amphibious", "coldBlooded", "camouflage", "shadowborn", "assassin", "honour");
+                "bleeds", "tracksBlood", "blast", "earthWall", "iceBridge", "chasm", "growForest", "start", "hero", "rally", "steady", "inspire", "volley", "spur", "undermine", "quicken", "hasten", "awakening", "brood", "bounty", "nightRegen", "game", "minRange", "lobs", "machine", "carry", "runs", "ram", "gates", "cover", "seats", "catch", "fishTime", "crater", "ignites", "sails", "batch", "burst", "drums", "pen", "darkSight", "hearing", "caveWise", "web", "poison", "fear", "flood", "amphibious", "coldBlooded", "camouflage", "shadowborn", "assassin", "mana", "honour");
             if (id == null) return;
             if (_db.TryGetUnit(id, out _))
             {
@@ -888,6 +901,7 @@ public static class ContentLoader
                 Model = o.Str("model", false) ?? id,
                 Cost = o.Cost("cost"),
                 Honour = o.Int("honour", 0, 100000, 0),
+                Mana = o.Int("mana", 0, 100000, 0),
                 TrainTicks = o.Int("trainTime", 1, MaxSeconds, 10) * Tps,
                 Damage = o.Int("damage", 0, 100000, 0),
                 AttackTicks = Math.Max(1, (attackTime * Tps).RoundToInt()),
@@ -1568,6 +1582,11 @@ public static class ContentLoader
                         o.Keys("type", "percent");
                         effects.Add(new TechEffect { Type = type, Percent = o.Int("percent", 1, 1000, 0, required: true) });
                         break;
+                    case TechEffectType.WildWoods:
+                        // { "type": "wild_woods", "percent": 100 }: how many more trees the player's fairy rings count at most.
+                        o.Keys("type", "percent");
+                        effects.Add(new TechEffect { Type = type, Percent = o.Int("percent", 1, 1000, 0, required: true) });
+                        break;
                     case TechEffectType.Grudges:
                         // { "type": "grudges", "percent": 50 }: how much more the player's units deal a unit they bear a grudge against.
                         o.Keys("type", "percent");
@@ -1902,6 +1921,7 @@ public static class ContentLoader
                 if (b.Mends > 0) h.Add(5000 + b.Mends);
                 h.Add(b.Mana);
                 h.Add(b.ChannelTicks);
+                if (b.Nature is { } nature) { h.Add(nature.Reach); h.Add(nature.Trees); }
                 if (b.Pen is { } pd)
                 {
                     h.Add(pd.Keeps); h.Add(pd.Speed); h.Add(pd.Trample); h.Add(pd.DownTicks);
@@ -1972,6 +1992,7 @@ public static class ContentLoader
                 if (u.Shadowborn) h.Add(194);
                 if (u.Assassin > 0) h.Add(2000 + u.Assassin);
                 if (u.Honour > 0) h.Add(3400 + u.Honour);
+                if (u.Mana > 0) h.Add(3500 + u.Mana);
                 if (u.Drums is { } drums)
                 {
                     h.Add(drums.Speed);

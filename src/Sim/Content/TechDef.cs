@@ -272,6 +272,11 @@ public enum TechEffectType : byte
     /// </summary>
     Grudges,
     /// <summary>
+    /// The Fey's Wild woods: the player's fairy rings (see <see cref="Economy.BuildingDef.Nature"/>) count the effect's
+    /// <see cref="TechEffect.Percent"/> more trees at most.
+    /// </summary>
+    WildWoods,
+    /// <summary>
     /// The Reptilians' Lurkers' strike and Clan Kage's Strike from the shadows: a unit of the player's lying in wait,
     /// hidden in the water or standing still with camouflage (see <see cref="Units.CombatSystem.Lurking"/>), deals the
     /// effect's <see cref="TechEffect.Percent"/> more with its first blow out of hiding at someone.

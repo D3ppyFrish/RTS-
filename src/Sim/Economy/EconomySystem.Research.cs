@@ -219,7 +219,7 @@ public sealed partial class EconomySystem
     {
         var units = Content.Units;
         p.Roads = p.SpareWorkers = p.MurderHoles = p.Salvage = p.FieldRepairs = p.CutWebs = p.Thorns = false;
-        p.BindTicks = p.GrudgePercent = p.AmbushPercent = 0;
+        p.BindTicks = p.GrudgePercent = p.AmbushPercent = p.WildWoodsPercent = 0;
         Array.Clear(p.HousingBonus);
         Array.Clear(p.HpBonus);
         Array.Clear(p.ShieldWall);
@@ -246,6 +246,7 @@ public sealed partial class EconomySystem
                     case TechEffectType.CutWebs: p.CutWebs = true; break;
                     case TechEffectType.Thorns: p.Thorns = true; break;
                     case TechEffectType.Grudges: p.GrudgePercent = Math.Max(p.GrudgePercent, e.Percent); break;
+                    case TechEffectType.WildWoods: p.WildWoodsPercent = Math.Max(p.WildWoodsPercent, e.Percent); break;
                     case TechEffectType.Ambush: p.AmbushPercent = Math.Max(p.AmbushPercent, e.Percent); break;
                     case TechEffectType.BindWounds: p.BindTicks = p.BindTicks == 0 ? e.Ticks : Math.Min(p.BindTicks, e.Ticks); break;
                     case TechEffectType.UnitHp:

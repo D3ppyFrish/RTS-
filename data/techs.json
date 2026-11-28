@@ -38,6 +38,8 @@
 //                                         them from close up (see "thorns" in buildings.json)
 //   cut_webs                              the player's units cut themselves out of webs: giant spiders' bites and the spider
 //                                         silk's bearer no longer slow them (see "Monsters and taming" in docs/rules.md)
+//   wild_woods    { percent }             the player's fairy rings count that many percent more trees at most (see "The Fey"
+//                                         in docs/rules.md)
 //   grudges       { percent }             an enemy unit that kills one of the player's units is marked with a grudge for life:
 //                                         the player's units deal it that many percent more, and see it through the fog
 //                                         (see "The Dwarves" in docs/rules.md)
@@ -159,6 +161,14 @@
   { "id": "reptile_mother", "icon": "crown", "name": "The Brood Mother's call", "faction": "reptilians",
     "description": "The brood answers the call of a mother of eggs, whose spawning mound is to be raised over a warm pool in the deep caves.",
     "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "reptile_lurkers", "basic_magic", "smelting" ] },
+
+  { "id": "fey_wild_woods", "icon": "fairy_ring", "name": "Wild woods", "faction": "fey", "description": "The old magic runs deeper in the woods than anyone knew. Each of your fairy rings draws on twice as many trees round it at most (24 instead of 12), so a ring deep in a forest channels twice the mana.",
+    "cost": { "food": 40, "wood": 40 }, "researchTime": 40,
+    "effects": [ { "type": "wild_woods", "percent": 100 } ] },
+
+  { "id": "fey_high_court", "icon": "crown", "name": "The High Court", "faction": "fey",
+    "description": "The fey lords hold court again, under a hollow hill to be sung up in the deep caves, where the oldest magic sleeps.",
+    "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "fey_wild_woods", "basic_magic", "smelting" ] },
 
   { "id": "kage_moonless", "icon": "crown", "name": "The Moonless Night", "faction": "kage",
     "description": "The clan's elders swear to bring the long night, whose shrine is to be raised in the deep caves, far from any light. Only a clan with 60 honour may swear it.",

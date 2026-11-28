@@ -540,6 +540,7 @@ public sealed partial class AutomationSystem
         var w = World;
         long tick = _sim.Tick;
         _misses.TryGetValue(u.Id[i], out var misses);
+        var rings = Economy.NatureRings(u.Owner[i]); // the Fey leave their fairy rings' trees standing
         bool any = false;
         for (int r = 0; r <= FarSearchRadius && !have[top] && wanted > 0 && !(any && r > SearchRadius); r++)
         {
@@ -567,6 +568,7 @@ public sealed partial class AutomationSystem
             foreach (var c in _ring)
             {
                 if (have[c.Kind] || KeptAway(misses, c.X, c.Z, tick) || !CanSend(c, ux, uy, uz, tick)) continue;
+                if (rings.Count > 0 && Gatherable[c.Kind].Block == BlockType.Wood && EconomySystem.Spared(rings, c.X, c.Z)) continue;
                 have[c.Kind] = true;
                 (hx[c.Kind], hy[c.Kind], hz[c.Kind]) = (c.X, c.Y, c.Z);
                 any = true;

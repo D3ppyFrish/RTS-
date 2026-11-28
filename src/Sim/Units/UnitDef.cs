@@ -44,6 +44,8 @@ public sealed class UnitDef
     public GoodAmount[] Cost { get; init; } = Array.Empty<GoodAmount>();
     /// <summary>Clan honour training one costs, paid when it is queued (<c>"honour"</c> in the data; see <see cref="Content.FactionDef.Honour"/>); 0 for none.</summary>
     public int Honour { get; init; }
+    /// <summary>Mana training one costs, paid from its player's pool when it is queued (<c>"mana"</c> in the data; the Fey's wisps and enchanters); 0 for none.</summary>
+    public int Mana { get; init; }
     /// <summary>Ticks of training at a building that trains it.</summary>
     public int TrainTicks { get; init; } = 200;
     /// <summary>The building type that trains it; null if it cannot be trained.</summary>

@@ -18,7 +18,9 @@ hills; see [The Reptilians](rules.md#the-reptilians)) or Clan Kage (ratfolk ninj
 they stand still and whose kunoichi cut down workers, casters and heroes, weaker in bright daylight and stronger in the
 shadowed wilds, and whose town, but its walls and towers, is hidden under fog of war until you come within 5 columns
 of it, and who earn clan honour by assassinations, sabotage and scouting to train their master ninja; see
-[Clan Kage](rules.md#clan-kage)), and under Against the faction of the other side (the same as yours makes a mirror match), the
+[Clan Kage](rules.md#clan-kage)) or the Fey (tricksters of old magic: cheap, frail sprites, wisps and enchanters, the last two
+paid in mana too, and fairy rings that channel mana from the trees round them instead of shrines and crystal; see
+[The Fey](rules.md#the-fey)), and under Against the faction of the other side (the same as yours makes a mirror match), the
 world seed, the map size (Standard, 768 by 768 blocks, or Large, 1024 by 1024: nearly twice the land, the towns
 about 700 blocks apart instead of 520, and the land beyond the standard map's twice as thick with monster lairs; see
 [Monsters and taming](rules.md#monsters-and-taming)), whether the computer plays the other side and how well (Computer level: Easy, Normal, which
@@ -29,7 +31,7 @@ come in big waves from an open town; the Settlers (at Normal and Hard) wall thei
 stronger as the match goes on, and at Hard post their archers on it and keep a quarter of their soldiers
 at home behind it when the rest attack.
 Each faction has its own look for the menus, panels and buttons: castle stone for the Settlers, rough
-timber for the Orcs and the Elves, dark slate for the Deepfolk, castle stone for the Dwarves too, timber for the Reptilians, dark slate for Clan Kage. The start screen changes to the look of the faction you pick. Destroy the other side's
+timber for the Orcs and the Elves, dark slate for the Deepfolk, castle stone for the Dwarves too, timber for the Reptilians, dark slate for Clan Kage and the Fey. The start screen changes to the look of the faction you pick. Destroy the other side's
 town hall to win, or (unless switched off on the start screen) hold more than half of the old ruins, the
 ancient sites, for 3 minutes: soldiers standing alone in one for 15 seconds take it, and the sites button in the
 top bar says how many you hold and counts down when someone holds most (see

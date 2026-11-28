@@ -103,7 +103,7 @@ public sealed partial class AiPlayer
     {
         "farming", "tools", "archery", "horse_breeding", "masonry", "sapping", "basic_magic", "crop_rotation",
         "orc_war_drums", "orc_beast_pens", "deep_chitin", "settler_guilds", "deep_warrens", "roads", "carts", "smelting",
-        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "kage_shadow_step", "kage_saboteurs", "kage_wall_climbing", "silk_knives", "field_dressings", "field_hospital",
+        "settler_drill", "elf_thornwood", "dwarf_grudges", "reptile_lurkers", "kage_shadow_strike", "kage_smoke_bombs", "kage_shadow_step", "kage_saboteurs", "kage_wall_climbing", "fey_wild_woods", "silk_knives", "field_dressings", "field_hospital",
     };
 
     /// <summary>The smart levels research the discovery techs they have opened after this many of their usual order.</summary>
@@ -472,7 +472,7 @@ public sealed partial class AiPlayer
         if (Smart) ListeningPosts(sim, hall, issue);
         if (Smart) Hospitals(sim, hall, issue);
         if (Smart) CrystalLens(sim, hall, issue);
-        if (Smart) Shrine(sim, hall, issue);
+        Shrine(sim, hall, issue); // a crystal shrine at the smart levels; the Fey's fairy rings at every level
         if (Smart) Fishing(sim, hall, issue);
         if (Smart) Hunting(sim, hall, issue);
         if (Smart) Foresting(sim, hall, issue);
@@ -564,6 +564,7 @@ public sealed partial class AiPlayer
         var vision = sim.Vision;
         long bestD = long.MaxValue;
         (x, y, z) = (-1, -1, -1);
+        var rings = sim.Economy.NatureRings(Player); // the Fey leave their fairy rings' trees standing
         for (int r = 0; r <= WoodReach && bestD == long.MaxValue; r++)
         {
             for (int dz = -r; dz <= r; dz++)
@@ -579,6 +580,7 @@ public sealed partial class AiPlayer
                     if (d >= bestD) continue;
                     if (Smart && vision.At(Player, cx, cz) == Sight.Unseen) continue; // only trees it has seen
                     if (!TrunkBase(w, cx, cz, out int ty)) continue;
+                    if (rings.Count > 0 && EconomySystem.Spared(rings, cx, cz)) continue;
                     if (enemy is { } e && Dist2(cx, cz, e.X, e.Z) <= d) continue;
                     if (NearLair(sim, cx, cz) || NearBadForest(cx, cz) || KeepsOff(sim, cx, cz)) continue;
                     var (baseY, topY) = Harvest.Span(w, cx, ty, cz);
@@ -1075,12 +1077,12 @@ public sealed partial class AiPlayer
             }
             int total = 0;
             foreach (string id in b.Def.Trains)
-                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && !d.Ram && d.Drums == null && d.Honour == 0) total += RoleWeight(d.Role);
+                if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && !d.Ram && d.Drums == null && d.Honour == 0 && d.Mana <= sim.Economy.Player(Player).Mana) total += RoleWeight(d.Role);
             if (total == 0) continue;
             int roll = _rng.Range(0, total);
             foreach (string id in b.Def.Trains)
             {
-                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d) || d.Ram || d.Drums != null || d.Honour > 0) continue;
+                if (!sim.Content.TryGetUnit(id, out var d) || !sim.Economy.Unlocked(Player, d) || d.Ram || d.Drums != null || d.Honour > 0 || d.Mana > sim.Economy.Player(Player).Mana) continue;
                 roll -= RoleWeight(d.Role);
                 if (roll >= 0) continue;
                 if (Affordable(sim, d.Cost)) issue(new TrainCommand(Player, b.Id, d.Id));

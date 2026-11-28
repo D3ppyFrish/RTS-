@@ -2991,7 +2991,7 @@ public partial class PlayerControl : Node
                $"priorities={(first >= 0 && _sim.Content.Units[u.Def[first]].Role == UnitRole.Worker ? WorkPriorities.ToLog(u.Priorities[first]) : "none")} " +
                $"research={_sim.Economy.Researching(LocalPlayer)?.Id ?? "none"} techs={techs} " +
                $"units={units} enemies={enemies} enemies_shown={enemiesShown} fog={(Fog.Enabled ? "on" : "off")} gazes={_sim.Economy.Gazes.Count(g => g.Player == LocalPlayer)} lens_selected={(SelectedLens() != null ? 1 : 0)} " +
-               $"faction={_sim.FactionOf(LocalPlayer).Id} batches={Batches()} bursting={Bursting()} " +
+               $"faction={_sim.FactionOf(LocalPlayer).Id} batches={Batches()} bursting={Bursting()} fairy_rings={FairyRings(out int ringTrees)} ring_trees={ringTrees} " +
                $"seen={_sim.Vision.SeenColumns(LocalPlayer)} fighting={fighting} patrolling={patrolling} guarding={guarding} routing={routing} drumming={drumming} drums_heard={drumsHeard} molting={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Molting[i] > 0)} soft={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Soft[i] > 0)} penned={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.Penned[i] != 0)} stampeding={Enumerable.Range(0, u.Count).Count(i => u.Owner[i] == LocalPlayer && u.RunStage[i] != 0)} trampled={_sim.Combat.Trampled} pens={OwnKind(BuildingKind.Pen)} tunnelling={tunnelling} " +
                $"digging={digging} dig_areas={_sim.Economy.DigAreas.Count} dig_preview={_digPreview.Count} dig_depth={DigDepth} " +
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
@@ -3111,6 +3111,20 @@ public partial class PlayerControl : Node
             n++;
             foreach (var (x, y, z) in pool.Blocks)
                 if (_sim.World.Get(x, y, z) == BlockType.Water) water++;
+        }
+        return n;
+    }
+
+    /// <summary>Your finished fairy rings (the Fey), and the trees they channel from between them.</summary>
+    private int FairyRings(out int trees)
+    {
+        int n = 0;
+        trees = 0;
+        foreach (var b in _sim.Buildings.All)
+        {
+            if (b.Owner != LocalPlayer || b.Def.Nature == null || !b.Active) continue;
+            n++;
+            trees += _sim.Economy.NatureTrees(b);
         }
         return n;
     }

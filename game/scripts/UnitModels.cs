@@ -128,6 +128,13 @@ public static class UnitModels
     private static readonly Color RatEye = new(0.95f, 0.2f, 0.15f);
     private static readonly Color NinjaCloth = new(0.13f, 0.13f, 0.17f);
     private static readonly Color NinjaClothLight = new(0.22f, 0.22f, 0.28f);
+    private static readonly Color FeySkin = new(0.8f, 0.9f, 0.84f);
+    private static readonly Color FeyHair = new(0.86f, 0.8f, 0.96f);
+    private static readonly Color FeyMoss = new(0.34f, 0.5f, 0.34f);
+    private static readonly Color FeyEye = new(0.55f, 1f, 0.85f);
+    private static readonly Color FeyWing = new(0.78f, 0.95f, 0.92f);
+    private static readonly Color WispGlow = new(0.85f, 1f, 0.7f);
+    private static readonly Color WispCore = new(1f, 1f, 0.85f);
     private static readonly Color Team = new(1f, 0f, 0f, 0f);      // full-strength team colour
     private static readonly Color TeamDark = new(0.7f, 0f, 0f, 0f); // shaded team colour
 
@@ -396,6 +403,34 @@ public static class UnitModels
         }
 
         /// <summary>
+        /// A fey: slight and pale green-white, with silvery-lilac hair, long pointed ears, glowing sea-green eyes and a
+        /// pair of dragonfly wings off its back, pale with their inner panes in its owner's colour; moss-green leggings
+        /// and a tunic of its owner's colour. Hands at x = -3 and 2.
+        /// </summary>
+        public Builder Fey(bool legs = true, bool wings = true)
+        {
+            if (legs)
+            {
+                Box(-2, 0, -1, -2, 4, 0, FeyMoss);
+                Box(1, 0, -1, 1, 4, 0, FeyMoss);
+            }
+            Box(-2, 5, -1, 1, 9, 0, Team);
+            Box(-2, 5, -1, 1, 5, 0, FeyMoss);                                    // girdle of moss
+            Box(-3, 6, -1, -3, 9, 0, FeySkin).Box(2, 6, -1, 2, 9, 0, FeySkin);   // bare arms
+            Box(-3, 5, -1, -3, 5, 0, FeySkin).Box(2, 5, -1, 2, 5, 0, FeySkin);   // hands
+            Box(-2, 10, -2, 1, 13, 1, FeySkin);                                  // head
+            Box(-2, 13, -2, 1, 14, 1, FeyHair).Box(-2, 10, -2, 1, 12, -2, FeyHair); // wild hair, down the back
+            Box(-3, 11, -1, -3, 14, -1, FeySkin).Box(2, 11, -1, 2, 14, -1, FeySkin); // long pointed ears
+            Box(-1, 11, 1, -1, 11, 1, FeyEye).Box(0, 11, 1, 0, 11, 1, FeyEye);   // glowing eyes
+            if (wings)
+            {
+                Box(-6, 7, -2, -1, 12, -2, FeyWing).Box(0, 7, -2, 5, 12, -2, FeyWing);     // dragonfly wings
+                Box(-5, 8, -2, -2, 11, -2, Team).Box(1, 8, -2, 4, 11, -2, Team);           // their inner panes
+            }
+            return this;
+        }
+
+        /// <summary>
         /// A dwarf: two thirds of a person's height and broader, stout in the leg, with a great ginger beard down over the
         /// chest and a belt with a gold buckle, in a tunic of its owner's colour. Hands at x = -4 and 3, at y = 3.
         /// </summary>
@@ -607,6 +642,31 @@ public static class UnitModels
         "kage/sapper" => new Builder().Rat()
             .Box(-1, 10, 2, 0, 10, 3, Leather)                                                                   // dust mask
             .Box(2, 2, 0, 2, 10, 0, Wood).Box(1, 10, -1, 3, 10, 1, Iron),                                        // pick
+        // The Fey's own: slight winged tricksters with their owner's colour on tunic and wings.
+        // A sprite: a long thorn for a spear and a crown of little leaves.
+        "sprite" => new Builder().Fey()
+            .Box(-2, 15, -2, 1, 15, 1, Leaf)                                                                     // leaf crown
+            .Box(2, 2, 1, 2, 14, 1, Wood).Box(2, 15, 1, 2, 16, 1, Antler),                                       // thorn spear
+        // A wisp: a ball of witchfire floating at head height, a tiny fey at its heart, trailing sparks below.
+        "wisp" => new Builder()
+            .Box(-3, 7, -3, 2, 12, 2, WispGlow).Box(-2, 6, -2, 1, 13, 1, WispGlow)                               // the glow
+            .Box(-1, 8, 3, 0, 11, 3, WispCore).Box(-1, 9, 3, 0, 10, 3, Team)                                     // its bright heart
+            .Box(-4, 9, -1, -4, 11, 0, Team).Box(3, 9, -1, 3, 11, 0, Team)                                       // little wings
+            .Box(-1, 4, 0, 0, 5, 0, WispGlow).Box(0, 2, -1, 0, 2, -1, WispGlow).Box(-1, 0, 0, -1, 0, 0, WispCore), // trail of sparks
+        // An enchanter: a long cloak of leaves, a crown of antlers and a staff topped with a glowing orb.
+        "enchanter" => new Builder().Fey(legs: false).Box(-2, 0, -1, 1, 4, 0, Leaf).Box(-2, 0, 1, 1, 1, 1, TeamDark)
+            .Box(-3, 2, -2, 2, 9, -2, Leaf)                                                                      // cloak of leaves
+            .Box(-3, 15, 0, -3, 17, 0, Antler).Box(-4, 17, 0, -4, 18, 0, Antler).Box(2, 15, 0, 2, 17, 0, Antler).Box(3, 17, 0, 3, 18, 0, Antler) // antlers
+            .Box(3, 0, 1, 3, 14, 1, Wood).Box(3, 15, 0, 4, 16, 2, WispGlow).Box(3, 15, 1, 3, 15, 1, WispCore),   // staff and orb
+        // The Fey's versions of everyone's: a worker with a basket of mushrooms, a sapper with a digging stick, a healer with a dewdrop.
+        "fey/worker" => new Builder().Fey()
+            .Box(2, 3, 1, 2, 8, 1, Wood).Box(2, 8, 2, 2, 8, 3, Steel)                                            // sickle
+            .Box(-2, 5, 2, 1, 7, 3, Reed).Box(-1, 8, 2, 0, 8, 3, Fire),                                          // basket with a red cap in it
+        "fey/sapper" => new Builder().Fey(wings: false)
+            .Box(-6, 9, -2, -1, 12, -2, FeyWing).Box(0, 9, -2, 5, 12, -2, FeyWing)                               // short wings, folded up
+            .Box(2, 2, 0, 2, 10, 0, Wood).Box(1, 10, -1, 3, 10, 1, Antler),                                      // antler pick
+        "fey/healer" => new Builder().Fey(legs: false).Box(-2, 0, -1, 1, 4, 0, Cloth).Box(-2, 0, 1, 1, 1, 1, Team)
+            .Box(3, 0, 1, 3, 13, 1, Wood).Box(3, 14, 1, 3, 15, 1, Glow),                                         // staff with a dewdrop
         "rider" => new Builder().Mount(Horse)
             .Box(-3, 5, -4, 2, 9, 1, TeamDark)                                           // caparison down the flanks
             .Humanoid(lift: 6, legs: false)
