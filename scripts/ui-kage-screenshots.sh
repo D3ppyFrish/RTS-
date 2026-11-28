@@ -3,7 +3,7 @@
 # (seven factions to choose from), and the match starts with their own units by your town hall in the west: workers,
 # kunoichi, shinobi, shuriken throwers and shadow casters, no spearmen, riders, archers or mages. Then, in test mode as
 # Clan Kage: kunoichi and shinobi stand still in the grass and hide, a close-up shows the four ratfolk, and Settler
-# spearmen walk into the hidden ones. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
+# spearmen come close and the hidden ones go for them. Saves PNGs to OUT_DIR and fails if the UI state is not as expected.
 # Usage: scripts/ui-kage-screenshots.sh [OUT_DIR]
 set -euo pipefail
 OUT="$(realpath -m "${1:-screenshots/kage}")"
@@ -64,8 +64,9 @@ camera 160,402 18 38 14
 wait 5
 shot $OUT/ui-kage-hiding.png
 spawn spearman 160,407 3 1
-ticks 80
+ticks 15
 print
+ticks 40
 camera 160,404 18 38 14
 wait 5
 shot $OUT/ui-kage-ambush.png
@@ -80,6 +81,7 @@ mapfile -t UI < <(grep '^UI ' "$LOG2")
 [ "${#UI[@]}" -eq 3 ] || fail "expected 3 UI lines, got ${#UI[@]}"
 [ "$(field "${UI[0]}" hiding)" -ge 2 ] || fail "the kunoichi and shinobi standing still do not hide: ${UI[0]}"
 [ "$(field "${UI[1]}" hiding)" -ge 7 ] || fail "the kunoichi and shinobi standing still do not hide: ${UI[1]}"
+[ "$(field "${UI[2]}" fighting)" -ge 1 ] || fail "nobody went for the spearmen: ${UI[2]}"
 [ "$(field "${UI[2]}" hiding)" -lt "$(field "${UI[1]}" hiding)" ] || fail "nobody came out of hiding at the spearmen: ${UI[2]}"
 [ "$(grep -c '^Saved screenshot' "$LOG" "$LOG2" | awk -F: '{s+=$2} END {print s}')" -eq 5 ] || fail "missing screenshots"
 echo "UI Clan Kage screenshot test OK: $OUT"

@@ -83,13 +83,14 @@ public class KageTests
     {
         var sim = Flat(fog: true);
         int shinobi = sim.SpawnUnit(0, "shinobi", 30, 30, Stand);
+        sim.Schedule(0, new StanceCommand(0, new[] { shinobi }, UnitStance.Hold)); // a scout told to hold, watching
         int spear = sim.SpawnUnit(1, "spearman", 36, 30, Stand); // well within sight both ways
         sim.Run(Tps);
         int s = Index(sim, shinobi);
         Assert.True(sim.Combat.Hiding(s));
         Assert.False(sim.Vision.SeesUnit(1, s));
         Assert.Equal(0, sim.Units.Target[Index(sim, spear)]); // nobody goes after it from further off
-        Assert.Equal(0, sim.Units.Target[s]); // and it lies in wait rather than going after the spearman
+        Assert.Equal(0, sim.Units.Target[s]); // and holding, it stays put and hidden
 
         // Walking, it shows.
         sim.Schedule(sim.Tick, new MoveCommand(0, new[] { shinobi }, 30, 10, Stand));
@@ -101,6 +102,14 @@ public class KageTests
         sim.Schedule(sim.Tick, new StopCommand(0, new[] { shinobi }));
         sim.Run(3);
         Assert.True(sim.Combat.Hiding(Index(sim, shinobi)));
+
+        // Left to fight as it likes, a hidden unit goes after the enemies it sees, and shows as it does.
+        var open = Flat(fog: true);
+        int bold = open.SpawnUnit(0, "kunoichi", 30, 30, Stand);
+        int seen = open.SpawnUnit(1, "spearman", 36, 30, Stand);
+        open.Run(Tps);
+        Assert.Equal(seen, open.Units.Target[Index(open, bold)]);
+        Assert.False(open.Combat.Hiding(Index(open, bold)));
 
         // Walked up close, the spearman spots it, and it springs at him.
         var close = Flat(fog: true);

@@ -465,7 +465,8 @@ public sealed partial class CombatSystem
         bool guard = u.Town[i] != 0;
         bool monster = !guard && u.Owner[i] == Simulation.WildPlayer;
         // A Reptilian lying in the water lies in wait: it springs only at enemies that come close (CombatSystem.Swamp.cs).
-        bool lying = Lurking(i);
+        // Clan Kage hiding as they stand still go after whoever they see, and show once they move (CombatSystem.Shadows.cs).
+        bool lying = Lurking(i) && !Def(i).Camouflage;
         // In the dark it sees less far, but a target in the light as far as by day (see Conditions).
         var cond = _sim.Conditions;
         int ox = x.FloorToInt(), oz = z.FloorToInt();
