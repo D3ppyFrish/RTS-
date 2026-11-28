@@ -214,6 +214,7 @@ public sealed partial class CombatSystem
         foreach (int id in _lurkers) Mix(id);
         HashSmoke(Mix);
         HashShadowSteps(Mix);
+        HashGlamour(Mix);
         return h;
     }
 
@@ -271,6 +272,7 @@ public sealed partial class CombatSystem
         StepLurkers();
         StepSmoke();
         StepShadowSteps();
+        StepGlamour();
         BuildGrid();
         Rally();
         StepDrums();
@@ -914,6 +916,15 @@ public sealed partial class CombatSystem
     private bool Hit(int i, UnitDef def, int t, Building? b)
     {
         var u = U;
+        if (u.Illusion[i] > 0)
+        {
+            // An illusion goes through the motions, and the blow or the shot comes to nothing (CombatSystem.Glamour.cs).
+            Fought(i);
+            if (b != null) AddShot(i, def, Clamp(u.X[i], b.X, b.MaxX + 1), b.Y + 1, Clamp(u.Z[i], b.Z, b.MaxZ + 1));
+            else AddShot(i, def, u.X[t], u.Y[t], u.Z[t]);
+            u.ChargeLeft[i] = 0;
+            return true;
+        }
         if (b != null)
         {
             Fought(i);
@@ -978,6 +989,12 @@ public sealed partial class CombatSystem
         var u = U;
         var part = Location(i, t);
         int damage = 0;
+        if (u.Illusion[t] > 0)
+        {
+            // The first blow that lands on an illusion ends it, whatever it would have dealt (CombatSystem.Glamour.cs).
+            _pending[t] = Math.Max(_pending[t], u.Hp[t]);
+            return (part, 0, false);
+        }
         // A lurking monster's first blow coming up out of the water is an ambush (see MonsterSystem.Spring).
         int ambush = splash ? 0 : Math.Max(_sim.Monsters.Spring(i), SpringLurker(i));
         bool blocked = !splash && Shielded(i, t);
@@ -1205,6 +1222,13 @@ public sealed partial class CombatSystem
                 _pending[i] = _bled[i] = 0;
                 continue;
             }
+            if (u.Illusion[i] > 0)
+            {
+                // Anything that hurts an illusion ends it, and nobody is told of it (CombatSystem.Glamour.cs).
+                u.Hp[i] = 0;
+                _dead.Add(i);
+                continue;
+            }
             if (_pending[i] > 0)
             {
                 Fought(i);
@@ -1231,6 +1255,11 @@ public sealed partial class CombatSystem
         var monsters = _sim.Monsters;
         foreach (int d in _dead)
         {
+            if (u.Illusion[d] > 0)
+            {
+                IllusionsBroken++; // it fades: no blood, no loss, no kill, no fear (CombatSystem.Glamour.cs)
+                continue;
+            }
             Mourn(d);
             // A death leaves a pool where the unit fell. (Corpses, #74, will keep bleeding until hauled off.)
             if (Def(d).Bleeds) _sim.Blood.Spill(u.X[d], u.Y[d] - 1, u.Z[d], Rts.Sim.World.BloodSystem.Pool, u.Id[d]);

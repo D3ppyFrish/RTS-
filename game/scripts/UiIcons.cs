@@ -213,6 +213,12 @@ public static class UiIcons
             "......ss.ll.", ".....slls.ls", "..f...ss..s.", ".fyf........", "..fk........", "...k........",
             "..kkkkk.....", ".kcCCcck....", "kcCcccccks..", "kcccccccksl.", ".kcccccksll.", "..kkkkk..ss.",
         },
+        // Glamour: a little winged fey and two shimmering copies of it, with sparks of magic.
+        ["glamour"] = new[]
+        {
+            "..t.....w...", ".tvt..kk..t.", "..t..kpPk...", "v...tkkkkt..", ".v.ttkggkttv", "vt.t.kgGk.tv",
+            "tt...kggk..t", "t.t..kGGk.t.", "...t.k..k...", "..t..k..k.t.", ".t..kk..kk..", "..v.......v.",
+        },
         // Lurkers' strike: a lizard's yellow eyes just above the water.
         ["lurk"] = new[]
         {

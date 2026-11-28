@@ -91,7 +91,7 @@ public sealed class DroppedItemSystem
     public bool CanTake(int i, DroppedItem item)
     {
         var u = U;
-        if (i < 0 || i >= u.Count || u.Hp[i] <= 0 || u.Subdued[i] || u.Rout[i] > 0 || u.Town[i] != 0 || _sim.Monsters.IsWild(i)) return false;
+        if (i < 0 || i >= u.Count || u.Hp[i] <= 0 || u.Subdued[i] || u.Rout[i] > 0 || u.Town[i] != 0 || u.Illusion[i] > 0 || _sim.Monsters.IsWild(i)) return false;
         var def = _sim.Content.Units[u.Def[i]];
         if (item.Staff) return def.Heal > 0 && !_sim.DuskTree.HasStaff(i);
         return u.Relic[i] == 0 && def.Damage > 0 && def.Role != UnitRole.Worker;

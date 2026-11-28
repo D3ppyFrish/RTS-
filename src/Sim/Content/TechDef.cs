@@ -304,6 +304,12 @@ public enum TechEffectType : byte
     /// <see cref="ClimbCommand"/>). The numbers are in the role table (<see cref="CombatRules.Climb"/>).
     /// </summary>
     WallClimbing,
+    /// <summary>
+    /// The Fey's Glamour: matching units can weave illusions round them (see <see cref="GlamourCommand"/>), decoys that
+    /// look like one of the player's units, strike for nothing and fade at the first blow. The numbers are in the role
+    /// table (<see cref="CombatRules.Glamour"/>).
+    /// </summary>
+    Glamour,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

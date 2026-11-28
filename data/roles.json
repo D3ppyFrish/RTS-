@@ -34,6 +34,12 @@
 // seen through the fog by their enemies, nor fights or is fought unit to unit. Each thrower then waits "wait" seconds
 // (from the throw) before the next. First guesses for playtesting.
 //
+// glamour: units that can weave illusions (a tech's glamour effect, the Fey's Glamour, their enchanters) weave "count"
+// illusions of the unit "unit" round them, within "spread" columns, for "mana" mana. An illusion looks like the real
+// thing to everyone and is ordered like one, but deals no damage, fades at the first blow that lands on it (leaving no
+// blood, loss or kill) and fades by itself after "time" seconds. It takes no housing and works no job. Each caster then
+// waits "wait" seconds (from the weaving) before the next. First guesses for playtesting.
+//
 // shadowStep: units that can step through the shadows (a tech's shadow_step effect, Clan Kage's Shadow step, their
 // shadow casters) take the units of theirs within "gather" columns (up to "carry" in all, the caster too) through the
 // shadows to a spot up to "range" columns off that their side has seen, for "mana" mana: they come out of the shadows
@@ -58,6 +64,7 @@
   "molt": { "below": 25, "time": 15, "soft": 30, "pace": 60, "tender": 150 },
   "smoke": { "radius": 3, "height": 2, "time": 8, "wait": 45 },
   "shadowStep": { "range": 80, "gather": 5, "carry": 8, "spread": 3, "mana": 30, "wait": 90 },
+  "glamour": { "count": 3, "unit": "sprite", "spread": 2, "time": 20, "mana": 15, "wait": 40 },
   "sabotage": { "time": 6, "guard": 3, "stall": 45, "spoil": 25, "wait": 60 },
   "climb": { "time": 1, "height": 10, "reach": 2 },
   "shieldWall": { "front": 25, "charge": 25, "repel": 100, "stagger": 2, "drop": 1, "cover": 1.5 },

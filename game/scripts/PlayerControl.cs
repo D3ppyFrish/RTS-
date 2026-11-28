@@ -371,6 +371,7 @@ public partial class PlayerControl : Node
         switch (key.Keycode)
         {
             case Key.L when key.ShiftPressed: ToggleGrowForest(); break;
+            case Key.L when key.CtrlPressed: WeaveGlamour(); break;
             case Key.L: StartRoad(); break;
             case Key.Comma: Bloom(); break;
             case Key.Y when key.ShiftPressed: ToggleEarthWall(); break;
@@ -1439,6 +1440,24 @@ public partial class PlayerControl : Node
         ready.RemoveAll(id => !_sim.Combat.ReadyToSmoke(_sim.Units.IndexOf(id)));
         if (ready.Count == 0) return;
         _sim.Schedule(_sim.Tick, new SmokeCommand(LocalPlayer, ready.ToArray()));
+        Changed?.Invoke();
+    }
+
+    /// <summary>The selected units of yours that can weave illusions (see <see cref="Rts.Sim.Content.TechEffectType.Glamour"/>), ready or not.</summary>
+    public List<int> OwnGlamourers()
+    {
+        var list = OwnSelected();
+        list.RemoveAll(id => !_sim.Combat.CanGlamour(_sim.Units.IndexOf(id)));
+        return list;
+    }
+
+    /// <summary>The selected enchanters that are ready weave their illusions round them.</summary>
+    public void WeaveGlamour()
+    {
+        var ready = OwnGlamourers();
+        ready.RemoveAll(id => !_sim.Combat.ReadyToGlamour(_sim.Units.IndexOf(id)));
+        if (ready.Count == 0) return;
+        _sim.Schedule(_sim.Tick, new GlamourCommand(LocalPlayer, ready.ToArray()));
         Changed?.Invoke();
     }
 
@@ -2997,7 +3016,7 @@ public partial class PlayerControl : Node
                $"casters={OwnCasters().Count} caster_ready={(ReadyCaster() != 0 ? 1 : 0)} casting={OwnCasting()} earth_walls={OwnEarthWalls()} earth_blocks={OwnEarthBlocks()} " +
                $"ice_casters={OwnCasters(Spell.IceBridge).Count} ice_bridges={OwnIce(out int iceBlocks, out int cracking)} ice_blocks={iceBlocks} ice_cracking={cracking} " +
                $"chasm_casters={OwnCasters(Spell.Chasm).Count} chasms={OwnChasms(out int chasmOpen)} chasm_open={chasmOpen} in_chasm={InChasm()} " +
-               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} smoke_clouds={_sim.Combat.Clouds.Count} smoke_bombs={_sim.Combat.SmokeBombs} shadow_steps={_sim.Combat.StepsMade} units_stepped={_sim.Combat.UnitsStepped} step_casters={OwnSteppers().Count} " +
+               $"flood_casters={OwnCasters(Spell.Flood).Count} floods={OwnFloods(out int floodWater)} flood_water={floodWater} lurking={OwnLurking()} hiding={OwnHiding()} smoke_clouds={_sim.Combat.Clouds.Count} smoke_bombs={_sim.Combat.SmokeBombs} illusions={OwnIllusions()} illusions_woven={_sim.Combat.IllusionsWoven} illusions_broken={_sim.Combat.IllusionsBroken} shadow_steps={_sim.Combat.StepsMade} units_stepped={_sim.Combat.UnitsStepped} step_casters={OwnSteppers().Count} " +
                $"saboteurs={OwnSaboteurs().Count} sabotaging={Jobs(UnitJob.Sabotage)} sabotages={_sim.Economy.Sabotages} goods_spoiled={_sim.Economy.GoodsSpoiled} stalled={_sim.Buildings.All.Count(b => _sim.Economy.Stalled(b))} " +
                $"climbers={OwnClimbers().Count} climbing={Jobs(UnitJob.Climb)} climbs={_sim.Economy.Climbs} on_walls={OnWalls()} " +
                $"grove_casters={OwnCasters(Spell.GrowForest).Count} grove_trees={_sim.Spells.GroveTrees} " +
@@ -3130,7 +3149,16 @@ public partial class PlayerControl : Node
     }
 
     /// <summary>Units of yours hiding as they stand still (Clan Kage's shinobi and kunoichi).</summary>
-    private int OwnHiding()
+    /// <summary>Illusions of yours (the Fey's Glamour).</summary>
+    private int OwnIllusions()
+    {
+        int n = 0;
+        for (int i = 0; i < _sim.Units.Count; i++)
+            if (_sim.Units.Owner[i] == LocalPlayer && _sim.Units.Illusion[i] > 0) n++;
+        return n;
+    }
+
+        private int OwnHiding()
     {
         int n = 0;
         for (int i = 0; i < _sim.Units.Count; i++)
