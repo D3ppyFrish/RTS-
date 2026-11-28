@@ -253,6 +253,11 @@ public enum TechEffectType : byte
     /// (<see cref="CombatRules.ShadowStep"/>).
     /// </summary>
     ShadowStep,
+    /// <summary>
+    /// Clan Kage's Saboteurs: matching units can sabotage an enemy building, so it does no work for a while and goods in
+    /// it spoil (see <see cref="SabotageCommand"/>). The numbers are in the role table (<see cref="CombatRules.Sabotage"/>).
+    /// </summary>
+    Sabotage,
 }
 
 /// <summary>What a <see cref="TechEffectType.Reveal"/> effect shows on the map.</summary>

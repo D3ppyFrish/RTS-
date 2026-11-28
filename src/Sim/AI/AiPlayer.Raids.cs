@@ -51,14 +51,15 @@ public sealed partial class AiPlayer
     /// </summary>
     private Command? SpareRaiders(Command c)
     {
-        if (_raidParty.Count == 0 || c is not UnitsCommand uc || c is CaptureCommand or BurnCommand) return c;
+        // Its saboteur is left to its work the same way (AiPlayer.Sabotage.cs).
+        if (_raidParty.Count == 0 && _saboteur == 0 || c is not UnitsCommand uc || c is CaptureCommand or BurnCommand or SabotageCommand) return c;
         bool any = false;
         foreach (int id in uc.Units)
-            if (_raidParty.Contains(id)) { any = true; break; }
+            if (_raidParty.Contains(id) || id == _saboteur) { any = true; break; }
         if (!any) return c;
         var kept = new List<int>(uc.Units.Length);
         foreach (int id in uc.Units)
-            if (!_raidParty.Contains(id)) kept.Add(id);
+            if (!_raidParty.Contains(id) && id != _saboteur) kept.Add(id);
         return kept.Count == 0 ? null : uc with { Units = kept.ToArray() };
     }
 

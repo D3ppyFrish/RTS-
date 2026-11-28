@@ -122,6 +122,17 @@ public sealed record CaptureCommand(int PlayerId, int[] Units, int Building) : U
     public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building);
 }
 
+/// <summary>
+/// Sabotage (Clan Kage's saboteurs, see <see cref="Content.TechEffectType.Sabotage"/>): those of the units that can and
+/// are ready go to the enemy building and wreck its works once no soldier of its owner's is by it; then it does no work
+/// for a while and goods in it spoil (see <c>Economy/EconomySystem.Sabotage.cs</c>).
+/// </summary>
+public sealed record SabotageCommand(int PlayerId, int[] Units, int Building) : UnitsCommand(PlayerId, Units)
+{
+    public bool Equals(SabotageCommand? other) => base.Equals(other) && Building == other!.Building;
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Building);
+}
+
 /// <summary>The units go to an enemy storehouse and burn it with its goods, once nobody defends it.</summary>
 public sealed record BurnCommand(int PlayerId, int[] Units, int Building) : UnitsCommand(PlayerId, Units)
 {
