@@ -189,7 +189,8 @@ replay made with different data says so instead of drifting apart.
   tames monsters, how a computer player plays it (`aiStyle`: `waves` or `balanced`, see
   [Winning and computer players](docs/rules.md#winning-and-computer-players)), and whether its buildings are hidden
   under fog of war until a rival comes that many columns close (`hiddenVillage`, Clan Kage's 5, see
-  [Clan Kage](docs/rules.md#clan-kage)).
+  [Clan Kage](docs/rules.md#clan-kage)), and whether it keeps clan honour (`honour`: what each contract earns and
+  each dishonour costs; a unit's or tech's `honour` is the honour it costs, see [Clan Kage](docs/rules.md#clan-kage)).
 - **Walls, gates and towers** in `buildings.json`: walls and gates come in tiers, where `"upgrade"` names
   the building one is turned into where it stands (so only the first of a chain is ever laid) and
   `"facing"` the building that goes up on each free side of an upgrade when it is done (a stone wall is

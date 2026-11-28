@@ -587,5 +587,12 @@
     "description": "An old ratfolk sorcerer in a hooded robe. Hurls bolts of shadow that curse whoever they strike with dread, breaking their nerve. No terrain magic, but with Shadow step it takes your units through the shadows across the map. Weaker in bright daylight, stronger in the shadowed wilds.",
     "speed": 4, "hp": 45, "model": "shadow_caster", "damage": 9, "attackTime": 2, "range": 8, "sight": 9,
     "attack": "crush", "fear": 8, "shadowborn": true,
-    "cost": { "food": 50, "wood": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" }
+    "cost": { "food": 50, "wood": 20 }, "trainTime": 20, "trainedAt": "barracks", "requires": "basic_magic" },
+  // The clan's master ninja: a hero, one of a kind, trained for clan honour (see "honour" in factions.json).
+  { "id": "master_ninja", "name": "Master ninja", "faction": "kage", "role": "line_infantry",
+    "description": "A hero, one of a kind, trained for 40 clan honour: the clan's deadliest blade, an old grey rat in black with a long sword. Strikes hard and fast, and twice as hard at workers, casters and heroes, hides while standing still, and never runs. Your soldiers near the master ninja hold their nerve. Weaker in bright daylight, stronger in the shadowed wilds.",
+    "speed": 6, "hp": 160, "model": "master_ninja", "damage": 14, "attackTime": 0.7, "range": 1.5, "sight": 11,
+    "attack": "slash", "armor": { "head": 1, "torso": 2 }, "assassin": 100, "camouflage": true, "shadowborn": true,
+    "hero": true, "rally": 10, "steady": 30, "inspire": 2,
+    "cost": { "food": 80, "wood": 40, "iron": 10 }, "honour": 40, "trainTime": 30, "trainedAt": "barracks" }
 ]

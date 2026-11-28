@@ -337,13 +337,14 @@ public sealed partial class AutomationSystem
 
     /// <summary>
     /// The soldier a governor trains next at barracks b: of the types it trains that the player may train
-    /// (ranged only for Defence, if there are any), the one the player has fewest of; the first in the list on a tie.
+    /// (ranged only for Defence, if there are any; none paid for in clan honour), the one the player has fewest of; the
+    /// first in the list on a tie.
     /// </summary>
     private UnitDef? NextSoldier(Building b, int p, GovernorFocus focus)
     {
         var options = new List<UnitDef>();
         foreach (var id in b.Def.Trains)
-            if (_sim.Content.TryGetUnit(id, out var d) && Fights(d.Role) && Economy.Unlocked(p, d)) options.Add(d);
+            if (_sim.Content.TryGetUnit(id, out var d) && Fights(d.Role) && d.Honour == 0 && Economy.Unlocked(p, d)) options.Add(d); // nothing paid for in honour
         if (focus == GovernorFocus.Defence)
         {
             var ranged = options.FindAll(d => d.Role == UnitRole.Ranged);

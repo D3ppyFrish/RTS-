@@ -1237,6 +1237,7 @@ public sealed partial class CombatSystem
             Count(_losses, u.Owner[d]);
             // The nearest blow of the tick, or for a unit that bled to death, whoever cut it. Still there: the dead are removed below.
             int killer = u.IndexOf(_hitBy[d] != 0 ? _hitBy[d] : u.Cutter[d]);
+            _sim.Economy.Slain(d, killer); // clan honour: an assassination, or a hero lost
             if (killer < 0) continue;
             Count(_kills, u.Owner[killer]);
             _sim.Evolution.Killed(killer);

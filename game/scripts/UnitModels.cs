@@ -123,6 +123,7 @@ public static class UnitModels
     private static readonly Color Obsidian = new(0.1f, 0.09f, 0.13f);
     private static readonly Color RatFur = new(0.5f, 0.45f, 0.4f);
     private static readonly Color RatFurDark = new(0.36f, 0.32f, 0.29f);
+    private static readonly Color RatGrey = new(0.68f, 0.68f, 0.7f);   // the master ninja's old grey fur
     private static readonly Color RatPink = new(0.88f, 0.6f, 0.6f);
     private static readonly Color RatEye = new(0.95f, 0.2f, 0.15f);
     private static readonly Color NinjaCloth = new(0.13f, 0.13f, 0.17f);
@@ -591,6 +592,14 @@ public static class UnitModels
         "shadow_caster" => new Builder().Rat(legs: false).Box(-2, 0, -1, 1, 4, 0, NinjaCloth).Box(-2, 0, -1, 1, 0, 0, TeamDark)
             .Box(-2, 13, -2, 1, 13, 1, NinjaClothLight).Box(-1, 14, -2, 0, 14, -1, NinjaClothLight)               // hood
             .Box(3, 0, 1, 3, 14, 1, DeadWood).Box(4, 14, 1, 4, 14, 1, DeadWood).Box(4, 15, 1, 4, 16, 1, BlightVein), // staff and shadow flame
+        // The master ninja (a hero, trained for clan honour): an old grey rat with a white beard, a cape of its owner's
+        // colour down the back and a long sword with a gold guard held up in the right hand.
+        "master_ninja" => new Builder().Rat()
+            .Box(-2, 10, -2, 1, 12, 1, RatGrey).Box(-1, 10, 2, 0, 11, 3, RatGrey).Box(-1, 11, 4, 0, 11, 4, RatPink) // grey head
+            .Box(-2, 12, 1, -2, 12, 1, RatEye).Box(1, 12, 1, 1, 12, 1, RatEye).Box(-2, 12, -2, 1, 12, 0, Team)    // eyes, headband
+            .Box(-1, 9, 2, 0, 9, 3, Bone).Box(0, 8, 3, 0, 8, 3, Bone)                                            // white beard
+            .Box(-2, 5, -2, 1, 10, -2, TeamDark)                                                                 // cape
+            .Box(2, 2, 1, 2, 3, 1, Dark).Box(2, 4, 0, 2, 4, 2, Gold).Box(2, 5, 1, 2, 15, 1, Steel),              // long sword
         // Clan Kage's versions of everyone's: a worker with a basket and sickle, a sapper with a pick and a mask.
         "kage/worker" => new Builder().Rat()
             .Box(2, 3, 1, 2, 8, 1, Wood).Box(2, 8, 2, 2, 8, 3, Steel)                                            // sickle

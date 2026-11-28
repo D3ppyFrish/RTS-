@@ -124,6 +124,7 @@ public sealed partial class EconomySystem
                 U.SabotageWait[i] = Math.Max(1, rules.WaitTicks);
             }
         Sabotages++;
+        SabotageDone(player);
     }
 
     /// <summary>True if a soldier of the building's owner's stands within <see cref="SabotageRules.Guard"/> columns of it.</summary>

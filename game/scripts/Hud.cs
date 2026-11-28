@@ -36,6 +36,7 @@ public partial class Hud : CanvasLayer
     private readonly Label[] _stockLabels = new Label[Goods.Count];
     private Label _popLabel = null!;
     private Label _manaLabel = null!;
+    private Label _honourLabel = null!;
     private Label _foodRateLabel = null!;
     private Label _clockLabel = null!;
     private WorldLighting _lighting = null!;
@@ -211,6 +212,10 @@ public partial class Hud : CanvasLayer
             _stockLabels[(int)good].GetParent().AddChild(_foodRateLabel);
         }
         _manaLabel = Stat(row, UiIcons.Get("mana"), "Mana: channelled from crystal at your shrines, and spent on spells");
+        _honourLabel = Stat(row, UiIcons.Get("honour"), "Clan honour: earned by contracts (assassinating rival workers, casters and heroes, " +
+            "sabotage, scouting rival town halls), lost when a building of yours falls or is taken or your hero dies, " +
+            "and spent on the master ninja and the Moonless Night");
+        _honourLabel.GetParent().Name = "honour_stat";
         _popLabel = Stat(row, UiIcons.Get("people"), "People over housing");
         row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
         _clockLabel = Stat(row, UiIcons.Get("time"), "Match time and game speed");
@@ -1600,8 +1605,11 @@ public partial class Hud : CanvasLayer
             string key = k == 0 ? "  [U]" : "";
             // A batch hatches several at once for the one cost (the Deepfolk's swarms).
             string what = unit.Batch > 1 ? $"Hatch {unit.Batch} {unit.Name.ToLowerInvariant()}s" : $"Train {unit.Name.ToLowerInvariant()}";
-            button.Text = needs != null ? $"{unit.Name}: {needs}" : $"{what}{key}   {CostText(unit.Cost)}";
-            button.Disabled = needs != null || !econ.CanAfford(player, unit.Cost) || b!.Queue.Count >= EconomySystem.MaxQueue;
+            // A hero is one of a kind (the master ninja): not while one lives or is queued.
+            if (needs == null && unit.Hero && econ.HeroTaken(player, unit)) needs = "one of a kind, you have one";
+            button.Text = needs != null ? $"{unit.Name}: {needs}" : $"{what}{key}   {CostText(unit.Cost, unit.Honour)}";
+            button.Disabled = needs != null || !econ.CanAfford(player, unit.Cost) || !econ.HasHonour(player, unit.Honour)
+                              || b!.Queue.Count >= EconomySystem.MaxQueue;
         }
         _digButton.Visible = _control.OwnDiggers().Count > 0 || _control.Tool == PlayerControl.ToolMode.Dig;
         _digButton.SetPressedNoSignal(_control.Tool == PlayerControl.ToolMode.Dig);
@@ -2611,6 +2619,10 @@ public partial class Hud : CanvasLayer
         return text.Length > 0 ? text.ToString() : "free";
     }
 
+    /// <summary>A cost as text, with the clan honour it also costs (none for 0).</summary>
+    public static string CostText(GoodAmount[] cost, int honour) =>
+        honour <= 0 ? CostText(cost) : cost.Length == 0 ? $"{honour} honour" : $"{CostText(cost)}, {honour} honour";
+
     private string DescribeSelection()
     {
         if (_sim.Buildings.Get(_control.SelectedBuilding) is { } building) return DescribeBuilding(building);
@@ -3153,6 +3165,9 @@ public partial class Hud : CanvasLayer
         foreach (var good in Goods.All) _stockLabels[(int)good].Text = stock[(int)good].ToString(CultureInfo.InvariantCulture);
         _popLabel.Text = $"{econ.Population(player)} / {econ.Housing(player)}";
         _manaLabel.Text = econ.Player(player).Mana.ToString(CultureInfo.InvariantCulture);
+        // Clan honour, for a faction that keeps it (Clan Kage).
+        _honourLabel.GetParent<Control>().Visible = econ.HonourOf(player) != null;
+        _honourLabel.Text = econ.Honour(player).ToString(CultureInfo.InvariantCulture);
         int rate = econ.FoodPerMinute(player);
         _foodRateLabel.Text = (rate > 0 ? "+" : "") + rate.ToString(CultureInfo.InvariantCulture) + "/min";
         _foodRateLabel.AddThemeColorOverride("font_color", rate > 0 ? new Color(0.55f, 0.9f, 0.45f) : new Color(0.8f, 0.8f, 0.75f));

@@ -1104,10 +1104,16 @@ public sealed partial class AiPlayer
     {
         if (!Hard) Keep(sim); // Hard's economy has worked out what to keep in hand
         var (seen, mine) = TrainCounts(sim);
-        bool trained = false;
+        bool trained = false, hero = false;
         foreach (var b in sim.Buildings.All)
         {
             if (b.Owner != Player || !b.Active || b.Def.Kind != BuildingKind.Barracks || b.Queue.Count >= 2 || Docks(sim, b.Def)) continue;
+            // A hero paid for in clan honour first, once it has the honour (see AiPlayer.Honour.cs).
+            if (!hero && TrainHonourHero(sim, b, issue))
+            {
+                hero = trained = true;
+                continue;
+            }
             long total = 0;
             foreach (string id in b.Def.Trains)
                 if (sim.Content.TryGetUnit(id, out var d) && sim.Economy.Unlocked(Player, d) && (!anyAffordable || Affordable(sim, d.Cost)))
@@ -1174,6 +1180,7 @@ public sealed partial class AiPlayer
         // Rams only against walls and gates (they go at nothing else), and catapults counted without them.
         if (def.Ram) return KnowsWalls(sim) && Rams(sim) < RamsWanted ? 3 : 0;
         if (def.Drums != null) return Drummers(sim) < DrummersWanted ? 3 : 0; // one goes with each wave
+        if (def.Honour > 0) return 0; // trained for honour on its own (see TrainHonourHero)
         if (def.Role == UnitRole.Siege) return mine[(int)UnitRole.Siege] - Rams(sim) < 2 ? 2 : 0;
         long w = Weight(sim, def.Role, seen, mine);
         if (!Hard || w == 0 || def.Role is UnitRole.Sapper or UnitRole.Siege) return w;

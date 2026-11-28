@@ -161,8 +161,8 @@
     "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "reptile_lurkers", "basic_magic", "smelting" ] },
 
   { "id": "kage_moonless", "icon": "crown", "name": "The Moonless Night", "faction": "kage",
-    "description": "The clan's elders swear to bring the long night, whose shrine is to be raised in the deep caves, far from any light.",
-    "cost": { "food": 200, "stone": 150, "iron": 30 }, "researchTime": 90, "requires": [ "kage_shadow_strike", "basic_magic", "smelting" ] },
+    "description": "The clan's elders swear to bring the long night, whose shrine is to be raised in the deep caves, far from any light. Only a clan with 60 honour may swear it.",
+    "cost": { "food": 200, "stone": 150, "iron": 30 }, "honour": 60, "researchTime": 90, "requires": [ "kage_shadow_strike", "basic_magic", "smelting" ] },
 
   { "id": "dwarf_king", "icon": "crown", "name": "The Mountain King's oath", "faction": "dwarves",
     "description": "The clans swear to a king under the mountain, whose hall is to be carved in the deep caves.",

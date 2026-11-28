@@ -243,6 +243,7 @@ public sealed partial class CombatSystem
     /// </summary>
     private void Collapse(Building b)
     {
+        _sim.Economy.BuildingLost(b);
         _sim.Automation.Destroyed(b);
         _sim.Physics.Crumble(b);
         _sim.Economy.ClearTrees(b);

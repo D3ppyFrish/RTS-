@@ -857,7 +857,7 @@ its commands played back ends the same. An order of the player's always comes fi
   as build, farm, smelt, supply, gather what's needed (supply only finds work once a storehouse has supply rules). A new list
   counts from the worker's next job. Lists are part of the game state.
 - **Repeat** (`RepeatCommand`, P): a building on repeat queues each unit it finishes again as soon as
-  there are goods for it and a minute's food left for everyone.
+  there are goods for it and a minute's food left for everyone (but a hero, who is one of a kind).
 - **Houses and farms**: a player whose workers are all automatic (Shift+J) also gets buildings: a house
   when the units waiting to be trained would fill the housing, and a farm when food runs short (less
   than 100 plus two minutes' worth), no farm has a free place and there are fewer farm places than a
@@ -897,7 +897,7 @@ its commands played back ends the same. An order of the player's always comes fi
   workers, then a smelter once you have 20 iron ore; Army wants a barracks; Defence wants a barracks, then a
   watchtower at each of the four corners 9 columns out from the hall. The hall trains workers up to 30
   (Growth), 15 (Army) or 20 (Defence). Under Army or Defence each barracks in the town with nothing queued
-  trains a soldier: Army the fighting type (line, heavy, ranged or cavalry) you have fewest of, Defence the
+  trains a soldier: Army the fighting type (line, heavy, ranged or cavalry; none that costs clan honour) you have fewest of, Defence the
   ranged type you have fewest of, or spearmen until it has archers. Soldiers wait while a wanted building
   waits for goods. With nothing being researched, the governor of your first town hall researches the next
   tech its focus needs, read from the data: whatever farms need, then what smelters need (Growth), what the
@@ -1476,7 +1476,6 @@ numbers are first guesses to be tuned in playtests.
 
 Clan Kage is the seventh faction, the design doc's ratfolk ninja clan: scouts and assassins who vanish while they stand
 still and strike from hiding, at home in the dark and weaker in bright daylight (`KageTests`; `CombatSystem.Shadows.cs`).
-Their clan honour is still to come.
 
 - **Their own units** (`"replaces"` in `data/factions.json`): the barracks trains **kunoichi** instead of spearmen,
   **shinobi** instead of riders (the clan rides no horses), **shuriken throwers** instead of archers and **shadow
@@ -1565,7 +1564,31 @@ Their clan honour is still to come.
   players know nothing of it: they neither send waves at it nor raid, sabotage or burn it. Who has found what is part
   of the state hash. The clan's own building panel says "Hidden" and how many rivals have found it. With fog of war off
   nothing is hidden.
-- **Their final tech** is the Moonless Night (after Strike from the shadows, Basic magic and Smelting), which opens
+- **Clan honour** (`"honour"` in `data/factions.json`, `FactionDef.Honour`; `Economy/EconomySystem.Honour.cs`,
+  `HonourTests`): a trait of the clan's from the start, not a tech. As the design doc has it, the clan earns honour by
+  carrying out contracts (`PlayerEconomy.Honour`, shown in the top bar beside mana; every match starts at 0):
+  - an **assassination**: a rival's worker or caster killed by a unit of theirs, 2 honour, and a rival's hero, 10
+    (`EconomySystem.Slain`, the same marks as the kunoichi's, `CombatSystem.Marked`; not a wild monster nor a
+    city-state's guard);
+  - a **sabotage** done (see Saboteurs above), 10;
+  - **scouting**: the first time a unit of theirs comes within 12 columns of a rival's finished town hall, 15, once a
+    hall (`EconomySystem.Scouted`; checked once a second, with fog of war or without).
+
+  It loses honour by **dishonourable defeats**: 5 for each finished building of theirs destroyed (knocked down, burned,
+  fallen into the ground) or captured, but walls, gates, towers and bridges, 20 for a town hall, and 20 when its hero is
+  killed (`EconomySystem.BuildingLost`). Honour is never below 0. It is spent (`"honour"` on a unit or a tech, paid when
+  it is queued or its research starts, as goods are):
+  - the **master ninja** (40 honour with 80 food, 40 wood and 10 iron, at the barracks): a hero, one of a kind, so no
+    second can be queued while one lives or is queued (`EconomySystem.HeroTaken`), and a hero's death is a dishonour.
+    Line infantry, 160 hit points, speed 6, 14 slashing damage every 0.7 seconds, sight 11, an assassin as the kunoichi
+    (twice the damage to workers, casters and heroes), hiding while it stands still and shadowborn; it never runs, and
+    your soldiers within 10 blocks of it lose 30% less morale to deaths near them and get it back twice as fast. The game
+    draws an old grey rat with a white beard, a cape of its owner's colour and a long sword;
+  - the clan's top tech, **the Moonless Night**, which also costs 60 honour.
+
+  The tech tree and the train buttons show what costs honour. In test mode, +1000 goods gives the clan 100 honour too.
+  Every number is in `data/factions.json`, a first guess to be tuned in playtests.
+- **Their final tech** is the Moonless Night (after Strike from the shadows, Basic magic and Smelting, and 60 honour), which opens
   their great work, the **Shrine of the Moonless Night**, a dark timber pagoda (see
   [Ascendancy and great works](#ascendancy-and-great-works)). With their soldiers they hack the dusk tree down, as the
   Orcs do (see [The dusk tree](#the-dusk-tree)).
@@ -1587,7 +1610,11 @@ of its own that is ready to step steps through the shadows: to the furthest spot
 short of the target and within the caster's range, that the step can be made to, if it saves at least 20 columns of
 walking; then the whole wave sets out for the target again (`AiPlayer.ShadowStep.cs`). At every level, a unit of theirs that can throw a smoke bomb and is badly hurt (down to the retreat share
 of its hit points) with a rival soldier it sees within 4 columns throws one and walks home to the town hall in it, and
-is left out of the army for 20 seconds (`AiPlayer.Smoke.cs`). All numbers are first guesses to be tuned in playtests.
+is left out of the army for 20 seconds (`AiPlayer.Smoke.cs`). At every level they earn clan honour as anyone of the clan does (their waves kill rival
+workers and casters, their saboteurs sabotage, their scouts find rival town halls), train nothing that costs honour by
+the usual weights, and train their master ninja at a barracks, before anything else there, as soon as they have the
+honour and the goods for it and none living or queued; it then fights in the army as any soldier does
+(`AiPlayer.Honour.cs`). All numbers are first guesses to be tuned in playtests.
 
 ## Dropped relics and the Dusk Staff
 

@@ -267,6 +267,12 @@ public static class UiIcons
             "............", ".....kk.....", "....ktwk....", "..k.ktwk.k..", ".ktkkttkktk.", ".ktwkttkwtk.",
             ".kttkttktvk.", "..ktkvtkvk..", "..kvkvvkvk..", ".kkkkkkkkkk.", "kSsssssssSSk", ".kkkkkkkkkk.",
         },
+        // Clan honour: the clan's red seal, a gold ring round a dark mark.
+        ["honour"] = new[]
+        {
+            "....kkkk....", "..kkrrrrkk..", ".krrryyrrrk.", ".krryrryrrk.", "krryrkkryrrk", "krryrkkryrrk",
+            "krryrrrryrrk", ".krryrryrrk.", ".krrryyrrrk.", "..kRrrrrRk..", "...kkkkkk...", "............",
+        },
         // Mana: a glowing violet drop with a spark in it.
         ["mana"] = new[]
         {

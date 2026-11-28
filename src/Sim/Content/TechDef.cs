@@ -39,6 +39,12 @@ public sealed class FactionDef
     /// </summary>
     public int HiddenVillage { get; init; }
     /// <summary>
+    /// Clan Kage's clan honour (<c>"honour"</c> in the data; null for none): its players earn honour by contracts carried
+    /// out (assassinations, sabotage, scouting), lose it by dishonourable defeats, and spend it on what costs honour (see
+    /// <see cref="Economy.EconomySystem.Honour"/>).
+    /// </summary>
+    public HonourRules? Honour { get; init; }
+    /// <summary>
     /// The units it has its own in place of (<c>"replaces"</c> in the data), from the replaced one to its own, in data
     /// order: its players cannot train the replaced one, and its matches start with its own instead (see
     /// <see cref="StartUnits"/>).
@@ -129,6 +135,30 @@ public sealed class DenUse
     public Units.UnitDef? Form { get; init; }
     /// <summary>A relic the nearest of the player's fighting units without one takes up.</summary>
     public RelicDef? Relic { get; init; }
+}
+
+/// <summary>
+/// Clan Kage's clan honour (see "Clan Kage" in docs/rules.md and <c>Economy/EconomySystem.Honour.cs</c>): what each
+/// contract earns and each dishonour costs.
+/// </summary>
+public sealed class HonourRules
+{
+    /// <summary>For a rival's worker or caster killed by one of the player's units (an assassination).</summary>
+    public int Assassination { get; init; } = 2;
+    /// <summary>For a rival's hero killed by one of the player's units.</summary>
+    public int HeroSlain { get; init; } = 10;
+    /// <summary>For a rival's building sabotaged.</summary>
+    public int Sabotage { get; init; } = 10;
+    /// <summary>For each rival town hall one of the player's units first comes within <see cref="ScoutRange"/> columns of.</summary>
+    public int Scouting { get; init; } = 15;
+    /// <summary>Columns from a rival town hall's footprint within which a unit scouts it.</summary>
+    public int ScoutRange { get; init; } = 12;
+    /// <summary>Lost for each finished building of the player's destroyed or captured (but walls, gates, towers and bridges).</summary>
+    public int BuildingLost { get; init; } = 5;
+    /// <summary>Lost for a town hall of the player's destroyed or captured.</summary>
+    public int HallLost { get; init; } = 20;
+    /// <summary>Lost when a hero of the player's is killed.</summary>
+    public int HeroLost { get; init; } = 20;
 }
 
 /// <summary>
@@ -361,6 +391,8 @@ public sealed class TechDef
     public Discovery Discovery { get; init; }
     /// <summary>What researching it costs, paid when it starts.</summary>
     public GoodAmount[] Cost { get; init; } = Array.Empty<GoodAmount>();
+    /// <summary>Clan honour researching it costs, paid when it starts (<c>"honour"</c> in the data; see <see cref="FactionDef.Honour"/>); 0 for none.</summary>
+    public int Honour { get; init; }
     /// <summary>Ticks of research at a town hall.</summary>
     public int ResearchTicks { get; init; } = 20 * Simulation.TicksPerSecond;
     /// <summary>Techs the player must have first.</summary>

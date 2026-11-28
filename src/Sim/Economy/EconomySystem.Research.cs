@@ -80,7 +80,7 @@ public sealed partial class EconomySystem
         if (MissingTech(player, tech.Requires) != null) return ResearchResult.NeedsTechs;
         if (Researching(player) != null) return ResearchResult.Busy;
         if (TownHall(player) == null) return ResearchResult.NoTownHall;
-        if (checkCost && !CanAfford(player, tech.Cost)) return ResearchResult.CannotAfford;
+        if (checkCost && (!CanAfford(player, tech.Cost) || !HasHonour(player, tech.Honour))) return ResearchResult.CannotAfford;
         return ResearchResult.Ok;
     }
 
@@ -173,6 +173,7 @@ public sealed partial class EconomySystem
         var hall = TownHall(c.PlayerId)!;
         if (!TrySpend(c.PlayerId, tech.Cost, hall.X + hall.Def.SizeX / 2, hall.Z + hall.Def.SizeZ / 2)) return;
         var p = Player(c.PlayerId);
+        p.Honour -= tech.Honour;
         p.Researching = tech.Index;
         p.ResearchTicks = 0;
     }
